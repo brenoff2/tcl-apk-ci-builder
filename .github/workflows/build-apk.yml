@@ -19,7 +19,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
       - name: Android 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - name: Fonte Apache-2.0 fixada
