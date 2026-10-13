@@ -40,16 +40,16 @@ change(manifest,
        '        </intent>\n'
        '    </queries>')
 change(manifest,
-       '        android:label="Bluetooth Quick Connect"',
-       '        android:label="Controle TCL TV"')
+       'android:label="Bluetooth Quick Connect"\n        android:theme=',
+       'android:label="Controle TCL TV"\n        android:theme=')
 change(manifest,
        '        <service\n            android:name=".RemoteButtonService"',
        '        <activity\n            android:name=".IptvAppsActivity"\n'
        '            android:exported="false" />\n\n'
        '        <service\n            android:name=".RemoteButtonService"')
 change(manifest,
-       '            android:label="Bluetooth Quick Connect"',
-       '            android:label="Controle TCL TV"')
+       'android:label="Bluetooth Quick Connect"\n            android:permission=',
+       'android:label="Controle TCL TV"\n            android:permission=')
 change("app/src/main/res/values/styles.xml",
        "Maps the remote color buttons to selected paired Bluetooth devices.",
        "Usa apenas as teclas de cor para acessar aplicativos e recuperar fones Bluetooth.")
