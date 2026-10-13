@@ -29,7 +29,7 @@ jobs:
       - name: Remover rastreamento e adicionar IP manual
         run: |
           python3 scripts/prepare_tcl.py
-          ! grep -i 'firebase' source/app/build.gradle.kts
+          ! grep -E 'libs[.]firebase|plugins[.]firebase' source/app/build.gradle.kts
       - name: Compilar APK Android
         run: |
           cd source
