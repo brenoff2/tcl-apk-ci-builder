@@ -10,17 +10,13 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -47,10 +43,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hari.androidtvremote.R
 
+private data class TvIptvPlayer(val name: String, val packageName: String)
+
+private val iptvPlayerOptions = listOf(
+    TvIptvPlayer("TiviMate", "ar.tvplayer.tv"),
+    TvIptvPlayer("XCIPTV Player", "com.nathnetwork.xciptv"),
+    TvIptvPlayer("Televizo", "com.ottplay.ottplay"),
+    TvIptvPlayer("Kodi", "org.xbmc.kodi"),
+    TvIptvPlayer("VLC", "org.videolan.vlc")
+)
+
 /**
- * Square, offline logos for built-in streaming shortcuts.
- * A long press on the IPTV tile edits the user-selected link to their own player.
- * No channel lists or IPTV streams are supplied.
+ * The remote v2 protocol cannot query which packages are installed on the TV.
+ * This picker lets the user select a likely IPTV player by known app ID;
+ * it never asks for an IPTV server URL or supplies streams.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -63,15 +69,26 @@ fun AppShortcutStripSquare(
     val prefs = remember(context) {
         context.getSharedPreferences("tcl_iptv_shortcut", Context.MODE_PRIVATE)
     }
-    var iptvLink by remember { mutableStateOf(prefs.getString("link", "") ?: "") }
-    var editingIptv by remember { mutableStateOf(false) }
-    var iptvInput by rememberSaveable { mutableStateOf(iptvLink) }
-    var iptvError by remember { mutableStateOf("") }
+    var selectedPackage by remember {
+        mutableStateOf(prefs.getString("tv_player_package", "") ?: "")
+    }
+    var showingPicker by remember { mutableStateOf(false) }
+    var customPackage by rememberSaveable { mutableStateOf("") }
+    var pickerError by remember { mutableStateOf("") }
 
-    fun openEditor() {
-        iptvInput = iptvLink
-        iptvError = ""
-        editingIptv = true
+    fun openPicker() {
+        customPackage = selectedPackage.takeIf {
+            it.isNotBlank() && iptvPlayerOptions.none { p -> p.packageName == it }
+        } ?: ""
+        pickerError = ""
+        showingPicker = true
+    }
+
+    fun choose(packageName: String) {
+        selectedPackage = packageName
+        prefs.edit().putString("tv_player_package", packageName).apply()
+        showingPicker = false
+        onQuickApp("market://launch?id=" + packageName)
     }
 
     Row(
@@ -79,7 +96,6 @@ fun AppShortcutStripSquare(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         quickApps.forEach { app ->
-            val tileSize = shortcutSize
             val logoId = when (app.id) {
                 "netflix" -> R.drawable.tcl_brand_netflix
                 "prime_video" -> R.drawable.tcl_brand_prime_video
@@ -87,53 +103,47 @@ fun AppShortcutStripSquare(
                 "disney_plus" -> R.drawable.tcl_brand_disney_plus
                 "apple_tv" -> R.drawable.tcl_brand_apple_tv
                 "youtube" -> R.drawable.tcl_brand_youtube
+                "iptv" -> R.drawable.tcl_brand_iptv
                 else -> null
             }
             Box(
                 modifier = Modifier
-                    .size(tileSize)
-                    .clip(RoundedCornerShape(13.dp))
-                    .background(if (app.id == "iptv") Color(0xFF173B68) else if (logoId != null) Color.White else Color(0xFF15151B))
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(13.dp))
+                    .size(shortcutSize)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF121624))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
                     .combinedClickable(
                         onClick = {
                             if (app.id == "iptv") {
-                                if (iptvLink.isBlank()) openEditor()
-                                else onQuickApp(iptvLink)
+                                if (selectedPackage.isBlank()) openPicker()
+                                else onQuickApp("market://launch?id=" + selectedPackage)
                             } else {
                                 onQuickApp(app.intentUri ?: app.launchName)
                             }
                         },
-                        onLongClick = { if (app.id == "iptv") openEditor() }
+                        onLongClick = { if (app.id == "iptv") openPicker() }
                     )
                     .semantics {
                         contentDescription = if (app.id == "iptv")
-                            "IPTV; toque para abrir, segure para configurar"
+                            "IPTV, toque para abrir ou segure para escolher outro aplicativo"
                         else app.label
                     },
                 contentAlignment = Alignment.Center
             ) {
-                when {
-                    logoId != null -> Image(
+                if (logoId != null) {
+                    Image(
                         painter = painterResource(logoId),
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().padding(3.dp),
                         contentScale = ContentScale.Fit
                     )
-                    app.id == "iptv" -> Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Filled.Tv,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(tileSize * 0.46f)
-                        )
-                        Text("IPTV", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                    else -> Text(
-                        app.mark,
+                } else {
+                    Text(
+                        text = app.mark,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
                         color = Color.White,
+                        maxLines = 1,
                         textAlign = TextAlign.Center
                     )
                 }
@@ -141,45 +151,54 @@ fun AppShortcutStripSquare(
         }
     }
 
-    if (editingIptv) {
+    if (showingPicker) {
         AlertDialog(
-            onDismissRequest = { editingIptv = false },
-            title = { Text("Configurar IPTV") },
+            onDismissRequest = { showingPicker = false },
+            title = { Text("Escolher aplicativo IPTV") },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        "Cole o link de abertura do aplicativo IPTV que você usa na televisão. " +
-                            "Toque no ícone para abrir e pressione por mais tempo para alterar."
+                        "Selecione o player que você já tem instalado na TV. " +
+                        "A conexão remota não permite listar os aplicativos instalados.",
+                        style = MaterialTheme.typography.bodySmall
                     )
-                    OutlinedTextField(
-                        value = iptvInput,
-                        onValueChange = { iptvInput = it; iptvError = "" },
-                        label = { Text("Link / Intent do seu IPTV") },
-                        placeholder = { Text("intent://... ou https://...") },
-                        singleLine = false,
-                        minLines = 2
-                    )
-                    if (iptvError.isNotBlank()) {
-                        Text(iptvError, color = MaterialTheme.colorScheme.error)
+                    iptvPlayerOptions.forEach { player ->
+                        TextButton(onClick = { choose(player.packageName) }) {
+                            Text(
+                                text = (if (player.packageName == selectedPackage) "✓  " else "") +
+                                    player.name
+                            )
+                        }
                     }
+                    OutlinedTextField(
+                        value = customPackage,
+                        onValueChange = { customPackage = it; pickerError = "" },
+                        label = { Text("Outro app: ID do pacote (opcional)") },
+                        placeholder = { Text("com.exemplo.player") },
+                        singleLine = true
+                    )
+                    if (pickerError.isNotEmpty()) {
+                        Text(pickerError, color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = {
+                        selectedPackage = ""
+                        prefs.edit().remove("tv_player_package").apply()
+                        showingPicker = false
+                    }) { Text("Restaurar escolha / redefinir atalho") }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val valid = CustomShortcut.validateIntentUri(iptvInput)
-                    if (valid != null) {
-                        iptvError = valid
+                    val candidate = customPackage.trim()
+                    if (candidate.matches(Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+"))) {
+                        choose(candidate)
                     } else {
-                        val saved = iptvInput.trim()
-                        prefs.edit().putString("link", saved).apply()
-                        iptvLink = saved
-                        editingIptv = false
-                        onQuickApp(saved)
+                        pickerError = "Selecione um player acima ou informe um ID Android válido."
                     }
-                }) { Text("Salvar e abrir") }
+                }) { Text("Usar outro app") }
             },
             dismissButton = {
-                TextButton(onClick = { editingIptv = false }) { Text("Cancelar") }
+                TextButton(onClick = { showingPicker = false }) { Text("Cancelar") }
             }
         )
     }
