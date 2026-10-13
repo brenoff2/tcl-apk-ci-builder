@@ -67,6 +67,7 @@ apps=[
     ("disney_plus","Disney+","D+","164CBA"),
     ("apple_tv","Apple TV","AT","343A46"),
     ("youtube","YouTube","YT","FF3025"),
+    ("iptv","IPTV","TV","33355F"),
 ]
 out=["private val defaultRemoteShortcutApps = listOf("]
 for i,(ident,label,mark,color) in enumerate(apps):
@@ -184,3 +185,45 @@ change("app/build.gradle.kts", [
 ])
 change("app/src/main/res/values/strings.xml", [('Controle TCL Livre', 'Controle TCL 1.1')])
 print("TCL_V1_1_PLAYBACK_PATCH_OK")
+
+
+# TCL 1.2: square offline service logos and an IPTV launch shortcut.
+from urllib.request import urlopen
+asset_sha = "2ade7af6c86f0bf7de0b29cd62af99b3458b7af1"
+resources = ROOT / "app/src/main/res/drawable-nodpi"
+resources.mkdir(parents=True,exist_ok=True)
+logos = {
+    "netflix": "netflix",
+    "prime_video": "prime-video",
+    "max": "max",
+    "disney_plus": "disney-plus",
+    "apple_tv": "apple-tv-plus",
+    "youtube": "youtube"
+}
+for dest, source in logos.items():
+    url = f"https://raw.githubusercontent.com/homarr-labs/dashboard-icons/{asset_sha}/png/{source}.png"
+    binary = urlopen(url, timeout=25).read()
+    if not binary.startswith(b"\\x89PNG\\r\\n\\x1a\\n") or len(binary)<1000:
+        raise RuntimeError("Invalid brand icon asset: "+source)
+    (resources/f"tcl_brand_{dest}.png").write_bytes(binary)
+
+copyfile("overrides/AppShortcutTiles.kt", SRC/"ui/app/AppShortcutTiles.kt")
+change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt",[
+    ("RemoteShelfMode.Applications -> AppShortcutStrip(",
+     "RemoteShelfMode.Applications -> AppShortcutStripSquare("),
+    ("            if (hasTopStrip) maxHeight * 0.34f else maxHeight * 0.43f,\\n            295.dp\\n        ).coerceAtLeast(240.dp)",
+     "            if (hasTopStrip) maxHeight * 0.28f else maxHeight * 0.36f,\\n            265.dp\\n        ).coerceAtLeast(200.dp)")
+])
+change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteCustomization.kt",[
+    ("    return savedOrder + missingCustom",
+     "    return savedOrder + defaultIds.filter { it !in savedOrder } + missingCustom")
+])
+change("app/build.gradle.kts",[
+    ("versionCode = 11", "versionCode = 12"),
+    ('versionName = "1.1-TCL"', 'versionName = "1.2-TCL"'),
+    ('applicationId = "com.tclremote.livre.v11"', 'applicationId = "com.tclremote.livre"')
+])
+change("app/src/main/res/values/strings.xml",[
+    ("Controle TCL 1.1","Controle TCL 1.2")
+])
+print("TCL_V1_2_IPTV_BRAND_EPISODE_PATCH_OK")
