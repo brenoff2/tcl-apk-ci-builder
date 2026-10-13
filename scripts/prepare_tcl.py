@@ -116,8 +116,8 @@ change(vm, [
      "        connectToDeviceInternal(device.id, userInitiated = true)\n"
      "    }\n\n"
      "    fun connectToDevice(deviceId: String) {\n"),
-    ("        if (!device.isChromecastServiceDevice()) {\n",
-     "        if (!device.isChromecastServiceDevice() && deviceId !in manualDeviceIds) {\n"),
+    ("        if (!device.isChromecastServiceDevice()) {\n            synchronized(discoveredDevices) { discoveredDevices.remove(deviceId) }\n",
+     "        if (!device.isChromecastServiceDevice() && deviceId !in manualDeviceIds) {\n            synchronized(discoveredDevices) { discoveredDevices.remove(deviceId) }\n"),
     ("        device.addListener(listener)\n        device.connect()",
      "        device.addListener(listener)\n"
      "        if (device.id in manualDeviceIds) listener.onDeviceReady(device)\n"
