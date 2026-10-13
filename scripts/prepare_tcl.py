@@ -258,3 +258,34 @@ change("app/src/main/res/values/strings.xml", [
 ])
 assert 'applicationId = "com.tclremote.livre"' in (ROOT/"app/build.gradle.kts").read_text()
 print("TCL_V1_3_OPAQUE_ICONS_AND_EPISODES_OK")
+
+# TCL 1.4: launch installed apps instead of browser URLs. Home Assistant
+# Android TV Remote documents market://launch?id=<package>. Users can long
+# press a logo and try the registered native link if their TV doesn't honor it.
+change("app/src/main/java/com/hari/androidtvremote/ui/app/TvRemoteViewModel.kt",[
+    ('"Netflix"                      -> "netflix://"',
+     '"Netflix"                      -> "market://launch?id=com.netflix.ninja"'),
+    ('"YouTube"                      -> "https://www.youtube.com"',
+     '"YouTube"                      -> "market://launch?id=com.google.android.youtube.tv"'),
+    ('"Prime", "Prime Video"         -> "https://www.primevideo.com/"',
+     '"Prime", "Prime Video"         -> "market://launch?id=com.amazon.amazonvideo.livingroom"'),
+    ('"Disney+"                      -> "https://www.disneyplus.com/"',
+     '"Disney+"                      -> "market://launch?id=com.disney.disneyplus"'),
+    ('"Apple TV"                     -> "https://tv.apple.com/"',
+     '"Apple TV"                     -> "market://launch?id=com.apple.atve.androidtv.appletv"'),
+    ('"HBO Max", "Max"               -> "https://max.com/"',
+     '"HBO Max", "Max"               -> "market://launch?id=com.wbd.stream"')
+])
+# Placeholder makes Android aapt include R.drawable.tcl_brand_iptv. Before
+# release signing the placeholder is replaced with the cropped user screenshot.
+(resources/"tcl_brand_iptv.png").write_bytes(
+    (resources/"tcl_brand_prime_video.png").read_bytes()
+)
+change("app/build.gradle.kts", [
+    ("versionCode = 13", "versionCode = 14"),
+    ('versionName = "1.3-TCL"', 'versionName = "1.4-TCL"')
+])
+change("app/src/main/res/values/strings.xml", [
+    ("Controle TCL 1.3", "Controle TCL 1.4")
+])
+print("TCL_V1_4_APP_LAUNCH_AND_IPTV_PICKER_OK")
