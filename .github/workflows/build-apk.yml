@@ -1,0 +1,99 @@
+name: Build Controle TCL APK (fora Oracle)
+on:
+  push:
+    branches: ['feat/android-apk-no-ads']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: tcl-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Android 36
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Python e Pillow para ícones opacos
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Fonte Apache-2.0 fixada
+        run: |
+          git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+      - name: Remover rastreamento e adicionar IP manual
+        run: |
+          python3 scripts/prepare_tcl.py
+          ! grep -E 'libs[.]firebase|plugins[.]firebase' source/app/build.gradle.kts
+      - name: Compilar APK Android
+        run: |
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verificar APK assinado
+        run: |
+          mkdir -p output
+          cp source/app/build/outputs/apk/debug/app-debug.apk output/Controle_TCL_Livre_v1.6_CI.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose output/Controle_TCL_Livre_v1.6_CI.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging output/Controle_TCL_Livre_v1.6_CI.apk | head -n 8
+          unzip -l output/Controle_TCL_Livre_v1.6_CI.apk | grep classes.dex
+          sha256sum output/Controle_TCL_Livre_v1.6_CI.apk | tee output/SHA256.txt
+          cp source/LICENSE output/LICENSE-APACHE-2.0.txt
+      - name: Salvar APK nos artefatos do PR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Controle_TCL_V1_6_CI
+          path: output/
+          if-no-files-found: error
+          retention-days: 30
+  build-tv-companion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Android 33 + Build tools
+        run: sdkmanager 'platforms;android-33' 'build-tools;35.0.0'
+      - name: Clone pinned MIT TV Bluetooth utility
+        run: |
+          git clone --depth 1 https://github.com/fezdk/bluetooth-quick-connect.git tv-source
+          test "$(git -C tv-source rev-parse HEAD)" = "508b5f148e1945911085f1789051c59d76c0278b"
+      - name: Customize TV companion
+        run: python3 scripts/prepare_companion.py
+      - name: Compile companion APK
+        run: |
+          cd tv-source
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify TV app signature and package
+        run: |
+          mkdir -p output-tv
+          cp tv-source/app/build/outputs/apk/debug/app-debug.apk output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk | head -n 10
+          unzip -l output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk | grep classes.dex
+          cp tv-source/LICENSE output-tv/LICENSE-Bluetooth-Quick-Connect-MIT.txt
+          sha256sum output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk > output-tv/SHA256.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Controle_TCL_TV_Complemento_V1_1_CI
+          path: output-tv/
+          if-no-files-found: error
+          retention-days: 30
