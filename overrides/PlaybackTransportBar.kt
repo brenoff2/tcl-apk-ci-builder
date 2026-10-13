@@ -116,6 +116,24 @@ fun PlaybackTransportBar(
                 onClick = { accelerateForward() }
             )
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            PlaybackChip(
+                text = "↺ Do início",
+                description = "Solicita reinício do episódio; alguns streamings interpretam como anterior",
+                modifier = Modifier.weight(1f)
+            ) {
+                reset()
+                onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_PREVIOUS)
+            }
+            PlaybackChip(
+                text = "☷ Episódios",
+                description = "Voltar para a tela anterior para selecionar episódios",
+                modifier = Modifier.weight(1f)
+            ) {
+                reset()
+                onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_BACK)
+            }
+        }
     }
 }
 
