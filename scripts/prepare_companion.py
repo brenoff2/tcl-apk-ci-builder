@@ -40,8 +40,8 @@ change(manifest,
        '        </intent>\n'
        '    </queries>')
 change(manifest,
-       'android:label="Bluetooth Quick Connect"',
-       'android:label="Controle TCL TV"')
+       '        android:label="Bluetooth Quick Connect"',
+       '        android:label="Controle TCL TV"')
 change(manifest,
        '        <service\n            android:name=".RemoteButtonService"',
        '        <activity\n            android:name=".IptvAppsActivity"\n'
@@ -123,9 +123,6 @@ change(main,
 change(main,
        'button.setText("Choose device: " + mapping.name);',
        'button.setText("Fones escolhidos: " + mapping.name);')
-change(main,
-       'String[] labels = new String[deviceOptions.size()];',
-       'String[] labels = new String[deviceOptions.size()];')
 change(main,
        'setTitle(button.label + " button device")',
        'setTitle("Escolher fones Bluetooth")')

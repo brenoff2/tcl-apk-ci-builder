@@ -289,3 +289,21 @@ change("app/src/main/res/values/strings.xml", [
     ("Controle TCL 1.3", "Controle TCL 1.4")
 ])
 print("TCL_V1_4_APP_LAUNCH_AND_IPTV_PICKER_OK")
+
+# TCL 1.5: same package/certificate, 2/3-sized edge-to-edge icons,
+# installed TV-app selection via optional on-TV accessibility companion.
+change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt", [
+    ("                                onQuickApp = wrappedOnQuickApp,\n                                shortcutSize = shelfButtonSize",
+     "                                onQuickApp = wrappedOnQuickApp,\n"
+     "                                onRemoteKey = wrappedOnRemoteKey,\n"
+     "                                shortcutSize = shelfButtonSize")
+])
+change("app/build.gradle.kts", [
+    ("versionCode = 14", "versionCode = 15"),
+    ('versionName = "1.4-TCL"', 'versionName = "1.5-TCL"')
+])
+change("app/src/main/res/values/strings.xml", [
+    ("Controle TCL 1.4", "Controle TCL 1.5")
+])
+assert 'applicationId = "com.tclremote.livre"' in (ROOT/"app/build.gradle.kts").read_text()
+print("TCL_V1_5_TV_PICKER_BT_BUTTON_OK")
