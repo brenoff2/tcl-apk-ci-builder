@@ -14,7 +14,7 @@ def change(path,old,new):
         raise RuntimeError(f"{path}: source changed, count={n}: {old[:80]}")
     p.write_text(s.replace(old,new,1))
 
-for name in ("IptvAppsActivity.java","RemoteButtonService.java","BluetoothRecoverAction.java"):
+for name in ("IptvAppsActivity.java","RemoteButtonService.java","BluetoothRecoverAction.java","TvAppBridge.java"):
     copyfile(source/name, base/name)
 
 change("app/build.gradle.kts",
@@ -129,3 +129,23 @@ change(main,
 # Don't request privileged Bluetooth permissions: only normal BLUETOOTH_CONNECT.
 assert "BLUETOOTH_PRIVILEGED" not in (root/manifest).read_text()
 print("TCL_TV_COMPANION_V1_PATCH_OK")
+
+# TV companion 1.1: paired local network API, lists actual installed app icons.
+change(manifest,
+       '    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />',
+       '    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\\n'
+       '    <uses-permission android:name="android.permission.INTERNET" />')
+change(main,
+       'root.addView(title);',
+       'root.addView(title);\\n\\n'
+       '        TextView pairingCode = new TextView(this);\\n'
+       '        pairingCode.setText("Codigo para conectar os apps ao celular: " + TvAppBridge.pairingCode(this));\\n'
+       '        pairingCode.setTextSize(23);\\n'
+       '        pairingCode.setTextColor(Color.rgb(149,205,255));\\n'
+       '        pairingCode.setPadding(0, 8, 0, 18);\\n'
+       '        root.addView(pairingCode);')
+change("app/build.gradle.kts",
+       'versionCode = 1', 'versionCode = 2')
+change("app/build.gradle.kts",
+       'versionName = "1.0-TCL"', 'versionName = "1.1-TCL"')
+print("TCL_TV_APPS_BRIDGE_READY")

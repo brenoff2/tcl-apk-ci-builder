@@ -12,7 +12,11 @@ import android.util.Log;
  * Red = recover headset; blue = launch/chose IPTV; yellow = change IPTV.
  */
 public final class RemoteButtonService extends AccessibilityService {
+    private TvAppBridge appBridge;
     @Override protected void onServiceConnected() {
+        super.onServiceConnected();
+        appBridge = new TvAppBridge(this);
+        appBridge.start();
         AccessibilityServiceInfo info=getServiceInfo();
         if(info!=null) {
             info.flags |= AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS;
@@ -42,6 +46,10 @@ public final class RemoteButtonService extends AccessibilityService {
             return true;
         }
         return false;
+    }
+    @Override public void onDestroy() {
+        if (appBridge != null) appBridge.stop();
+        super.onDestroy();
     }
     @Override public void onAccessibilityEvent(AccessibilityEvent e) { }
     @Override public void onInterrupt() { }
