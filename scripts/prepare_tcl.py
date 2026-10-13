@@ -166,3 +166,19 @@ change(discovery, [
      "                // Section header\n")
 ])
 print("TCL_PATCH_OK")
+
+
+# TCL v1.1: permanently visible media bar on the remote home view.
+from shutil import copyfile
+copyfile("overrides/PlaybackTransportBar.kt", SRC / "ui/app/PlaybackTransportBar.kt")
+change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt", [
+    ("                    RemoteLayoutConfig.SECTION_DPAD_STAGE -> {\n                        Spacer(modifier = Modifier.height(6.dp))",
+     "                    RemoteLayoutConfig.SECTION_DPAD_STAGE -> {\n                        PlaybackTransportBar(onRemoteKey = wrappedOnRemoteKey)\n                        Spacer(modifier = Modifier.height(6.dp))"),
+    ("            if (hasTopStrip) maxHeight * 0.44f else maxHeight * 0.52f,\n            352.dp\n        ).coerceAtLeast(350.dp)",
+     "            if (hasTopStrip) maxHeight * 0.34f else maxHeight * 0.43f,\n            295.dp\n        ).coerceAtLeast(240.dp)")
+])
+change("app/build.gradle.kts", [
+    ("versionCode = 10", "versionCode = 11"),
+    ('versionName = "1.0-TCL"', 'versionName = "1.1-TCL"')
+])
+print("TCL_V1_1_PLAYBACK_PATCH_OK")
