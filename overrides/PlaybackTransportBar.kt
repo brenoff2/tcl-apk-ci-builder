@@ -1,5 +1,7 @@
 package com.hari.androidtvremote.ui.app
 
+import android.content.Context
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,10 +17,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -38,6 +42,11 @@ fun PlaybackTransportBar(
     modifier: Modifier = Modifier
 ) {
     val levels = listOf(1, 2, 4, 8, 16)
+    val context = LocalContext.current
+    val companionPrefs = remember(context) {
+        context.getSharedPreferences("tcl_tv_companion", Context.MODE_PRIVATE)
+    }
+    var showHeadsetSetup by remember { mutableStateOf(false) }
     var forwardRequests by rememberSaveable { mutableStateOf(0) }
     var rewindRequests by rememberSaveable { mutableStateOf(0) }
     var showEpisodeGuide by rememberSaveable { mutableStateOf(false) }
@@ -136,7 +145,33 @@ fun PlaybackTransportBar(
                 reset()
                 showEpisodeGuide = true
             }
+            PlaybackChip(
+                text = "🎧 Fones",
+                description = "Tentar desconectar e reconectar o fone Bluetooth pareado na TCL",
+                modifier = Modifier.weight(0.9f)
+            ) {
+                if (companionPrefs.getBoolean("confirmed", false)) {
+                    onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_PROG_RED)
+                } else {
+                    showHeadsetSetup = true
+                }
+            }
         }
+    }
+
+    if (showHeadsetSetup) {
+        TvCompanionSetupDialog(
+            description = "Para tentar reiniciar a conexão dos fones Bluetooth da TCL, " +
+                "instale o complemento Controle TCL TV, ative o serviço em Acessibilidade " +
+                "e escolha seus fones pareados na opção Fones (botão vermelho). " +
+                "Quando a TCL bloquear a reconexão silenciosa, a TV abrirá as opções Bluetooth.",
+            onReady = {
+                companionPrefs.edit().putBoolean("confirmed", true).apply()
+                showHeadsetSetup = false
+                onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_PROG_RED)
+            },
+            onDismiss = { showHeadsetSetup = false }
+        )
     }
 
     if (showEpisodeGuide) {
