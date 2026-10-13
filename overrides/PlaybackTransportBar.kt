@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +40,7 @@ fun PlaybackTransportBar(
     val levels = listOf(1, 2, 4, 8, 16)
     var forwardRequests by rememberSaveable { mutableStateOf(0) }
     var rewindRequests by rememberSaveable { mutableStateOf(0) }
+    var showEpisodeGuide by rememberSaveable { mutableStateOf(false) }
 
     fun reset() {
         forwardRequests = 0
@@ -127,13 +130,44 @@ fun PlaybackTransportBar(
             }
             PlaybackChip(
                 text = "☷ Episódios",
-                description = "Voltar para a tela anterior para selecionar episódios",
+                description = "Abrir opções para acessar a lista de episódios",
                 modifier = Modifier.weight(1f)
             ) {
                 reset()
-                onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_BACK)
+                showEpisodeGuide = true
             }
         }
+    }
+
+    if (showEpisodeGuide) {
+        AlertDialog(
+            onDismissRequest = { showEpisodeGuide = false },
+            title = { Text("Episódios e temporadas") },
+            text = {
+                Text(
+                    "Na Netflix, a lista fica na página da série, em \"Episódios e mais\". " +
+                    "O controle não consegue abrir essa seção diretamente a partir do vídeo. " +
+                    "Experimente Voltar ao título e selecione Episódios e mais com as setas. " +
+                    "Mostrar controles abre o menu de reprodução na TV."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showEpisodeGuide = false
+                    onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_BACK)
+                }) {
+                    Text("Voltar ao título")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showEpisodeGuide = false
+                    onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_DPAD_UP)
+                }) {
+                    Text("Mostrar controles")
+                }
+            }
+        )
     }
 }
 

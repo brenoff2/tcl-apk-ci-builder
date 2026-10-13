@@ -227,3 +227,34 @@ change("app/src/main/res/values/strings.xml",[
     ("Controle TCL 1.1","Controle TCL 1.2")
 ])
 print("TCL_V1_2_IPTV_BRAND_EPISODE_PATCH_OK")
+
+# TCL 1.3: compose opaque 256x256 tiles. Brand logos remain unchanged,
+# but their backgrounds are baked into the PNG itself for high contrast.
+from PIL import Image
+brand_backgrounds = {
+    "netflix": ("#151515", 0.74),
+    "prime_video": ("#F0FAFF", 0.97),
+    "max": ("#F3F0FF", 0.99),
+    "disney_plus": ("#070F32", 0.92),
+    "apple_tv": ("#FFFFFF", 0.94),
+    "youtube": ("#FAFAFA", 0.76)
+}
+for brand, (background, fill) in brand_backgrounds.items():
+    target = resources / f"tcl_brand_{brand}.png"
+    original = Image.open(target).convert("RGBA")
+    original.thumbnail((int(256 * fill), int(256 * fill)), Image.Resampling.LANCZOS)
+    icon = Image.new("RGBA", (256, 256), background)
+    icon.alpha_composite(original, ((256 - original.width) // 2, (256 - original.height) // 2))
+    icon.convert("RGB").save(target, format="PNG", optimize=True)
+    audit = Image.open(target)
+    assert audit.mode == "RGB" and audit.size == (256, 256), brand
+
+change("app/build.gradle.kts", [
+    ("versionCode = 12", "versionCode = 13"),
+    ('versionName = "1.2-TCL"', 'versionName = "1.3-TCL"')
+])
+change("app/src/main/res/values/strings.xml", [
+    ("Controle TCL 1.2", "Controle TCL 1.3")
+])
+assert 'applicationId = "com.tclremote.livre"' in (ROOT/"app/build.gradle.kts").read_text()
+print("TCL_V1_3_OPAQUE_ICONS_AND_EPISODES_OK")

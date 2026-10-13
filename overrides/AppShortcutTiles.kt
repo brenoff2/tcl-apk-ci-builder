@@ -79,7 +79,7 @@ fun AppShortcutStripSquare(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         quickApps.forEach { app ->
-            val tileSize = shortcutSize * 0.88f
+            val tileSize = shortcutSize
             val logoId = when (app.id) {
                 "netflix" -> R.drawable.tcl_brand_netflix
                 "prime_video" -> R.drawable.tcl_brand_prime_video
@@ -93,7 +93,7 @@ fun AppShortcutStripSquare(
                 modifier = Modifier
                     .size(tileSize)
                     .clip(RoundedCornerShape(13.dp))
-                    .background(Color(0xFF15151B))
+                    .background(if (app.id == "iptv") Color(0xFF173B68) else if (logoId != null) Color.White else Color(0xFF15151B))
                     .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(13.dp))
                     .combinedClickable(
                         onClick = {
@@ -117,7 +117,7 @@ fun AppShortcutStripSquare(
                     logoId != null -> Image(
                         painter = painterResource(logoId),
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(5.dp),
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Fit
                     )
                     app.id == "iptv" -> Column(horizontalAlignment = Alignment.CenterHorizontally) {

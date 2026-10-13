@@ -2,8 +2,6 @@ name: Build Controle TCL APK (fora Oracle)
 on:
   push:
     branches: ['feat/android-apk-no-ads']
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 permissions:
   contents: write
@@ -25,6 +23,11 @@ jobs:
         uses: android-actions/setup-android@v4
       - name: Android 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Python e Pillow para ícones opacos
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
       - name: Fonte Apache-2.0 fixada
         run: |
           git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
@@ -41,16 +44,16 @@ jobs:
       - name: Verificar APK assinado
         run: |
           mkdir -p output
-          cp source/app/build/outputs/apk/debug/app-debug.apk output/Controle_TCL_Livre_v1.2_CI.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose output/Controle_TCL_Livre_v1.2_CI.apk
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging output/Controle_TCL_Livre_v1.2_CI.apk | head -n 8
-          unzip -l output/Controle_TCL_Livre_v1.2_CI.apk | grep classes.dex
-          sha256sum output/Controle_TCL_Livre_v1.2_CI.apk | tee output/SHA256.txt
+          cp source/app/build/outputs/apk/debug/app-debug.apk output/Controle_TCL_Livre_v1.3_CI.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose output/Controle_TCL_Livre_v1.3_CI.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging output/Controle_TCL_Livre_v1.3_CI.apk | head -n 8
+          unzip -l output/Controle_TCL_Livre_v1.3_CI.apk | grep classes.dex
+          sha256sum output/Controle_TCL_Livre_v1.3_CI.apk | tee output/SHA256.txt
           cp source/LICENSE output/LICENSE-APACHE-2.0.txt
       - name: Salvar APK nos artefatos do PR
         uses: actions/upload-artifact@v4
         with:
-          name: Controle_TCL_V1_2_CI
+          name: Controle_TCL_V1_3_CI
           path: output/
           if-no-files-found: error
           retention-days: 30
