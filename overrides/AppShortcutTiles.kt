@@ -45,6 +45,15 @@ import com.hari.androidtvremote.R
 
 private data class TvIptvPlayer(val name: String, val packageName: String)
 
+private val nativeAppLinks = mapOf(
+    "netflix" to "netflix://",
+    "prime_video" to "https://app.primevideo.com",
+    "hbo_max" to "https://play.max.com",
+    "disney_plus" to "https://www.disneyplus.com",
+    "apple_tv" to "https://tv.apple.com",
+    "youtube" to "vnd.youtube.launch://"
+)
+
 private val iptvPlayerOptions = listOf(
     TvIptvPlayer("TiviMate", "ar.tvplayer.tv"),
     TvIptvPlayer("XCIPTV Player", "com.nathnetwork.xciptv"),
@@ -73,6 +82,7 @@ fun AppShortcutStripSquare(
         mutableStateOf(prefs.getString("tv_player_package", "") ?: "")
     }
     var showingPicker by remember { mutableStateOf(false) }
+    var editingStreaming by remember { mutableStateOf<RemoteShortcutApp?>(null) }
     var customPackage by rememberSaveable { mutableStateOf("") }
     var pickerError by remember { mutableStateOf("") }
 
@@ -118,10 +128,18 @@ fun AppShortcutStripSquare(
                                 if (selectedPackage.isBlank()) openPicker()
                                 else onQuickApp("market://launch?id=" + selectedPackage)
                             } else {
-                                onQuickApp(app.intentUri ?: app.launchName)
+                                val alternate = nativeAppLinks[app.id]
+                                if (alternate != null && prefs.getBoolean("use_native_" + app.id, false)) {
+                                    onQuickApp(alternate)
+                                } else {
+                                    onQuickApp(app.intentUri ?: app.launchName)
+                                }
                             }
                         },
-                        onLongClick = { if (app.id == "iptv") openPicker() }
+                        onLongClick = {
+                            if (app.id == "iptv") openPicker()
+                            else if (app.id in nativeAppLinks) editingStreaming = app
+                        }
                     )
                     .semantics {
                         contentDescription = if (app.id == "iptv")
@@ -149,6 +167,35 @@ fun AppShortcutStripSquare(
                 }
             }
         }
+    }
+
+    val selectedStreaming = editingStreaming
+    if (selectedStreaming != null) {
+        AlertDialog(
+            onDismissRequest = { editingStreaming = null },
+            title = { Text("Abrir " + selectedStreaming.label) },
+            text = {
+                Text(
+                    "Selecione como a TCL deve iniciar este serviço. " +
+                    "O método por aplicativo evita abrir um site; se não funcionar na sua TV, " +
+                    "teste o link nativo. A preferência fica salva."
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    prefs.edit().putBoolean("use_native_" + selectedStreaming.id, false).apply()
+                    editingStreaming = null
+                    onQuickApp(selectedStreaming.launchName)
+                }) { Text("Abrir aplicativo") }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    prefs.edit().putBoolean("use_native_" + selectedStreaming.id, true).apply()
+                    editingStreaming = null
+                    onQuickApp(nativeAppLinks.getValue(selectedStreaming.id))
+                }) { Text("Testar link nativo") }
+            }
+        )
     }
 
     if (showingPicker) {
