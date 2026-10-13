@@ -203,7 +203,7 @@ logos = {
 for dest, source in logos.items():
     url = f"https://raw.githubusercontent.com/homarr-labs/dashboard-icons/{asset_sha}/png/{source}.png"
     binary = urlopen(url, timeout=25).read()
-    if not binary.startswith(b"\\x89PNG\\r\\n\\x1a\\n") or len(binary)<1000:
+    if not binary.startswith(b"\x89PNG\r\n\x1a\n") or len(binary)<1000:
         raise RuntimeError("Invalid brand icon asset: "+source)
     (resources/f"tcl_brand_{dest}.png").write_bytes(binary)
 
@@ -211,8 +211,8 @@ copyfile("overrides/AppShortcutTiles.kt", SRC/"ui/app/AppShortcutTiles.kt")
 change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt",[
     ("RemoteShelfMode.Applications -> AppShortcutStrip(",
      "RemoteShelfMode.Applications -> AppShortcutStripSquare("),
-    ("            if (hasTopStrip) maxHeight * 0.34f else maxHeight * 0.43f,\\n            295.dp\\n        ).coerceAtLeast(240.dp)",
-     "            if (hasTopStrip) maxHeight * 0.28f else maxHeight * 0.36f,\\n            265.dp\\n        ).coerceAtLeast(200.dp)")
+    ("            if (hasTopStrip) maxHeight * 0.34f else maxHeight * 0.43f,\n            295.dp\n        ).coerceAtLeast(240.dp)",
+     "            if (hasTopStrip) maxHeight * 0.28f else maxHeight * 0.36f,\n            265.dp\n        ).coerceAtLeast(200.dp)")
 ])
 change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteCustomization.kt",[
     ("    return savedOrder + missingCustom",
