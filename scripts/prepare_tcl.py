@@ -307,3 +307,97 @@ change("app/src/main/res/values/strings.xml", [
 ])
 assert 'applicationId = "com.tclremote.livre"' in (ROOT/"app/build.gradle.kts").read_text()
 print("TCL_V1_5_TV_PICKER_BT_BUTTON_OK")
+
+# TCL 1.6: dynamic official installed-app catalog with per-TV favorites.
+from shutil import copyfile
+copyfile("overrides/TclInstalledApps.kt", SRC / "ui/app/TclInstalledApps.kt")
+change("app/src/main/AndroidManifest.xml", [
+    ('android:hardwareAccelerated="true"',
+     'android:hardwareAccelerated="true"\n        android:usesCleartextTraffic="true"')
+])
+change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt", [
+    ("RemoteShelfMode.Applications -> AppShortcutStripSquare(\n"
+     "                                quickApps = quickApps,\n"
+     "                                onQuickApp = wrappedOnQuickApp,\n"
+     "                                onRemoteKey = wrappedOnRemoteKey,\n"
+     "                                shortcutSize = shelfButtonSize\n"
+     "                            )",
+     "RemoteShelfMode.Applications -> TclInstalledAppsBar(\n"
+     "                                tvHost = sessionState.connectedDevice?.ipAddress,\n"
+     "                                modifier = Modifier.fillMaxWidth()\n"
+     "                            )")
+])
+# Unified playback card + D-pad flanked by volume and channel controls.
+change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt", [
+    ("                        PlaybackTransportBar(onRemoteKey = wrappedOnRemoteKey)\n"
+     "                        Spacer(modifier = Modifier.height(6.dp))\n"
+     "                        RemotePadStage(\n"
+     "                            activePadMode = activePadMode,\n"
+     "                            stageHeight = padStageHeight,\n"
+     "                            isConnected = isConnected,\n"
+     "                            hapticsEnabled = hapticsEnabled,\n"
+     "                            onAction = onRemoteKey\n"
+     "                        )",
+     "                        Column(modifier = Modifier.fillMaxWidth()\n"
+     "                            .clip(RoundedCornerShape(18.dp))\n"
+     "                            .background(MaterialTheme.colorScheme.surfaceContainer)\n"
+     "                            .padding(9.dp)) {\n"
+     "                            Text(\"Reprodução\", fontSize = 13.sp,\n"
+     "                                fontWeight = FontWeight.SemiBold,\n"
+     "                                color = MaterialTheme.colorScheme.onSurface)\n"
+     "                            PlaybackTransportBar(onRemoteKey = wrappedOnRemoteKey)\n"
+     "                        }\n"
+     "                        Spacer(modifier = Modifier.height(7.dp))\n"
+     "                        Row(modifier = Modifier.fillMaxWidth().height(padStageHeight),\n"
+     "                            horizontalArrangement = Arrangement.spacedBy(8.dp),\n"
+     "                            verticalAlignment = Alignment.CenterVertically) {\n"
+     "                            RemoteVerticalRocker(\n"
+     "                                modifier = Modifier.width(52.dp).fillMaxHeight(),\n"
+     "                                label = \"VOL\", fluidLevel = sessionState.volumeFraction,\n"
+     "                                isMuted = sessionState.isMuted,\n"
+     "                                topIcon = Icons.Filled.Add,\n"
+     "                                bottomIcon = Icons.Filled.Remove,\n"
+     "                                iconSize = actionIconSize,\n"
+     "                                contentColor = MaterialTheme.colorScheme.onSurface,\n"
+     "                                onTopClick = wrappedOnVolumeUp,\n"
+     "                                onBottomClick = wrappedOnVolumeDown\n"
+     "                            )\n"
+     "                            Box(modifier = Modifier.weight(1f)) {\n"
+     "                                RemotePadStage(\n"
+     "                                    activePadMode = activePadMode,\n"
+     "                                    stageHeight = padStageHeight,\n"
+     "                                    isConnected = isConnected,\n"
+     "                                    hapticsEnabled = hapticsEnabled,\n"
+     "                                    onAction = onRemoteKey\n"
+     "                                )\n"
+     "                            }\n"
+     "                            RemoteVerticalRocker(\n"
+     "                                modifier = Modifier.width(52.dp).fillMaxHeight(),\n"
+     "                                label = \"CH\",\n"
+     "                                topIcon = Icons.Filled.KeyboardArrowUp,\n"
+     "                                bottomIcon = Icons.Filled.KeyboardArrowDown,\n"
+     "                                iconSize = actionIconSize,\n"
+     "                                contentColor = MaterialTheme.colorScheme.onSurface,\n"
+     "                                onTopClick = { wrappedOnRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_CHANNEL_UP) },\n"
+     "                                onBottomClick = { wrappedOnRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_CHANNEL_DOWN) }\n"
+     "                            )\n"
+     "                        }")
+])
+change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt", [
+    ("    onPower: () -> Unit,\n    layoutConfig: RemoteLayoutConfig\n) {",
+     "    onPower: () -> Unit,\n    layoutConfig: RemoteLayoutConfig,\n    showRockers: Boolean = true\n) {"),
+    ("        when (layoutConfig.leftRocker) {",
+     "        if (showRockers) when (layoutConfig.leftRocker) {"),
+    ("        when (layoutConfig.rightRocker) {",
+     "        if (showRockers) when (layoutConfig.rightRocker) {"),
+    ("                                layoutConfig = layoutConfig\n                            )",
+     "                                layoutConfig = layoutConfig,\n                                showRockers = false\n                            )")
+])
+change("app/build.gradle.kts", [
+    ("versionCode = 15", "versionCode = 16"),
+    ('versionName = "1.5-TCL"', 'versionName = "1.6-TCL"')
+])
+change("app/src/main/res/values/strings.xml", [
+    ("Controle TCL 1.5", "Controle TCL 1.6")
+])
+print("TCL_V1_6_OFFICIAL_INSTALLED_APPS_FAVORITES_OK")

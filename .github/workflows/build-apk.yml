@@ -44,16 +44,16 @@ jobs:
       - name: Verificar APK assinado
         run: |
           mkdir -p output
-          cp source/app/build/outputs/apk/debug/app-debug.apk output/Controle_TCL_Livre_v1.5_CI.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose output/Controle_TCL_Livre_v1.5_CI.apk
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging output/Controle_TCL_Livre_v1.5_CI.apk | head -n 8
-          unzip -l output/Controle_TCL_Livre_v1.5_CI.apk | grep classes.dex
-          sha256sum output/Controle_TCL_Livre_v1.5_CI.apk | tee output/SHA256.txt
+          cp source/app/build/outputs/apk/debug/app-debug.apk output/Controle_TCL_Livre_v1.6_CI.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose output/Controle_TCL_Livre_v1.6_CI.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging output/Controle_TCL_Livre_v1.6_CI.apk | head -n 8
+          unzip -l output/Controle_TCL_Livre_v1.6_CI.apk | grep classes.dex
+          sha256sum output/Controle_TCL_Livre_v1.6_CI.apk | tee output/SHA256.txt
           cp source/LICENSE output/LICENSE-APACHE-2.0.txt
       - name: Salvar APK nos artefatos do PR
         uses: actions/upload-artifact@v4
         with:
-          name: Controle_TCL_V1_5_CI
+          name: Controle_TCL_V1_6_CI
           path: output/
           if-no-files-found: error
           retention-days: 30
@@ -85,15 +85,15 @@ jobs:
       - name: Verify TV app signature and package
         run: |
           mkdir -p output-tv
-          cp tv-source/app/build/outputs/apk/debug/app-debug.apk output-tv/Controle_TCL_TV_Complemento_v1.0_CI.apk
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose output-tv/Controle_TCL_TV_Complemento_v1.0_CI.apk
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging output-tv/Controle_TCL_TV_Complemento_v1.0_CI.apk | head -n 10
-          unzip -l output-tv/Controle_TCL_TV_Complemento_v1.0_CI.apk | grep classes.dex
+          cp tv-source/app/build/outputs/apk/debug/app-debug.apk output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk | head -n 10
+          unzip -l output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk | grep classes.dex
           cp tv-source/LICENSE output-tv/LICENSE-Bluetooth-Quick-Connect-MIT.txt
-          sha256sum output-tv/Controle_TCL_TV_Complemento_v1.0_CI.apk > output-tv/SHA256.txt
+          sha256sum output-tv/Controle_TCL_TV_Complemento_v1.1_CI.apk > output-tv/SHA256.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: Controle_TCL_TV_Complemento_CI
+          name: Controle_TCL_TV_Complemento_V1_1_CI
           path: output-tv/
           if-no-files-found: error
           retention-days: 30

@@ -133,16 +133,16 @@ print("TCL_TV_COMPANION_V1_PATCH_OK")
 # TV companion 1.1: paired local network API, lists actual installed app icons.
 change(manifest,
        '    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />',
-       '    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\\n'
+       '    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />\n'
        '    <uses-permission android:name="android.permission.INTERNET" />')
 change(main,
        'root.addView(title);',
-       'root.addView(title);\\n\\n'
-       '        TextView pairingCode = new TextView(this);\\n'
-       '        pairingCode.setText("Codigo para conectar os apps ao celular: " + TvAppBridge.pairingCode(this));\\n'
-       '        pairingCode.setTextSize(23);\\n'
-       '        pairingCode.setTextColor(Color.rgb(149,205,255));\\n'
-       '        pairingCode.setPadding(0, 8, 0, 18);\\n'
+       'root.addView(title);\n\n'
+       '        TextView pairingCode = new TextView(this);\n'
+       '        pairingCode.setText("Codigo para conectar os apps ao celular: " + TvAppBridge.pairingCode(this));\n'
+       '        pairingCode.setTextSize(23);\n'
+       '        pairingCode.setTextColor(Color.rgb(149,205,255));\n'
+       '        pairingCode.setPadding(0, 8, 0, 18);\n'
        '        root.addView(pairingCode);')
 change("app/build.gradle.kts",
        'versionCode = 1', 'versionCode = 2')
