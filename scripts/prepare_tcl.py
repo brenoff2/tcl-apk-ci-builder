@@ -308,6 +308,26 @@ change("app/src/main/res/values/strings.xml", [
 assert 'applicationId = "com.tclremote.livre"' in (ROOT/"app/build.gradle.kts").read_text()
 print("TCL_V1_5_TV_PICKER_BT_BUTTON_OK")
 
+# RESCUE SWITCH: rebuild the previously usable 1.5 layout while retaining
+# the Android app ID and upgrade-compatible signing certificate.
+# No 8-digit code, no new LAN service, no new UI layout until validated.
+import os
+if os.environ.get("TCL_RESCUE_STABLE") == "1":
+    change("app/build.gradle.kts", [
+        ("versionCode = 15", "versionCode = 17"),
+        ('versionName = "1.5-TCL"', 'versionName = "1.7-Resgate"')
+    ])
+    change("app/src/main/res/values/strings.xml", [
+        ("Controle TCL 1.5", "Controle TCL 1.7")
+    ])
+    screen = (SRC/"ui/app/RemoteScreen.kt").read_text()
+    assert "AppShortcutStripSquare(" in screen
+    assert "TclInstalledAppsBar" not in screen
+    assert not (SRC/"ui/app/TclInstalledApps.kt").exists()
+    assert 'applicationId = "com.tclremote.livre"' in (ROOT/"app/build.gradle.kts").read_text()
+    print("TCL_RESGATE_ESTAVEL_SEM_VINCULACAO_OK")
+    raise SystemExit(0)
+
 # TCL 1.6: dynamic official installed-app catalog with per-TV favorites.
 from shutil import copyfile
 copyfile("overrides/TclInstalledApps.kt", SRC / "ui/app/TclInstalledApps.kt")
