@@ -4,28 +4,22 @@ import android.content.Context
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,71 +36,55 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hari.androidtvremote.R
+import com.hari.androidtvremote.androidLib.remote.Remotemessage
 
-private data class TvIptvPlayer(val name: String, val packageName: String)
-
-private val nativeAppLinks = mapOf(
+private val alternateAppLinks = mapOf(
     "netflix" to "netflix://",
     "prime_video" to "https://app.primevideo.com",
     "hbo_max" to "https://play.max.com",
     "disney_plus" to "https://www.disneyplus.com",
     "apple_tv" to "https://tv.apple.com",
-    "youtube" to "vnd.youtube.launch://"
-)
-
-private val iptvPlayerOptions = listOf(
-    TvIptvPlayer("TiviMate", "ar.tvplayer.tv"),
-    TvIptvPlayer("XCIPTV Player", "com.nathnetwork.xciptv"),
-    TvIptvPlayer("Televizo", "com.ottplay.ottplay"),
-    TvIptvPlayer("Kodi", "org.xbmc.kodi"),
-    TvIptvPlayer("VLC", "org.videolan.vlc")
+    "youtube" to "https://www.youtube.com"
 )
 
 /**
- * The remote v2 protocol cannot query which packages are installed on the TV.
- * This picker lets the user select a likely IPTV player by known app ID;
- * it never asks for an IPTV server URL or supplies streams.
+ * 2/3-size tiles, logos fill the tile with no internal transparent margins.
+ * The TV companion enumerates installed TV apps and selects IPTV on the TV.
+ * The phone cannot enumerate TV packages via Android TV Remote v2 alone.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppShortcutStripSquare(
     quickApps: List<RemoteShortcutApp>,
     onQuickApp: (String) -> Unit,
+    onRemoteKey: (Remotemessage.RemoteKeyCode) -> Unit,
     shortcutSize: Dp
 ) {
     val context = LocalContext.current
     val prefs = remember(context) {
-        context.getSharedPreferences("tcl_iptv_shortcut", Context.MODE_PRIVATE)
+        context.getSharedPreferences("tcl_tv_companion", Context.MODE_PRIVATE)
     }
-    var selectedPackage by remember {
-        mutableStateOf(prefs.getString("tv_player_package", "") ?: "")
-    }
-    var showingPicker by remember { mutableStateOf(false) }
-    var editingStreaming by remember { mutableStateOf<RemoteShortcutApp?>(null) }
-    var customPackage by rememberSaveable { mutableStateOf("") }
-    var pickerError by remember { mutableStateOf("") }
+    var showSetup by remember { mutableStateOf(false) }
+    var editStreaming by remember { mutableStateOf<RemoteShortcutApp?>(null) }
+    var requestedChange by remember { mutableStateOf(false) }
 
-    fun openPicker() {
-        customPackage = selectedPackage.takeIf {
-            it.isNotBlank() && iptvPlayerOptions.none { p -> p.packageName == it }
-        } ?: ""
-        pickerError = ""
-        showingPicker = true
-    }
-
-    fun choose(packageName: String) {
-        selectedPackage = packageName
-        prefs.edit().putString("tv_player_package", packageName).apply()
-        showingPicker = false
-        onQuickApp("market://launch?id=" + packageName)
+    fun iptvAction(change: Boolean) {
+        if (prefs.getBoolean("confirmed", false)) {
+            onRemoteKey(if (change)
+                Remotemessage.RemoteKeyCode.KEYCODE_PROG_YELLOW
+                else Remotemessage.RemoteKeyCode.KEYCODE_PROG_BLUE)
+        } else {
+            requestedChange = change
+            showSetup = true
+        }
     }
 
     Row(
         modifier = Modifier.horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
         quickApps.forEach { app ->
-            val logoId = when (app.id) {
+            val iconId = when (app.id) {
                 "netflix" -> R.drawable.tcl_brand_netflix
                 "prime_video" -> R.drawable.tcl_brand_prime_video
                 "hbo_max" -> R.drawable.tcl_brand_max
@@ -118,49 +96,39 @@ fun AppShortcutStripSquare(
             }
             Box(
                 modifier = Modifier
-                    .size(shortcutSize)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF121624))
-                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(12.dp))
+                    .size(shortcutSize * 0.66f)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(Color(0xFF141924))
                     .combinedClickable(
                         onClick = {
-                            if (app.id == "iptv") {
-                                if (selectedPackage.isBlank()) openPicker()
-                                else onQuickApp("market://launch?id=" + selectedPackage)
-                            } else {
-                                val alternate = nativeAppLinks[app.id]
-                                if (alternate != null && prefs.getBoolean("use_native_" + app.id, false)) {
-                                    onQuickApp(alternate)
-                                } else {
-                                    onQuickApp(app.intentUri ?: app.launchName)
-                                }
-                            }
+                            if (app.id == "iptv") iptvAction(false)
+                            else onQuickApp(app.intentUri ?: app.launchName)
                         },
                         onLongClick = {
-                            if (app.id == "iptv") openPicker()
-                            else if (app.id in nativeAppLinks) editingStreaming = app
+                            if (app.id == "iptv") iptvAction(true)
+                            else if (app.id in alternateAppLinks) editStreaming = app
                         }
                     )
                     .semantics {
                         contentDescription = if (app.id == "iptv")
-                            "IPTV, toque para abrir ou segure para escolher outro aplicativo"
+                            "IPTV: toque para abrir, segure para escolher outro app instalado na TV"
                         else app.label
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (logoId != null) {
+                if (iconId != null) {
                     Image(
-                        painter = painterResource(logoId),
+                        painter = painterResource(iconId),
                         contentDescription = null,
-                        modifier = Modifier.fillMaxSize().padding(3.dp),
-                        contentScale = ContentScale.Fit
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     Text(
                         text = app.mark,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
                         color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.sp,
                         maxLines = 1,
                         textAlign = TextAlign.Center
                     )
@@ -169,84 +137,71 @@ fun AppShortcutStripSquare(
         }
     }
 
-    val selectedStreaming = editingStreaming
-    if (selectedStreaming != null) {
-        AlertDialog(
-            onDismissRequest = { editingStreaming = null },
-            title = { Text("Abrir " + selectedStreaming.label) },
-            text = {
-                Text(
-                    "Selecione como a TCL deve iniciar este serviço. " +
-                    "O método por aplicativo evita abrir um site; se não funcionar na sua TV, " +
-                    "teste o link nativo. A preferência fica salva."
-                )
+    if (showSetup) {
+        TvCompanionSetupDialog(
+            description = "Para escolher os aplicativos realmente instalados na TCL, " +
+                "instale o complemento Controle TCL TV na televisão e ative o serviço " +
+                "em Configurações → Acessibilidade. A lista aparece na própria TV.",
+            onReady = {
+                prefs.edit().putBoolean("confirmed", true).apply()
+                showSetup = false
+                onRemoteKey(if (requestedChange)
+                    Remotemessage.RemoteKeyCode.KEYCODE_PROG_YELLOW
+                    else Remotemessage.RemoteKeyCode.KEYCODE_PROG_BLUE)
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    prefs.edit().putBoolean("use_native_" + selectedStreaming.id, false).apply()
-                    editingStreaming = null
-                    onQuickApp(selectedStreaming.launchName)
-                }) { Text("Abrir aplicativo") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    prefs.edit().putBoolean("use_native_" + selectedStreaming.id, true).apply()
-                    editingStreaming = null
-                    onQuickApp(nativeAppLinks.getValue(selectedStreaming.id))
-                }) { Text("Testar link nativo") }
+            onDismiss = { showSetup = false },
+            onFallback = {
+                showSetup = false
+                onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_HOME)
             }
         )
     }
 
-    if (showingPicker) {
+    val app = editStreaming
+    if (app != null) {
         AlertDialog(
-            onDismissRequest = { showingPicker = false },
-            title = { Text("Escolher aplicativo IPTV") },
+            onDismissRequest = { editStreaming = null },
+            title = { Text("Abrir " + app.label) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(
-                        "Selecione o player que você já tem instalado na TV. " +
-                        "A conexão remota não permite listar os aplicativos instalados.",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    iptvPlayerOptions.forEach { player ->
-                        TextButton(onClick = { choose(player.packageName) }) {
-                            Text(
-                                text = (if (player.packageName == selectedPackage) "✓  " else "") +
-                                    player.name
-                            )
-                        }
-                    }
-                    OutlinedTextField(
-                        value = customPackage,
-                        onValueChange = { customPackage = it; pickerError = "" },
-                        label = { Text("Outro app: ID do pacote (opcional)") },
-                        placeholder = { Text("com.exemplo.player") },
-                        singleLine = true
-                    )
-                    if (pickerError.isNotEmpty()) {
-                        Text(pickerError, color = MaterialTheme.colorScheme.error)
-                    }
-                    TextButton(onClick = {
-                        selectedPackage = ""
-                        prefs.edit().remove("tv_player_package").apply()
-                        showingPicker = false
-                    }) { Text("Restaurar escolha / redefinir atalho") }
-                }
+                Text("Se o atalho não abrir na TCL, teste o link nativo do serviço. " +
+                     "Alguns fabricantes não aceitam abertura pelo identificador Android.")
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val candidate = customPackage.trim()
-                    if (candidate.matches(Regex("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+"))) {
-                        choose(candidate)
-                    } else {
-                        pickerError = "Selecione um player acima ou informe um ID Android válido."
-                    }
-                }) { Text("Usar outro app") }
+                    editStreaming = null
+                    onQuickApp(app.launchName)
+                }) { Text("Abrir app") }
             },
             dismissButton = {
-                TextButton(onClick = { showingPicker = false }) { Text("Cancelar") }
+                TextButton(onClick = {
+                    editStreaming = null
+                    onQuickApp(alternateAppLinks.getValue(app.id))
+                }) { Text("Link alternativo") }
             }
         )
     }
+}
+
+@Composable
+fun TvCompanionSetupDialog(
+    description: String,
+    onReady: () -> Unit,
+    onDismiss: () -> Unit,
+    onFallback: (() -> Unit)? = null
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Complemento Controle TCL TV") },
+        text = { Text(description) },
+        confirmButton = {
+            TextButton(onClick = onReady) { Text("Já configurei na TV") }
+        },
+        dismissButton = {
+            if (onFallback != null) {
+                TextButton(onClick = onFallback) { Text("Ver apps na TV") }
+            } else {
+                TextButton(onClick = onDismiss) { Text("Agora não") }
+            }
+        }
+    )
 }
