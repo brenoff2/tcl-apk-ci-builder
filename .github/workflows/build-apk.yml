@@ -1,13 +1,61 @@
-name: TCL Android APK CI
+name: Build Controle TCL APK (fora Oracle)
 on:
   push:
     branches: ['feat/android-apk-no-ads']
   pull_request:
     branches: [main]
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
-  test-runner:
+  build-apk:
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     steps:
-      - name: Hosted runner available
-        run: echo "ANDROID_CI_RUNNER_OK"
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+      - name: Android 36
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Fonte Apache-2.0 fixada
+        run: |
+          git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+      - name: Remover rastreamento e adicionar IP manual
+        run: |
+          python3 scripts/prepare_tcl.py
+          ! grep -i 'firebase' source/app/build.gradle.kts
+      - name: Compilar APK Android
+        run: |
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verificar APK assinado
+        run: |
+          mkdir -p output
+          cp source/app/build/outputs/apk/debug/app-debug.apk output/Controle_TCL_Sem_Anuncios.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose output/Controle_TCL_Sem_Anuncios.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging output/Controle_TCL_Sem_Anuncios.apk | head -n 8
+          unzip -l output/Controle_TCL_Sem_Anuncios.apk | grep classes.dex
+          sha256sum output/Controle_TCL_Sem_Anuncios.apk | tee output/SHA256.txt
+          cp source/LICENSE output/LICENSE-APACHE-2.0.txt
+      - name: Salvar APK nos artefatos do PR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Controle_TCL_Sem_Anuncios
+          path: output/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publicar APK para download direto
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view tcl-livre-v1.0 >/dev/null 2>&1 ||
+            gh release create tcl-livre-v1.0 --target "$GITHUB_SHA" --title "Controle TCL Livre v1.0" --notes "APK sem anúncios nem telemetria. Android TV Remote v2; conexão por IP, teclado, touchpad e aplicativos."
+          gh release upload tcl-livre-v1.0 output/Controle_TCL_Sem_Anuncios.apk --clobber
