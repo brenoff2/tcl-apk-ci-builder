@@ -1,0 +1,13 @@
+name: TCL Android APK CI
+on:
+  push:
+    branches: ['feat/android-apk-no-ads']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  test-runner:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hosted runner available
+        run: echo "ANDROID_CI_RUNNER_OK"
