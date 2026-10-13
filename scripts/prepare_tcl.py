@@ -179,6 +179,8 @@ change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt", [
 ])
 change("app/build.gradle.kts", [
     ("versionCode = 10", "versionCode = 11"),
-    ('versionName = "1.0-TCL"', 'versionName = "1.1-TCL"')
+    ('versionName = "1.0-TCL"', 'versionName = "1.1-TCL"'),
+    ('applicationId = "com.tclremote.livre"', 'applicationId = "com.tclremote.livre.v11"')
 ])
+change("app/src/main/res/values/strings.xml", [('Controle TCL Livre', 'Controle TCL 1.1')])
 print("TCL_V1_1_PLAYBACK_PATCH_OK")
