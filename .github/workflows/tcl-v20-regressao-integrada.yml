@@ -48,27 +48,31 @@ jobs:
         run: |
           cd source
           chmod +x gradlew
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
       - name: Auditar identificador e gerar BASE DE ASSINATURA (NAO DISTRIBUIR)
         run: |
           set -euo pipefail
           mkdir -p output-phone
-          APK=source/app/build/outputs/apk/debug/app-debug.apk
+          APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
           SDK="$ANDROID_HOME/build-tools/36.0.0"
-          "$SDK/apksigner" verify --verbose --print-certs "$APK" > output-phone/assinatura_debug.txt
           "$SDK/aapt" dump badging "$APK" > output-phone/identidade.txt
+          "$SDK/aapt" dump xmltree "$APK" AndroidManifest.xml > output-phone/manifesto.txt
+          if grep -q 'android:debuggable.*0xffffffff' output-phone/manifesto.txt; then
+            echo 'BLOQUEADO: aplicativo de producao com depuracao habilitada'
+            exit 1
+          fi
           grep -q "name='com.tclremote.livre' versionCode='20'" output-phone/identidade.txt
           sha256sum "$APK" > output-phone/sha256.txt
-          cp "$APK" output-phone/BASE_APP_2_0_REASSINAR_NAO_INSTALAR.apk
+          cp "$APK" output-phone/BASE_APP_2_0_RELEASE_UNSIGNED_NAO_INSTALAR.apk
           cat > output-phone/NAO_INSTALAR.txt <<'TXT'
-          Esse APK tem assinatura temporaria de DEBUG. NAO INSTALAR como atualizacao.
+          Este APK e RELEASE NAO ASSINADO. NAO INSTALAR diretamente.
           O aparelho 1.7 usa certificado 49de7c9a... (chave original nao recuperada).
           Para usar como app unico, e preciso assinar com chave persistente,
           planejar backup e migracao manual da versao instalada.
           TXT
       - uses: actions/upload-artifact@v4
         with:
-          name: TCL_PHONE_20_BASE_DEBUG_NAO_INSTALAR
+          name: TCL_PHONE_20_RELEASE_UNSIGNED_NAO_INSTALAR
           path: output-phone/
           retention-days: 14
           if-no-files-found: error
@@ -96,14 +100,13 @@ jobs:
         run: |
           cd tv-source
           chmod +x gradlew
-          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
       - name: Auditar manifesto real, sem AccessibilityService
         run: |
           set -euo pipefail
           mkdir -p output-tv
-          APK=tv-source/app/build/outputs/apk/debug/app-debug.apk
+          APK=tv-source/app/build/outputs/apk/release/app-release-unsigned.apk
           SDK="$ANDROID_HOME/build-tools/35.0.0"
-          "$SDK/apksigner" verify --verbose --print-certs "$APK" > output-tv/assinatura_debug.txt
           "$SDK/aapt" dump badging "$APK" > output-tv/identidade.txt
           "$SDK/aapt" dump permissions "$APK" > output-tv/permissoes.txt
           "$SDK/aapt" dump xmltree "$APK" AndroidManifest.xml > output-tv/manifesto.txt
@@ -114,15 +117,15 @@ jobs:
             exit 1
           fi
           sha256sum "$APK" > output-tv/sha256.txt
-          cp "$APK" output-tv/BASE_TV_1_3_REASSINAR_NAO_INSTALAR.apk
+          cp "$APK" output-tv/BASE_TV_1_3_RELEASE_UNSIGNED_NAO_INSTALAR.apk
           cat > output-tv/NAO_INSTALAR.txt <<'TXT'
-          O APK da TV 1.3 tem assinatura temporaria do runner de CI.
+          O APK da TV 1.3 e RELEASE NAO ASSINADO.
           Nao atualiza a TV 1.2. A liberacao requer certificado persistente
           e migracao documentada. O Play Protect ainda requer teste fisico.
           TXT
       - uses: actions/upload-artifact@v4
         with:
-          name: TCL_TV_13_BASE_DEBUG_NAO_INSTALAR
+          name: TCL_TV_13_RELEASE_UNSIGNED_NAO_INSTALAR
           path: output-tv/
           retention-days: 14
           if-no-files-found: error
