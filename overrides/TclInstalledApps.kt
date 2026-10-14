@@ -149,23 +149,30 @@ private fun OfficialTvIcon(app: TvOfficialApp, size: Dp) {
 }
 
 @Composable
-fun TclInstalledAppsBar(tvHost: String?, modifier: Modifier = Modifier) {
+fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val prefs = remember(context) {
         context.getSharedPreferences("tcl_tv_installed_apps", Context.MODE_PRIVATE)
     }
     val host = tvHost.orEmpty()
-    var pairing by remember(host) { mutableStateOf(prefs.getString("pair:$host", "") ?: "") }
-    var codeEntry by remember(host) { mutableStateOf(pairing) }
-    var allApps by remember(host) { mutableStateOf<List<TvOfficialApp>>(emptyList()) }
-    var favorites by remember(host) {
-        mutableStateOf(savedFavoriteIds(prefs.getString("favorites:$host", null)))
+    // Use the connection's stable device identifier, not only its DHCP address.
+    // Also migrate the previous host-based preferences without discarding them.
+    val deviceKey = tvIdentity?.takeIf { it.isNotBlank() } ?: host
+    var pairing by remember(deviceKey, host) {
+        mutableStateOf(prefs.getString("pair:$deviceKey",
+            prefs.getString("pair:$host", "")) ?: "")
     }
-    var showPair by remember(host) { mutableStateOf(false) }
-    var showManager by remember(host) { mutableStateOf(false) }
-    var busy by remember(host) { mutableStateOf(false) }
-    var errorText by remember(host) { mutableStateOf<String?>(null) }
-    var refresh by remember(host) { mutableStateOf(0) }
+    var codeEntry by remember(deviceKey, host) { mutableStateOf(pairing) }
+    var allApps by remember(deviceKey, host) { mutableStateOf<List<TvOfficialApp>>(emptyList()) }
+    var favorites by remember(deviceKey, host) {
+        mutableStateOf(savedFavoriteIds(prefs.getString("favorites:$deviceKey",
+            prefs.getString("favorites:$host", null))))
+    }
+    var showPair by remember(deviceKey, host) { mutableStateOf(false) }
+    var showManager by remember(deviceKey, host) { mutableStateOf(false) }
+    var busy by remember(deviceKey, host) { mutableStateOf(false) }
+    var errorText by remember(deviceKey, host) { mutableStateOf<String?>(null) }
+    var refresh by remember(deviceKey, host) { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(host, pairing, refresh) {
@@ -185,22 +192,25 @@ fun TclInstalledAppsBar(tvHost: String?, modifier: Modifier = Modifier) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Aplicativos da TV", fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+            Text("Aplicativos", fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
             TextButton(onClick = {
                 if (host.isBlank()) errorText = "Conecte a TCL primeiro."
                 else if (pairing.isBlank()) showPair = true
                 else if (allApps.isEmpty()) refresh++
                 else showManager = true
-            }) { Text(if (favorites.isEmpty()) "Escolher +" else "Organizar") }
+            }) { Text("Ver todos  ›") }
         }
         val byPackage = remember(allApps) { allApps.associateBy { it.packageName } }
-        val selectedApps = favorites.mapNotNull { byPackage[it] }
+        // First connection: show only packages actually reported by this TV.
+        // The user chooses favorites; never invent Netflix/Prime/etc placeholders.
+        val selectedApps = if (favorites.isEmpty()) allApps.take(7)
+            else favorites.mapNotNull { byPackage[it] }
         if (selectedApps.isNotEmpty()) {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 selectedApps.forEach { app ->
                     Column(
-                        modifier = Modifier.width(59.dp).clickable {
+                        modifier = Modifier.width(62.dp).clickable {
                             scope.launch {
                                 errorText = null
                                 runCatching { TclTvAppApi.open(host, pairing, app.packageName) }
@@ -236,8 +246,9 @@ fun TclInstalledAppsBar(tvHost: String?, modifier: Modifier = Modifier) {
                 },
                 modifier = Modifier.fillMaxWidth().height(54.dp)
             ) {
-                Text(if (pairing.isBlank()) "Vincular aplicativos instalados na TCL"
-                     else if (busy) "Consultando aplicativos..." else "Escolher meus aplicativos")
+                Text(if (host.isBlank()) "Conecte à TCL para identificar os aplicativos"
+                     else if (pairing.isBlank()) "Vincular leitura de aplicativos da TV"
+                     else if (busy) "Identificando aplicativos instalados..." else "Atualizar aplicativos da TV")
             }
         }
         if (errorText != null) {
@@ -280,7 +291,7 @@ fun TclInstalledAppsBar(tvHost: String?, modifier: Modifier = Modifier) {
                         scope.launch {
                             runCatching { TclTvAppApi.apps(host, codeEntry) }
                                 .onSuccess { list ->
-                                    prefs.edit().putString("pair:$host", codeEntry).apply()
+                                    prefs.edit().putString("pair:$deviceKey", codeEntry).apply()
                                     pairing = codeEntry
                                     allApps = list
                                     errorText = null
@@ -301,7 +312,7 @@ fun TclInstalledAppsBar(tvHost: String?, modifier: Modifier = Modifier) {
     }
 
     if (showManager) {
-        var draft by remember(host, showManager) { mutableStateOf(favorites) }
+        var draft by remember(deviceKey, host, showManager) { mutableStateOf(favorites) }
         val present = allApps.associateBy { it.packageName }
         val displayed = allApps.sortedWith(
             compareBy<TvOfficialApp> { if (it.packageName in draft) 0 else 1 }
@@ -374,7 +385,7 @@ fun TclInstalledAppsBar(tvHost: String?, modifier: Modifier = Modifier) {
                         Button(onClick = {
                             val valid = draft.filter { it in present }
                             favorites = valid
-                            prefs.edit().putString("favorites:$host",
+                            prefs.edit().putString("favorites:$deviceKey",
                                 JSONArray(valid).toString()).apply()
                             showManager = false
                         }) { Text("Salvar") }
