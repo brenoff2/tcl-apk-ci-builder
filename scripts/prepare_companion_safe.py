@@ -17,12 +17,19 @@ if not base.is_dir():
 
 # Remove ALL upstream compiled Java classes, not just the accessibility entry.
 # Unused legacy classes should not end up in the distributed binary.
+# The three harmless upstream Bluetooth helper files are retained, but
+# their remote-color-key accessibility entry point is excluded.
+safe_bluetooth_helpers = {
+    "BluetoothConnectAction.java", "MappingStore.java",
+    "DeviceSettingsFallback.java"
+}
 for file in base.glob("*.java"):
-    file.unlink()
+    if file.name not in safe_bluetooth_helpers:
+        file.unlink()
 
-for file in ("MainActivity.java", "TclCatalogService.java"):
+for file in ("MainActivity.java", "TclCatalogService.java", "TvAppBridge.java"):
     copyfile(assets / file, base / file)
-copyfile("overrides/tv/TvAppBridge.java", base / "TvAppBridge.java")
+copyfile("overrides/tv/BluetoothRecoverAction.java", base / "BluetoothRecoverAction.java")
 
 manifest = app / "src/main/AndroidManifest.xml"
 copyfile(assets / "AndroidManifest.xml", manifest)
@@ -47,8 +54,8 @@ changes = {
     'applicationId = "dk.fez.bluetoothquickconnect"':
         'applicationId = "com.tclremote.tvcompanion"',
     'targetSdk = 33': 'targetSdk = 34',
-    'versionCode = 1': 'versionCode = 3',
-    'versionName = "0.1.0"': 'versionName = "1.2-Sem-Acessibilidade"',
+    'versionCode = 1': 'versionCode = 4',
+    'versionName = "0.1.0"': 'versionName = "1.3-Catalogo-Fones"',
 }
 for old, new in changes.items():
     if config.count(old) != 1:
@@ -63,9 +70,14 @@ assert "TclCatalogService" in actual
 assert "BIND_ACCESSIBILITY_SERVICE" not in actual
 assert "RemoteButtonService" not in actual
 assert "android.accessibilityservice" not in actual
-assert "BLUETOOTH" not in actual
+assert "android.permission.BLUETOOTH_CONNECT" in actual
+assert "android.permission.BLUETOOTH" in actual
+assert "android.permission.BLUETOOTH_SCAN" not in actual
+assert "android.permission.BLUETOOTH_PRIVILEGED" not in actual
 assert not (base / "RemoteButtonService.java").exists()
 
 assert "installedApps()" in (base / "TvAppBridge.java").read_text()
 assert '"/launch"' in (base / "TvAppBridge.java").read_text()
-print("TCL_TV_SAFE_1_2_NO_ACCESSIBILITY_AND_REAL_INSTALLED_APPS_OK")
+assert '"/headphones"' in (base / "TvAppBridge.java").read_text()
+assert "MappingStore" in (base / "MainActivity.java").read_text()
+print("TCL_TV_SAFE_1_3_NO_ACCESSIBILITY_REAL_APPS_AND_PAIRED_HEADPHONES_OK")
