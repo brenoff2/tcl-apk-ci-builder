@@ -52,11 +52,17 @@ class SafeTvCompanionTests(unittest.TestCase):
         self.assertIn("BluetoothRecoverAction.recoverOrOpen(context, mapping)", self.bridge)
         self.assertIn("requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}", self.screen)
         self.assertIn("MappingStore.save(this, KeyEvent.KEYCODE_PROG_RED", self.screen)
+        if os.environ.get("TCL_TV_V14") == "1":
+            self.assertIn("TclUpdateManager.check(this", self.screen)
+            self.assertIn("android.R.attr.state_focused", self.screen)
+            self.assertIn('"/headphones/status"', self.bridge)
+            self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
+            self.assertNotIn("BIND_ACCESSIBILITY_SERVICE", self.manifest)
 
     def test_package_and_version_and_no_old_java(self):
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
-        self.assertIn("versionCode = 4", self.gradle)
-        self.assertIn('versionName = "1.3-Catalogo-Fones"', self.gradle)
+        self.assertIn("versionCode = " + ("5" if os.environ.get("TCL_TV_V14") == "1" else "4"), self.gradle)
+        self.assertIn('versionName = "' + ("1.4-Catalogo-Fones-Atualiza" if os.environ.get("TCL_TV_V14") == "1" else "1.3-Catalogo-Fones") + '"', self.gradle)
         actual = {p.name for p in SRC.glob("*.java")}
         self.assertEqual(actual, {
             "MainActivity.java", "TclCatalogService.java", "TvAppBridge.java",
