@@ -36,6 +36,7 @@ jobs:
           python3 scripts/apply_tcl_v22.py
           python3 scripts/apply_tcl_ptbr_cleanup.py
           python3 scripts/apply_tcl_i18n.py
+          python3 scripts/apply_tcl_tv_brand.py
       - name: Validar regressao e atualizacao segura
         env:
           TCL_APPROVED_UI: '1'
