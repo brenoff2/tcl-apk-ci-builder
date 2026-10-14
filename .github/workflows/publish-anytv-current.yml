@@ -1,0 +1,38 @@
+name: Publish verified current APKs
+on:
+  push:
+    branches: [feat/tcl-v22-updates-back-bluetooth]
+    paths:
+      - .github/workflows/publish-anytv-current.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish-tv-current:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+      - name: Fetch published signed TV APKs and verify hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          base="https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.4"
+          mkdir -p updates/tv/cert3382 updates/tv/cert8b2b
+          curl --fail --location --retry 3 "$base/Controle_TCL_TV_v1.4_cert3382.apk" -o updates/tv/cert3382/current.apk
+          curl --fail --location --retry 3 "$base/Controle_TCL_TV_v1.4_cert8b2b.apk" -o updates/tv/cert8b2b/current.apk
+          echo "eee4842962199f0e331efbeee4517b0a803f3f555811f68ab19146c7ac66d688  updates/tv/cert3382/current.apk" | sha256sum --check
+          echo "c3e2a25dc19451a20a2f00813caaae5320ff5e0dda140fc762034717d305a242  updates/tv/cert8b2b/current.apk" | sha256sum --check
+          cp updates/tv/cert3382/current.apk updates/tv/cert3382/AnyTV-Connect-v1.4.apk
+          cp updates/tv/cert8b2b/current.apk updates/tv/cert8b2b/AnyTV-Connect-v1.4.apk
+      - name: Commit real binary APK files
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f updates/tv/cert3382/*.apk updates/tv/cert8b2b/*.apk
+          if ! git diff --cached --quiet; then
+            git commit -m "release(tv): publish signed current.apk for both existing signers [skip ci]"
+            git push
+          fi
