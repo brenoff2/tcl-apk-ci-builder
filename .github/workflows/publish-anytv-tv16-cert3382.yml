@@ -1,0 +1,43 @@
+name: Publish signed AnyTV Connect 1.6 cert3382
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-tv16-cert3382.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish-and-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Check package and original TV certificate 3382
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=updates/tv/cert3382/current.apk
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          echo '62dc534c243059fc5ede6ffa2576700fb69dc852e686ffc49a92258e562d9378  updates/tv/cert3382/current.apk' | sha256sum -c
+          cmp "$apk" updates/tv/cert3382/AnyTV-Connect-v1.6.apk
+          "$bt/aapt" dump badging "$apk" | grep -q "name='com.tclremote.tvcompanion' versionCode='7' versionName='1.6-AnyTV'"
+          "$bt/apksigner" verify --verbose --print-certs "$apk" > signer-3382.txt
+          grep -qi "3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add" signer-3382.txt
+          "$bt/zipalign" -c 4 "$apk"
+          cp "$apk" Controle_TCL_TV_v1.6_cert3382.apk
+      - name: Add second verified certificate variant to existing TV 1.6 release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release view tv-complemento-v1.6 >/dev/null
+          gh release upload tv-complemento-v1.6 Controle_TCL_TV_v1.6_cert3382.apk --clobber
+          mkdir -p downloaded
+          gh release download tv-complemento-v1.6 -p Controle_TCL_TV_v1.6_cert3382.apk -D downloaded
+          cmp Controle_TCL_TV_v1.6_cert3382.apk downloaded/Controle_TCL_TV_v1.6_cert3382.apk
+          echo 'TV_CERT3382_RELEASE_AND_CURRENT_MATCH_SIGNED_APK'
