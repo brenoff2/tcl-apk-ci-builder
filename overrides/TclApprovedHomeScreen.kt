@@ -48,8 +48,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Text
+import androidx.compose.material3.Switch
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.material3.Text
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.runtime.Composable
@@ -120,6 +121,7 @@ fun TclApprovedHomeScreen(
     onPower: () -> Unit,
     onQuickApp: (String) -> Unit,
     onRemoteKey: (Remotemessage.RemoteKeyCode) -> Unit,
+    onKeyDirection: (Remotemessage.RemoteKeyCode, Remotemessage.RemoteDirection) -> Unit,
     onVolumeChanged: (Float) -> Unit,
     onVolumeUp: () -> Unit,
     onVolumeDown: () -> Unit,
@@ -289,12 +291,18 @@ fun TclApprovedHomeScreen(
                     }
 
                     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val gap = if (maxWidth < 350.dp) 7.dp else 10.dp
-                        val rockerWidth = if (maxWidth < 350.dp) 51.dp else 59.dp
-                        val padSize = (maxWidth - rockerWidth * 2 - gap * 2)
-                            .coerceAtLeast(0.dp).coerceAtMost(if (compactHeight) 178.dp else 226.dp)
+                        // The old 178dp cap produced a tiny disc despite free
+                        // space below it, and clipped the fourth numeric row.
+                        val gap = if (maxWidth < 350.dp) 5.dp else 6.dp
+                        val rockerWidth = if (maxWidth < 350.dp) 41.dp else 45.dp
+                        val padWidth = (maxWidth - rockerWidth * 2 - gap * 2)
+                            .coerceAtLeast(0.dp).coerceAtMost(330.dp)
+                        // Four genuine rows, never squeezed into a square.
+                        val padHeight = if (activePadMode == RemotePadMode.NumberPad)
+                            (padWidth * 1.24f).coerceAtLeast(252.dp)
+                        else padWidth
                         Row(
-                            modifier = Modifier.fillMaxWidth().height(padSize),
+                            modifier = Modifier.fillMaxWidth().height(padHeight),
                             horizontalArrangement = Arrangement.spacedBy(gap),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -314,16 +322,22 @@ fun TclApprovedHomeScreen(
                                     if (isConnected) onVolumeDown() else onOpenDiscovery()
                                 }
                             )
-                            Box(modifier = Modifier.weight(1f)) {
-                                // Native Android TV D-pad/touchpad/number-pad,
-                                // preserving hit zones, haptics and key mapping.
-                                RemotePadStage(
-                                    activePadMode = activePadMode,
-                                    stageHeight = padSize,
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                TclResponsivePad(
+                                    mode = activePadMode,
+                                    width = padWidth,
+                                    height = padHeight,
                                     isConnected = isConnected,
                                     hapticsEnabled = hapticsEnabled,
-                                    onAction = {
-                                        if (isConnected) onRemoteKey(it) else onOpenDiscovery()
+                                    onShort = { remoteKey(it) },
+                                    onHoldStart = {
+                                        onKeyDirection(it, Remotemessage.RemoteDirection.START_LONG)
+                                    },
+                                    onHoldEnd = {
+                                        onKeyDirection(it, Remotemessage.RemoteDirection.END_LONG)
                                     }
                                 )
                             }
@@ -405,6 +419,8 @@ fun TclApprovedHomeScreen(
     if (showKeyboard) {
         TclTextInputDialog(
             onDismiss = { showKeyboard = false },
+            onAppendText = onKeyboardText,
+            onBackspace = onKeyboardBackspace,
             onSendText = onSendText
         )
     }
@@ -569,54 +585,92 @@ private fun TclQuickAction(
 @Composable
 private fun TclTextInputDialog(
     onDismiss: () -> Unit,
+    onAppendText: (String) -> Unit,
+    onBackspace: (Int) -> Unit,
     onSendText: (String) -> Unit
 ) {
     var draft by rememberSaveable { mutableStateOf("") }
-    var sent by rememberSaveable { mutableStateOf(false) }
-    fun sendDraft() {
-        if (draft.isNotEmpty()) {
-            // Send the complete text as one IME update, NEVER send DPAD_CENTER
-            // or IME_ENTER here: that clicks the TV keyboard's selected key.
-            onSendText(draft)
-            sent = true
+    var liveTyping by rememberSaveable { mutableStateOf(true) }
+    var note by remember { mutableStateOf<String?>(null) }
+
+    fun changeText(value: String) {
+        val previous = draft
+        if (value == previous) return
+        draft = value
+        note = null
+        if (!liveTyping) return
+
+        // Deliver only the changed portion to the Android TV Remote v2 IME.
+        // Resending the entire buffer at every keystroke can duplicate text.
+        when {
+            value.startsWith(previous) -> onAppendText(value.substring(previous.length))
+            previous.startsWith(value) -> onBackspace(previous.length - value.length)
+            else -> {
+                // Composing text, selection replacement or pasted correction:
+                // clear the previously mirrored buffer and insert the new one.
+                if (previous.isNotEmpty()) onBackspace(previous.length)
+                if (value.isNotEmpty()) onAppendText(value)
+            }
         }
     }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Escrever na TCL") },
+        title = { Text("Teclado da TCL") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "Selecione primeiro um campo de texto na televisão. " +
-                        "Depois digite ou cole aqui e toque em Enviar texto.",
+                    "Abra e selecione primeiro um campo de pesquisa ou texto na TV. " +
+                    "O teclado do celular não controla menus que não aceitam digitação.",
                     color = TclMuted
                 )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Digitar na TV ao vivo", color = TclText)
+                    Switch(
+                        checked = liveTyping,
+                        onCheckedChange = { next ->
+                            if (next && !liveTyping && draft.isNotEmpty()) {
+                                onSendText(draft)
+                                note = "Texto enviado ao campo que estiver ativo na TV."
+                            }
+                            liveTyping = next
+                        }
+                    )
+                }
                 OutlinedTextField(
                     value = draft,
-                    onValueChange = {
-                        draft = it
-                        sent = false
-                    },
-                    label = { Text("Texto para a televisão") },
+                    onValueChange = ::changeText,
+                    label = { Text("Digite ou cole aqui") },
                     minLines = 2,
                     maxLines = 5,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = { sendDraft() }),
+                    keyboardActions = KeyboardActions(onDone = {
+                        if (!liveTyping && draft.isNotEmpty()) {
+                            onSendText(draft)
+                            note = "Texto enviado ao campo que estiver ativo na TV."
+                        }
+                    }),
                     modifier = Modifier.fillMaxWidth()
                 )
-                if (sent) {
-                    Text(
-                        "Comando de texto enviado. Confira o campo na TCL; " +
-                            "o botão não pressionou nenhuma tecla virtual da TV.",
-                        color = TclBlue
-                    )
-                }
+                if (note != null) Text(note.orEmpty(), color = TclBlue)
             }
         },
         confirmButton = {
-            TextButton(enabled = draft.isNotEmpty(), onClick = { sendDraft() }) {
-                Text(if (sent) "Reenviar texto" else "Enviar texto")
+            TextButton(
+                onClick = {
+                    if (!liveTyping && draft.isNotEmpty()) {
+                        onSendText(draft)
+                        note = "Texto enviado ao campo que estiver ativo na TV."
+                    } else {
+                        onDismiss()
+                    }
+                }
+            ) {
+                Text(if (liveTyping) "Concluir" else "Enviar texto")
             }
         },
         dismissButton = {
