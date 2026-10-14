@@ -164,14 +164,14 @@ private fun OfficialTvIcon(app: TvOfficialApp, size: Dp) {
     }
     Box(
         modifier = Modifier.size(size).clip(RoundedCornerShape(11.dp))
-            .background(Color(0xFF232936)),
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
             Image(bitmap = bitmap, contentDescription = app.name,
                 contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
         } else {
-            Text(app.name.take(2).uppercase(), color = Color.White,
+            Text(app.name.take(2).uppercase(), color = MaterialTheme.colorScheme.onSurface,
                 fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
     }
@@ -318,10 +318,10 @@ fun TclInstalledAppsBar(
                 }
                 Box(
                     modifier = Modifier.size(56.dp).clip(RoundedCornerShape(11.dp))
-                        .background(Color(0xFF182B45))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                         .clickable { showManager = true },
                     contentAlignment = Alignment.Center
-                ) { Text("+", color = Color(0xFFB8D7FF), fontSize = 23.sp) }
+                ) { Text("+", color = MaterialTheme.colorScheme.primary, fontSize = 23.sp) }
             }
         } else {
             OutlinedButton(
@@ -340,7 +340,7 @@ fun TclInstalledAppsBar(
         }
         if (errorText != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(errorText.orEmpty(), color = Color(0xFFFFB0B2),
+                Text(errorText.orEmpty(), color = MaterialTheme.colorScheme.error,
                     fontSize = 11.sp, modifier = Modifier.weight(1f))
                 TextButton(onClick = {
                     if (pairing.isNotBlank()) refresh++ else showPair = true
@@ -412,13 +412,13 @@ fun TclInstalledAppsBar(
             Surface(
                 modifier = Modifier.fillMaxWidth().heightIn(max = 670.dp),
                 shape = RoundedCornerShape(22.dp),
-                color = Color(0xFF121A29)
+                color = MaterialTheme.colorScheme.surface
             ) {
                 Column(modifier = Modifier.padding(15.dp),
                     verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text("Seus aplicativos", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     Text("Ícones oficiais da TV. Marque os favoritos e use ↑ ↓ para ordenar.",
-                        color = Color(0xFFBAC6D5), fontSize = 12.sp)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
                     LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                         items(displayed, key = { it.packageName }) { item ->
                             val selected = item.packageName in draft
