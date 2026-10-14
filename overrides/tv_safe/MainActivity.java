@@ -24,6 +24,8 @@ import android.os.Looper;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -45,7 +47,7 @@ public final class MainActivity extends Activity {
     private GradientDrawable buttonShape(int color, boolean selected) {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
-        bg.setCornerRadius(dp(15));
+        bg.setCornerRadius(dp(10));
         bg.setStroke(dp(selected ? 3 : 1),
                 selected ? Color.rgb(255, 230, 86) : Color.rgb(75, 111, 148));
         return bg;
@@ -57,7 +59,7 @@ public final class MainActivity extends Activity {
         text.setTextSize(size);
         text.setTextColor(color);
         text.setGravity(Gravity.CENTER_HORIZONTAL);
-        text.setPadding(0, 5, 0, 9);
+        text.setPadding(0, dp(2), 0, dp(4));
         return text;
     }
 
@@ -68,7 +70,7 @@ public final class MainActivity extends Activity {
         button.setTextColor(Color.WHITE);
         button.setAllCaps(false);
         button.setSingleLine(false);
-        button.setMaxLines(3);
+        button.setMaxLines(2);
         button.setFocusable(true);
         button.setPadding(dp(10), dp(7), dp(10), dp(7));
         // Android TV D-pad focus state: bright border + blue background.
@@ -80,14 +82,31 @@ public final class MainActivity extends Activity {
         backgrounds.addState(new int[]{},
                 buttonShape(Color.rgb(16, 43, 75), false));
         button.setBackground(backgrounds);
-        button.setMinHeight(dp(76));
+        button.setMinHeight(dp(48));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        params.setMargins(0, dp(8), 0, dp(8));
+        params.setMargins(0, dp(4), 0, dp(4));
         button.setLayoutParams(params);
         button.setOnClickListener(onClick);
         return button;
+    }
+
+    private LinearLayout actionRow(Button first, Button second) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        for (Button button : new Button[]{first, second}) {
+            LinearLayout.LayoutParams item = new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            item.setMargins(dp(4), dp(3), dp(4), dp(3));
+            button.setLayoutParams(item);
+            row.addView(button);
+        }
+        return row;
     }
 
     @Override protected void onCreate(Bundle savedInstanceState) {
@@ -99,15 +118,25 @@ public final class MainActivity extends Activity {
         scroll.setBackgroundColor(BACKGROUND);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20), dp(10), dp(20), dp(12));
+        root.setPadding(dp(10), dp(8), dp(10), dp(10));
         root.setGravity(Gravity.CENTER_HORIZONTAL);
-        scroll.addView(root);
+        FrameLayout frame = new FrameLayout(this);
+        scroll.addView(frame);
+        FrameLayout.LayoutParams centered = new FrameLayout.LayoutParams(
+                Math.min(getResources().getDisplayMetrics().widthPixels - dp(24), dp(760)),
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+        frame.addView(root, centered);
 
-        root.addView(label("AnyTV Connect", 22, TEXT));
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.tcl_banner);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        root.addView(logo, new LinearLayout.LayoutParams(dp(260), dp(82)));
+        root.addView(label("AnyTV Connect", 20, TEXT));
         root.addView(label("Complemento de aplicativos instalados", 17, MUTED));
         root.addView(label("Código de vinculação da TV", 17, MUTED));
 
-        TextView code = label(TvAppBridge.pairingCode(this), 39, Color.rgb(83, 168, 255));
+        TextView code = label(TvAppBridge.pairingCode(this), 34, Color.rgb(83, 168, 255));
         code.setTextIsSelectable(true);
         code.setPadding(0, 9, 0, 13);
         root.addView(code);
@@ -119,32 +148,29 @@ public final class MainActivity extends Activity {
         status = label("Verificando serviço...", 16, TEXT);
         root.addView(status);
 
-        root.addView(action("Ativar conexão com o celular", v -> startBridge()));
-
-        root.addView(action("Buscar atualizações", v ->
-                TclUpdateManager.check(this, msg -> {
-                    if (updateStatus != null) updateStatus.setText(msg);
-                })));
+        root.addView(actionRow(
+                action("Ativar conexão", v -> startBridge()),
+                action("Buscar atualizações", v ->
+                        TclUpdateManager.check(this, msg -> {
+                            if (updateStatus != null) updateStatus.setText(msg);
+                        }))));
         updateStatus = label("Atualizações: verifique a nova versão aqui.", 15, MUTED);
         root.addView(updateStatus);
 
         TextView headphone = label("Fones Bluetooth pareados", 16, MUTED);
         root.addView(headphone);
-        root.addView(action("Selecionar fone de ouvido", v -> chooseHeadphones()));
-        root.addView(action("Reconectar fone selecionado", v -> reconnectHeadphones()));
-        root.addView(action("Configurações Bluetooth da TV", v -> openBluetoothSettings()));
-        root.addView(action("Desativar conexão", v -> {
-            stopService(new Intent(this, TclCatalogService.class));
-            status.setText("Conexão desativada");
-        }));
+        root.addView(actionRow(
+                action("Escolher fone", v -> chooseHeadphones()),
+                action("Reconectar fone", v -> reconnectHeadphones())));
+        root.addView(actionRow(
+                action("Bluetooth da TV", v -> openBluetoothSettings()),
+                action("Desativar conexão", v -> {
+                    stopService(new Intent(this, TclCatalogService.class));
+                    status.setText("Conexão desativada");
+                })));
 
         root.addView(label(
-                "O catálogo de aplicativos usa somente rede local. A conexão com fones "
-                + "já pareados solicita Bluetooth quando você escolher os fones. "
-                + "Não há permissão de Acessibilidade nem de leitura da tela.", 14, MUTED));
-        root.addView(label(
-                "O serviço permanece ativo ao voltar para a tela inicial da TV. "
-                + "Se a TV reiniciar, abra este aplicativo para reativar.", 14, MUTED));
+                "Conexão local e privada. Após reiniciar a TV, abra o AnyTV Connect para reativar.", 13, MUTED));
 
         setContentView(scroll);
         startBridge();
@@ -234,11 +260,11 @@ public final class MainActivity extends Activity {
                     status.setText("Fones conectados novamente: " + mapping.name);
                     break;
                 case "api_restricted":
-                    status.setText("A TCL bloqueou o comando Bluetooth. " +
+                    status.setText("A TV bloqueou o comando Bluetooth. " +
                         "Use a opção Configurações Bluetooth, se desejar.");
                     break;
                 case "not_paired":
-                    status.setText("Fones não estão mais pareados com a TCL.");
+                    status.setText("Fones não estão mais pareados com a TV.");
                     break;
                 case "permission_required":
                     status.setText("Autorize o Bluetooth no aplicativo da TV.");
@@ -256,7 +282,7 @@ public final class MainActivity extends Activity {
             try {
                 startActivity(new Intent(Settings.ACTION_SETTINGS));
             } catch (RuntimeException ignored) {
-                status.setText("Abra o menu Bluetooth nas configurações da TCL.");
+                status.setText("Abra o menu Bluetooth nas configurações da TV.");
             }
         }
     }

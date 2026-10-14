@@ -61,7 +61,7 @@ class TvUpdateAndBluetooth(unittest.TestCase):
 
     def test_tv_buttons_readable_dpad_focus(self):
         self.assertIn("state_focused", self.main)
-        self.assertIn("dp(76)", self.main)
+        self.assertIn("dp(48)", self.main)
         self.assertIn("setTextSize(TypedValue.COMPLEX_UNIT_SP, 15)", self.main)
         self.assertIn('action("Buscar atualizações"', self.main)
         self.assertIn("Color.rgb(255, 230, 86)", self.main)
@@ -76,7 +76,7 @@ class TvUpdateAndBluetooth(unittest.TestCase):
         self.assertIn("headphoneStatus = result", self.bridge)
 
     def test_tv_inplace_update_support(self):
-        self.assertIn("versionCode = 5", self.gradle)
+        self.assertIn("versionCode = 6", self.gradle)
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
         self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
         self.assertNotIn("BIND_ACCESSIBILITY_SERVICE", self.manifest)

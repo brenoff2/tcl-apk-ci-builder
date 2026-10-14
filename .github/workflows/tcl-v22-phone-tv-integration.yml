@@ -88,7 +88,8 @@ jobs:
         with: {distribution: temurin, java-version: '17'}
       - uses: android-actions/setup-android@v4
       - run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
-      - name: Clonar fonte MIT fixada e preparar TV 1.4
+      - run: python3 -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Clonar fonte MIT fixada e preparar TV 1.5
         run: |
           git clone --depth 1 https://github.com/fezdk/bluetooth-quick-connect.git tv-source
           test "$(git -C tv-source rev-parse HEAD)" = "508b5f148e1945911085f1789051c59d76c0278b"
@@ -96,6 +97,7 @@ jobs:
       - name: Auditar fonte e permissoes
         env:
           TCL_TV_V14: '1'
+          TCL_TV_V15: '1'
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_safe_tv_companion.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -k TvUpdateAndBluetooth -v
@@ -113,17 +115,17 @@ jobs:
           "$BT/aapt" dump badging "$APK" > output/identidade.txt
           "$BT/aapt" dump xmltree "$APK" AndroidManifest.xml > output/manifesto.txt
           "$BT/aapt" dump permissions "$APK" > output/permissoes.txt
-          grep -q "name='com.tclremote.tvcompanion' versionCode='5'" output/identidade.txt
+          grep -q "name='com.tclremote.tvcompanion' versionCode='6'" output/identidade.txt
           if grep -Ei 'BIND_ACCESSIBILITY_SERVICE|AccessibilityService|QUERY_ALL_PACKAGES|SYSTEM_ALERT_WINDOW|android.permission.BLUETOOTH_SCAN' output/permissoes.txt output/manifesto.txt; then
             echo 'PERMISSAO SENSIVEL NA TV'; exit 1
           fi
-          "$BT/zipalign" -f 4 "$APK" output/Controle_TCL_TV_1_4_RELEASE_UNSIGNED.apk
-          "$BT/zipalign" -c 4 output/Controle_TCL_TV_1_4_RELEASE_UNSIGNED.apk
-          sha256sum output/Controle_TCL_TV_1_4_RELEASE_UNSIGNED.apk > output/SHA256.txt
+          "$BT/zipalign" -f 4 "$APK" output/AnyTV_TV_1_5_RELEASE_UNSIGNED.apk
+          "$BT/zipalign" -c 4 output/AnyTV_TV_1_5_RELEASE_UNSIGNED.apk
+          sha256sum output/AnyTV_TV_1_5_RELEASE_UNSIGNED.apk > output/SHA256.txt
           echo 'NAO INSTALAR. Gerar versoes assinadas com ambos certificados TV 1.3.' > output/LEIA.txt
       - uses: actions/upload-artifact@v4
         with:
-          name: TCL_TV_1_4_UNSIGNED_DUAS_ASSINATURAS
+          name: ANYTV_TV_1_5_UNSIGNED_DUAS_ASSINATURAS
           path: output/
           retention-days: 30
           if-no-files-found: error
@@ -136,8 +138,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with: {name: ANYTV_PHONE_2_4_UNSIGNED_TO_SIGN, path: phone-artifact}
       - uses: actions/download-artifact@v4
-        with: {name: TCL_TV_1_4_UNSIGNED_DUAS_ASSINATURAS, path: tv-artifact}
+        with: {name: ANYTV_TV_1_5_UNSIGNED_DUAS_ASSINATURAS, path: tv-artifact}
       - run: |
           test -s phone-artifact/AnyTV_2_4_RELEASE_UNSIGNED.apk
-          test -s tv-artifact/Controle_TCL_TV_1_4_RELEASE_UNSIGNED.apk
+          test -s tv-artifact/AnyTV_TV_1_5_RELEASE_UNSIGNED.apk
           echo 'Both release builds ready for locally verified certificate-compatible signing'

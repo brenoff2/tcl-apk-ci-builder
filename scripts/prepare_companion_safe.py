@@ -43,8 +43,15 @@ copyfile(assets / "AndroidManifest.xml", manifest)
 drawable = app / "src/main/res/drawable"
 for file in drawable.glob("*.xml"):
     file.unlink()
-copyfile(assets / "tcl_icon.xml", drawable / "tcl_icon.xml")
-copyfile(assets / "tcl_banner.xml", drawable / "tcl_banner.xml")
+from PIL import Image
+brand_icon = Image.open("assets/anytv_icon.png").convert("RGBA")
+brand_icon.thumbnail((432, 432), Image.Resampling.LANCZOS)
+brand_icon.save(drawable / "tcl_icon.png", format="PNG", optimize=True)
+logo = Image.open("assets/anytv_logo.png").convert("RGBA")
+logo.thumbnail((580, 200), Image.Resampling.LANCZOS)
+banner = Image.new("RGBA", (640, 360), (5, 12, 22, 255))
+banner.alpha_composite(logo, ((640 - logo.width)//2, (360 - logo.height)//2))
+banner.save(drawable / "tcl_banner.png", format="PNG", optimize=True)
 
 # The old accessibility metadata XML is not part of this build.
 xml_dir = app / "src/main/res/xml"
@@ -60,8 +67,8 @@ changes = {
     'applicationId = "dk.fez.bluetoothquickconnect"':
         'applicationId = "com.tclremote.tvcompanion"',
     'targetSdk = 33': 'targetSdk = 34',
-    'versionCode = 1': 'versionCode = 5',
-    'versionName = "0.1.0"': 'versionName = "1.4-Catalogo-Fones-Atualiza"',
+    'versionCode = 1': 'versionCode = 6',
+    'versionName = "0.1.0"': 'versionName = "1.5-AnyTV"',
 }
 for old, new in changes.items():
     if config.count(old) != 1:
