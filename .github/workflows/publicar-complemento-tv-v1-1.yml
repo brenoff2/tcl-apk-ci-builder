@@ -48,3 +48,31 @@ jobs:
           gh release view tv-complemento-v1.1 \
             --json assets,url \
             --jq '{release:.url,assets:[.assets[] | {name:.name,url:.url}]}'
+      - name: Criar link curto para Downloader
+        run: |
+          set -euo pipefail
+          URL="https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.1/tcl-tv.apk"
+          SHORT=$(curl -sS --max-time 25 -G \
+            --data-urlencode "format=simple" \
+            --data-urlencode "shorturl=TCLTV11BA" \
+            --data-urlencode "url=$URL" \
+            'https://is.gd/create.php' || true)
+          if [[ "$SHORT" != "https://is.gd/TCLTV11BA" ]]; then
+            echo "is.gd creation message: $SHORT"
+            # On subsequent workflow runs the same slug can already exist.
+            LOOKUP=$(curl -fsS --max-time 20 -G \
+              --data-urlencode "format=simple" \
+              --data-urlencode "shorturl=TCLTV11BA" \
+              'https://is.gd/forward.php' || true)
+            if [[ "$LOOKUP" != "$URL" ]]; then
+              echo 'FAIL: short link was not created or it points elsewhere.'
+              exit 1
+            fi
+          fi
+          TARGET=$(curl -sS -I -o /dev/null -w '%{redirect_url}' --max-time 20 "$SHORT")
+          if [[ "$TARGET" != "$URL" ]]; then
+            echo "FAIL: short link redirects to unexpected location: $TARGET"
+            exit 1
+          fi
+          echo "Validated Downloader short URL: $SHORT"
+          echo "### Link curto confirmado: $SHORT" >> "$GITHUB_STEP_SUMMARY"
