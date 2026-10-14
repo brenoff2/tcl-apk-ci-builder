@@ -45,7 +45,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_rescue_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_tcl_v21_contract.py' -v
-          python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -k PhoneUpdatesAndBack -v
       - name: Compilar release sem R8 agressivo
         run: |
           cd source
@@ -89,7 +89,9 @@ jobs:
       - name: Auditar fonte e permissoes
         env:
           TCL_TV_V14: '1'
-        run: python3 -m unittest discover -s scripts/tests -p 'test_safe_tv_companion.py' -v
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_safe_tv_companion.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -k TvUpdateAndBluetooth -v
       - name: Compilar release TV
         run: |
           cd tv-source
