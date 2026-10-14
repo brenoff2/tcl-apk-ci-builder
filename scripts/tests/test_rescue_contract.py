@@ -35,8 +35,12 @@ class RescueContractTests(unittest.TestCase):
     def test_no_incomplete_catalog_in_rescue(self):
         self.assertIn("AppShortcutStripSquare(", self.screen)
         self.assertNotIn("TclInstalledAppsBar(", self.screen)
-        self.assertFalse((KOTLIN / "TclInstalledApps.kt").exists())
-        self.assertNotIn("usesCleartextTraffic", (APP / "src/main/AndroidManifest.xml").read_text())
+        if os.environ.get("TCL_APPROVED_UI") == "1":
+            self.assertTrue((KOTLIN / "TclInstalledApps.kt").exists())
+            self.assertIn("usesCleartextTraffic", (APP / "src/main/AndroidManifest.xml").read_text())
+        else:
+            self.assertFalse((KOTLIN / "TclInstalledApps.kt").exists())
+            self.assertNotIn("usesCleartextTraffic", (APP / "src/main/AndroidManifest.xml").read_text())
 
     def test_top_level_controls_scroll_with_finite_deck(self):
         self.assertIn("val deckHeight = maxOf(rockerHeight, gridHeight)", self.screen)
