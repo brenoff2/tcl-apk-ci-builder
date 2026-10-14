@@ -18,6 +18,13 @@ for locale, values in DATA.items():
     body.extend(f'    <string name="tcl_{key}">{android_xml(value)}</string>' for key, value in zip(KEYS, values))
     body.append("</resources>")
     (folder / "tcl_localization.xml").write_text("\n".join(body) + "\n", encoding="utf-8")
+# Android requires default values for every generated resource identifier.
+default_folder = res / "values"
+default_folder.mkdir(parents=True, exist_ok=True)
+default_body = ['<?xml version="1.0" encoding="utf-8"?>', '<resources>']
+default_body.extend(f'    <string name="tcl_{key}">{android_xml(value)}</string>' for key, value in zip(KEYS, DATA["en"]))
+default_body.append("</resources>")
+(default_folder / "tcl_localization.xml").write_text("\\n".join(default_body) + "\\n", encoding="utf-8")
 settings = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/SettingsScreen.kt")
 source = settings.read_text(encoding="utf-8")
 from_locale = DATA["pt-rBR"]
@@ -56,6 +63,10 @@ for locale, values in DESCRIPTIONS.items():
     extra = "".join(f'    <string name="tcl_{key}">{android_xml(value)}</string>\n' for key, value in zip(description_keys, values))
     source_xml = source_xml.replace("</resources>", extra + "</resources>")
     file.write_text(source_xml, encoding="utf-8")
+default_file = res / "values" / "tcl_localization.xml"
+default_xml = default_file.read_text(encoding="utf-8")
+default_extra = "".join(f'    <string name="tcl_{key}">{android_xml(value)}</string>\\n' for key, value in zip(description_keys, DESCRIPTIONS["en"]))
+default_file.write_text(default_xml.replace("</resources>", default_extra + "</resources>"), encoding="utf-8")
 source = settings.read_text(encoding="utf-8")
 for key, value in zip(description_keys, DESCRIPTIONS["pt-rBR"]):
     # The short support description is not translated by the earlier compatibility script.
