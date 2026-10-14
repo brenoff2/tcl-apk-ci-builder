@@ -27,3 +27,39 @@ for key, value in zip(KEYS, from_locale):
 settings.write_text(source, encoding="utf-8")
 assert 'tcl_donation' in source and 'tcl_support_project' in source
 print("TCL_I18N_15_SETTINGS_LABELS_READY")
+
+# Additional active settings descriptions, localized without changing callbacks.
+DESCRIPTIONS = {
+"pt-rBR": ["Personalize os botões, a disposição e os atalhos", "Cores, plano de fundo e tema escuro", "Sobre, patrocinadores e informações de suporte", "Apoie o desenvolvimento e mantenha o app sem anúncios", "Reconectar automaticamente à última TV vinculada"],
+"en": ["Customize controls, layout and shortcuts", "Wallpaper, colors and dark theme", "About and support information", "Support development and keep the app ad-free", "Reconnect to the last paired TV automatically"],
+"es": ["Personaliza controles, diseño y accesos directos", "Fondo, colores y tema oscuro", "Información y ayuda", "Apoya el desarrollo sin anuncios", "Reconectar automáticamente a la última TV"],
+"fr": ["Personnaliser les commandes et raccourcis", "Fond, couleurs et thème sombre", "Informations et assistance", "Soutenez le développement sans publicité", "Reconnexion automatique au dernier téléviseur"],
+"de": ["Steuerung und Kurzbefehle anpassen", "Hintergrund, Farben und dunkles Design", "Informationen und Hilfe", "Werbefreie Entwicklung unterstützen", "Automatisch mit dem letzten TV verbinden"],
+"it": ["Personalizza comandi e scorciatoie", "Sfondo, colori e tema scuro", "Informazioni e assistenza", "Sostieni lo sviluppo senza pubblicità", "Riconnetti automaticamente l'ultima TV"],
+"zh-rCN": ["自定义控件、布局和快捷方式", "壁纸、颜色和深色主题", "关于与支持信息", "支持无广告开发", "自动重新连接上次配对的电视"],
+"hi": ["नियंत्रण, लेआउट और शॉर्टकट बदलें", "वॉलपेपर, रंग और डार्क थीम", "जानकारी और सहायता", "विज्ञापन-मुक्त विकास में सहयोग दें", "पिछले टीवी से स्वतः दोबारा जुड़ें"],
+"ar": ["تخصيص التحكم والتخطيط والاختصارات", "الخلفية والألوان والمظهر الداكن", "المعلومات والدعم", "ادعم التطوير دون إعلانات", "إعادة الاتصال بالتلفاز الأخير تلقائيًا"],
+"ru": ["Настройка кнопок и ярлыков", "Фон, цвета и тёмная тема", "Информация и поддержка", "Поддержите разработку без рекламы", "Автоматически подключаться к последнему ТВ"],
+"ja": ["操作やショートカットをカスタマイズ", "壁紙、色、ダークテーマ", "情報とサポート", "広告なしの開発を支援", "前回のテレビに自動再接続"],
+"ko": ["조작과 바로가기 맞춤 설정", "배경, 색상 및 어두운 테마", "정보 및 지원", "광고 없는 개발 후원", "마지막 TV에 자동 재연결"],
+"bn": ["নিয়ন্ত্রণ ও শর্টকাট সাজান", "ওয়ালপেপার, রং ও ডার্ক থিম", "তথ্য ও সহায়তা", "বিজ্ঞাপনমুক্ত উন্নয়নে সহায়তা", "শেষ টিভিতে স্বয়ংক্রিয় পুনঃসংযোগ"],
+"in": ["Sesuaikan kontrol dan pintasan", "Wallpaper, warna, dan tema gelap", "Informasi dan bantuan", "Dukung pengembangan tanpa iklan", "Hubungkan ulang otomatis ke TV terakhir"],
+"tr": ["Kontrolleri ve kısayolları özelleştir", "Duvar kağıdı, renkler ve koyu tema", "Bilgi ve destek", "Reklamsız geliştirmeyi destekle", "Son TV'ye otomatik bağlan"]
+}
+description_keys = ["remote_description", "appearance_description", "support_description", "donation_description", "auto_reconnect_description"]
+for locale, values in DESCRIPTIONS.items():
+    file = res / ("values-" + locale) / "tcl_localization.xml"
+    source_xml = file.read_text(encoding="utf-8")
+    extra = "".join(f'    <string name="tcl_{key}">{escape(value)}</string>\n' for key, value in zip(description_keys, values))
+    source_xml = source_xml.replace("</resources>", extra + "</resources>")
+    file.write_text(source_xml, encoding="utf-8")
+source = settings.read_text(encoding="utf-8")
+for key, value in zip(description_keys, DESCRIPTIONS["pt-rBR"]):
+    # The short support description is not translated by the earlier compatibility script.
+    original_en = "About, sponsor, and project support details"
+    if key == "support_description":
+        original = original_en
+    else:
+        original = value
+    source = source.replace('"' + original + '"', 'context.getString(com.hari.androidtvremote.R.string.tcl_' + key + ')')
+settings.write_text(source, encoding="utf-8")
