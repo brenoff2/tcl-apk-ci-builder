@@ -4,6 +4,9 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -66,6 +69,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import kotlin.math.sin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -253,12 +258,6 @@ fun TclApprovedHomeScreen(
                             .padding(if (compactHeight) 7.dp else 10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Icon(Icons.Filled.Cast, contentDescription = null,
-                                tint = TclBlue, modifier = Modifier.size(18.dp))
-                            Text("Reprodução", color = TclMuted, fontSize = 14.sp)
-                        }
                         // Keep all actions: 10 s, play/pause/stop, speeds,
                         // restart episode, episode guide and headphones.
                         PlaybackTransportBar(
@@ -293,14 +292,12 @@ fun TclApprovedHomeScreen(
                     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                         // The old 178dp cap produced a tiny disc despite free
                         // space below it, and clipped the fourth numeric row.
-                        val gap = if (maxWidth < 350.dp) 5.dp else 6.dp
-                        val rockerWidth = if (maxWidth < 350.dp) 41.dp else 45.dp
+                        // Same footprint in D-pad, pointer and 4-row numeric mode.
+                        val gap = if (maxWidth < 350.dp) 6.dp else 8.dp
+                        val rockerWidth = if (maxWidth < 350.dp) 53.dp else 57.dp
                         val padWidth = (maxWidth - rockerWidth * 2 - gap * 2)
-                            .coerceAtLeast(0.dp).coerceAtMost(330.dp)
-                        // Four genuine rows, never squeezed into a square.
-                        val padHeight = if (activePadMode == RemotePadMode.NumberPad)
-                            (padWidth * 1.24f).coerceAtLeast(252.dp)
-                        else padWidth
+                            .coerceAtLeast(0.dp).coerceAtMost(280.dp)
+                        val padHeight = padWidth
                         Row(
                             modifier = Modifier.fillMaxWidth().height(padHeight),
                             horizontalArrangement = Arrangement.spacedBy(gap),
@@ -310,6 +307,8 @@ fun TclApprovedHomeScreen(
                                 modifier = Modifier.width(rockerWidth).fillMaxHeight(),
                                 label = "Volume",
                                 headerIcon = Icons.Filled.VolumeUp,
+                                fluidLevel = sessionState.volumeFraction,
+                                isMuted = sessionState.isMuted,
                                 onHeader = {
                                     remoteKey(Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_MUTE)
                                 },
