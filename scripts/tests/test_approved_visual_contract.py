@@ -58,7 +58,7 @@ class ApprovedUiContract(unittest.TestCase):
 
     def test_no_overlap_regression_and_cast_still_available(self):
         self.assertIn(".verticalScroll(rememberScrollState())", self.skin)
-        self.assertIn(".coerceAtLeast(0.dp).coerceAtMost(270.dp)", self.skin)
+        self.assertIn(".coerceAtLeast(0.dp).coerceAtMost(215.dp)", self.skin)
         self.assertIn("HomeScreen(", self.skin)
         self.assertIn("RemotePadMode.Touchpad -> RemotePadMode.NumberPad", self.nav)
         self.assertIn("internal fun KeyboardDialog(", self.screen)
