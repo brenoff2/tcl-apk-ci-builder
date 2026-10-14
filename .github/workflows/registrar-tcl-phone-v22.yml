@@ -1,0 +1,34 @@
+name: Registrar versao atual TCL Livre 2.2 no canal de atualizacoes
+
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths:
+      - '.github/workflows/registrar-tcl-phone-v22.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  register-current:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Registrar versao atual sem distribuir APK incompatível
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view tcl-phone-v2.2 >/dev/null 2>&1; then
+            echo "Tag existente; preservando assinatura e ativos."
+          else
+            gh release create tcl-phone-v2.2 \
+              --target feat/tcl-v22-updates-back-bluetooth \
+              --title 'Controle TCL Livre 2.2 - versao atual' \
+              --notes 'Versao 2.2, versionCode 22, pacote com.tclremote.livre. SHA-256 do APK assinado e homologado por compilacao CI: bcb2ac6f6c984bb2aaac57d758ca4fc3051a351bf6805899a5672509d4686904. O download do APK 2.2 foi disponibilizado como anexo na conversa de desenvolvimento. Este registro de versao serve para o botão Buscar atualizacoes reconhecer corretamente que a 2.2 ja e a mais recente. NENHUM arquivo APK foi publicado neste Release. Futuras versões so devem adicionar APKs assinados pela chave permanente com certificado SHA-256 df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8. Nunca publicar debug nem chave privada.' \
+              --latest=false
+          fi
+          gh release view tcl-phone-v2.2 --json tagName,url,assets \
+            --jq '{tag:.tagName,url:.url,files:[.assets[].name]}'
