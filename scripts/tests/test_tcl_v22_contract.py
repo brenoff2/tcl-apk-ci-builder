@@ -61,7 +61,7 @@ class TvUpdateAndBluetooth(unittest.TestCase):
     def test_tv_buttons_readable_dpad_focus(self):
         self.assertIn("state_focused", self.main)
         self.assertIn("dp(76)", self.main)
-        self.assertIn("setTextSize(TypedValue.COMPLEX_UNIT_SP, 20)", self.main)
+        self.assertIn("setTextSize(TypedValue.COMPLEX_UNIT_SP, 15)", self.main)
         self.assertIn('action("Buscar atualizações"', self.main)
         self.assertIn("Color.rgb(255, 230, 86)", self.main)
 
