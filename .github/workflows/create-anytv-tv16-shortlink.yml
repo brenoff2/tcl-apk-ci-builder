@@ -37,7 +37,7 @@ jobs:
             alias_name="${link#https://is.gd/}"
             resolved=$(curl --fail --silent --show-error --max-time 30 --get 'https://is.gd/forward.php' --data-urlencode 'format=simple' --data-urlencode "shorturl=$alias_name")
           else
-            resolved=$(curl --location --silent --show-error --max-time 45 --output /dev/null --write-out '%{url_effective}' "$link")
+            resolved=$(curl --silent --show-error --head --max-time 30 "$link" | awk 'tolower($1)=="location:" {print $2; exit}' | tr -d '\r')
           fi
           echo "RESOLVED_DESTINATION=$resolved"
           test "$resolved" = "$TARGET"
