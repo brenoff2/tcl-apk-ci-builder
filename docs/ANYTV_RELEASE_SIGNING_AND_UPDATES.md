@@ -30,3 +30,12 @@ SHA-256 do certificado da versão 2.2 instalada:
 10. Não alterar ícone, marca, interface ou recursos durante uma tentativa de reparo de assinatura/publicação.
 
 Status em 2026-10-14: existem certificados públicos no Drive, mas **não foi localizada a chave privada de assinatura original do celular**. Atualização assinada compatível **bloqueada** até recuperar essa chave.
+
+## Canais permanentes atuais
+
+- Celular: `updates/android/current.json` (atualmente `available:false`, pois o release 2.3 ainda não tem APK assinado compatível).
+- TV: `updates/tv/current.json` (aponta para os dois APKs **assinados e publicados** do release `tv-complemento-v1.4`).
+- Os botões dos dois aplicativos consultam esses manifestos através de `overrides/common/TclUpdateManager.java` a partir do **próximo build instalado**.
+- A versão instalada anteriormente continua usando seu próprio atualizador antigo. Um manifesto novo no GitHub não altera retroativamente APKs já instalados.
+- **Publicação atômica:** primeiro criar GitHub Release + subir APK(s) assinados, validar nome, tamanho, SHA-256, pacote, versionCode e signer, e **somente depois** trocar `current.json`. Nunca marcar `available:true` para artefato ausente.
+- Conservar versões antigas nos GitHub Releases. Não reutilizar um APK chamado `current.apk`: o manifesto estável preserva o histórico e distingue certificados.
