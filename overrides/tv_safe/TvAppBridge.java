@@ -53,6 +53,7 @@ public final class TvAppBridge {
     private final ExecutorService workers = Executors.newFixedThreadPool(2);
     private final AtomicInteger badCodes = new AtomicInteger();
     private volatile boolean running = false;
+    private volatile String headphoneStatus = "idle";
     private ServerSocket server;
 
     public TvAppBridge(Context context) {
@@ -161,9 +162,11 @@ public final class TvAppBridge {
                         "{\"launched\":" + opened + "}");
             } else if (parts[0].equals("POST") && parts[1].equals("/headphones")) {
                 // Only pre-paired devices explicitly selected in this TV app.
-                // The caller must be paired and within a private LAN.
                 String result = requestHeadphones();
                 write(socket.getOutputStream(), 200, "{\"status\":\"" + result + "\"}");
+            } else if (parts[0].equals("GET") && parts[1].equals("/headphones/status")) {
+                write(socket.getOutputStream(), 200,
+                        "{\"status\":\"" + headphoneStatus + "\"}");
             } else {
                 write(socket.getOutputStream(), 404, "{\"error\":\"invalid_route\"}");
             }
@@ -182,9 +185,10 @@ public final class TvAppBridge {
             MappingStore.get(context, KeyEvent.KEYCODE_PROG_RED);
         if (mapping == null) return "not_configured";
         try {
-            BluetoothRecoverAction.recoverOrOpen(context, mapping);
-            // This is asynchronous and hidden A2DP APIs may be blocked by the
-            // TV firmware. It means requested, not confirmed connected.
+            headphoneStatus = "reconnecting";
+            BluetoothRecoverAction.recover(context, mapping, result ->
+                    headphoneStatus = result);
+            // Final status is polled through /headphones/status.
             return "requested";
         } catch (SecurityException error) {
             return "permission_required";
