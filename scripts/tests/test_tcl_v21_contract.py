@@ -28,7 +28,7 @@ class TclV21Contract(unittest.TestCase):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
         self.assertNotIn("com.tclremote.livre.preview", self.gradle)
         self.assertIn("versionCode = " + ("23" if os.environ.get("TCL_V23") == "1" else "22" if os.environ.get("TCL_V22") == "1" else "21"), self.gradle)
-        self.assertIn('versionName = "' + ("2.2-TCL" if os.environ.get("TCL_V22") == "1" else "2.1-TCL") + '"', self.gradle)
+        self.assertIn('versionName = "' + ("2.3-TCL" if os.environ.get("TCL_V23") == "1" else "2.2-TCL" if os.environ.get("TCL_V22") == "1" else "2.1-TCL") + '"', self.gradle)
 
     def test_roomy_dpad_no_artificial_178dp_cap(self):
         self.assertIn("TclResponsivePad(", self.screen)
