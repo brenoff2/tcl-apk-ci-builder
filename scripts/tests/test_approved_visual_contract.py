@@ -26,7 +26,7 @@ class ApprovedUiContract(unittest.TestCase):
         expected = ("com.tclremote.livre" if os.environ.get("TCL_RELEASE_SINGLE_APP") == "1"
                     else "com.tclremote.livre.preview")
         self.assertIn('applicationId = "' + expected + '"', self.gradle)
-        self.assertIn("versionCode = 20", self.gradle)
+        self.assertIn("versionCode = " + ("21" if os.environ.get("TCL_V21") == "1" else "20"), self.gradle)
 
     def test_has_all_screenshot_sections(self):
         for section in ("TclApprovedHeader(", "TclInstalledAppsBar(",
@@ -73,7 +73,10 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn("windowInsetsPadding(WindowInsets.safeDrawing)", self.skin)
 
     def test_keyboard_buffered_text_without_virtual_ok_click(self):
-        self.assertIn("onSendText(draft)", self.skin)
+        if os.environ.get("TCL_V21") == "1":
+            self.assertIn("onAppendText(value.substring(previous.length))", self.skin)
+        else:
+            self.assertIn("onSendText(draft)", self.skin)
         self.assertIn('onSendText = { text: String ->', self.nav)
         self.assertIn("tvRemoteViewModel.sendText(text, submit = false)", self.nav)
         self.assertNotIn("onEnter = onKeyboardEnter", self.skin)
@@ -96,7 +99,11 @@ class ApprovedUiContract(unittest.TestCase):
 
     def test_no_overlap_regression_and_cast_still_available(self):
         self.assertIn(".verticalScroll(rememberScrollState())", self.skin)
-        self.assertIn(".coerceAtLeast(0.dp).coerceAtMost(if (compactHeight) 178.dp else 226.dp)", self.skin)
+        if os.environ.get("TCL_V21") == "1":
+            self.assertIn("TclResponsivePad(", self.skin)
+            self.assertNotIn("178.dp", self.skin)
+        else:
+            self.assertIn(".coerceAtLeast(0.dp).coerceAtMost(if (compactHeight) 178.dp else 226.dp)", self.skin)
         self.assertIn("HomeScreen(", self.skin)
         self.assertIn("RemotePadMode.Touchpad -> RemotePadMode.NumberPad", self.nav)
         self.assertIn("internal fun KeyboardDialog(", self.screen)
