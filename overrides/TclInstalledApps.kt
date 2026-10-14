@@ -164,9 +164,13 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
     }
     var codeEntry by remember(deviceKey, host) { mutableStateOf(pairing) }
     var allApps by remember(deviceKey, host) { mutableStateOf<List<TvOfficialApp>>(emptyList()) }
+    val savedFavoriteRaw = prefs.getString("favorites:$deviceKey",
+        prefs.getString("favorites:$host", null))
     var favorites by remember(deviceKey, host) {
-        mutableStateOf(savedFavoriteIds(prefs.getString("favorites:$deviceKey",
-            prefs.getString("favorites:$host", null))))
+        mutableStateOf(savedFavoriteIds(savedFavoriteRaw))
+    }
+    var hasUserFavorites by remember(deviceKey, host) {
+        mutableStateOf(savedFavoriteRaw != null)
     }
     var showPair by remember(deviceKey, host) { mutableStateOf(false) }
     var showManager by remember(deviceKey, host) { mutableStateOf(false) }
@@ -184,6 +188,10 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
                     errorText = null
                 }.onFailure {
                     errorText = it.message ?: "Não foi possível consultar aplicativos da TCL."
+                    if (it.message?.contains("Código incorreto") == true) {
+                        codeEntry = pairing
+                        showPair = true
+                    }
                 }
             busy = false
         }
@@ -203,7 +211,7 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
         val byPackage = remember(allApps) { allApps.associateBy { it.packageName } }
         // First connection: show only packages actually reported by this TV.
         // The user chooses favorites; never invent Netflix/Prime/etc placeholders.
-        val selectedApps = if (favorites.isEmpty()) allApps.take(7)
+        val selectedApps = if (!hasUserFavorites) allApps.take(7)
             else favorites.mapNotNull { byPackage[it] }
         if (selectedApps.isNotEmpty()) {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
@@ -385,6 +393,7 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
                         Button(onClick = {
                             val valid = draft.filter { it in present }
                             favorites = valid
+                            hasUserFavorites = true
                             prefs.edit().putString("favorites:$deviceKey",
                                 JSONArray(valid).toString()).apply()
                             showManager = false
