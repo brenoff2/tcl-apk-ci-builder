@@ -12,7 +12,10 @@ top = """    BoxWithConstraints(
 assert s.count(top) == 1
 s=s.replace(top,top+"""        val outerWidth = maxWidth\n        val outerHeight = maxHeight\n        Column(modifier = Modifier.fillMaxSize()) {
 """)
-s=s.replace("val compactHeight = maxHeight < 760.dp", "val compactHeight = outerHeight < 760.dp")\ns=s.replace("val tightHeight = maxHeight < 650.dp", "val tightHeight = outerHeight < 650.dp")\ns=s.replace("horizontal = if (maxWidth < 360.dp)", "horizontal = if (outerWidth < 360.dp)")\nscroll="""            modifier = Modifier
+s=s.replace("val compactHeight = maxHeight < 760.dp", "val compactHeight = outerHeight < 760.dp")
+s=s.replace("val tightHeight = maxHeight < 650.dp", "val tightHeight = outerHeight < 650.dp")
+s=s.replace("horizontal = if (maxWidth < 360.dp)", "horizontal = if (outerWidth < 360.dp)")
+scroll="""            modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
 """
