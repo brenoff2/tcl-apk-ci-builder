@@ -10,7 +10,8 @@ adb install -r -t "$APK"
 # disposable, on a fresh emulator ONLY; never distribute this QA APK.
 # Bypass first-run onboarding by changing only the emulator's local preference.
 adb shell am force-stop com.tclremote.livre || true
-cat <<'XML' | adb shell run-as com.tclremote.livre sh -c 'mkdir -p shared_prefs; cat > shared_prefs/android_tv_prefs.xml'
+adb shell run-as com.tclremote.livre mkdir -p shared_prefs
+cat <<'XML' | adb shell run-as com.tclremote.livre tee shared_prefs/android_tv_prefs.xml >/dev/null
 <?xml version='1.0' encoding='utf-8' standalone='yes' ?>
 <map>
   <boolean name="first_launch" value="false" />
