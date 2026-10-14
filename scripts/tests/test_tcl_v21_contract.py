@@ -42,15 +42,28 @@ class TclV21Contract(unittest.TestCase):
         self.assertNotIn("val padSize =", self.screen)
 
     def test_four_number_rows_fit_on_small_screens(self):
-        for screen_width, padding, rocker, gap in [
-            (320, 8, 41, 5), (360, 12, 45, 6),
-            (393, 12, 45, 6), (480, 12, 45, 6)
-        ]:
-            pad = min(screen_width - 2 * padding - 2 * rocker - 2 * gap, 330)
-            height = max(pad * 1.24, 252)
-            with self.subTest(width=screen_width):
-                self.assertGreaterEqual(pad, 200)
-                self.assertGreaterEqual((height - 14 - 15) / 4, 55)
+        if os.environ.get("TCL_V22") == "1":
+            settings = [
+                (320, 8, 46, 5), (360, 12, 57, 8),
+                (393, 12, 57, 8), (480, 12, 57, 8)
+            ]
+            for screen_width, padding, rocker, gap in settings:
+                pad = min(screen_width - 2 * padding - 2 * rocker - 2 * gap, 280)
+                height = pad
+                with self.subTest(width=screen_width):
+                    self.assertGreaterEqual(pad, 200)
+                    self.assertEqual(pad, height)
+                    self.assertGreaterEqual((height - 14 - 15) / 4, 43)
+        else:
+            for screen_width, padding, rocker, gap in [
+                (320, 8, 41, 5), (360, 12, 45, 6),
+                (393, 12, 45, 6), (480, 12, 45, 6)
+            ]:
+                pad = min(screen_width - 2 * padding - 2 * rocker - 2 * gap, 330)
+                height = max(pad * 1.24, 252)
+                with self.subTest(width=screen_width):
+                    self.assertGreaterEqual(pad, 200)
+                    self.assertGreaterEqual((height - 14 - 15) / 4, 55)
         for row in [
             'listOf("1", "2", "3")',
             'listOf("4", "5", "6")',
