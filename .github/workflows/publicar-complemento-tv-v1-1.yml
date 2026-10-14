@@ -1,0 +1,50 @@
+name: Publicar Controle TCL TV 1.1 para Downloader
+
+on:
+  push:
+    branches: ['feat/tcl-tela-aprovada-v19']
+    paths:
+      - '.github/workflows/publicar-complemento-tv-v1-1.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish-tv-companion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Recuperar APK TV 1.1 verificado do Actions
+        env:
+          GH_TOKEN: \${{ github.token }}
+          GH_REPO: \${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p tv
+          gh run download 38482823651 --name Controle_TCL_TV_Complemento_V1_1_CI --dir tv
+          test -f tv/Controle_TCL_TV_Complemento_v1.1_CI.apk
+          printf '%s  %s\n' \
+            '075ba1fde47a1606cbaed448156ea3e2d7d402cc74819e14798f3886d0e9db1a' \
+            'tv/Controle_TCL_TV_Complemento_v1.1_CI.apk' | sha256sum -c -
+          cp tv/Controle_TCL_TV_Complemento_v1.1_CI.apk tv/tcl-tv.apk
+          ls -lh tv/tcl-tv.apk
+      - name: Publicar arquivo publico persistente no GitHub Releases
+        env:
+          GH_TOKEN: \${{ github.token }}
+          GH_REPO: \${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view tv-complemento-v1.1 >/dev/null 2>&1; then
+            gh release upload tv-complemento-v1.1 tv/tcl-tv.apk --clobber
+          else
+            gh release create tv-complemento-v1.1 tv/tcl-tv.apk \
+              --title "Controle TCL TV 1.1 - complemento da televisao" \
+              --notes "Complemento oficial deste projeto para instalar na TCL Android TV, ativar em Configuracoes > Acessibilidade e exibir o codigo de 8 digitos. Ele disponibiliza ao controle do celular os aplicativos realmente instalados na TV, com os nomes e icones oficiais, e permite abrir o aplicativo escolhido. Build de depuracao da versao 1.1; futuras atualizacoes precisam usar assinatura compatível." \
+              --target feat/tcl-tela-aprovada-v19 \
+              --latest=false
+          fi
+          gh release view tv-complemento-v1.1 \
+            --json assets,url \
+            --jq '{release:.url,assets:[.assets[] | {name:.name,url:.url}]}'
