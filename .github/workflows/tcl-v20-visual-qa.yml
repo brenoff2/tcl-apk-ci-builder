@@ -1,0 +1,51 @@
+name: TCL v2.0 - QA visual em 4 telas e temas
+
+on:
+  push:
+    branches: ['fix/tcl-v20-responsive-teclado-tema']
+    paths:
+      - '.github/workflows/tcl-v20-visual-qa.yml'
+      - 'scripts/tcl_v20_visual_qa.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  emulator-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Recuperar APK de teste v2.0 ja compilado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p qa-base
+          gh run download 38497407337 --name TCL_PHONE_20_BASE_DEBUG_NAO_INSTALAR --dir qa-base
+          test -s qa-base/BASE_APP_2_0_REASSINAR_NAO_INSTALAR.apk
+          chmod +x scripts/tcl_v20_visual_qa.sh
+      - name: Permitir KVM no runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Emular Android 15 e capturar quatro dimensoes / modos
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: bash scripts/tcl_v20_visual_qa.sh
+      - name: Guardar screenshots para inspeção manual
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TCL_V20_QA_VISUAL_320_393_480_DP
+          path: screenshot-output/
+          if-no-files-found: warn
+          retention-days: 14
