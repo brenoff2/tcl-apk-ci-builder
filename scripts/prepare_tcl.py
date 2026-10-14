@@ -354,11 +354,77 @@ if os.environ.get("TCL_RESCUE_STABLE") == "1":
     change("app/src/main/res/values/strings.xml", [
         ("Controle TCL 1.5", "Controle TCL 1.8")
     ])
+    if os.environ.get("TCL_APPROVED_UI") == "1":
+        # The screenshot-approved screen must remain a separate install until
+        # the private signer for the user's real 1.7 APK is recovered.
+        if os.environ.get("TCL_PREVIEW_SIDE_BY_SIDE") != "1":
+            raise RuntimeError("Approved UI build requires TCL_PREVIEW_SIDE_BY_SIDE=1; no incompatible updates.")
+        copyfile("overrides/TclApprovedHomeScreen.kt",
+                 SRC / "ui/app/TclApprovedHomeScreen.kt")
+        change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt", [
+            ("private fun RemotePadStage(", "internal fun RemotePadStage("),
+            ("private fun KeyboardDialog(", "internal fun KeyboardDialog(")
+        ])
+        change("app/src/main/java/com/hari/androidtvremote/navigation/AppNavGraph.kt", [
+            ("import com.hari.androidtvremote.ui.app.HomeScreen",
+             "import com.hari.androidtvremote.ui.app.TclApprovedHomeScreen"),
+            ("            HomeScreen(\n", "            TclApprovedHomeScreen(\n"),
+            ("                onOpenSettings = {\n"
+             "                    navController.navigate(Screen.Settings.route)\n"
+             "                },\n",
+             "                onOpenSettings = {\n"
+             "                    navController.navigate(Screen.Settings.route)\n"
+             "                },\n"
+             "                onManageApps = {\n"
+             "                    navController.navigate(Screen.QuickLaunchOrder.route)\n"
+             "                },\n"),
+            ("                onCyclePadMode = {\n"
+             "                    activePadMode = activePadMode.toggleNumberPad(defaultPadMode)\n"
+             "                },\n",
+             "                onCyclePadMode = {\n"
+             "                    activePadMode = when (activePadMode) {\n"
+             "                        RemotePadMode.DPad -> RemotePadMode.Touchpad\n"
+             "                        RemotePadMode.Touchpad -> RemotePadMode.NumberPad\n"
+             "                        RemotePadMode.NumberPad -> RemotePadMode.DPad\n"
+             "                    }\n"
+             "                },\n")
+        ])
+        # All previous shortcut IDs remain recognized; only the default order
+        # is aligned with the screenshot, while user-saved orders are kept.
+        apps_file = SRC / "ui/app/RemoteCustomization.kt"
+        apps_code = apps_file.read_text()
+        apps_start = apps_code.index("private val defaultRemoteShortcutApps = listOf(")
+        apps_end = apps_code.index("\nfun defaultRemoteShortcutOrder()", apps_start)
+        approved_apps = """private val defaultRemoteShortcutApps = listOf(
+    RemoteShortcutApp("netflix", "Netflix", "Netflix", "N", Color(0xFFD61F2C)),
+    RemoteShortcutApp("prime_video", "Prime Video", "Prime Video", "PV", Color(0xFF1788FF)),
+    RemoteShortcutApp("hbo_max", "Max", "Max", "M", Color(0xFF7434FF)),
+    RemoteShortcutApp("disney_plus", "Disney+", "Disney+", "D+", Color(0xFF1277CE)),
+    RemoteShortcutApp("apple_tv", "Apple TV", "Apple TV", "AT", Color(0xFF2F3C52)),
+    RemoteShortcutApp("youtube", "YouTube", "YouTube", "YT", Color(0xFFFF2D20)),
+    RemoteShortcutApp("iptv", "IPTV", "IPTV", "TV", Color(0xFF7A21B8)),
+    RemoteShortcutApp("jiohotstar", "JioHotstar", "Jio Hotstar", "JH", Color(0xFF6A54FF)),
+    RemoteShortcutApp("sonyliv", "SonyLIV", "SonyLIV", "SL", Color(0xFF8E5BFF)),
+    RemoteShortcutApp("hulu", "Hulu", "Hulu", "HU", Color(0xFF1CE783))
+)
+"""
+        apps_file.write_text(apps_code[:apps_start] + approved_apps + apps_code[apps_end:])
+        change("app/build.gradle.kts", [
+            ("versionCode = 18", "versionCode = 19"),
+            ('versionName = "1.8-Resgate-Teste"', 'versionName = "1.9-Tela-Aprovada-Preview"'),
+            ('applicationId = "com.tclremote.livre"',
+             'applicationId = "com.tclremote.livre.preview"')
+        ])
+        change("app/src/main/res/values/strings.xml", [
+            ("Controle TCL 1.8", "Controle TCL Visual")
+        ])
+        print("TCL_TELA_APROVADA_PREVIEW_SIDE_BY_SIDE_OK")
     screen = (SRC/"ui/app/RemoteScreen.kt").read_text()
     assert "AppShortcutStripSquare(" in screen
     assert "TclInstalledAppsBar" not in screen
     assert not (SRC/"ui/app/TclInstalledApps.kt").exists()
-    assert 'applicationId = "com.tclremote.livre"' in (ROOT/"app/build.gradle.kts").read_text()
+    expected_app_id = ("com.tclremote.livre.preview" if os.environ.get("TCL_APPROVED_UI") == "1" else "com.tclremote.livre")
+    assert 'applicationId = "' + expected_app_id + '"' in (ROOT/"app/build.gradle.kts").read_text()
     print("TCL_RESGATE_ESTAVEL_SEM_VINCULACAO_OK")
     raise SystemExit(0)
 
