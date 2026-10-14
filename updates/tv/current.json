@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "platform": "tv",
+  "package": "com.tclremote.tvcompanion",
+  "available": true,
+  "version": "1.4",
+  "tag": "tv-complemento-v1.4",
+  "assets": [
+    {
+      "name": "Controle_TCL_TV_v1.4_cert3382.apk",
+      "size": 37567,
+      "digest": "sha256:eee4842962199f0e331efbeee4517b0a803f3f555811f68ab19146c7ac66d688",
+      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.4/Controle_TCL_TV_v1.4_cert3382.apk"
+    },
+    {
+      "name": "Controle_TCL_TV_v1.4_cert8b2b.apk",
+      "size": 37567,
+      "digest": "sha256:c3e2a25dc19451a20a2f00813caaae5320ff5e0dda140fc762034717d305a242",
+      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.4/Controle_TCL_TV_v1.4_cert8b2b.apk"
+    }
+  ]
+}
