@@ -411,6 +411,27 @@ fun TclApprovedHomeScreen(
             text = { Text(headsetStatus.orEmpty()) },
             confirmButton = {
                 TextButton(onClick = { headsetStatus = null }) { Text("Entendi") }
+            },
+            dismissButton = {
+                if (headsetStatus?.contains("bloqueou a reconexão") == true) {
+                    TextButton(onClick = {
+                        val tv = sessionState.connectedDevice
+                        val host = tv?.ipAddress
+                        val pairing = if (host.isNullOrBlank()) null else
+                            TclTvAppApi.savedCode(headsetPrefs, host, tv.id, tv.name)
+                        if (!host.isNullOrBlank() && !pairing.isNullOrBlank()) {
+                            scope.launch {
+                                val opened = TclTvAppApi.openBluetoothSettings(host, pairing)
+                                headsetStatus = if (opened) {
+                                    "Configurações Bluetooth solicitadas. Na TV, selecione seus fones."
+                                } else {
+                                    "A TV não permitiu abrir as configurações remotamente. " +
+                                    "Abra Controle TCL TV na televisão e selecione Configurações Bluetooth da TV."
+                                }
+                            }
+                        }
+                    }) { Text("Abrir Bluetooth na TV") }
+                }
             }
         )
     }
