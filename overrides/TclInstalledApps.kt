@@ -129,11 +129,11 @@ internal object TclTvAppApi {
             // TV 1.4 responds "requested" immediately, then asynchronously
             // checks A2DP state. Never claim connected until it is confirmed.
             if (status == "requested") {
-                repeat(12) {
+                for (attempt in 0 until 12) {
                     kotlinx.coroutines.delay(800L)
                     status = JSONObject(request(host, code, "/headphones/status"))
                         .optString("status", "not_supported")
-                    if (status != "reconnecting" && status != "requested") return@repeat
+                    if (status != "reconnecting" && status != "requested") break
                 }
             }
             when (status) {
