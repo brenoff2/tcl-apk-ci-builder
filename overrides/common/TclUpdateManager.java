@@ -81,68 +81,24 @@ public final class TclUpdateManager {
                 String signer = sha256(currentSigner(installed));
                 boolean tv = TV_PACKAGE.equals(pkg);
                 String prefix = tv ? TV_PREFIX : PHONE_PREFIX;
-                JSONArray releases = channelReleases(tv);
-                JSONObject release = null;
-                String version = "";
-                int best = -1;
-                for (int i = 0; i < releases.length(); i++) {
-                    JSONObject candidate = releases.getJSONObject(i);
-                    if (candidate.optBoolean("draft") || candidate.optBoolean("prerelease"))
-                        continue;
-                    String tagName = candidate.optString("tag_name", "");
-                    if (!tagName.startsWith(prefix)) continue;
-                    String ver = tagName.substring(prefix.length());
-                    int code = versionValue(ver);
-                    if (code > best) {
-                        release = candidate;
-                        version = ver;
-                        best = code;
-                    }
-                }
-                if (release == null) {
-                    throw new IllegalStateException("Ainda não existe uma atualização AnyTV assinada e publicada.");
-                }
-                if (best <= versionValue(installed.versionName)) {
-                    post(activity, callback, "Você já tem a versão mais recente.");
-                    return;
-                }
-                String tag = release.getString("tag_name");
-                String base = DOWNLOAD_PREFIX + tag + "/";
-                JSONArray assets = release.getJSONArray("assets");
-                String expectedName;
+                String suffix;
                 if (tv) {
                     if (TV_CERT_A.equals(signer)) {
-                        expectedName = "Controle_TCL_TV_v" + version + "_cert3382.apk";
+                        suffix = "tv/cert3382";
                     } else if (TV_CERT_B.equals(signer)) {
-                        expectedName = "Controle_TCL_TV_v" + version + "_cert8b2b.apk";
+                        suffix = "tv/cert8b2b";
                     } else {
-                        throw new IllegalStateException(
-                                "Sua TV usa uma assinatura não reconhecida. " +
-                                "Não vou apagar a configuração nem forçar uma reinstalação.");
+                        throw new SecurityException(
+                                "Assinatura da TV desconhecida. Não é seguro instalar por cima.");
                     }
                 } else {
-                    expectedName = "Controle_TCL_Livre_v" + version + ".apk";
+                    suffix = "android";
                 }
-
-                JSONObject asset = null;
-                for (int n = 0; n < assets.length(); n++) {
-                    JSONObject candidate = assets.getJSONObject(n);
-                    if (expectedName.equals(candidate.optString("name"))) {
-                        asset = candidate;
-                        break;
-                    }
-                }
-                if (asset == null) {
-                    throw new IllegalStateException(
-                            "A atualização ainda não tem um APK compatível com este aparelho.");
-                }
-                String url = asset.getString("browser_download_url");
-                String digest = asset.optString("digest", "").toLowerCase(Locale.ROOT);
-                long size = asset.optLong("size", -1);
-                if (!url.equals(base + expectedName) || !digest.matches("sha256:[0-9a-f]{64}")
-                        || size < 15000 || size > MAX_DOWNLOAD) {
-                    throw new SecurityException("Metadados do APK inválidos; atualização bloqueada.");
-                }
+                // A real signed APK, not a JSON pointer or version-specific URL.
+                // Each TV signer receives a different current.apk.
+                String url = "https://raw.githubusercontent.com/" + REPO
+                        + "/feat/tcl-v22-updates-back-bluetooth/updates/"
+                        + suffix + "/current.apk";
 
                 if (Build.VERSION.SDK_INT >= 26 && !pm.canRequestPackageInstalls()) {
                     post(activity, callback,
@@ -163,11 +119,7 @@ public final class TclUpdateManager {
 
                 post(activity, callback, "Atualização encontrada. Baixando e verificando...");
                 File apk = new File(app.getCacheDir(), "tcl-update-verified.apk");
-                download(url, apk, size);
-                if (!digest.substring(7).equals(sha256File(apk))) {
-                    apk.delete();
-                    throw new SecurityException("Arquivo baixado não confere com o SHA-256 publicado.");
-                }
+                download(url, apk, -1);
                 PackageInfo next = pm.getPackageArchiveInfo(apk.getAbsolutePath(), flags);
                 if (next == null || !pkg.equals(next.packageName)) {
                     apk.delete();
@@ -330,7 +282,7 @@ public final class TclUpdateManager {
                     out.write(buf, 0, n);
                 }
             }
-            if (received != expectedSize || !temp.renameTo(destination)) {
+            if ((expectedSize >= 0 && received != expectedSize) || received < 15000 || !temp.renameTo(destination)) {
                 throw new IllegalStateException("Download incompleto ou armazenamento insuficiente.");
             }
         } finally {
