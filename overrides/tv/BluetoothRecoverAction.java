@@ -29,6 +29,10 @@ final class BluetoothRecoverAction {
         void onResult(String status);
     }
 
+    private interface Finish {
+        void accept(String status);
+    }
+
     private static final String TAG = "TCLBluetoothRecovery";
     private BluetoothRecoverAction() { }
 
@@ -75,7 +79,7 @@ final class BluetoothRecoverAction {
         final BluetoothProfile[] currentProxy = new BluetoothProfile[1];
         final Runnable[] finishTimeout = new Runnable[1];
 
-        final java.util.function.Consumer<String> finish = status -> {
+        final Finish finish = status -> {
             if (!finished.compareAndSet(false, true)) return;
             if (finishTimeout[0] != null) main.removeCallbacks(finishTimeout[0]);
             BluetoothProfile proxy = currentProxy[0];
@@ -158,7 +162,7 @@ final class BluetoothRecoverAction {
 
     private static void verifyConnected(
             BluetoothProfile proxy, BluetoothDevice device,
-            Handler main, java.util.function.Consumer<String> finish, int attempt) {
+            Handler main, Finish finish, int attempt) {
         try {
             if (proxy.getConnectionState(device) == BluetoothProfile.STATE_CONNECTED) {
                 finish.accept("connected");
