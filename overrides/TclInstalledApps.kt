@@ -122,6 +122,14 @@ internal object TclTvAppApi {
                 JSONObject().put("package", packageName).toString())).optBoolean("launched")
         }
 
+    suspend fun openBluetoothSettings(host: String, code: String): Boolean =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                JSONObject(request(host, code, "/headphones/settings", "{}"))
+                    .optBoolean("opened", false)
+            }.getOrDefault(false)
+        }
+
     suspend fun headphones(host: String, code: String): String =
         withContext(Dispatchers.IO) {
             var status = JSONObject(request(host, code, "/headphones", "{}"))
@@ -141,8 +149,8 @@ internal object TclTvAppApi {
                 "reconnecting", "requested" -> "A TCL ainda está tentando reconectar os fones."
                 "not_configured" -> "Na TV, abra Controle TCL TV e selecione seus fones pareados."
                 "permission_required" -> "Na TV, abra Controle TCL TV e autorize a conexão Bluetooth."
-                "api_restricted" -> "O Android da TCL bloqueou a reconexão automática. " +
-                    "O aplicativo não abriu as Configurações sem sua autorização."
+                "api_restricted" -> "O Android da TV bloqueou a reconexão automática. " +
+                    "Você pode abrir as configurações Bluetooth da TV pelo botão abaixo."
                 "not_paired" -> "Esses fones não estão mais pareados com a TCL."
                 "not_connected", "timeout", "profile_unavailable" ->
                     "A TV não conseguiu confirmar a reconexão dos fones."
