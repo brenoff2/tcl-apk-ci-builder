@@ -1,4 +1,4 @@
-# Controle TCL Livre — bloqueio de atualização Android
+> **HISTÓRICO — situação superada:** esta investigação documentou incompatibilidades antigas de 1.7/1.8. Para entregas atuais do AnyTV 2.5 e AnyTV Connect 1.6, consultar [ANYTV_RELEASE_SIGNING_AND_UPDATES.md](./ANYTV_RELEASE_SIGNING_AND_UPDATES.md). As chaves privadas necessárias para o celular e para a variante TV 8b2b foram posteriormente recuperadas e os APKs compatíveis publicados e verificados em 14/10/2026. Os bloqueios descritos abaixo são históricos, não o estado atual de publicação.\n\n# Controle TCL Livre — bloqueio de atualização Android
 
 ## Situação comprovada (13/10/2026)
 

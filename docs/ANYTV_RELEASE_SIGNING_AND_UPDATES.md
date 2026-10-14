@@ -1,45 +1,42 @@
-# AnyTV — publicação, assinaturas e atualização
+# AnyTV — releases, assinaturas e atualizações
 
-## Situação verificada em 14/10/2026
+## Estado validado em 14/10/2026
 
-- **Celular**: versão **2.4**, applicationId `com.tclremote.livre`, versionCode **24**. APK assinado e publicado, com ícone e logomarca aprovados.
-- **Televisão**: versão **1.5**, applicationId `com.tclremote.tvcompanion`, versionCode **6**. Dois APKs assinados e publicados, para certificados **8b2b** (instalação atual confirmada pelo usuário) e **3382** (instalações alternativas).
-- Ambos os aplicativos mantêm o botão **Buscar atualizações**; os instalados antes da mudança usam **GitHub Releases** e os novos usam **o arquivo binário current.apk**.
-- A confirmação final da instalação em dispositivos reais requer teste no celular e na TV do usuário. Nunca afirmar teste físico que não ocorreu.
+O GitHub Actions [38588338021](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/38588338021) concluiu com sucesso a verificação de pacotes, versionCode, assinatura, alinhamento e igualdade binária com os assets do GitHub Releases.
 
-## Canais estáveis — APK binário real, não JSON
+| Aplicativo | Pacote | Versão | versionCode | Assinatura |
+|---|---|---|---|---|
+| AnyTV Android | `com.tclremote.livre` | 2.5-AnyTV | 25 | `df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8` |
+| AnyTV Connect TV — instalação do usuário | `com.tclremote.tvcompanion` | 1.6-AnyTV | 7 | `8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da` |
+| AnyTV Connect TV — instalações alternativas | `com.tclremote.tvcompanion` | 1.5-AnyTV | 6 | `3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add` |
 
-- Android: `updates/android/current.apk`, histórico `updates/android/AnyTV-v2.4.apk`.
-- Android TV (assinatura 8b2b): `updates/tv/cert8b2b/current.apk`, histórico `updates/tv/cert8b2b/AnyTV-Connect-v1.5.apk`.
-- Android TV (assinatura 3382): `updates/tv/cert3382/current.apk`, histórico `updates/tv/cert3382/AnyTV-Connect-v1.5.apk`.
-- Nunca sobrescrever uma variante de certificado com outra. Os APKs assinados permanecem também no GitHub Releases.
+**Não confundir:** a versão TV 1.6 assinada com 8b2b não serve para instalar sobre a variante 3382. Esta última permanece em 1.5 até existir APK 1.6 assinado especificamente com 3382.
 
-## Lançamentos compatíveis com atualizadores instalados anteriormente
+Ambos os apps atualizados exibem a versão discretamente na própria interface; os nomes do lançador continuam **AnyTV** e **AnyTV Connect**. Ícone e logomarca aprovados estão nos projetos de build de ambas as versões.
 
-- Telefone: tag `tcl-phone-v2.4`, asset `Controle_TCL_Livre_v2.4.apk`.
-- TV: tag `tv-complemento-v1.5`, assets `Controle_TCL_TV_v1.5_cert8b2b.apk` e `Controle_TCL_TV_v1.5_cert3382.apk`.
-- As versões antigas selecionam a variante certa através do certificado instalado e exigem versãoCode superior.
+## Arquivos permanentes no GitHub
 
-## Identidade de assinatura
+- Celular: `updates/android/current.apk`, histórico `updates/android/AnyTV-v2.5.apk`.
+- TV 8b2b: `updates/tv/cert8b2b/current.apk`, histórico `updates/tv/cert8b2b/AnyTV-Connect-v1.6.apk`.
+- TV 3382: `updates/tv/cert3382/current.apk`, histórico da versão 1.5.
 
-- Celular (SHA-256 de certificado): `df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8`.
-- TV variante 8b2b: `8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da`.
-- TV variante 3382: `3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add`.
-- Chaves privadas foram recuperadas e verificadas fora do GitHub. **Não publicar keystores, PKCS12, passwords ou backups descriptografados**.
-- Backups públicos dos certificados: [Google Drive](https://drive.google.com/drive/folders/15lfuEVc5XwSjJSn0st9Pnf78JhOms1Sh). Backups privados foram preservados em pasta privada no Drive, sem disponibilizar URLs ou credenciais no repositório.
-- A chave de assinatura legada 8b2b foi recuperada localmente de um backup criptografado CMS utilizando a chave privada de recuperação 3382. O backup criptografado permanece no release TV 1.3; nunca disponibilizar o conteúdo descriptografado.
+Releases oficiais para clientes e atualizadores antigos:
+- [tcl-phone-v2.5](https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tcl-phone-v2.5/Controle_TCL_Livre_v2.5.apk), SHA-256 `98a8628e7df3210a9a33ac5533630099c3a0c16d179655e548c2ed58e691c9da`.
+- [tv-complemento-v1.6 (8b2b)](https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.6/Controle_TCL_TV_v1.6_cert8b2b.apk), SHA-256 `fbb216082f23278cdccbe0625416376b69143a080010c097d4601cd9322fe86b`.
 
-## Procedimento obrigatório por atualização
+## Botão Buscar atualizações
 
-1. Preservar `applicationId` e todas as funcionalidades existentes; aplicar mudanças de interface com testes de regressão.
-2. Incrementar `versionCode` e o número interno da versão do aplicativo modificado. No lançador, exibir **somente AnyTV / AnyTV Connect**, sem versão.
-3. Compilar pelo CI; conferir package, versionCode, permissões e recursos reais de branding no APK.
-4. Assinar localmente com a chave compatível com o aplicativo instalado. Para a TV, gerar separadamente ambas as assinaturas enquanto existirem instalações das duas linhagens.
-5. Conferir `apksigner verify --verbose --print-certs`, SHA-256 do arquivo, assinatura, pacote, versionCode e tamanho. Abortá-la se houver divergência.
-6. Publicar o APK **assinado** no GitHub Releases com o nome esperado pelo atualizador das versões existentes.
-7. Publicar o mesmo APK binário como `current.apk` no canal fixo, mantendo histórico por versão. Usar operação atômica, conferir SHA-256 e tamanhos após publicar.
-8. Validar o mecanismo no aplicativo novo e o caminho do atualizador antigo. Nunca presumir que o link encurtado aponta para a versão mais recente.
-9. Guardar as assinaturas e instruções de recuperação em armazenamento privado. Jamais expor chaves privadas em GitHub, logs, links públicos ou arquivos distribuídos.
-10. Não declarar uma release concluída sem compilação aprovada e arquivos assinados acessíveis. Testes físicos devem ser descritos como pendentes quando não realizados.
+Implementação: `overrides/common/TclUpdateManager.java`. Ela seleciona o canal binário `current.apk` pelo pacote e, no caso da TV, pelo certificado instalado; baixa o APK; recusa package/certificado incompatível e `versionCode` não superior; em seguida, abre o PackageInstaller do Android. **A instalação ainda precisa da confirmação de segurança do usuário no dispositivo**, e um teste físico no celular/TV não ocorreu neste ambiente.
 
-Scripts e integrações: `scripts/apply_anytv_brand.py`, `scripts/prepare_companion_safe.py`, `overrides/common/TclUpdateManager.java`, workflows `tcl-v22-phone-tv-integration.yml`, `publish-anytv-android-current.yml` e `publish-anytv-tv15.yml`.
+Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - Releases**, incluindo versões históricas. Não mover APKs assinados de uma variante de certificado para a outra.
+
+## Segurança e processo para próximas atualizações
+
+1. Incrementar os códigos/nomes de versão apenas nos aplicativos modificados; não acrescentar versões ao nome do lançador.
+2. Aplicar os recursos aprovados de marca e preservar callbacks/funcionalidades; rodar testes e builds Android e TV.
+3. Assinar em ambiente privado com a chave original de cada pacote/certificado; **não publicar senhas, keystores ou backups descriptografados no GitHub ou nos logs**.
+4. Verificar `aapt dump badging`, `apksigner verify --verbose --print-certs`, SHA-256 e `zipalign` antes de qualquer mudança em `current.apk`.
+5. Publicar histórico e assets do GitHub Releases com os nomes esperados; trocar cada `current.apk` somente pelo mesmo APK auditado.
+6. Comparar hash de origem, release e `current.apk` após a publicação. O workflow `.github/workflows/publish-anytv-25-16.yml` foi convertido em **verificação somente leitura** para que um rerun nunca rebaixe a versão publicada.
+7. Guardar backups privados no Drive em **AnyTV - Assinaturas Privadas - Nao Compartilhar**. Os certificados públicos têm backup separado. Não inserir chaves privadas no repositório.
+8. Afirmar instalação/atualização completa no dispositivo apenas após homologação real; CI e acesso ao download não substituem esse teste.
