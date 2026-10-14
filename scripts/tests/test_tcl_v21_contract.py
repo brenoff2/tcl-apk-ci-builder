@@ -26,14 +26,18 @@ class TclV21Contract(unittest.TestCase):
     def test_one_real_phone_package_not_a_preview(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
         self.assertNotIn("com.tclremote.livre.preview", self.gradle)
-        self.assertIn("versionCode = 21", self.gradle)
-        self.assertIn('versionName = "2.1-TCL"', self.gradle)
+        self.assertIn("versionCode = " + ("22" if os.environ.get("TCL_V22") == "1" else "21"), self.gradle)
+        self.assertIn('versionName = "' + ("2.2-TCL" if os.environ.get("TCL_V22") == "1" else "2.1-TCL") + '"', self.gradle)
 
     def test_roomy_dpad_no_artificial_178dp_cap(self):
         self.assertIn("TclResponsivePad(", self.screen)
         self.assertIn("val padWidth = (maxWidth - rockerWidth * 2 - gap * 2)", self.screen)
-        self.assertIn("val padHeight = if (activePadMode == RemotePadMode.NumberPad)", self.screen)
-        self.assertIn("padWidth * 1.24f", self.screen)
+        if os.environ.get("TCL_V22") == "1":
+            self.assertIn("val padHeight = padWidth", self.screen)
+            self.assertNotIn("padWidth * 1.24f", self.screen)
+        else:
+            self.assertIn("val padHeight = if (activePadMode == RemotePadMode.NumberPad)", self.screen)
+            self.assertIn("padWidth * 1.24f", self.screen)
         self.assertNotIn("178.dp", self.screen)
         self.assertNotIn("val padSize =", self.screen)
 
