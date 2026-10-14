@@ -69,7 +69,7 @@ import java.net.URL
 data class TvOfficialApp(val packageName: String, val name: String, val icon: String)
 
 /** TV-local pairing; icons and app names are read from Android TV PackageManager. */
-private object TclTvAppApi {
+internal object TclTvAppApi {
     private fun request(host: String, code: String, path: String, body: String? = null): String {
         require(host.matches(Regex("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}"))) {
             "Endereço IP da TV indisponível"
@@ -88,6 +88,9 @@ private object TclTvAppApi {
             }
             val status = conn.responseCode
             if (status == 401) throw IllegalStateException("Código incorreto. Confira os 8 dígitos na TCL.")
+            if (status == 404 && path == "/headphones") {
+                throw IllegalStateException("Para reconectar os fones, instale Controle TCL TV 1.3 na televisão.")
+            }
             if (status !in 200..299) throw IllegalStateException("A TCL não conseguiu executar a ação ($status).")
             return conn.inputStream.bufferedReader().use { it.readText() }
         } catch (error: java.net.ConnectException) {
@@ -118,6 +121,30 @@ private object TclTvAppApi {
             JSONObject(request(host, code, "/launch",
                 JSONObject().put("package", packageName).toString())).optBoolean("launched")
         }
+
+    suspend fun headphones(host: String, code: String): String =
+        withContext(Dispatchers.IO) {
+            val status = JSONObject(request(host, code, "/headphones", "{}"))
+                .optString("status", "")
+            when (status) {
+                "requested" -> "Pedido de reconexão enviado aos fones selecionados. " +
+                    "Confira na TCL; a conexão depende do firmware Bluetooth."
+                "not_configured" -> "Na TV, abra Controle TCL TV e escolha primeiro os fones pareados."
+                "permission_required" -> "Na TV, abra Controle TCL TV e autorize a permissão Bluetooth."
+                "not_supported" -> "Reconexão automática indisponível nesta TV. Abra as configurações Bluetooth."
+                else -> "Resposta inesperada da TCL ao tentar reconectar os fones."
+            }
+        }
+
+    fun savedCode(prefs: android.content.SharedPreferences,
+                  host: String?, deviceId: String?, deviceName: String?): String? {
+        val name = deviceName?.trim()?.lowercase()
+        return listOfNotNull(
+            host?.takeIf { it.isNotBlank() }?.let { prefs.getString("pair:$it", null) },
+            deviceId?.takeIf { it.isNotBlank() }?.let { prefs.getString("pair:$it", null) },
+            name?.takeIf { it.isNotBlank() }?.let { prefs.getString("pair:name:$it", null) }
+        ).firstOrNull { it.matches(Regex("[0-9]{8}")) }
+    }
 }
 
 private fun savedFavoriteIds(raw: String?): List<String> =
