@@ -89,7 +89,7 @@ private object TclTvAppApi {
             if (status !in 200..299) throw IllegalStateException("A TCL não conseguiu executar a ação ($status).")
             return conn.inputStream.bufferedReader().use { it.readText() }
         } catch (error: java.net.ConnectException) {
-            throw IllegalStateException("Abra Controle TCL TV e ative seu serviço em Acessibilidade.", error)
+            throw IllegalStateException("Abra Controle TCL TV na televisão e ative a conexão pela tela do aplicativo.", error)
         } catch (error: java.net.SocketTimeoutException) {
             throw IllegalStateException("A TCL não respondeu. Verifique se os dois aparelhos usam a mesma rede.", error)
         } finally {
@@ -278,7 +278,7 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         "Na TV, abra Controle TCL TV e encontre o código de 8 dígitos. " +
-                            "Ative o serviço em Configurações → Acessibilidade e conecte ambos à mesma rede.",
+                            "Ative a conexão no próprio aplicativo Controle TCL TV 1.2. Mantenha ambos na mesma rede.",
                         fontSize = 13.sp
                     )
                     OutlinedTextField(
