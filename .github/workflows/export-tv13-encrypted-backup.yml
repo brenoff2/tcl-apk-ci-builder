@@ -1,0 +1,24 @@
+name: Export encrypted TV13 signer backup for local recovery
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/export-tv13-encrypted-backup.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download encrypted public TV recovery backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          curl --fail --location --retry 3 "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.3/TV13_BACKUP_CRIPTOGRAFADO.cms" -o output/TV13_BACKUP_CRIPTOGRAFADO.cms
+          echo "38b9a49fa4efab2cb2d9d95921c504c90b8b6e6d2c21852219420f5cceb8d668  output/TV13_BACKUP_CRIPTOGRAFADO.cms" | sha256sum --check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tv13-encrypted-recovery-backup
+          path: output/TV13_BACKUP_CRIPTOGRAFADO.cms
+          retention-days: 3
