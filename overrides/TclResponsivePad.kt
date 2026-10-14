@@ -1,5 +1,6 @@
 package com.hari.androidtvremote.ui.app
 
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,6 +42,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hari.androidtvremote.androidLib.remote.Remotemessage
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -114,20 +118,27 @@ private fun TclHeldZone(
                         if (hapticsEnabled) view.performHapticFeedback(
                             android.view.HapticFeedbackConstants.KEYBOARD_TAP
                         )
-                        val wasReleased = withTimeoutOrNull(380L) {
+                        val wasReleased = withTimeoutOrNull(270L) {
                             tryAwaitRelease()
                         }
                         when (wasReleased) {
                             true -> latestTap(key)
                             null -> {
-                                // The 380 ms threshold elapsed while pressed.
+                                // Short taps use SHORT. A sustained press sends
+                                // START_LONG and END_LONG with a guaranteed
+                                // minimum TV-side duration; otherwise a 300ms
+                                // tap could look like just 20ms of key hold.
                                 latestStart(key)
+                                val startedAt = SystemClock.uptimeMillis()
                                 try {
                                     tryAwaitRelease()
                                 } finally {
-                                    // Even if Compose cancels the gesture while
-                                    // scrolling, never strand a held TV key.
-                                    latestEnd(key)
+                                    withContext(NonCancellable) {
+                                        val elapsed = SystemClock.uptimeMillis() - startedAt
+                                        if (elapsed < 430L) delay(430L - elapsed)
+                                        // Never strand a TV key on navigation/cancel.
+                                        latestEnd(key)
+                                    }
                                 }
                             }
                             false -> Unit
