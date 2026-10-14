@@ -10,21 +10,17 @@ settings = ui / "SettingsScreen.kt"
 source = settings.read_text(encoding="utf-8")
 # Keep original callback signatures: AppNavGraph still supplies these callbacks.
 # Remove only obsolete user-facing navigation entries, not functional routes.
-for label in ("Tips & Support", "Support Project"):
-    needle = f'                    SettingSubtitle(text = "{label}")'
-    at = source.find(needle)
-    if at < 0:
-        raise RuntimeError(f"Expected settings section not found: {label}")
-    # Each section is two LazyColumn item blocks, before the next heading.
-    next_heading = source.find('                item {\n                    SettingSubtitle(', at + len(needle))
-    if next_heading < 0:
-        raise RuntimeError(f"Could not locate next settings section after {label}")
-    section_start = source.rfind('                item {\n', 0, at)
-    source = source[:section_start] + source[next_heading:]
+# Keep Donation and Support routes visible; localization is non-destructive.
 settings.write_text(source, encoding="utf-8")
 
 translations = {
     "Settings": "Configurações",
+    "Donation": "Doação",
+    "Support & about": "Suporte e informações",
+    "Tips & Support": "Dicas e suporte",
+    "Support Project": "Apoie o projeto",
+    "Support open source development, keep it ad-free": "Apoie o desenvolvimento e mantenha o app sem anúncios",
+    "Support & about": "Suporte e informações",
     "Remote": "Controle",
     "Remote Controls": "Controles do remoto",
     "Personalize controls, layout, and quick actions": "Personalize os botões, a disposição e os atalhos",
@@ -76,8 +72,8 @@ for path in sorted(ui.glob("*.kt")):
     if after != before:
         path.write_text(after, encoding="utf-8")
         changed[path.name] = sum(before.count('"' + en + '"') for en in translations)
-assert 'title = "Donation"' not in settings.read_text()
-assert 'title = "Support & about"' not in settings.read_text()
+assert 'title = "Doação"' in settings.read_text()
+assert 'title = "Suporte e informações"' in settings.read_text()
 assert 'title = "Buscar atualizações"' in settings.read_text()
 assert 'TclUpdateManager.check(activity)' in settings.read_text()
 print("TCL_PTBR_UI_CLEANUP_READY", changed)
