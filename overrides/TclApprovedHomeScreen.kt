@@ -434,55 +434,40 @@ private fun TclApprovedHeader(
     onCast: () -> Unit,
     onSettings: () -> Unit
 ) {
+    // A slim toolbar, not a second oversized connected-status card.
     Row(
         modifier = Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(21.dp))
-            .background(Brush.horizontalGradient(
-                listOf(TclSurfaceHigh, TclSurface)
-            ))
-            .border(1.dp, TclOutline.copy(alpha = .8f), RoundedCornerShape(21.dp))
-            .padding(horizontal = 10.dp, vertical = 8.dp),
+            .padding(horizontal = 1.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(7.dp)
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Box(
-            modifier = Modifier.size(43.dp)
-                .clip(RoundedCornerShape(9.dp))
-                .background(Brush.linearGradient(
-                    listOf(TclSurfaceHigh, TclSurface, TclSurfaceHigh)
-                )).clickable(onClick = onChooseTv),
+            modifier = Modifier.size(30.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(TclSurfaceHigh)
+                .clickable(onClick = onChooseTv),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Filled.Tv, contentDescription = "Escolher TV", tint = TclBlue,
-                modifier = Modifier.size(31.dp))
+            Icon(Icons.Filled.Tv, contentDescription = "Selecionar TCL",
+                tint = TclBlue, modifier = Modifier.size(22.dp))
         }
-        Column(modifier = Modifier.weight(1f).clickable(onClick = onChooseTv)) {
-            Row(verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(tvName, color = TclText, fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false))
-                Box(Modifier.size(7.dp).clip(CircleShape)
-                    .background(if (isConnected) Color(0xFF17DE68) else Color(0xFFFFA427)))
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = null,
-                    tint = TclMuted, modifier = Modifier.size(16.dp))
-            }
-            Text(if (isConnected) "TCL  •  Android TV" else "Conecte sua TCL",
-                color = TclMuted, maxLines = 1, fontSize = 11.sp)
+        Row(
+            modifier = Modifier.weight(1f).clickable(onClick = onChooseTv),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Box(Modifier.size(7.dp).clip(CircleShape)
+                .background(if (isConnected) Color(0xFF17DE68) else Color(0xFFFFA427)))
+            Text(tvName, color = TclText, fontWeight = FontWeight.Medium,
+                fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false))
+            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Trocar televisão",
+                tint = TclMuted, modifier = Modifier.size(13.dp))
         }
-        TclHeaderAction(
-            icon = Icons.Filled.PowerSettingsNew,
-            description = "Ligar ou desligar",
-            tint = Color(0xFFFF4775), onClick = onPower
-        )
-        TclHeaderAction(
-            icon = Icons.Filled.Cast, description = "Transmitir",
-            tint = TclBlue, onClick = onCast
-        )
-        TclHeaderAction(
-            icon = Icons.Filled.Settings, description = "Configurações",
-            tint = TclText, onClick = onSettings
-        )
+        TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar",
+            Color(0xFFFF4775), onPower)
+        TclHeaderAction(Icons.Filled.Cast, "Transmitir", TclBlue, onCast)
+        TclHeaderAction(Icons.Filled.Settings, "Configurações", TclText, onSettings)
     }
 }
 
@@ -494,7 +479,7 @@ private fun TclHeaderAction(
     onClick: () -> Unit
 ) {
     Box(
-        modifier = Modifier.size(37.dp)
+        modifier = Modifier.size(32.dp)
             .clip(CircleShape)
             .background(Brush.verticalGradient(
                 listOf(TclSurfaceHigh, TclSurface)
