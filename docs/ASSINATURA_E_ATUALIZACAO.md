@@ -10,16 +10,28 @@ compatível com a chave usada no APK **efetivamente instalado**, e o
 Certificados SHA-256 obtidos com `apksigner verify --print-certs`
 dos APKs preservados:
 
-- 1.2, 1.3 e 1.4: `49de7c9ad97bf4cfb2409f5e6480ab21bff816f093f8e7df66a33cce61077a04` (iguais).
-- 1.5, 1.6, 1.7 e 1.8: certificados diferentes desses e entre si
-  nos artefatos auditados, oriundos de builds `assembleDebug` com
-  runners temporários do GitHub Actions.
+- 1.2, 1.3, 1.4 e o APK 1.7 final fornecido pelo usuário: `49de7c9ad97bf4cfb2409f5e6480ab21bff816f093f8e7df66a33cce61077a04` (iguais).
+- 1.5, 1.6, 1.7 **CI** e 1.8: certificados diferentes desses e entre si
+  nos artefatos de `assembleDebug` com runners temporários do GitHub Actions.
 - 1.8 teste: `51cfe5c439f05eaa07b4b4ad7135ab550b4fbcb32198e02e9226ccc5b8301e2d`.
 
-As versões 1.2–1.4 demonstram que uma chave foi reutilizada fora do
-workflow, mas a **chave privada** não está no repositório e não foi
-recuperada da biblioteca de artefatos. Não é possível derivá-la de APKs
-já assinados.
+**Novo achado: APK 1.7 RESGATE ANEXADO PELO USUARIO.** O arquivo original
+`Controle_TCL_Livre_1.7_Resgate.apk` fornecido pelo usuário nesta
+conversa tem SHA-256 de arquivo
+`61450aa66d42116b9be7c198b95f6807fb7ca94ed5812544f38bb7afd6371820`
+e certificado SHA-256
+`49de7c9ad97bf4cfb2409f5e6480ab21bff816f093f8e7df66a33cce61077a04`,
+**igual ao das versões 1.2–1.4**. Portanto, o APK final 1.7 do
+usuário é diferente do 1.7 de depuração baixado do GitHub Actions.
+Não tratar a assinatura do artefato CI como se fosse a do APK instalado.
+
+Isso comprova que um processo externo assinou o APK distribuído com
+uma chave consistente, mas a **chave privada** não está no repositório
+e não foi recuperada da biblioteca de artefatos. Não é possível
+derivá-la dos APKs assinados. Para produzir atualização de 1.7,
+o certificado final deve permanecer 49DE... e o versionCode deve subir.
+O certificado do arquivo anexo ainda precisa ser comparado ao
+certificado efetivamente instalado, se a instalação real tiver divergido.
 
 ## Política de entrega (bloqueio preventivo)
 
