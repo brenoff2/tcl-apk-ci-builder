@@ -293,8 +293,8 @@ fun TclApprovedHomeScreen(
                         // The old 178dp cap produced a tiny disc despite free
                         // space below it, and clipped the fourth numeric row.
                         // Same footprint in D-pad, pointer and 4-row numeric mode.
-                        val gap = if (maxWidth < 350.dp) 6.dp else 8.dp
-                        val rockerWidth = if (maxWidth < 350.dp) 53.dp else 57.dp
+                        val gap = if (maxWidth < 340.dp) 5.dp else 8.dp
+                        val rockerWidth = if (maxWidth < 340.dp) 46.dp else 57.dp
                         val padWidth = (maxWidth - rockerWidth * 2 - gap * 2)
                             .coerceAtLeast(0.dp).coerceAtMost(280.dp)
                         val padHeight = padWidth
