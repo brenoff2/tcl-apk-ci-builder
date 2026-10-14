@@ -62,9 +62,11 @@ class TclV21Contract(unittest.TestCase):
             "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER"
         ):
             self.assertIn(name, self.pad)
-        self.assertIn("withTimeoutOrNull(380L)", self.pad)
+        self.assertIn("withTimeoutOrNull(270L)", self.pad)
         self.assertIn("latestStart(key)", self.pad)
         self.assertIn("latestEnd(key)", self.pad)
+        self.assertIn("withContext(NonCancellable)", self.pad)
+        self.assertIn("if (elapsed < 430L) delay(430L - elapsed)", self.pad)
         self.assertIn("finally {", self.pad)
         self.assertIn("RemoteDirection.START_LONG", self.screen)
         self.assertIn("RemoteDirection.END_LONG", self.screen)
