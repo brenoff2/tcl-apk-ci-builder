@@ -34,6 +34,7 @@ jobs:
           TCL_RESCUE_STABLE=1 TCL_APPROVED_UI=1 TCL_RELEASE_SINGLE_APP=1 python3 scripts/prepare_tcl.py
           python3 scripts/apply_tcl_v21.py
           python3 scripts/apply_tcl_v22.py
+          python3 scripts/apply_tcl_ptbr_cleanup.py
       - name: Validar regressao e atualizacao segura
         env:
           TCL_APPROVED_UI: '1'
