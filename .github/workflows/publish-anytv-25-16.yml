@@ -1,0 +1,93 @@
+name: Publish verified AnyTV 2.5 and Connect 1.6
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-25-16.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+      - uses: android-actions/setup-android@v4
+      - name: Install Android SDK signature and manifest tools
+        run: sdkmanager 'build-tools;36.0.0'
+      - name: Retrieve the two previously signed APKs
+        shell: bash
+        env:
+          PHONE_SOURCE: 'https://sdmntpritalynorth.oaiusercontent.com/files/00000000-f974-8246-b1ab-738aecf6d8a3/raw?se=2026-10-14T15%3A24%3A41Z&sp=r&sv=2026-02-06&sr=b&scid=46a47c13-b122-5c02-a57c-6e0f16ac1b48&skoid=86ad43b0-1afa-4d46-a6d6-9e67f7cdc5bc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-14T11%3A46%3A03Z&ske=2026-10-15T11%3A46%3A03Z&sks=b&skv=2026-02-06&sig=oF2yn9MPbw1pqFV0R4cm5Zz9DTGeGzE7nbyuKidV4Js%3D'
+          TV_8B2B_SOURCE: 'https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-0824-820e-9882-845e7d14a223/raw?se=2026-10-14T15%3A24%3A21Z&sp=r&sv=2026-02-06&sr=b&scid=91e282c1-6fc9-59c1-bebd-f0bf27388014&skoid=86ad43b0-1afa-4d46-a6d6-9e67f7cdc5bc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-14T05%3A04%3A54Z&ske=2026-10-15T05%3A04%3A54Z&sks=b&skv=2026-02-06&sig=3/pjmWvGWjtry2PGQ/1/6dP3OUYs4od3aFqcZ6RsY%2Bg%3D'
+        run: |
+          set -euo pipefail
+          mkdir -p staging
+          curl --fail --silent --show-error --location --retry 3 --connect-timeout 15 --max-time 240 "$PHONE_SOURCE" -o staging/phone.apk
+          curl --fail --silent --show-error --location --retry 3 --connect-timeout 15 --max-time 90 "$TV_8B2B_SOURCE" -o staging/tv8b2b.apk
+          test "$(stat -c %s staging/phone.apk)" -gt 10000000
+          test "$(stat -c %s staging/tv8b2b.apk)" -gt 50000
+      - name: Verify real APKs packages versions and historical signers
+        shell: bash
+        run: |
+          set -euo pipefail
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          "$bt/aapt" dump badging staging/phone.apk > staging/phone-identity.txt
+          "$bt/aapt" dump badging staging/tv8b2b.apk > staging/tv-identity.txt
+          grep -q "name='com.tclremote.livre' versionCode='25' versionName='2.5-AnyTV'" staging/phone-identity.txt
+          grep -q "name='com.tclremote.tvcompanion' versionCode='7' versionName='1.6-AnyTV'" staging/tv-identity.txt
+          "$bt/apksigner" verify --verbose --print-certs staging/phone.apk > staging/phone-signature.txt
+          "$bt/apksigner" verify --verbose --print-certs staging/tv8b2b.apk > staging/tv-signature.txt
+          grep -qi "df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8" staging/phone-signature.txt
+          grep -qi "8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da" staging/tv-signature.txt
+          "$bt/zipalign" -c 4 staging/phone.apk
+          "$bt/zipalign" -c 4 staging/tv8b2b.apk
+          echo 'APK_PACKAGE_VERSION_SIGNER_AND_ALIGNMENT_VERIFIED'
+          sha256sum staging/phone.apk staging/tv8b2b.apk
+      - name: Publish current APKs keeping previous versions in history
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p updates/android updates/tv/cert8b2b
+          cp staging/phone.apk updates/android/current.apk
+          cp staging/phone.apk updates/android/AnyTV-v2.5.apk
+          cp staging/tv8b2b.apk updates/tv/cert8b2b/current.apk
+          cp staging/tv8b2b.apk updates/tv/cert8b2b/AnyTV-Connect-v1.6.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f updates/android/current.apk updates/android/AnyTV-v2.5.apk updates/tv/cert8b2b/current.apk updates/tv/cert8b2b/AnyTV-Connect-v1.6.apk
+          git diff --cached --quiet || git commit -m "release: publish signed AnyTV 2.5 and Connect 1.6 [skip ci]"
+          git push
+      - name: Publish correctly named GitHub Releases for legacy updater
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp staging/phone.apk Controle_TCL_Livre_v2.5.apk
+          cp staging/tv8b2b.apk Controle_TCL_TV_v1.6_cert8b2b.apk
+          if gh release view tcl-phone-v2.5 >/dev/null 2>&1; then
+            gh release upload tcl-phone-v2.5 Controle_TCL_Livre_v2.5.apk --clobber
+          else
+            gh release create tcl-phone-v2.5 Controle_TCL_Livre_v2.5.apk --target feat/tcl-v22-updates-back-bluetooth --title "AnyTV 2.5 Android" --notes "APK assinado com o certificado original. Interface AnyTV e versao discreta no cabecalho."
+          fi
+          if gh release view tv-complemento-v1.6 >/dev/null 2>&1; then
+            gh release upload tv-complemento-v1.6 Controle_TCL_TV_v1.6_cert8b2b.apk --clobber
+          else
+            gh release create tv-complemento-v1.6 Controle_TCL_TV_v1.6_cert8b2b.apk --target feat/tcl-v22-updates-back-bluetooth --title "AnyTV Connect 1.6 TV" --notes "APK cert8b2b para a TV instalada, preservando assinatura e adicionando identificacao da versao. Variante 3382 permanece disponivel em 1.5."
+          fi
+      - name: Verify public releases match exactly the signed files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          local_phone=$(sha256sum staging/phone.apk | cut -d' ' -f1)
+          local_tv=$(sha256sum staging/tv8b2b.apk | cut -d' ' -f1)
+          gh release download tcl-phone-v2.5 -p Controle_TCL_Livre_v2.5.apk -D staging/release-phone
+          gh release download tv-complemento-v1.6 -p Controle_TCL_TV_v1.6_cert8b2b.apk -D staging/release-tv
+          echo "$local_phone  staging/release-phone/Controle_TCL_Livre_v2.5.apk" | sha256sum -c
+          echo "$local_tv  staging/release-tv/Controle_TCL_TV_v1.6_cert8b2b.apk" | sha256sum -c
+          echo 'BOTH_PUBLIC_RELEASES_MATCH_SIGNED_INPUTS'
