@@ -24,9 +24,14 @@ class RescueContractTests(unittest.TestCase):
 
     def test_identity_and_code(self):
         if os.environ.get("TCL_APPROVED_UI") == "1":
-            self.assertIn('applicationId = "com.tclremote.livre.preview"', self.gradle)
-            self.assertIn("versionCode = 19", self.gradle)
-            self.assertIn('versionName = "1.9-Tela-Aprovada-Preview"', self.gradle)
+            if os.environ.get("TCL_RELEASE_SINGLE_APP") == "1":
+                self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
+                self.assertNotIn('applicationId = "com.tclremote.livre.preview"', self.gradle)
+                self.assertIn('versionName = "2.0-TCL"', self.gradle)
+            else:
+                self.assertIn('applicationId = "com.tclremote.livre.preview"', self.gradle)
+                self.assertIn('versionName = "2.0-Preview"', self.gradle)
+            self.assertIn("versionCode = 20", self.gradle)
         else:
             self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
             self.assertIn("versionCode = 18", self.gradle)
@@ -77,10 +82,12 @@ class RescueContractTests(unittest.TestCase):
             "KEYCODE_MEDIA_PLAY", "KEYCODE_MEDIA_PAUSE",
             "KEYCODE_MEDIA_STOP", "KEYCODE_MEDIA_FAST_FORWARD",
             "KEYCODE_MEDIA_REWIND", "KEYCODE_MEDIA_PREVIOUS",
-            "KEYCODE_PROG_RED",
         ):
             with self.subTest(key=key):
                 self.assertIn(key, self.playback)
+        self.assertIn("onHeadphones: (() -> Unit)? = null", self.playback)
+        self.assertIn("onHeadphones()", self.playback)
+        self.assertNotIn("KEYCODE_PROG_RED", self.playback)
         self.assertIn("TvCompanionSetupDialog(", self.shortcut)
 
     def test_no_firebase_gradle_runtime(self):
