@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "platform": "android",
+  "package": "com.tclremote.livre",
+  "available": false,
+  "version": null,
+  "tag": null,
+  "assets": [],
+  "note": "Release de atualização bloqueado até APK de assinatura compatível ser publicado e verificado."
+}
