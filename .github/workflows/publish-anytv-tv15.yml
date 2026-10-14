@@ -1,0 +1,44 @@
+name: Publish signed AnyTV Connect 1.5
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-tv15.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: 'feat/tcl-v22-updates-back-bluetooth'}
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;35.0.0'
+      - name: Verify two APKs, versions and original signing certificates
+        shell: bash
+        run: |
+          set -euo pipefail
+          bt="$ANDROID_HOME/build-tools/35.0.0"
+          echo 'a32c1843a15d0d09fb89a042ef4ab6911fb43e91516cef7577b9b13b512741c1  updates/tv/cert8b2b/current.apk' | sha256sum -c
+          echo '884e265e3a4187b2a3bab5629c359a08a4887cdcfc5194a9ec948ee75c42eac4  updates/tv/cert3382/current.apk' | sha256sum -c
+          for item in '8b2b 8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da' '3382 3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add'; do
+            kind="${item%% *}"
+            cert="${item##* }"
+            apk="updates/tv/cert$kind/current.apk"
+            "$bt/apksigner" verify --verbose --print-certs "$apk" > "verify-$kind.txt"
+            grep -qi "$cert" "verify-$kind.txt"
+            "$bt/aapt" dump badging "$apk" | grep -q "name='com.tclremote.tvcompanion' versionCode='6'"
+            cmp "$apk" "updates/tv/cert$kind/AnyTV-Connect-v1.5.apk"
+            cp "$apk" "Controle_TCL_TV_v1.5_cert$kind.apk"
+          done
+      - name: Publish update release visible to the installed 1.4 updater
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if gh release view tv-complemento-v1.5 >/dev/null 2>&1; then
+            gh release upload tv-complemento-v1.5 Controle_TCL_TV_v1.5_cert8b2b.apk Controle_TCL_TV_v1.5_cert3382.apk --clobber
+          else
+            gh release create tv-complemento-v1.5 Controle_TCL_TV_v1.5_cert8b2b.apk Controle_TCL_TV_v1.5_cert3382.apk --target feat/tcl-v22-updates-back-bluetooth --title "AnyTV Connect 1.5" --notes "Interface compacta e marca AnyTV. Atualização sem desinstalar. O complemento identifica a assinatura atual e seleciona o APK compatível."
+          fi
