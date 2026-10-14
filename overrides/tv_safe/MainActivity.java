@@ -64,13 +64,13 @@ public final class MainActivity extends Activity {
     private Button action(String value, View.OnClickListener onClick) {
         Button button = new Button(this);
         button.setText(value);
-        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         button.setTextColor(Color.WHITE);
         button.setAllCaps(false);
         button.setSingleLine(false);
         button.setMaxLines(3);
         button.setFocusable(true);
-        button.setPadding(dp(16), dp(14), dp(16), dp(14));
+        button.setPadding(dp(10), dp(7), dp(10), dp(7));
         // Android TV D-pad focus state: bright border + blue background.
         StateListDrawable backgrounds = new StateListDrawable();
         backgrounds.addState(new int[]{android.R.attr.state_pressed},
@@ -99,11 +99,11 @@ public final class MainActivity extends Activity {
         scroll.setBackgroundColor(BACKGROUND);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(24), dp(18), dp(24), dp(22));
+        root.setPadding(dp(20), dp(10), dp(20), dp(12));
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         scroll.addView(root);
 
-        root.addView(label("CONTROLE TCL TV", 28, TEXT));
+        root.addView(label("AnyTV Connect", 22, TEXT));
         root.addView(label("Complemento de aplicativos instalados", 17, MUTED));
         root.addView(label("Código de vinculação da TV", 17, MUTED));
 
@@ -113,7 +113,7 @@ public final class MainActivity extends Activity {
         root.addView(code);
 
         root.addView(label(
-                "No celular, abra Controle TCL Livre e informe o código uma única vez. "
+                "No celular, abra AnyTV e informe o código uma única vez. "
                 + "A TV e o celular precisam estar na mesma rede local.", 15, MUTED));
 
         status = label("Verificando serviço...", 16, TEXT);
@@ -181,7 +181,7 @@ public final class MainActivity extends Activity {
         try {
             BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             if (adapter == null) {
-                status.setText("Esta TCL não informou um adaptador Bluetooth.");
+                status.setText("Esta TV não informou um adaptador Bluetooth.");
                 return;
             }
             Set<BluetoothDevice> bonded = adapter.getBondedDevices();
@@ -241,7 +241,7 @@ public final class MainActivity extends Activity {
                     status.setText("Fones não estão mais pareados com a TCL.");
                     break;
                 case "permission_required":
-                    status.setText("Autorize o Bluetooth no aplicativo da TCL.");
+                    status.setText("Autorize o Bluetooth no aplicativo da TV.");
                     break;
                 default:
                     status.setText("Não foi possível confirmar a conexão: " + result);
