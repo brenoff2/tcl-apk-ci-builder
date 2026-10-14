@@ -71,53 +71,18 @@ replace_once(viewmodel,
     fun sendText(text: String, submit: Boolean) {
 """)
 
-replace_once(viewmodel,
-    """    fun sendText(text: String, submit: Boolean) {
-        if (!checkConnectionGuard()) return
-        if (text.isBlank() && !submit) return
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                sendImeTextUpdate(text)
-                if (submit) {
-                    app.androidRemoteTv?.sendImeEnter()
-                }
-            } catch (error: Exception) {
-                Timber.e(error, "[Keyboard] Failed to send text")
-            }
-        }
-    }
-
-    fun sendKeyboardText(text: String) {
-        if (!checkConnectionGuard()) return
-        if (text.isEmpty()) return
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val remote = app.androidRemoteTv ?: return@launch
-                val currentFieldCounter = resolvedImeFieldCounter()
-                text.forEach { character ->
-                    remote.sendText(character.toString(), imeCounter++, currentFieldCounter)
-                }
-                Timber.d("[Keyboard] Sent 0 character(s), fieldCounter=$currentFieldCounter")
-            } catch (error: Exception) {
-                Timber.e(error, "[Keyboard] Failed to send keyboard text")
-            }
-        }
-    }
-
-    fun sendKeyboardBackspace(count: Int = 1) {
-        if (!checkConnectionGuard()) return
-        if (count <= 0) return
-        viewModelScope.launch(Dispatchers.IO) {
-            repeat(count) {
-                app.androidRemoteTv?.sendCommand(
-                    Remotemessage.RemoteKeyCode.KEYCODE_DEL,
-                    Remotemessage.RemoteDirection.SHORT
-                )
-            }
-        }
-    }
-""",
-    """    fun sendText(text: String, submit: Boolean) {
+# Patch the whole keyboard method trio by semantic boundaries. Other upstream
+# versions add comments inside those functions; exact whole-function text
+# matching was too fragile and prevented even reaching the compiler.
+vm_text = viewmodel.read_text()
+first = vm_text.index("    fun sendText(text: String, submit: Boolean) {\n")
+last = vm_text.index("    fun sendKeyboardEnter() {\n", first)
+original = vm_text[first:last]
+if not all(token in original for token in
+           ("fun sendKeyboardText(", "fun sendKeyboardBackspace(",
+            "sendImeTextUpdate(text)", "KEYCODE_DEL")):
+    raise RuntimeError("Upstream IME methods changed; refusing speculative patch")
+keyboard_patch = """    fun sendText(text: String, submit: Boolean) {
         if (!checkConnectionGuard()) return
         if (text.isEmpty() && !submit) return
         keyAndTextWrites.trySend {
@@ -129,8 +94,8 @@ replace_once(viewmodel,
     fun sendKeyboardText(text: String) {
         if (!checkConnectionGuard()) return
         if (text.isEmpty()) return
-        // Paste and live-keyboard diffs use a single ordered IME batch per delta.
-        // Repeatedly resending the whole accumulated string duplicates characters.
+        // A single ordered IME insertion for live keyboard or clipboard paste.
+        // Resending the entire buffer at every edit can duplicate characters.
         keyAndTextWrites.trySend {
             app.androidRemoteTv?.sendText(
                 text, ++imeCounter, resolvedImeFieldCounter()
@@ -149,7 +114,9 @@ replace_once(viewmodel,
             }
         }
     }
-""")
+
+"""
+viewmodel.write_text(vm_text[:first] + keyboard_patch + vm_text[last:])
 
 session = REMOTE / "RemoteSession.java"
 replace_once(session,
