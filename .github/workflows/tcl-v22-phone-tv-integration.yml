@@ -37,6 +37,7 @@ jobs:
           python3 scripts/apply_tcl_ptbr_cleanup.py
           python3 scripts/apply_tcl_i18n.py
           python3 scripts/apply_tcl_tv_brand.py
+          python3 -c 'import pathlib, xml.etree.ElementTree as ET; files=list(pathlib.Path("source/app/src/main/res").glob("values*/tcl_localization.xml")); assert len(files)==16, len(files); [ET.parse(p) for p in files]; print("TCL_I18N_XML_VALID",len(files))'
       - name: Validar regressao e atualizacao segura
         env:
           TCL_APPROVED_UI: '1'
