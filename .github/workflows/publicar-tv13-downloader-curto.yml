@@ -1,0 +1,130 @@
+name: Publicar TV 1.3 Assinado - Link Curto Downloader
+
+on:
+  push:
+    branches: ['fix/tcl-v20-responsive-teclado-tema']
+    paths:
+      - '.github/workflows/publicar-tv13-downloader-curto.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish-tv13:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;35.0.0'
+
+      - name: Buscar compilacao release 1.3 e conferir integridade
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p input public private
+          gh run download 38498190653 --name TCL_TV_13_RELEASE_UNSIGNED_NAO_INSTALAR --dir input
+          ORIGINAL='input/BASE_TV_1_3_RELEASE_UNSIGNED_NAO_INSTALAR.apk'
+          test -s "$ORIGINAL"
+          printf '%s  %s\n' \
+            '877e632acde3b89f40d95bcece3351b8d3a493c2dfa84b8ac7a597f3ee219ed6' \
+            "$ORIGINAL" | sha256sum -c -
+
+      - name: Assinar com chave propria e criar backup criptografado
+        run: |
+          set -euo pipefail
+          export TV_RELEASE_PASSWORD="$(openssl rand -hex 28)"
+          KEYSTORE="$RUNNER_TEMP/tcl-tv13-release.p12"
+          keytool -genkeypair -storetype PKCS12 -keyalg RSA -keysize 3072 \
+            -validity 36500 -alias tcl-tv-13 \
+            -dname 'CN=Controle TCL TV 1.3,O=Projeto Controle TCL,C=BR' \
+            -keystore "$KEYSTORE" \
+            -storepass:env TV_RELEASE_PASSWORD -keypass:env TV_RELEASE_PASSWORD
+          chmod 600 "$KEYSTORE"
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          "$BT/zipalign" -f 4 input/BASE_TV_1_3_RELEASE_UNSIGNED_NAO_INSTALAR.apk \
+            "$RUNNER_TEMP/tv13-aligned.apk"
+          "$BT/apksigner" sign --ks "$KEYSTORE" --ks-type PKCS12 \
+            --ks-key-alias tcl-tv-13 \
+            --ks-pass env:TV_RELEASE_PASSWORD \
+            --key-pass env:TV_RELEASE_PASSWORD \
+            --out public/tcl-tv.apk "$RUNNER_TEMP/tv13-aligned.apk"
+          "$BT/apksigner" verify --verbose --print-certs public/tcl-tv.apk > public/CERTIFICADO_TV13.txt
+          "$BT/aapt" dump badging public/tcl-tv.apk > public/IDENTIDADE_TV13.txt
+          "$BT/aapt" dump permissions public/tcl-tv.apk > public/PERMISSOES_TV13.txt
+          grep -q "name='com.tclremote.tvcompanion' versionCode='4'" public/IDENTIDADE_TV13.txt
+          if grep -Ei 'BIND_ACCESSIBILITY_SERVICE|AccessibilityService|QUERY_ALL_PACKAGES|SYSTEM_ALERT_WINDOW|android.permission.BLUETOOTH_SCAN' public/PERMISSOES_TV13.txt; then
+            echo 'BLOCKED: forbidden Android permission'; exit 1
+          fi
+          sha256sum public/tcl-tv.apk > public/SHA256_TV13.txt
+
+          # The next signer is not a disposable Actions debug keystore.
+          # Its backup is encrypted to the PUBLIC certificate of the signer
+          # already retained privately by the project owner. Never publish
+          # the plaintext keystore or its random password.
+          cp "$KEYSTORE" private/tv13-private.p12
+          printf '%s\n' "$TV_RELEASE_PASSWORD" > private/tv13-secret-password.txt
+          chmod 600 private/*
+          tar -C private -czf "$RUNNER_TEMP/tv13-signer-bundle.tar.gz" \
+            tv13-private.p12 tv13-secret-password.txt
+          openssl cms -encrypt -binary -aes256 -outform DER \
+            -in "$RUNNER_TEMP/tv13-signer-bundle.tar.gz" \
+            -out public/TV13_BACKUP_CRIPTOGRAFADO.cms \
+            release_signing/tcl_tv_public_backup_recipient.pem
+          openssl cms -cmsout -print -inform DER \
+            -in public/TV13_BACKUP_CRIPTOGRAFADO.cms >/dev/null
+          echo 'TV 1.3 signed, verified, and securely backed up.'
+
+      - name: Criar Release publica com APK assinado direto
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view tv-complemento-v1.3 >/dev/null 2>&1; then
+            echo 'Release 1.3 already exists, refusing to change the signing certificate.'
+            exit 1
+          fi
+          gh release create tv-complemento-v1.3 \
+            public/tcl-tv.apk public/SHA256_TV13.txt \
+            public/CERTIFICADO_TV13.txt public/TV13_BACKUP_CRIPTOGRAFADO.cms \
+            --title 'Controle TCL TV 1.3 - Catalogo de apps e Fones' \
+            --notes 'APK para TCL Android TV. Sem Acessibilidade. Exibe codigo de 8 digitos, lista apps reais e permite escolher fones Bluetooth pareados. Requer remocao do complemento 1.2 por incompatibilidade de assinatura. O codigo de recuperacao do signer privado NAO esta incluido no Release.' \
+            --target fix/tcl-v20-responsive-teclado-tema \
+            --latest=false
+          gh release view tv-complemento-v1.3 --json assets \
+            --jq '.assets[] | [.name,.size,.url] | @tsv'
+
+      - name: Encurtar download e verificar destino
+        run: |
+          set -euo pipefail
+          URL='https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.3/tcl-tv.apk'
+          SHORT=$(curl -fsS --max-time 25 -G \
+            --data-urlencode 'format=simple' \
+            --data-urlencode 'shorturl=TCLTV13BA' \
+            --data-urlencode "url=$URL" \
+            'https://urlvanish.com/api/shorten')
+          echo "Link retornado pelo encurtador: $SHORT"
+          [[ "$SHORT" == "https://urlvanish.com/TCLTV13BA" ]]
+          TARGET=$(curl -sS -I -o /dev/null -w '%{redirect_url}' --max-time 25 "$SHORT")
+          test "$TARGET" = "$URL"
+          echo "TCL_TV_13_SHORT_URL_VALIDATED=$SHORT"
+          echo "### Instalar TV 1.3 no Downloader: $SHORT" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Armazenar comprovantes publicos e backup criptografado
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: TCL_TV_1_3_APK_PUBLICADO_E_BACKUP_ENCRIPTADO
+          path: public/
+          if-no-files-found: warn
+          retention-days: 90
