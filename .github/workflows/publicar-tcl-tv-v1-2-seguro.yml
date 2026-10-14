@@ -1,0 +1,77 @@
+name: Publicar TCL TV 1.2 sem Acessibilidade para Downloader
+
+on:
+  push:
+    branches: ['fix/tcl-tv-play-protect-sem-acessibilidade']
+    paths:
+      - '.github/workflows/publicar-tcl-tv-v1-2-seguro.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release-safe-tv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Recuperar APK auditado com SHA exato
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p safe-tv
+          gh run download 38495436296 --name TCL_TV_1_2_SEM_ACESSIBILIDADE_AUDITADO --dir safe-tv
+          test -f safe-tv/Controle_TCL_TV_1.2_SEM_ACESSIBILIDADE_TESTE.apk
+          printf '%s  %s\n' \
+            'f94685151754d4c58f90be304ef5abac5847fbf88d5658998b48c52167c0e551' \
+            'safe-tv/Controle_TCL_TV_1.2_SEM_ACESSIBILIDADE_TESTE.apk' | sha256sum -c -
+          grep -q "name='com.tclremote.tvcompanion' versionCode='3'" safe-tv/APK_IDENTIDADE.txt
+          if grep -Ei 'BIND_ACCESSIBILITY_SERVICE|AccessibilityService|READ_SMS|QUERY_ALL_PACKAGES|android.permission.BLUETOOTH' safe-tv/APK_PERMISSOES.txt safe-tv/APK_MANIFESTO.txt; then
+            echo 'BLOCKED: manifest includes sensitive APIs'
+            exit 1
+          fi
+          cp safe-tv/Controle_TCL_TV_1.2_SEM_ACESSIBILIDADE_TESTE.apk safe-tv/tcl-tv.apk
+      - name: Publicar Release com instalador direto
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view tv-complemento-v1.2 >/dev/null 2>&1; then
+            gh release upload tv-complemento-v1.2 safe-tv/tcl-tv.apk --clobber
+          else
+            gh release create tv-complemento-v1.2 safe-tv/tcl-tv.apk \
+              --title 'Controle TCL TV 1.2 - Sem Acessibilidade (teste)' \
+              --notes 'Nova compilacao auditada para evitar o bloqueio do Play Protect causado pelo uso desnecessario de Acessibilidade na versao 1.1. Requer somente INTERNET e FOREGROUND_SERVICE com specialUse, mantendo servico visivel. Abra o complemento na TV para ativar a conexao local e ver o codigo de 8 digitos. O funcionamento no dispositivo real e a aceitacao do Play Protect ainda precisam ser testados. O atalho por teclas coloridas nao esta nesta versao. Nao desative o Play Protect.' \
+              --target fix/tcl-tv-play-protect-sem-acessibilidade \
+              --latest=false
+          fi
+          gh release view tv-complemento-v1.2 --json assets --jq '.assets[] | [.name,.url] | @tsv'
+      - name: Encurtar e testar redirecionamento HTTPS
+        run: |
+          set -euo pipefail
+          URL='https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.2/tcl-tv.apk'
+          SHORT=$(curl -fsS --max-time 25 -G \
+            --data-urlencode 'format=simple' \
+            --data-urlencode 'shorturl=TCLTV12BA' \
+            --data-urlencode "url=$URL" \
+            'https://urlvanish.com/api/shorten')
+          echo "Resposta do encurtador: $SHORT"
+          [[ "$SHORT" =~ ^https://urlvanish\.com/[a-zA-Z0-9_]+$ ]] || exit 1
+          TARGET=$(curl -sS -I -o /dev/null -w '%{redirect_url}' --max-time 25 "$SHORT")
+          test "$TARGET" = "$URL"
+          echo "SHORT_URL_VALIDATED=$SHORT"
+          echo "### Link curto validado para TCL: $SHORT" >> "$GITHUB_STEP_SUMMARY"
+      - name: Retirar instalador 1.1 bloqueado do ar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release edit tv-complemento-v1.1 \
+            --notes 'VERSAO RETIRADA: o APK v1.1 foi bloqueado pelo Google Play Protect na TCL por possivel acesso a dados sensiveis. Nao instale. Use apenas o complemento v1.2 sem Acessibilidade, sujeito a teste no dispositivo.'
+          gh release delete-asset tv-complemento-v1.1 tcl-tv.apk --yes
+          echo 'Obsolete 1.1 installer removed from public release.'
