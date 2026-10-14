@@ -19,7 +19,9 @@ class SafeTvCompanionTests(unittest.TestCase):
 
     def test_no_accessibility_or_sensitive_package_permissions(self):
         self.assertNotIn("accessibility", self.manifest.lower())
-        self.assertNotIn("BLUETOOTH", self.manifest)
+        self.assertIn("android.permission.BLUETOOTH_CONNECT", self.manifest)
+        self.assertNotIn("BLUETOOTH_SCAN", self.manifest)
+        self.assertNotIn("BLUETOOTH_PRIVILEGED", self.manifest)
         for forbidden in ["QUERY_ALL_PACKAGES", "SYSTEM_ALERT_WINDOW",
                           "BIND_ACCESSIBILITY_SERVICE", "READ_SMS",
                           "BIND_NOTIFICATION_LISTENER_SERVICE", "REQUEST_INSTALL_PACKAGES"]:
@@ -45,15 +47,22 @@ class SafeTvCompanionTests(unittest.TestCase):
         self.assertIn("X-TCL-Pair", self.bridge)
         self.assertIn("installedApps()", self.bridge)
         self.assertIn("TvAppBridge.pairingCode(this)", self.screen)
+        self.assertIn('parts[1].equals("/headphones")', self.bridge)
+        self.assertIn("MappingStore.get(context, KeyEvent.KEYCODE_PROG_RED)", self.bridge)
+        self.assertIn("BluetoothRecoverAction.recoverOrOpen(context, mapping)", self.bridge)
+        self.assertIn("requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}", self.screen)
+        self.assertIn("MappingStore.save(this, KeyEvent.KEYCODE_PROG_RED", self.screen)
 
     def test_package_and_version_and_no_old_java(self):
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
-        self.assertIn("versionCode = 3", self.gradle)
-        self.assertIn('versionName = "1.2-Sem-Acessibilidade"', self.gradle)
+        self.assertIn("versionCode = 4", self.gradle)
+        self.assertIn('versionName = "1.3-Catalogo-Fones"', self.gradle)
         actual = {p.name for p in SRC.glob("*.java")}
-        self.assertEqual(
-            actual, {"MainActivity.java", "TclCatalogService.java", "TvAppBridge.java"}
-        )
+        self.assertEqual(actual, {
+            "MainActivity.java", "TclCatalogService.java", "TvAppBridge.java",
+            "BluetoothConnectAction.java", "BluetoothRecoverAction.java",
+            "DeviceSettingsFallback.java", "MappingStore.java"
+        })
 
 
 if __name__ == "__main__":
