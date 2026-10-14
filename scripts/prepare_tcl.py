@@ -397,6 +397,12 @@ if os.environ.get("TCL_RESCUE_STABLE") == "1":
              "                    tvRemoteViewModel.sendText(text, submit = false)\n"
              "                },\n")
         ])
+        # Avoid release R8/resource shrinking until physical TV regression QA.
+        # The source uses reflection/serialized IME and ConnectSDK components.
+        change("app/build.gradle.kts", [
+            ("isMinifyEnabled = true", "isMinifyEnabled = false"),
+            ("isShrinkResources = true", "isShrinkResources = false")
+        ])
         if mode_preview:
             change("app/build.gradle.kts", [
                 ("versionCode = 18", "versionCode = 20"),
