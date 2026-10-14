@@ -1,7 +1,7 @@
 name: Export Android APK signer for local secure signing
 on:
   push:
-    branches: ['feat/android-apk-no-ads']
+    branches: ['feat/android-apk-no-ads', 'feat/tcl-v22-updates-back-bluetooth']
     paths: ['.github/workflows/export-signing-tools.yml']
   workflow_dispatch:
 permissions:
