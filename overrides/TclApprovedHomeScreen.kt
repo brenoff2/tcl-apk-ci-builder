@@ -498,41 +498,87 @@ private fun TclSideRocker(
     modifier: Modifier,
     label: String,
     headerIcon: ImageVector,
+    fluidLevel: Float? = null,
+    isMuted: Boolean = false,
     onHeader: () -> Unit,
     onIncrease: () -> Unit,
     onDecrease: () -> Unit
 ) {
-    Column(
+    val outline = RoundedCornerShape(25.dp)
+    Box(
         modifier = modifier
-            .clip(RoundedCornerShape(35.dp))
-            .background(Brush.verticalGradient(
-                listOf(TclSurfaceHigh, TclSurface)
-            ))
-            .border(1.dp, TclOutline, RoundedCornerShape(35.dp))
-            .padding(vertical = 7.dp, horizontal = 3.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
+            .clip(outline)
+            .background(Brush.verticalGradient(listOf(TclSurfaceHigh, TclSurface)))
+            .border(1.dp, TclOutline, outline)
     ) {
-        Icon(
-            headerIcon, contentDescription = if (label == "Volume") "Silenciar" else "TV",
-            tint = TclText, modifier = Modifier.size(24.dp)
-                .clickable(onClick = onHeader).padding(1.dp)
-        )
-        Column(
-            modifier = Modifier.weight(1f).padding(top = 6.dp),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = "Aumentar " + label,
-                tint = TclText, modifier = Modifier.size(36.dp)
-                    .clickable(onClick = onIncrease).padding(4.dp))
-            Box(Modifier.width(3.dp).height(37.dp)
-                .clip(RoundedCornerShape(2.dp)).background(TclBlue))
-            Icon(Icons.Filled.Remove, contentDescription = "Diminuir " + label,
-                tint = TclText, modifier = Modifier.size(34.dp)
-                    .clickable(onClick = onDecrease).padding(4.dp))
+        if (fluidLevel != null) {
+            TclLiquidFill(
+                fill = fluidLevel,
+                muted = isMuted,
+                modifier = Modifier.fillMaxSize()
+            )
         }
-        Text(label, fontSize = 10.sp, color = TclMuted, maxLines = 1)
+        Column(
+            modifier = Modifier.fillMaxSize().padding(vertical = 6.dp, horizontal = 3.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Icon(
+                headerIcon, contentDescription = if (label == "Volume") "Silenciar" else "TV",
+                tint = TclText,
+                modifier = Modifier.size(23.dp).clickable(onClick = onHeader)
+            )
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f).clickable(onClick = onIncrease),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Add, contentDescription = "Aumentar " + label,
+                    tint = TclText, modifier = Modifier.size(32.dp))
+            }
+            Box(
+                modifier = Modifier.fillMaxWidth().weight(1f).clickable(onClick = onDecrease),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.Remove, contentDescription = "Diminuir " + label,
+                    tint = TclText, modifier = Modifier.size(31.dp))
+            }
+            Text(label, fontSize = 10.sp, color = TclText, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+private fun TclLiquidFill(
+    fill: Float,
+    muted: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val fluid by animateFloatAsState(
+        targetValue = if (muted) 0f else fill.coerceIn(0f, 1f),
+        animationSpec = spring(dampingRatio = 0.72f, stiffness = 350f),
+        label = "tclVolumeLiquid"
+    )
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        if (w <= 0f || h <= 0f || fluid <= 0f) return@Canvas
+        val top = h * (1f - fluid)
+        val amplitude = 4.dp.toPx()
+        val path = Path().apply {
+            moveTo(0f, h)
+            lineTo(0f, top)
+            var x = 0f
+            while (x <= w) {
+                lineTo(x, top + sin(x / w * 2 * Math.PI).toFloat() * amplitude)
+                x += 3f
+            }
+            lineTo(w, top)
+            lineTo(w, h)
+            close()
+        }
+        drawPath(path, Brush.verticalGradient(
+            listOf(TclBlue.copy(alpha = 0.30f), TclBlue.copy(alpha = 0.78f)),
+            startY = top, endY = h))
     }
 }
 
