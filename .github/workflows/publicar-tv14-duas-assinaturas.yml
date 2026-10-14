@@ -1,0 +1,100 @@
+name: Publicar TCL TV 1.4 para atualizacao sem desinstalar
+
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths:
+      - '.github/workflows/publicar-tv14-duas-assinaturas.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-compatible-tv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;35.0.0'
+      - name: Transferir APKs ja assinados de blobs GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          gh api -H 'Accept: application/vnd.github.raw' \
+            repos/$GH_REPO/git/blobs/3251efe7e0c697ff46ee0cc5698c1121bacd2af8 \
+            > output/Controle_TCL_TV_v1.4_cert8b2b.apk
+          gh api -H 'Accept: application/vnd.github.raw' \
+            repos/$GH_REPO/git/blobs/4ea73e4d165a6ee050945867f00d4e8f1b06c664 \
+            > output/Controle_TCL_TV_v1.4_cert3382.apk
+          printf '%s  %s\n' \
+            c3e2a25dc19451a20a2f00813caaae5320ff5e0dda140fc762034717d305a242 \
+            output/Controle_TCL_TV_v1.4_cert8b2b.apk \
+            | sha256sum -c -
+          printf '%s  %s\n' \
+            eee4842962199f0e331efbeee4517b0a803f3f555811f68ab19146c7ac66d688 \
+            output/Controle_TCL_TV_v1.4_cert3382.apk \
+            | sha256sum -c -
+      - name: Auditar assinaturas compatíveis e versão
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          for kind in 8b2b 3382; do
+            APK="output/Controle_TCL_TV_v1.4_cert$kind.apk"
+            "$BT/apksigner" verify --verbose --print-certs "$APK" \
+              > "output/assinatura-$kind.txt"
+            "$BT/aapt" dump badging "$APK" > "output/identidade-$kind.txt"
+            grep -q "name='com.tclremote.tvcompanion' versionCode='5'" \
+              "output/identidade-$kind.txt"
+            case "$kind" in
+              8b2b) CERT='8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da' ;;
+              3382) CERT='3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add' ;;
+            esac
+            grep -iq "$CERT" "output/assinatura-$kind.txt"
+          done
+          printf 'TV 1.4 certified for both current 1.3 signatures\n' > output/LEIA.txt
+      - name: Publicar ativos oficiais por assinatura
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view tv-complemento-v1.4 >/dev/null 2>&1; then
+            echo 'Refusing to silently replace an existing signed release'
+            exit 1
+          fi
+          gh release create tv-complemento-v1.4 \
+            output/Controle_TCL_TV_v1.4_cert8b2b.apk \
+            output/Controle_TCL_TV_v1.4_cert3382.apk \
+            --title 'Controle TCL TV 1.4 - Atualizacoes + Fones' \
+            --notes 'Atualizacao sem desinstalar. Versao 1.4 adiciona Buscar atualizacoes, realce para foco do controle da TV, texto grande, reconexao A2DP verificada sem abrir automaticamente configuracoes e mantem catalogo de apps sem Acessibilidade. Se a TV 1.3 foi instalada pelo link TCLTV13BA use cert8b2b. Se veio do APK 1.3 anterior, use cert3382. Futuras atualizacoes: escolha Buscar atualizacoes dentro da TV. Android sempre pede confirmacao para instalar.' \
+            --target feat/tcl-v22-updates-back-bluetooth \
+            --latest=false
+          gh release view tv-complemento-v1.4 --json assets \
+            --jq '.assets[] | [.name,.size,.url] | @tsv'
+      - name: Gerar links curtos para ambos instaladores
+        run: |
+          set -euo pipefail
+          for item in '8b2b TCLTV14BA' '3382 TCLTV14ALT'; do
+            set -- $item
+            TYPE="$1"
+            CODE="$2"
+            URL="https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.4/Controle_TCL_TV_v1.4_cert$TYPE.apk"
+            SHORT=$(curl -fsS --max-time 22 -G \
+              --data-urlencode 'format=simple' \
+              --data-urlencode "shorturl=$CODE" \
+              --data-urlencode "url=$URL" \
+              'https://urlvanish.com/api/shorten')
+            echo "SHORT $TYPE $SHORT"
+            test "$SHORT" = "https://urlvanish.com/$CODE"
+            TARGET=$(curl -sS -I -o /dev/null -w '%{redirect_url}' \
+              --max-time 22 "$SHORT")
+            test "$TARGET" = "$URL"
+            echo "Validated TV 1.4 $TYPE: $SHORT" >> "$GITHUB_STEP_SUMMARY"
+          done
