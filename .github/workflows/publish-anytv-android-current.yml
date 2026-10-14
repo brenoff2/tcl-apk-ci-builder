@@ -1,0 +1,47 @@
+name: Publish signed AnyTV Android current APK
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-android-current.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: 'feat/tcl-v22-updates-back-bluetooth'}
+      - name: Download existing verified signed APK
+        shell: bash
+        env:
+          ONE_TIME_APK_SOURCE: 'https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-d050-820e-b3e4-718938a3f155/raw?se=2026-10-14T06%3A24%3A39Z&sp=r&sv=2026-02-06&sr=b&scid=414491e5-d66d-541d-9499-714c9cdb8049&skoid=86ad43b0-1afa-4d46-a6d6-9e67f7cdc5bc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-14T05%3A06%3A31Z&ske=2026-10-15T05%3A06%3A31Z&sks=b&skv=2026-02-06&sig=T5nOc4YogqLGtqJXwXGux94OiYDUh9JOHbXlQwAlxlA%3D'
+        run: |
+          set -euo pipefail
+          mkdir -p updates/android
+          curl --fail --location --retry 3 --connect-timeout 20 --max-time 240 "$ONE_TIME_APK_SOURCE" -o updates/android/current.apk
+          echo '0854adc5e08c1f51dd896eae7d4ddb38557389c3b0abe08e1432a918133b86df  updates/android/current.apk' | sha256sum --check
+          cp updates/android/current.apk updates/android/AnyTV-v2.3.apk
+      - name: Publish current.apk and immutable historical APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f updates/android/current.apk updates/android/AnyTV-v2.3.apk
+          if ! git diff --cached --quiet; then
+            git commit -m "release(android): publish signed AnyTV 2.3 current.apk [skip ci]"
+            git push
+          fi
+      - name: Publish GitHub Release for the updater installed in version 2.2
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          cp updates/android/current.apk Controle_TCL_Livre_v2.3.apk
+          if gh release view tcl-phone-v2.3 >/dev/null 2>&1; then
+            gh release upload tcl-phone-v2.3 Controle_TCL_Livre_v2.3.apk --clobber
+          else
+            gh release create tcl-phone-v2.3 Controle_TCL_Livre_v2.3.apk --target feat/tcl-v22-updates-back-bluetooth --title "AnyTV 2.3 Android" --notes "APK Android assinado com o mesmo certificado da versão 2.2. Compatível com atualização sem desinstalar."
+          fi
