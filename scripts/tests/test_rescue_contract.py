@@ -27,11 +27,11 @@ class RescueContractTests(unittest.TestCase):
             if os.environ.get("TCL_RELEASE_SINGLE_APP") == "1":
                 self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
                 self.assertNotIn('applicationId = "com.tclremote.livre.preview"', self.gradle)
-                self.assertIn('versionName = "' + ("2.1-TCL" if os.environ.get("TCL_V21") == "1" else "2.0-TCL") + '"', self.gradle)
+                self.assertIn('versionName = "' + ("2.2-TCL" if os.environ.get("TCL_V22") == "1" else "2.1-TCL" if os.environ.get("TCL_V21") == "1" else "2.0-TCL") + '"', self.gradle)
             else:
                 self.assertIn('applicationId = "com.tclremote.livre.preview"', self.gradle)
                 self.assertIn('versionName = "2.0-Preview"', self.gradle)
-            self.assertIn("versionCode = " + ("21" if os.environ.get("TCL_V21") == "1" else "20"), self.gradle)
+            self.assertIn("versionCode = " + ("22" if os.environ.get("TCL_V22") == "1" else "21" if os.environ.get("TCL_V21") == "1" else "20"), self.gradle)
         else:
             self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
             self.assertIn("versionCode = 18", self.gradle)
