@@ -558,6 +558,7 @@ private fun TclLiquidFill(
         animationSpec = spring(dampingRatio = 0.72f, stiffness = 350f),
         label = "tclVolumeLiquid"
     )
+    val liquidColor = TclBlue
     Canvas(modifier) {
         val w = size.width
         val h = size.height
@@ -577,7 +578,7 @@ private fun TclLiquidFill(
             close()
         }
         drawPath(path, Brush.verticalGradient(
-            listOf(TclBlue.copy(alpha = 0.30f), TclBlue.copy(alpha = 0.78f)),
+            listOf(liquidColor.copy(alpha = 0.30f), liquidColor.copy(alpha = 0.78f)),
             startY = top, endY = h))
     }
 }
