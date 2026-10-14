@@ -18,7 +18,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -45,9 +45,13 @@ import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.KeyboardBackspace
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -82,13 +86,21 @@ import com.hari.androidtvremote.utils.Constant
  * Preview uses a DIFFERENT applicationId to avoid replacing an installed
  * 1.7 APK whose private signing key is not currently available.
  */
-private val TclBg = Color(0xFF050B13)
-private val TclSurface = Color(0xFF101D2C)
-private val TclSurfaceHigh = Color(0xFF1A2D43)
-private val TclOutline = Color(0xFF254562)
-private val TclText = Color(0xFFEAF2FF)
-private val TclMuted = Color(0xFFA8BAD6)
-private val TclBlue = Color(0xFF298FFF)
+// The same Material theme powers settings and the remote; no dark override.
+private val TclBg: Color
+    @Composable get() = MaterialTheme.colorScheme.background
+private val TclSurface: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceContainer
+private val TclSurfaceHigh: Color
+    @Composable get() = MaterialTheme.colorScheme.surfaceContainerHigh
+private val TclOutline: Color
+    @Composable get() = MaterialTheme.colorScheme.outlineVariant
+private val TclText: Color
+    @Composable get() = MaterialTheme.colorScheme.onBackground
+private val TclMuted: Color
+    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
+private val TclBlue: Color
+    @Composable get() = MaterialTheme.colorScheme.primary
 
 @Composable
 fun TclApprovedHomeScreen(
@@ -112,6 +124,7 @@ fun TclApprovedHomeScreen(
     onKeyboardText: (String) -> Unit,
     onKeyboardBackspace: (Int) -> Unit,
     onKeyboardEnter: () -> Unit,
+    onSendText: (String) -> Unit,
     onToggleVoice: () -> Unit,
     onOpenCastPlayer: (MediaItemUi) -> Unit,
     onClearStatus: () -> Unit,
@@ -186,47 +199,25 @@ fun TclApprovedHomeScreen(
     }
 
 
-    MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = TclBlue,
-            onPrimary = Color.White,
-            surface = TclBg,
-            surfaceContainer = TclSurface,
-            surfaceContainerHigh = TclSurfaceHigh,
-            secondaryContainer = TclSurfaceHigh,
-            onSecondaryContainer = TclText,
-            outlineVariant = TclOutline,
-            onSurface = TclText,
-            onSurfaceVariant = TclMuted
-        )
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .background(Brush.verticalGradient(listOf(TclSurface, TclBg, TclBg)))
     ) {
-        Box(
-            Modifier.fillMaxSize().background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF0B1726), TclBg, Color(0xFF02060B))
-                )
+        val compactHeight = maxHeight < 760.dp
+        val tightHeight = maxHeight < 650.dp
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    horizontal = if (maxWidth < 360.dp) 8.dp else 12.dp,
+                    vertical = if (tightHeight) 4.dp else 8.dp
+                ),
+            verticalArrangement = Arrangement.spacedBy(
+                if (tightHeight) 6.dp else if (compactHeight) 8.dp else 10.dp
             )
         ) {
-            Scaffold(
-                modifier = Modifier.fillMaxSize(),
-                containerColor = Color.Transparent,
-                contentWindowInsets = WindowInsets.safeDrawing,
-                bottomBar = {
-                    TclBottomTabs(
-                        currentTab = currentTab,
-                        onRemote = { onTabSelected(HomeTab.Remote) },
-                        onCast = { onTabSelected(HomeTab.Cast) }
-                    )
-                }
-            ) { scaffoldPadding ->
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(scaffoldPadding)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
                     TclApprovedHeader(
                         tvName = sessionState.connectedDevice?.name ?: "Escolher televisão",
                         isConnected = isConnected,
@@ -246,10 +237,10 @@ fun TclApprovedHomeScreen(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(20.dp))
                             .background(
-                                Brush.verticalGradient(listOf(TclSurface, Color(0xFF0B1725)))
+                                Brush.verticalGradient(listOf(TclSurfaceHigh, TclSurface))
                             )
                             .border(1.dp, TclOutline.copy(alpha = .75f), RoundedCornerShape(20.dp))
-                            .padding(10.dp),
+                            .padding(if (compactHeight) 7.dp else 10.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically,
@@ -267,7 +258,7 @@ fun TclApprovedHomeScreen(
                         val gap = if (maxWidth < 350.dp) 7.dp else 10.dp
                         val rockerWidth = if (maxWidth < 350.dp) 51.dp else 59.dp
                         val padSize = (maxWidth - rockerWidth * 2 - gap * 2)
-                            .coerceAtLeast(0.dp).coerceAtMost(215.dp)
+                            .coerceAtLeast(0.dp).coerceAtMost(if (compactHeight) 178.dp else 226.dp)
                         Row(
                             modifier = Modifier.fillMaxWidth().height(padSize),
                             horizontalArrangement = Arrangement.spacedBy(gap),
@@ -321,7 +312,7 @@ fun TclApprovedHomeScreen(
 
                     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                         val buttonDiameter = ((maxWidth - 8.dp * 4) / 5)
-                            .coerceAtMost(60.dp)
+                            .coerceAtMost(if (compactHeight) 49.dp else 62.dp)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -363,17 +354,13 @@ fun TclApprovedHomeScreen(
                         }
                     }
                     Spacer(Modifier.height(2.dp))
-                }
-            }
         }
     }
 
     if (showKeyboard) {
-        KeyboardDialog(
+        TclTextInputDialog(
             onDismiss = { showKeyboard = false },
-            onInsertText = onKeyboardText,
-            onBackspace = { onKeyboardBackspace(1) },
-            onEnter = onKeyboardEnter
+            onSendText = onSendText
         )
     }
 }
@@ -391,7 +378,7 @@ private fun TclApprovedHeader(
         modifier = Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(21.dp))
             .background(Brush.horizontalGradient(
-                listOf(Color(0xFF101B2A), Color(0xFF08111E))
+                listOf(TclSurfaceHigh, TclSurface)
             ))
             .border(1.dp, TclOutline.copy(alpha = .8f), RoundedCornerShape(21.dp))
             .padding(horizontal = 10.dp, vertical = 8.dp),
@@ -402,11 +389,11 @@ private fun TclApprovedHeader(
             modifier = Modifier.size(43.dp)
                 .clip(RoundedCornerShape(9.dp))
                 .background(Brush.linearGradient(
-                    listOf(Color(0xFF293F7A), Color(0xFF0E1D36), Color(0xFF14213B))
+                    listOf(TclSurfaceHigh, TclSurface, TclSurfaceHigh)
                 )).clickable(onClick = onChooseTv),
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Filled.Tv, contentDescription = "Escolher TV", tint = Color(0xFF9EC4FF),
+            Icon(Icons.Filled.Tv, contentDescription = "Escolher TV", tint = TclBlue,
                 modifier = Modifier.size(31.dp))
         }
         Column(modifier = Modifier.weight(1f).clickable(onClick = onChooseTv)) {
@@ -430,7 +417,7 @@ private fun TclApprovedHeader(
         )
         TclHeaderAction(
             icon = Icons.Filled.Cast, description = "Transmitir",
-            tint = Color(0xFF85CAFF), onClick = onCast
+            tint = TclBlue, onClick = onCast
         )
         TclHeaderAction(
             icon = Icons.Filled.Settings, description = "Configurações",
@@ -450,7 +437,7 @@ private fun TclHeaderAction(
         modifier = Modifier.size(37.dp)
             .clip(CircleShape)
             .background(Brush.verticalGradient(
-                listOf(Color(0xFF22354B), Color(0xFF0D1524))
+                listOf(TclSurfaceHigh, TclSurface)
             ))
             .border(1.dp, TclOutline.copy(alpha = .9f), CircleShape)
             .clickable(onClick = onClick)
@@ -474,7 +461,7 @@ private fun TclSideRocker(
         modifier = modifier
             .clip(RoundedCornerShape(35.dp))
             .background(Brush.verticalGradient(
-                listOf(Color(0xFF182A3F), Color(0xFF07111E))
+                listOf(TclSurfaceHigh, TclSurface)
             ))
             .border(1.dp, TclOutline, RoundedCornerShape(35.dp))
             .padding(vertical = 7.dp, horizontal = 3.dp),
@@ -519,7 +506,7 @@ private fun TclQuickAction(
             modifier = Modifier.size(diameter)
                 .clip(CircleShape)
                 .background(Brush.verticalGradient(
-                    listOf(Color(0xFF1A3047), Color(0xFF081522))
+                    listOf(TclSurfaceHigh, TclSurface)
                 ))
                 .border(1.dp, TclOutline, CircleShape)
                 .clickable(onClick = onClick)
@@ -527,7 +514,7 @@ private fun TclQuickAction(
             contentAlignment = Alignment.Center
         ) {
             Icon(icon, contentDescription = null, tint = TclText,
-                modifier = Modifier.size(27.dp))
+                modifier = Modifier.size(if (diameter < 54.dp) 22.dp else 27.dp))
         }
         Text(title, color = TclMuted, fontSize = 11.sp, maxLines = 1,
             textAlign = TextAlign.Center)
@@ -535,57 +522,60 @@ private fun TclQuickAction(
 }
 
 @Composable
-private fun TclBottomTabs(
-    currentTab: HomeTab,
-    onRemote: () -> Unit,
-    onCast: () -> Unit
+private fun TclTextInputDialog(
+    onDismiss: () -> Unit,
+    onSendText: (String) -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth()
-            .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
-            .height(54.dp)
-            .clip(RoundedCornerShape(38.dp))
-            .background(Brush.verticalGradient(
-                listOf(Color(0xFF14263B), Color(0xFF071321))
-            ))
-            .border(1.dp, TclOutline, RoundedCornerShape(38.dp)),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        TclBottomTab("Remote", Icons.Filled.Tv,
-            selected = currentTab == HomeTab.Remote,
-            modifier = Modifier.weight(1f), onClick = onRemote)
-        Box(Modifier.width(1.dp).height(33.dp)
-            .background(TclOutline))
-        TclBottomTab("Cast", Icons.Filled.Cast,
-            selected = currentTab == HomeTab.Cast,
-            modifier = Modifier.weight(1f), onClick = onCast)
+    var draft by rememberSaveable { mutableStateOf("") }
+    var sent by rememberSaveable { mutableStateOf(false) }
+    fun sendDraft() {
+        if (draft.isNotEmpty()) {
+            // Send the complete text as one IME update, NEVER send DPAD_CENTER
+            // or IME_ENTER here: that clicks the TV keyboard's selected key.
+            onSendText(draft)
+            sent = true
+        }
     }
-}
 
-@Composable
-private fun TclBottomTab(
-    label: String,
-    icon: ImageVector,
-    selected: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = modifier.fillMaxHeight().clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(icon, contentDescription = label,
-            tint = if (selected) TclBlue else TclMuted,
-            modifier = Modifier.size(23.dp))
-        Spacer(Modifier.height(1.dp))
-        Text(label, fontSize = 12.sp, color = if (selected) TclBlue else TclMuted)
-        Spacer(Modifier.height(3.dp))
-        Box(
-            Modifier.width(66.dp).height(3.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(if (selected) TclBlue else Color.Transparent)
-        )
-    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Escrever na TCL") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Selecione primeiro um campo de texto na televisão. " +
+                        "Depois digite ou cole aqui e toque em Enviar texto.",
+                    color = TclMuted
+                )
+                OutlinedTextField(
+                    value = draft,
+                    onValueChange = {
+                        draft = it
+                        sent = false
+                    },
+                    label = { Text("Texto para a televisão") },
+                    minLines = 2,
+                    maxLines = 5,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { sendDraft() }),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (sent) {
+                    Text(
+                        "Comando de texto enviado. Confira o campo na TCL; " +
+                            "o botão não pressionou nenhuma tecla virtual da TV.",
+                        color = TclBlue
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = draft.isNotEmpty(), onClick = { sendDraft() }) {
+                Text(if (sent) "Reenviar texto" else "Enviar texto")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Fechar") }
+        }
+    )
 }
