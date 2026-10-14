@@ -59,7 +59,7 @@ jobs:
           grep -q "android.permission.INTERNET" output-tv/APK_PERMISSOES.txt
           grep -q "android.permission.FOREGROUND_SERVICE_SPECIAL_USE" output-tv/APK_PERMISSOES.txt
           if grep -Ei \
-            'BIND_ACCESSIBILITY_SERVICE|accessibilityservice|READ_SMS|QUERY_ALL_PACKAGES|BLUETOOTH|SYSTEM_ALERT_WINDOW|BIND_NOTIFICATION_LISTENER_SERVICE' \
+            'BIND_ACCESSIBILITY_SERVICE|accessibilityservice|READ_SMS|QUERY_ALL_PACKAGES|android\.permission\.BLUETOOTH|SYSTEM_ALERT_WINDOW|BIND_NOTIFICATION_LISTENER_SERVICE' \
             output-tv/APK_PERMISSOES.txt output-tv/APK_MANIFESTO.txt; then
             echo "BLOQUEADO: manifesto solicita acesso indevido"
             exit 1
