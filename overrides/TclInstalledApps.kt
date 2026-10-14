@@ -124,15 +124,31 @@ internal object TclTvAppApi {
 
     suspend fun headphones(host: String, code: String): String =
         withContext(Dispatchers.IO) {
-            val status = JSONObject(request(host, code, "/headphones", "{}"))
+            var status = JSONObject(request(host, code, "/headphones", "{}"))
                 .optString("status", "")
+            // TV 1.4 responds "requested" immediately, then asynchronously
+            // checks A2DP state. Never claim connected until it is confirmed.
+            if (status == "requested") {
+                repeat(12) {
+                    kotlinx.coroutines.delay(800L)
+                    status = JSONObject(request(host, code, "/headphones/status"))
+                        .optString("status", "not_supported")
+                    if (status != "reconnecting" && status != "requested") return@repeat
+                }
+            }
             when (status) {
-                "requested" -> "Pedido de reconexão enviado aos fones selecionados. " +
-                    "Confira na TCL; a conexão depende do firmware Bluetooth."
-                "not_configured" -> "Na TV, abra Controle TCL TV e escolha primeiro os fones pareados."
-                "permission_required" -> "Na TV, abra Controle TCL TV e autorize a permissão Bluetooth."
-                "not_supported" -> "Reconexão automática indisponível nesta TV. Abra as configurações Bluetooth."
-                else -> "Resposta inesperada da TCL ao tentar reconectar os fones."
+                "connected" -> "Fones reconectados. A TCL confirmou a conexão Bluetooth."
+                "reconnecting", "requested" -> "A TCL ainda está tentando reconectar os fones."
+                "not_configured" -> "Na TV, abra Controle TCL TV e selecione seus fones pareados."
+                "permission_required" -> "Na TV, abra Controle TCL TV e autorize a conexão Bluetooth."
+                "api_restricted" -> "O Android da TCL bloqueou a reconexão automática. " +
+                    "O aplicativo não abriu as Configurações sem sua autorização."
+                "not_paired" -> "Esses fones não estão mais pareados com a TCL."
+                "not_connected", "timeout", "profile_unavailable" ->
+                    "A TV não conseguiu confirmar a reconexão dos fones."
+                "bluetooth_off" -> "O Bluetooth da TCL está desligado."
+                "not_supported" -> "O recurso não é permitido pelo Android desta TCL."
+                else -> "Resposta inesperada da TCL: $status"
             }
         }
 
