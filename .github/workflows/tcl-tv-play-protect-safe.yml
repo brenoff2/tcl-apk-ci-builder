@@ -1,0 +1,90 @@
+name: TCL TV 1.2 - sem Acessibilidade - auditoria e compilacao
+
+on:
+  push:
+    branches: ['fix/tcl-tv-play-protect-sem-acessibilidade']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tcl-tv-safe
+  cancel-in-progress: true
+
+jobs:
+  safe-tv-companion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Ferramentas Android
+        run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Fonte MIT Android TV fixada
+        run: |
+          git clone --depth 1 https://github.com/fezdk/bluetooth-quick-connect.git tv-source
+          test "$(git -C tv-source rev-parse HEAD)" = "508b5f148e1945911085f1789051c59d76c0278b"
+      - name: Preparar complemento sem permissoes sensiveis
+        run: python3 scripts/prepare_companion_safe.py
+      - name: Testar ausencia de Acessibilidade e leitura real
+        run: python3 -m unittest discover -s scripts/tests -p 'test_safe_tv_companion.py' -v
+      - name: Compilar APK TV seguro
+        run: |
+          cd tv-source
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Auditar manifesto final assinado
+        run: |
+          set -euo pipefail
+          mkdir -p output-tv
+          APK=tv-source/app/build/outputs/apk/debug/app-debug.apk
+          TOOLS="$ANDROID_HOME/build-tools/35.0.0"
+          "$TOOLS/apksigner" verify --verbose --print-certs "$APK" \
+            > output-tv/APK_ASSINATURA.txt
+          "$TOOLS/aapt" dump badging "$APK" \
+            > output-tv/APK_IDENTIDADE.txt
+          "$TOOLS/aapt" dump permissions "$APK" \
+            > output-tv/APK_PERMISSOES.txt
+          "$TOOLS/aapt" dump xmltree "$APK" AndroidManifest.xml \
+            > output-tv/APK_MANIFESTO.txt
+          grep -q "name='com.tclremote.tvcompanion'" output-tv/APK_IDENTIDADE.txt
+          grep -q "versionCode='3'" output-tv/APK_IDENTIDADE.txt
+          grep -q "android.permission.INTERNET" output-tv/APK_PERMISSOES.txt
+          grep -q "android.permission.FOREGROUND_SERVICE_SPECIAL_USE" output-tv/APK_PERMISSOES.txt
+          if grep -Ei \
+            'BIND_ACCESSIBILITY_SERVICE|accessibilityservice|READ_SMS|QUERY_ALL_PACKAGES|BLUETOOTH|SYSTEM_ALERT_WINDOW|BIND_NOTIFICATION_LISTENER_SERVICE' \
+            output-tv/APK_PERMISSOES.txt output-tv/APK_MANIFESTO.txt; then
+            echo "BLOQUEADO: manifesto solicita acesso indevido"
+            exit 1
+          fi
+          # Code-level guard against accidentally packaging the old TV service.
+          if unzip -l "$APK" | grep -Ei 'remote_button_service|accessibility_service'; then
+            echo "BLOQUEADO: recurso legado de Acessibilidade"
+            exit 1
+          fi
+          sha256sum "$APK" > output-tv/APK_SHA256.txt
+          cp "$APK" output-tv/Controle_TCL_TV_1.2_SEM_ACESSIBILIDADE_TESTE.apk
+          cp tv-source/LICENSE output-tv/LICENSE-MIT.txt
+          cat > output-tv/LEIA_PRIMEIRO.txt <<'TXT'
+          COMPLEMENTO TCL TV 1.2 - TESTE
+          Acessibilidade removida. Servico de primeiro plano visivel na TV.
+          Permite consultar aplicativos instalados e seus icones.
+          Nao desative o Google Play Protect para instalacao.
+          O APK passou por compilacao, assinatura e auditoria estatica.
+          A INSTALACAO e o funcionamento real na TCL nao foram ainda homologados.
+          A funcao antiga de interceptar teclas de cores nao esta presente.
+          TXT
+      - name: Publicar artefatos auditados
+        uses: actions/upload-artifact@v4
+        with:
+          name: TCL_TV_1_2_SEM_ACESSIBILIDADE_AUDITADO
+          path: output-tv/
+          if-no-files-found: error
+          retention-days: 30
