@@ -39,6 +39,7 @@ import com.hari.androidtvremote.androidLib.remote.Remotemessage
 @Composable
 fun PlaybackTransportBar(
     onRemoteKey: (Remotemessage.RemoteKeyCode) -> Unit,
+    onHeadphones: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val levels = listOf(1, 2, 4, 8, 16)
@@ -150,9 +151,10 @@ fun PlaybackTransportBar(
                 description = "Tentar desconectar e reconectar o fone Bluetooth pareado na TCL",
                 modifier = Modifier.weight(0.9f)
             ) {
-                if (companionPrefs.getBoolean("confirmed", false)) {
-                    onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_PROG_RED)
+                if (onHeadphones != null) {
+                    onHeadphones()
                 } else {
+                    // No Accessibility interception; do not send a useless red key.
                     showHeadsetSetup = true
                 }
             }
@@ -161,14 +163,11 @@ fun PlaybackTransportBar(
 
     if (showHeadsetSetup) {
         TvCompanionSetupDialog(
-            description = "Para tentar reiniciar a conexão dos fones Bluetooth da TCL, " +
-                "instale o complemento Controle TCL TV, ative o serviço em Acessibilidade " +
-                "e escolha seus fones pareados na opção Fones (botão vermelho). " +
-                "Quando a TCL bloquear a reconexão silenciosa, a TV abrirá as opções Bluetooth.",
+            description = "A reconexão dos fones requer o complemento Controle TCL TV " +
+                "1.3 ou superior. Na TV, abra o complemento e escolha os fones já pareados. " +
+                "A versão antiga com Acessibilidade não é necessária.",
             onReady = {
-                companionPrefs.edit().putBoolean("confirmed", true).apply()
                 showHeadsetSetup = false
-                onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_PROG_RED)
             },
             onDismiss = { showHeadsetSetup = false }
         )
