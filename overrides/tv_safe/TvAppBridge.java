@@ -164,6 +164,19 @@ public final class TvAppBridge {
                 // Only pre-paired devices explicitly selected in this TV app.
                 String result = requestHeadphones();
                 write(socket.getOutputStream(), 200, "{\"status\":\"" + result + "\"}");
+            } else if (parts[0].equals("POST") && parts[1].equals("/headphones/settings")) {
+                // Explicit user request. Android can still disallow launching UI from background.
+                boolean opened = false;
+                try {
+                    Intent settingsIntent = new Intent(android.provider.Settings.ACTION_BLUETOOTH_SETTINGS);
+                    settingsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    context.startActivity(settingsIntent);
+                    opened = true;
+                } catch (RuntimeException error) {
+                    Log.w(TAG, "Bluetooth settings require foreground interaction", error);
+                }
+                write(socket.getOutputStream(), opened ? 200 : 409,
+                        "{\"opened\":" + opened + "}");
             } else if (parts[0].equals("GET") && parts[1].equals("/headphones/status")) {
                 write(socket.getOutputStream(), 200,
                         "{\"status\":\"" + headphoneStatus + "\"}");
