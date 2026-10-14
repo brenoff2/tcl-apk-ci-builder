@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -89,7 +91,7 @@ private object TclTvAppApi {
             if (status !in 200..299) throw IllegalStateException("A TCL não conseguiu executar a ação ($status).")
             return conn.inputStream.bufferedReader().use { it.readText() }
         } catch (error: java.net.ConnectException) {
-            throw IllegalStateException("Abra Controle TCL TV e ative seu serviço em Acessibilidade.", error)
+            throw IllegalStateException("Abra Controle TCL TV na televisão e ative a conexão.", error)
         } catch (error: java.net.SocketTimeoutException) {
             throw IllegalStateException("A TCL não respondeu. Verifique se os dois aparelhos usam a mesma rede.", error)
         } finally {
@@ -149,23 +151,31 @@ private fun OfficialTvIcon(app: TvOfficialApp, size: Dp) {
 }
 
 @Composable
-fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier = Modifier) {
+fun TclInstalledAppsBar(
+    tvHost: String?, tvIdentity: String?, tvName: String?,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
     val prefs = remember(context) {
         context.getSharedPreferences("tcl_tv_installed_apps", Context.MODE_PRIVATE)
     }
     val host = tvHost.orEmpty()
-    // Use the connection's stable device identifier, not only its DHCP address.
-    // Also migrate the previous host-based preferences without discarding them.
+    // Discovery IDs can change after reconnect. Keep aliases by TV IP and
+    // friendly name, and migrate v1.9 preferences that stored only the ID.
     val deviceKey = tvIdentity?.takeIf { it.isNotBlank() } ?: host
-    var pairing by remember(deviceKey, host) {
-        mutableStateOf(prefs.getString("pair:$deviceKey",
-            prefs.getString("pair:$host", "")) ?: "")
+    val nameKey = tvName?.trim()?.lowercase()?.takeIf { it.isNotBlank() }
+    val savedPair = remember(deviceKey, host, nameKey) {
+        prefs.getString("pair:$host", null)
+            ?: prefs.getString("pair:$deviceKey", null)
+            ?: nameKey?.let { prefs.getString("pair:name:$it", null) }
+            ?: ""
     }
-    var codeEntry by remember(deviceKey, host) { mutableStateOf(pairing) }
-    var allApps by remember(deviceKey, host) { mutableStateOf<List<TvOfficialApp>>(emptyList()) }
-    val savedFavoriteRaw = prefs.getString("favorites:$deviceKey",
-        prefs.getString("favorites:$host", null))
+    var pairing by remember(deviceKey, host, nameKey) { mutableStateOf(savedPair) }
+    var codeEntry by remember(deviceKey, host, nameKey) { mutableStateOf(pairing) }
+    var allApps by remember(deviceKey, host, nameKey) { mutableStateOf<List<TvOfficialApp>>(emptyList()) }
+    val savedFavoriteRaw = prefs.getString("favorites:$host", null)
+        ?: prefs.getString("favorites:$deviceKey", null)
+        ?: nameKey?.let { prefs.getString("favorites:name:$it", null) }
     var favorites by remember(deviceKey, host) {
         mutableStateOf(savedFavoriteIds(savedFavoriteRaw))
     }
@@ -178,6 +188,47 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
     var errorText by remember(deviceKey, host) { mutableStateOf<String?>(null) }
     var refresh by remember(deviceKey, host) { mutableStateOf(0) }
     val scope = rememberCoroutineScope()
+    fun storePair(code: String) {
+        // commit synchronously so immediately closing the app cannot lose it.
+        val editor = prefs.edit().putString("pair:$deviceKey", code)
+        if (host.isNotBlank()) editor.putString("pair:$host", code)
+        if (nameKey != null) editor.putString("pair:name:$nameKey", code)
+        editor.commit()
+    }
+    fun storeFavorites(ids: List<String>) {
+        val serialized = JSONArray(ids).toString()
+        val editor = prefs.edit().putString("favorites:$deviceKey", serialized)
+        if (host.isNotBlank()) editor.putString("favorites:$host", serialized)
+        if (nameKey != null) editor.putString("favorites:name:$nameKey", serialized)
+        editor.commit()
+    }
+
+    // v1.9 stored pair:<ephemeral_device_id> only. Search legacy keys and
+    // verify candidates against the actual TV before adopting a migrated code.
+    LaunchedEffect(host, deviceKey, nameKey) {
+        if (host.isNotBlank() && pairing.isBlank()) {
+            val candidates = prefs.all.entries
+                .filter { it.key.startsWith("pair:") }
+                .mapNotNull { it.value as? String }
+                .filter { it.matches(Regex("[0-9]{8}")) }
+                .distinct().take(5)
+            if (candidates.isNotEmpty()) {
+                busy = true
+                for (code in candidates) {
+                    val apps = runCatching { TclTvAppApi.apps(host, code) }.getOrNull()
+                    if (apps != null) {
+                        storePair(code)
+                        pairing = code
+                        codeEntry = code
+                        allApps = apps
+                        errorText = null
+                        break
+                    }
+                }
+                busy = false
+            }
+        }
+    }
 
     LaunchedEffect(host, pairing, refresh) {
         if (host.isNotBlank() && pairing.isNotBlank()) {
@@ -185,6 +236,7 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
             runCatching { TclTvAppApi.apps(host, pairing) }
                 .onSuccess { list ->
                     allApps = list
+                    storePair(pairing)
                     errorText = null
                 }.onFailure {
                     errorText = it.message ?: "Não foi possível consultar aplicativos da TCL."
@@ -278,7 +330,7 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         "Na TV, abra Controle TCL TV e encontre o código de 8 dígitos. " +
-                            "Ative o serviço em Configurações → Acessibilidade e conecte ambos à mesma rede.",
+                            "Ative a conexão pelo próprio complemento na TV e conecte ambos à mesma rede.",
                         fontSize = 13.sp
                     )
                     OutlinedTextField(
@@ -299,7 +351,7 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
                         scope.launch {
                             runCatching { TclTvAppApi.apps(host, codeEntry) }
                                 .onSuccess { list ->
-                                    prefs.edit().putString("pair:$deviceKey", codeEntry).apply()
+                                    storePair(codeEntry)
                                     pairing = codeEntry
                                     allApps = list
                                     errorText = null
@@ -394,8 +446,7 @@ fun TclInstalledAppsBar(tvHost: String?, tvIdentity: String?, modifier: Modifier
                             val valid = draft.filter { it in present }
                             favorites = valid
                             hasUserFavorites = true
-                            prefs.edit().putString("favorites:$deviceKey",
-                                JSONArray(valid).toString()).apply()
+                            storeFavorites(valid)
                             showManager = false
                         }) { Text("Salvar") }
                     }
