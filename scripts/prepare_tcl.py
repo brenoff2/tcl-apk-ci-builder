@@ -313,12 +313,46 @@ print("TCL_V1_5_TV_PICKER_BT_BUTTON_OK")
 # No 8-digit code, no new LAN service, no new UI layout until validated.
 import os
 if os.environ.get("TCL_RESCUE_STABLE") == "1":
+    # Stage 1: keep the known 1.5 controls, but make their measured
+    # height accessible on short displays rather than compressing the deck.
+    # With a scrollable Column, ColumnScope.weight is ignored; therefore
+    # the control deck needs a finite height derived from its button grid.
+    change("app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt", [
+        (
+            "            .collectAsStateWithLifecycle(initialValue = RemoteLayoutConfig.default)\n\n        Column(",
+            "            .collectAsStateWithLifecycle(initialValue = RemoteLayoutConfig.default)\n\n"
+            "        val activeRockers = listOf(layoutConfig.leftRocker, layoutConfig.rightRocker)\n"
+            "            .count { it != RemoteLayoutConfig.ROCKER_NONE }\n"
+            "        val gridWidth = (maxWidth - horizontalPadding * 2\n"
+            "            - rockerWidth * activeRockers - controlSpacing * activeRockers)\n"
+            "            .coerceAtLeast(0.dp)\n"
+            "        val gridCell = ((gridWidth - controlSpacing * 2) / 3).coerceAtLeast(0.dp)\n"
+            "        val gridRows = (layoutConfig.gridButtons.size + 2) / 3\n"
+            "        val gridHeight = gridCell * gridRows +\n"
+            "            controlSpacing * (gridRows - 1).coerceAtLeast(0)\n"
+            "        val deckHeight = maxOf(rockerHeight, gridHeight)\n\n"
+            "        Column("
+        ),
+        (
+            "                .padding(horizontal = horizontalPadding, vertical = 10.dp),\n"
+            "            verticalArrangement = Arrangement.spacedBy(verticalGap)",
+            "                .padding(horizontal = horizontalPadding, vertical = 10.dp)\n"
+            "                .verticalScroll(rememberScrollState()),\n"
+            "            verticalArrangement = Arrangement.spacedBy(verticalGap)"
+        ),
+        (
+            "                        Box(modifier = Modifier.weight(1f)) {\n"
+            "                            RemoteControlDeck(",
+            "                        Box(modifier = Modifier.fillMaxWidth().height(deckHeight)) {\n"
+            "                            RemoteControlDeck("
+        )
+    ])
     change("app/build.gradle.kts", [
-        ("versionCode = 15", "versionCode = 17"),
-        ('versionName = "1.5-TCL"', 'versionName = "1.7-Resgate"')
+        ("versionCode = 15", "versionCode = 18"),
+        ('versionName = "1.5-TCL"', 'versionName = "1.8-Resgate-Teste"')
     ])
     change("app/src/main/res/values/strings.xml", [
-        ("Controle TCL 1.5", "Controle TCL 1.7")
+        ("Controle TCL 1.5", "Controle TCL 1.8")
     ])
     screen = (SRC/"ui/app/RemoteScreen.kt").read_text()
     assert "AppShortcutStripSquare(" in screen
