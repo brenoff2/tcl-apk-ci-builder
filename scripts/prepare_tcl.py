@@ -357,8 +357,12 @@ if os.environ.get("TCL_RESCUE_STABLE") == "1":
     if os.environ.get("TCL_APPROVED_UI") == "1":
         # The screenshot-approved screen must remain a separate install until
         # the private signer for the user's real 1.7 APK is recovered.
-        if os.environ.get("TCL_PREVIEW_SIDE_BY_SIDE") != "1":
-            raise RuntimeError("Approved UI build requires TCL_PREVIEW_SIDE_BY_SIDE=1; no incompatible updates.")
+        mode_preview = os.environ.get("TCL_PREVIEW_SIDE_BY_SIDE") == "1"
+        mode_release = os.environ.get("TCL_RELEASE_SINGLE_APP") == "1"
+        if mode_preview == mode_release:
+            raise RuntimeError("Choose exactly one of PREVIEW_SIDE_BY_SIDE and RELEASE_SINGLE_APP")
+        # The real app ID can only be distributed with the original 1.7 key,
+        # or as a documented ONE-TIME migration to a new permanent signer.
         copyfile("overrides/TclApprovedHomeScreen.kt",
                  SRC / "ui/app/TclApprovedHomeScreen.kt")
         copyfile("overrides/TclInstalledApps.kt",
@@ -386,18 +390,29 @@ if os.environ.get("TCL_RESCUE_STABLE") == "1":
              "                        RemotePadMode.Touchpad -> RemotePadMode.NumberPad\n"
              "                        RemotePadMode.NumberPad -> RemotePadMode.DPad\n"
              "                    }\n"
+             "                },\n"),
+            ("                onKeyboardEnter = tvRemoteViewModel::sendKeyboardEnter,\n",
+             "                onKeyboardEnter = tvRemoteViewModel::sendKeyboardEnter,\n"
+             "                onSendText = { text: String ->\n"
+             "                    tvRemoteViewModel.sendText(text, submit = false)\n"
              "                },\n")
         ])
-        change("app/build.gradle.kts", [
-            ("versionCode = 18", "versionCode = 19"),
-            ('versionName = "1.8-Resgate-Teste"', 'versionName = "1.9-Tela-Aprovada-Preview"'),
-            ('applicationId = "com.tclremote.livre"',
-             'applicationId = "com.tclremote.livre.preview"')
-        ])
+        if mode_preview:
+            change("app/build.gradle.kts", [
+                ("versionCode = 18", "versionCode = 20"),
+                ('versionName = "1.8-Resgate-Teste"', 'versionName = "2.0-Preview"'),
+                ('applicationId = "com.tclremote.livre"',
+                 'applicationId = "com.tclremote.livre.preview"')
+            ])
+        else:
+            change("app/build.gradle.kts", [
+                ("versionCode = 18", "versionCode = 20"),
+                ('versionName = "1.8-Resgate-Teste"', 'versionName = "2.0-TCL"')
+            ])
         change("app/src/main/res/values/strings.xml", [
-            ("Controle TCL 1.8", "Controle TCL Visual")
+            ("Controle TCL 1.8", "Controle TCL 2.0")
         ])
-        print("TCL_TELA_APROVADA_PREVIEW_SIDE_BY_SIDE_OK")
+        print("TCL_APPROVED_V20_" + ("PREVIEW" if mode_preview else "SINGLE_APP") + "_READY")
     screen = (SRC/"ui/app/RemoteScreen.kt").read_text()
     assert "AppShortcutStripSquare(" in screen
     assert "TclInstalledAppsBar" not in screen
@@ -405,7 +420,7 @@ if os.environ.get("TCL_RESCUE_STABLE") == "1":
         assert (SRC/"ui/app/TclInstalledApps.kt").exists()
     else:
         assert not (SRC/"ui/app/TclInstalledApps.kt").exists()
-    expected_app_id = ("com.tclremote.livre.preview" if os.environ.get("TCL_APPROVED_UI") == "1" else "com.tclremote.livre")
+    expected_app_id = ("com.tclremote.livre.preview" if os.environ.get("TCL_PREVIEW_SIDE_BY_SIDE") == "1" else "com.tclremote.livre")
     assert 'applicationId = "' + expected_app_id + '"' in (ROOT/"app/build.gradle.kts").read_text()
     print("TCL_RESGATE_ESTAVEL_SEM_VINCULACAO_OK")
     raise SystemExit(0)
