@@ -11,8 +11,10 @@ import android.view.KeyEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import android.app.Activity;
 import android.content.Intent;
+import android.util.TypedValue;
+import android.graphics.drawable.StateListDrawable;
+import tcl.shared.TclUpdateManager;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
@@ -35,7 +37,19 @@ public final class MainActivity extends Activity {
     private static final int TEXT = Color.rgb(236, 244, 255);
     private static final int MUTED = Color.rgb(164, 188, 217);
     private TextView status;
+    private TextView updateStatus;
     private static final int REQ_BT_CONNECT = 11;
+    private int dp(float v) {
+        return Math.round(getResources().getDisplayMetrics().density * v);
+    }
+    private GradientDrawable buttonShape(int color, boolean selected) {
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(color);
+        bg.setCornerRadius(dp(15));
+        bg.setStroke(dp(selected ? 3 : 1),
+                selected ? Color.rgb(255, 230, 86) : Color.rgb(75, 111, 148));
+        return bg;
+    }
 
     private TextView label(String value, int size, int color) {
         TextView text = new TextView(this);
@@ -50,16 +64,27 @@ public final class MainActivity extends Activity {
     private Button action(String value, View.OnClickListener onClick) {
         Button button = new Button(this);
         button.setText(value);
-        button.setTextSize(18);
+        button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
         button.setTextColor(Color.WHITE);
         button.setAllCaps(false);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setColor(Color.rgb(18, 65, 115));
-        bg.setCornerRadius(20f);
-        button.setBackground(bg);
+        button.setSingleLine(false);
+        button.setMaxLines(3);
+        button.setFocusable(true);
+        button.setPadding(dp(16), dp(14), dp(16), dp(14));
+        // Android TV D-pad focus state: bright border + blue background.
+        StateListDrawable backgrounds = new StateListDrawable();
+        backgrounds.addState(new int[]{android.R.attr.state_pressed},
+                buttonShape(Color.rgb(20, 118, 207), true));
+        backgrounds.addState(new int[]{android.R.attr.state_focused},
+                buttonShape(Color.rgb(19, 88, 150), true));
+        backgrounds.addState(new int[]{},
+                buttonShape(Color.rgb(16, 43, 75), false));
+        button.setBackground(backgrounds);
+        button.setMinHeight(dp(76));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, 66);
-        params.setMargins(0, 9, 0, 9);
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        params.setMargins(0, dp(8), 0, dp(8));
         button.setLayoutParams(params);
         button.setOnClickListener(onClick);
         return button;
@@ -74,7 +99,7 @@ public final class MainActivity extends Activity {
         scroll.setBackgroundColor(BACKGROUND);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(50, 28, 50, 28);
+        root.setPadding(dp(24), dp(18), dp(24), dp(22));
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         scroll.addView(root);
 
@@ -88,13 +113,20 @@ public final class MainActivity extends Activity {
         root.addView(code);
 
         root.addView(label(
-                "No celular, abra Controle TCL Livre 1.9 e informe o código uma única vez. "
+                "No celular, abra Controle TCL Livre e informe o código uma única vez. "
                 + "A TV e o celular precisam estar na mesma rede local.", 15, MUTED));
 
         status = label("Verificando serviço...", 16, TEXT);
         root.addView(status);
 
         root.addView(action("Ativar conexão com o celular", v -> startBridge()));
+
+        root.addView(action("Buscar atualizações", v ->
+                TclUpdateManager.check(this, msg -> {
+                    if (updateStatus != null) updateStatus.setText(msg);
+                })));
+        updateStatus = label("Atualizações: verifique a nova versão aqui.", 15, MUTED);
+        root.addView(updateStatus);
 
         TextView headphone = label("Fones Bluetooth pareados", 16, MUTED);
         root.addView(headphone);
@@ -195,9 +227,26 @@ public final class MainActivity extends Activity {
             status.setText("Escolha primeiro um fone Bluetooth pareado.");
             return;
         }
-        BluetoothRecoverAction.recoverOrOpen(this, mapping);
-        status.setText("Tentando reconectar " + mapping.name +
-                ". Se a TV impedir a reconexão automática, use as configurações Bluetooth.");
+        status.setText("Desconectando e reconectando " + mapping.name + "...");
+        BluetoothRecoverAction.recover(this, mapping, result -> runOnUiThread(() -> {
+            switch (result) {
+                case "connected":
+                    status.setText("Fones conectados novamente: " + mapping.name);
+                    break;
+                case "api_restricted":
+                    status.setText("A TCL bloqueou o comando Bluetooth. " +
+                        "Use a opção Configurações Bluetooth, se desejar.");
+                    break;
+                case "not_paired":
+                    status.setText("Fones não estão mais pareados com a TCL.");
+                    break;
+                case "permission_required":
+                    status.setText("Autorize o Bluetooth no aplicativo da TCL.");
+                    break;
+                default:
+                    status.setText("Não foi possível confirmar a conexão: " + result);
+            }
+        }));
     }
 
     private void openBluetoothSettings() {
