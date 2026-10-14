@@ -29,10 +29,13 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn("versionCode = " + ("21" if os.environ.get("TCL_V21") == "1" else "20"), self.gradle)
 
     def test_has_all_screenshot_sections(self):
-        for section in ("TclApprovedHeader(", "TclInstalledAppsBar(",
-                        '"Reprodução"', "PlaybackTransportBar(",
-                        "TclSideRocker(", "RemotePadStage(", "TclQuickAction(",
-                        "TclTextInputDialog("):
+        sections = ["TclApprovedHeader(", "TclInstalledAppsBar(",
+                    '"Reprodução"', "PlaybackTransportBar(",
+                    "TclSideRocker(", "TclQuickAction(",
+                    "TclTextInputDialog("]
+        sections.append("TclResponsivePad(" if os.environ.get("TCL_V21") == "1"
+                        else "RemotePadStage(")
+        for section in sections:
             with self.subTest(section=section):
                 self.assertIn(section, self.skin)
 
