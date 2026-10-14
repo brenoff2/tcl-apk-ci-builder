@@ -1,0 +1,44 @@
+name: Create verified short URL AnyTV TV 1.6
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/create-anytv-tv16-shortlink.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  shorten:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create short link and verify destination
+        shell: bash
+        env:
+          TARGET: 'https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.6/Controle_TCL_TV_v1.6_cert8b2b.apk'
+        run: |
+          set -euo pipefail
+          response=$(curl --fail --silent --show-error --retry 2 --max-time 40 --get 'https://is.gd/create.php' --data-urlencode 'format=json' --data-urlencode "url=$TARGET" --data-urlencode 'shorturl=AnyTV16BA' || true)
+          echo "is.gd creation response: $response"
+          link=$(printf '%s' "$response" | python3 -c 'import json,sys; x=json.load(sys.stdin); print(x.get("shorturl",""))' 2>/dev/null || true)
+          if [[ -z "$link" ]]; then
+            response=$(curl --fail --silent --show-error --retry 2 --max-time 40 --get 'https://is.gd/create.php' --data-urlencode 'format=json' --data-urlencode "url=$TARGET" || true)
+            echo "is.gd fallback response: $response"
+            link=$(printf '%s' "$response" | python3 -c 'import json,sys; x=json.load(sys.stdin); print(x.get("shorturl",""))' 2>/dev/null || true)
+          fi
+          if [[ -z "$link" ]]; then
+            link=$(curl --fail --silent --show-error --retry 2 --max-time 40 --get 'https://tinyurl.com/api-create.php' --data-urlencode "url=$TARGET" || true)
+            echo "tinyurl fallback: $link"
+          fi
+          case "$link" in
+            https://is.gd/*|https://tinyurl.com/*) ;;
+            *) echo 'Short URL service did not issue a valid link'; exit 1 ;;
+          esac
+          if [[ "$link" == https://is.gd/* ]]; then
+            alias_name="${link#https://is.gd/}"
+            resolved=$(curl --fail --silent --show-error --max-time 30 --get 'https://is.gd/forward.php' --data-urlencode 'format=simple' --data-urlencode "shorturl=$alias_name")
+          else
+            resolved=$(curl --location --silent --show-error --max-time 45 --output /dev/null --write-out '%{url_effective}' "$link")
+          fi
+          echo "RESOLVED_DESTINATION=$resolved"
+          test "$resolved" = "$TARGET"
+          echo "VERIFIED_SHORT_LINK=$link"
