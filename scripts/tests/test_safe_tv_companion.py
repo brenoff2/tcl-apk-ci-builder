@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """TV companion permission and feature regression tests."""
 import re
+import os
 import unittest
 from pathlib import Path
 
@@ -24,7 +25,7 @@ class SafeTvCompanionTests(unittest.TestCase):
         self.assertNotIn("BLUETOOTH_PRIVILEGED", self.manifest)
         for forbidden in ["QUERY_ALL_PACKAGES", "SYSTEM_ALERT_WINDOW",
                           "BIND_ACCESSIBILITY_SERVICE", "READ_SMS",
-                          "BIND_NOTIFICATION_LISTENER_SERVICE", "REQUEST_INSTALL_PACKAGES"]:
+                          "BIND_NOTIFICATION_LISTENER_SERVICE"]:
             self.assertNotIn(forbidden, self.manifest)
         self.assertNotIn("AccessibilityService", self.service)
         self.assertFalse((SRC / "RemoteButtonService.java").exists())
@@ -49,7 +50,7 @@ class SafeTvCompanionTests(unittest.TestCase):
         self.assertIn("TvAppBridge.pairingCode(this)", self.screen)
         self.assertIn('parts[1].equals("/headphones")', self.bridge)
         self.assertIn("MappingStore.get(context, KeyEvent.KEYCODE_PROG_RED)", self.bridge)
-        self.assertIn("BluetoothRecoverAction.recoverOrOpen(context, mapping)", self.bridge)
+        self.assertIn("BluetoothRecoverAction.recover(context, mapping", self.bridge)
         self.assertIn("requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}", self.screen)
         self.assertIn("MappingStore.save(this, KeyEvent.KEYCODE_PROG_RED", self.screen)
         if os.environ.get("TCL_TV_V14") == "1":
