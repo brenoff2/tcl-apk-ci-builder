@@ -109,6 +109,15 @@ public final class MainActivity extends Activity {
         return row;
     }
 
+    private String installedVersion() {
+        try {
+            String name = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            return name == null ? "?" : name.split("-")[0];
+        } catch (PackageManager.NameNotFoundException ex) {
+            return "?";
+        }
+    }
+
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setStatusBarColor(BACKGROUND);
@@ -127,6 +136,12 @@ public final class MainActivity extends Activity {
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         frame.addView(root, centered);
+
+        TextView versionTag = label("v" + installedVersion(), 12, MUTED);
+        versionTag.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+        root.addView(versionTag, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
 
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.drawable.tcl_banner);

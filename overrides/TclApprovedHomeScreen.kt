@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -72,6 +73,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import kotlin.math.sin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
@@ -83,6 +85,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.hari.androidtvremote.R
 import com.hari.androidtvremote.androidLib.remote.Remotemessage
 import com.hari.androidtvremote.utils.Constant
 
@@ -455,6 +458,14 @@ private fun TclApprovedHeader(
     onCast: () -> Unit,
     onSettings: () -> Unit
 ) {
+    // Visible version is read from the installed APK, not duplicated in UI constants.
+    val appContext = LocalContext.current
+    val installedVersion = remember(appContext) {
+        runCatching {
+            appContext.packageManager.getPackageInfo(appContext.packageName, 0)
+                .versionName.orEmpty().substringBefore("-")
+        }.getOrDefault("?")
+    }
     // A slim toolbar, not a second oversized connected-status card.
     Row(
         modifier = Modifier.fillMaxWidth()
@@ -462,16 +473,12 @@ private fun TclApprovedHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        Box(
-            modifier = Modifier.size(30.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(TclSurfaceHigh)
-                .clickable(onClick = onChooseTv),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Filled.Tv, contentDescription = "Selecionar TCL",
-                tint = TclBlue, modifier = Modifier.size(22.dp))
-        }
+        Image(
+            painter = painterResource(id = R.drawable.anytv_wordmark),
+            contentDescription = "AnyTV — selecionar televisão",
+            modifier = Modifier.width(73.dp).height(28.dp)
+                .clickable(onClick = onChooseTv)
+        )
         Row(
             modifier = Modifier.weight(1f).clickable(onClick = onChooseTv),
             verticalAlignment = Alignment.CenterVertically,
@@ -485,6 +492,10 @@ private fun TclApprovedHeader(
             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Trocar televisão",
                 tint = TclMuted, modifier = Modifier.size(13.dp))
         }
+        Text(
+            "v$installedVersion", fontSize = 10.sp, color = TclMuted, maxLines = 1,
+            modifier = Modifier.semantics { contentDescription = "Versão $installedVersion" }
+        )
         TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar",
             Color(0xFFFF4775), onPower)
         TclHeaderAction(Icons.Filled.Cast, "Transmitir", TclBlue, onCast)

@@ -38,8 +38,8 @@ copyfile(logo_path, drawable/"anytv_wordmark.png")
 gradle = Path("source/app/build.gradle.kts")
 cfg = gradle.read_text(encoding="utf-8")
 assert cfg.count("versionCode = 23") == 1 and cfg.count('versionName = "2.3-TCL"') == 1
-cfg = cfg.replace("versionCode = 23","versionCode = 24").replace('versionName = "2.3-TCL"','versionName = "2.4-AnyTV"')
+cfg = cfg.replace("versionCode = 23","versionCode = 25").replace('versionName = "2.3-TCL"','versionName = "2.5-AnyTV"')
 gradle.write_text(cfg, encoding="utf-8")
-print("ANYTV_BRAND_ICON_WORDMARK_VERSION24_READY")
+print("ANYTV_BRAND_ICON_WORDMARK_VERSION25_READY")
 
 print("ANYTV_PHONE_DISPLAY_NAME_READY")

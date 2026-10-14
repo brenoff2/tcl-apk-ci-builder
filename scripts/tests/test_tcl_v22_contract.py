@@ -34,6 +34,7 @@ class PhoneUpdatesAndBack(unittest.TestCase):
     def test_update_button_and_signed_install(self):
         self.assertIn('title = "Buscar atualizações"', self.settings)
         self.assertIn("TclUpdateManager.check(activity)", self.settings)
+        self.assertIn("R.drawable.anytv_wordmark", (SRC / "com/hari/androidtvremote/ui/app/TclApprovedHomeScreen.kt").read_text())
         self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
         self.assertIn('android:exported="false"', self.manifest)
         self.assertIn("getPackageArchiveInfo(", self.updater)
@@ -46,7 +47,7 @@ class PhoneUpdatesAndBack(unittest.TestCase):
 
     def test_single_package_higher_version(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.apk)
-        self.assertIn("versionCode = 24", self.apk)
+        self.assertIn("versionCode = 25", self.apk)
 
 
 class TvUpdateAndBluetooth(unittest.TestCase):
@@ -61,6 +62,7 @@ class TvUpdateAndBluetooth(unittest.TestCase):
 
     def test_tv_buttons_readable_dpad_focus(self):
         self.assertIn("state_focused", self.main)
+        self.assertIn('"v" + installedVersion()', self.main)
         self.assertIn("dp(48)", self.main)
         self.assertIn("setTextSize(TypedValue.COMPLEX_UNIT_SP, 15)", self.main)
         self.assertIn('action("Buscar atualizações"', self.main)
@@ -76,7 +78,7 @@ class TvUpdateAndBluetooth(unittest.TestCase):
         self.assertIn("headphoneStatus = result", self.bridge)
 
     def test_tv_inplace_update_support(self):
-        self.assertIn("versionCode = 6", self.gradle)
+        self.assertIn("versionCode = 7", self.gradle)
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
         self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
         self.assertNotIn("BIND_ACCESSIBILITY_SERVICE", self.manifest)
