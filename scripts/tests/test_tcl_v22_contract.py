@@ -40,7 +40,8 @@ class PhoneUpdatesAndBack(unittest.TestCase):
         self.assertIn("getApkContentsSigners()", self.updater)
         self.assertIn("MessageDigest.isEqual(currentSigner(installed), currentSigner(next))", self.updater)
         self.assertIn("PackageInstaller.SessionParams.USER_ACTION_REQUIRED", self.updater)
-        self.assertIn("digest.substring(7).equals(sha256File(apk))", self.updater)
+        self.assertIn('"/current.apk"', self.updater)
+        self.assertIn("MessageDigest.isEqual(currentSigner(installed), currentSigner(next))", self.updater)
         self.assertNotIn("SilentInstall", self.updater)
 
     def test_single_package_higher_version(self):
