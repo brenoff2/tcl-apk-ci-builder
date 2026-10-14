@@ -241,7 +241,7 @@ fun TclApprovedHomeScreen(
                         .padding(scaffoldPadding)
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     TclApprovedHeader(
                         tvName = sessionState.connectedDevice?.name ?: "Escolher televisão",
@@ -274,7 +274,7 @@ fun TclApprovedHomeScreen(
                                 if (isConnected) onQuickApp(id) else onOpenDiscovery()
                             },
                             onRemoteKey = { remoteKey(it) },
-                            shortcutSize = 79.dp
+                            shortcutSize = 70.dp
                         )
                     }
 
@@ -303,7 +303,7 @@ fun TclApprovedHomeScreen(
                         val gap = if (maxWidth < 350.dp) 7.dp else 10.dp
                         val rockerWidth = if (maxWidth < 350.dp) 51.dp else 59.dp
                         val padSize = (maxWidth - rockerWidth * 2 - gap * 2)
-                            .coerceAtLeast(0.dp).coerceAtMost(270.dp)
+                            .coerceAtLeast(0.dp).coerceAtMost(215.dp)
                         Row(
                             modifier = Modifier.fillMaxWidth().height(padSize),
                             horizontalArrangement = Arrangement.spacedBy(gap),
@@ -356,8 +356,8 @@ fun TclApprovedHomeScreen(
                     }
 
                     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                        val buttonDiameter = ((maxWidth - 4 * 8.dp) / 5)
-                            .coerceAtMost(70.dp)
+                        val buttonDiameter = ((maxWidth - 8.dp * 4) / 5)
+                            .coerceAtMost(60.dp)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -430,7 +430,7 @@ private fun TclApprovedHeader(
                 listOf(Color(0xFF101B2A), Color(0xFF08111E))
             ))
             .border(1.dp, TclOutline.copy(alpha = .8f), RoundedCornerShape(21.dp))
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(7.dp)
     ) {
@@ -580,7 +580,7 @@ private fun TclBottomTabs(
         modifier = Modifier.fillMaxWidth()
             .navigationBarsPadding()
             .padding(horizontal = 12.dp, vertical = 4.dp)
-            .height(58.dp)
+            .height(54.dp)
             .clip(RoundedCornerShape(38.dp))
             .background(Brush.verticalGradient(
                 listOf(Color(0xFF14263B), Color(0xFF071321))
