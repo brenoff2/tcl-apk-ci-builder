@@ -31,6 +31,12 @@ for file in ("MainActivity.java", "TclCatalogService.java", "TvAppBridge.java"):
     copyfile(assets / file, base / file)
 copyfile("overrides/tv/BluetoothRecoverAction.java", base / "BluetoothRecoverAction.java")
 
+# Common verified, user-confirmed APK updater.
+shared = app / "src/main/java/tcl/shared"
+shared.mkdir(parents=True, exist_ok=True)
+for java_file in ("TclUpdateManager.java", "TclInstallResultReceiver.java"):
+    copyfile("overrides/common/" + java_file, shared / java_file)
+
 manifest = app / "src/main/AndroidManifest.xml"
 copyfile(assets / "AndroidManifest.xml", manifest)
 
@@ -54,8 +60,8 @@ changes = {
     'applicationId = "dk.fez.bluetoothquickconnect"':
         'applicationId = "com.tclremote.tvcompanion"',
     'targetSdk = 33': 'targetSdk = 34',
-    'versionCode = 1': 'versionCode = 4',
-    'versionName = "0.1.0"': 'versionName = "1.3-Catalogo-Fones"',
+    'versionCode = 1': 'versionCode = 5',
+    'versionName = "0.1.0"': 'versionName = "1.4-Catalogo-Fones-Atualiza"',
 }
 for old, new in changes.items():
     if config.count(old) != 1:
@@ -71,6 +77,10 @@ assert "BIND_ACCESSIBILITY_SERVICE" not in actual
 assert "RemoteButtonService" not in actual
 assert "android.accessibilityservice" not in actual
 assert "android.permission.BLUETOOTH_CONNECT" in actual
+assert "android.permission.REQUEST_INSTALL_PACKAGES" in actual
+assert "TclInstallResultReceiver" in actual
+assert "TclUpdateManager.check" in (base / "MainActivity.java").read_text()
+assert "state_focused" in (base / "MainActivity.java").read_text()
 assert "android.permission.BLUETOOTH" in actual
 assert "android.permission.BLUETOOTH_SCAN" not in actual
 assert "android.permission.BLUETOOTH_PRIVILEGED" not in actual
