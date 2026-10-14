@@ -171,6 +171,11 @@ fun TclApprovedHomeScreen(
     val view = LocalView.current
     val isConnected = sessionState.connectedDevice != null
     var showKeyboard by rememberSaveable { mutableStateOf(false) }
+    var headsetStatus by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val headsetPrefs = remember(context) {
+        context.getSharedPreferences("tcl_tv_installed_apps", android.content.Context.MODE_PRIVATE)
+    }
 
     fun haptic() {
         if (hapticsEnabled) {
@@ -254,7 +259,33 @@ fun TclApprovedHomeScreen(
                         }
                         // Keep all actions: 10 s, play/pause/stop, speeds,
                         // restart episode, episode guide and headphones.
-                        PlaybackTransportBar(onRemoteKey = { remoteKey(it) })
+                        PlaybackTransportBar(
+                            onRemoteKey = { remoteKey(it) },
+                            onHeadphones = {
+                                val tv = sessionState.connectedDevice
+                                val host = tv?.ipAddress
+                                if (host.isNullOrBlank()) {
+                                    onOpenDiscovery()
+                                } else {
+                                    val code = TclTvAppApi.savedCode(
+                                        headsetPrefs, host, tv.id, tv.name
+                                    )
+                                    if (code.isNullOrBlank()) {
+                                        headsetStatus = "Vincule primeiro o catálogo de aplicativos " +
+                                            "com o código da TCL. O mesmo vínculo será usado para os fones."
+                                    } else {
+                                        scope.launch {
+                                            headsetStatus = "Enviando pedido de reconexão..."
+                                            headsetStatus = runCatching {
+                                                TclTvAppApi.headphones(host, code)
+                                            }.getOrElse { error ->
+                                                error.message ?: "Não foi possível consultar a TCL."
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        )
                     }
 
                     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
@@ -358,6 +389,17 @@ fun TclApprovedHomeScreen(
                     }
                     Spacer(Modifier.height(2.dp))
         }
+    }
+
+    if (headsetStatus != null) {
+        AlertDialog(
+            onDismissRequest = { headsetStatus = null },
+            title = { Text("Fones Bluetooth") },
+            text = { Text(headsetStatus.orEmpty()) },
+            confirmButton = {
+                TextButton(onClick = { headsetStatus = null }) { Text("Entendi") }
+            }
+        )
     }
 
     if (showKeyboard) {
