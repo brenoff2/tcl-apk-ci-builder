@@ -97,8 +97,8 @@ replace_once(settings,
     '                }\n')
 
 gradle = APP / "build.gradle.kts"
-replace_once(gradle, 'versionCode = 21', 'versionCode = 22')
-replace_once(gradle, 'versionName = "2.1-TCL"', 'versionName = "2.2-TCL"')
+replace_once(gradle, 'versionCode = 21', 'versionCode = 23')
+replace_once(gradle, 'versionName = "2.1-TCL"', 'versionName = "2.3-TCL"')
 
 assert 'applicationId = "com.tclremote.livre"' in gradle.read_text()
 assert "BackHandler(enabled = isConnected && !showKeyboard" in screen.read_text()
