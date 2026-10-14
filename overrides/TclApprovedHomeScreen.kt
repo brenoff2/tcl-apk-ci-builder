@@ -103,7 +103,6 @@ fun TclApprovedHomeScreen(
     onCyclePadMode: () -> Unit,
     onOpenDiscovery: () -> Unit,
     onOpenSettings: () -> Unit,
-    onManageApps: () -> Unit,
     onPower: () -> Unit,
     onQuickApp: (String) -> Unit,
     onRemoteKey: (Remotemessage.RemoteKeyCode) -> Unit,
@@ -186,21 +185,6 @@ fun TclApprovedHomeScreen(
         }
     }
 
-    // Preserve a user-created order, but show the seven approved apps first
-    // when no preference was saved. Extra previously known apps stay accessible.
-    val appsToRender = remember(context, remoteApps) {
-        val prefs = context.getSharedPreferences(Constant.PREFS_NAME, android.content.Context.MODE_PRIVATE)
-        val explicitOrder = prefs.getString(Constant.PREF_REMOTE_APP_ORDER, null)
-        if (!explicitOrder.isNullOrBlank()) remoteApps
-        else {
-            val first = listOf(
-                "netflix", "prime_video", "hbo_max", "disney_plus",
-                "apple_tv", "youtube", "iptv"
-            )
-            val appsById = remoteApps.associateBy { it.id }
-            first.mapNotNull(appsById::get) + remoteApps.filter { it.id !in first }
-        }
-    }
 
     MaterialTheme(
         colorScheme = darkColorScheme(
@@ -252,31 +236,11 @@ fun TclApprovedHomeScreen(
                         onSettings = onOpenSettings
                     )
 
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Aplicativos", fontWeight = FontWeight.SemiBold,
-                                color = TclText, fontSize = 17.sp)
-                            Text(
-                                "Ver todos  ›",
-                                modifier = Modifier.clickable(onClick = onManageApps)
-                                    .padding(6.dp)
-                                    .semantics { contentDescription = "Ver e ordenar aplicativos" },
-                                color = TclMuted, fontSize = 13.sp
-                            )
-                        }
-                        AppShortcutStripSquare(
-                            quickApps = appsToRender,
-                            onQuickApp = { id ->
-                                if (isConnected) onQuickApp(id) else onOpenDiscovery()
-                            },
-                            onRemoteKey = { remoteKey(it) },
-                            shortcutSize = 70.dp
-                        )
-                    }
+                    TclInstalledAppsBar(
+                        tvHost = sessionState.connectedDevice?.ipAddress,
+                        tvIdentity = sessionState.connectedDevice?.id,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
                     Column(
                         modifier = Modifier.fillMaxWidth()
