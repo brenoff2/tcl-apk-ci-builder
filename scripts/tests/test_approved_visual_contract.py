@@ -37,7 +37,7 @@ class ApprovedUiContract(unittest.TestCase):
 
     def test_all_actions_connected_to_real_callbacks(self):
         for callback in ("onPower()", "onOpenSettings", "onOpenDiscovery",
-                         "onQuickApp(id)", "onRemoteKey(key)", "onVolumeUp()",
+                         "onQuickApp = onQuickApp", "onRemoteKey(key)", "onVolumeUp()",
                          "onVolumeDown()", "onKeyboardText", "onKeyboardBackspace",
                          "onKeyboardEnter", "onToggleVoice()", "onCyclePadMode()",
                          "onTabSelected(HomeTab.Cast)"):
