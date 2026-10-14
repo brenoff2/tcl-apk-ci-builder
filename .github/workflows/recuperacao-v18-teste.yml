@@ -1,0 +1,75 @@
+name: TCL Resgate Verificacao 1.8 (nao homologado)
+on:
+  push:
+    branches: ['fix/tcl-recuperacao-base-v18']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: tcl-apk-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Android 36
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Python e Pillow para ícones opacos
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Fonte Apache-2.0 fixada
+        run: |
+          git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+      - name: Remover rastreamento e adicionar IP manual
+        run: |
+          TCL_RESCUE_STABLE=1 python3 scripts/prepare_tcl.py
+          ! grep -E 'libs[.]firebase|plugins[.]firebase' source/app/build.gradle.kts
+          grep -q 'versionCode = 18' source/app/build.gradle.kts
+          grep -q 'versionName = "1.8-Resgate-Teste"' source/app/build.gradle.kts
+          grep -q 'applicationId = "com.tclremote.livre"' source/app/build.gradle.kts
+          ! grep -q 'TclInstalledAppsBar' source/app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt
+      - name: Testes de regressao do resgate
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+      - name: Aviso sobre chave de assinatura nao persistente
+        run: |
+          mkdir -p output
+          printf '%s\n' \
+            'APK DE TESTE - NAO HOMOLOGADO NA TV.' \
+            'Assinatura debug do runner GitHub, nao comprovada como chave de atualizacao.' \
+            'NAO desinstale a versao instalada se desejar preservar dados e configuracoes.' \
+            'Nao representa uma entrega final; teste apenas em ambiente descartavel.' \
+            > output/AVISO_IMPORTANTE.txt
+      - name: Compilar APK Android
+        run: |
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verificar APK assinado
+        run: |
+          mkdir -p output
+          cp source/app/build/outputs/apk/debug/app-debug.apk output/Controle_TCL_Resgate_v1.8_TESTE_NAO_ATUALIZAVEL.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose output/Controle_TCL_Resgate_v1.8_TESTE_NAO_ATUALIZAVEL.apk --print-certs | tee output/CERTIFICADO_DO_TESTE.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging output/Controle_TCL_Resgate_v1.8_TESTE_NAO_ATUALIZAVEL.apk | head -n 8
+          unzip -l output/Controle_TCL_Resgate_v1.8_TESTE_NAO_ATUALIZAVEL.apk | grep classes.dex
+          sha256sum output/Controle_TCL_Resgate_v1.8_TESTE_NAO_ATUALIZAVEL.apk | tee output/SHA256.txt
+          cp source/LICENSE output/LICENSE-APACHE-2.0.txt
+      - name: Salvar APK nos artefatos do PR
+        uses: actions/upload-artifact@v4
+        with:
+          name: Controle_TCL_Resgate_v1.8_TESTE_NAO_ATUALIZAVEL
+          path: output/
+          if-no-files-found: error
+          retention-days: 30
