@@ -68,7 +68,7 @@ public final class TclUpdateManager {
         final Context app = activity.getApplicationContext();
         final String pkg = app.getPackageName();
         if (!PHONE_PACKAGE.equals(pkg) && !TV_PACKAGE.equals(pkg)) {
-            callback.show("Este aplicativo não pertence ao canal de atualizações TCL.");
+            callback.show("Este aplicativo não pertence ao canal de atualizações AnyTV.");
             return;
         }
         callback.show("Buscando atualização oficial no GitHub...");
@@ -81,8 +81,7 @@ public final class TclUpdateManager {
                 String signer = sha256(currentSigner(installed));
                 boolean tv = TV_PACKAGE.equals(pkg);
                 String prefix = tv ? TV_PREFIX : PHONE_PREFIX;
-                JSONArray releases = new JSONArray(readUtf8(
-                        API + "/releases?per_page=80", 2_500_000));
+                JSONArray releases = channelReleases(tv);
                 JSONObject release = null;
                 String version = "";
                 int best = -1;
@@ -101,7 +100,7 @@ public final class TclUpdateManager {
                     }
                 }
                 if (release == null) {
-                    throw new IllegalStateException("Não existe uma atualização TCL publicada.");
+                    throw new IllegalStateException("Ainda não existe uma atualização AnyTV assinada e publicada.");
                 }
                 if (best <= versionValue(installed.versionName)) {
                     post(activity, callback, "Você já tem a versão mais recente.");
@@ -197,6 +196,37 @@ public final class TclUpdateManager {
                         (error.getMessage() == null ? "erro de rede ou instalador" : error.getMessage()));
             }
         }, "tcl-update-check").start();
+    }
+
+    /**
+     * Stable per-platform release channels. Only published, signed APKs go in
+     * current.json; the existing APK/signature/hash checks remain mandatory.
+     */
+    private static JSONArray channelReleases(boolean tv) throws Exception {
+        String channel = tv ? "tv" : "android";
+        String uri = "https://raw.githubusercontent.com/" + REPO
+                + "/feat/tcl-v22-updates-back-bluetooth/updates/" + channel + "/current.json";
+        JSONObject current = new JSONObject(readUtf8(uri, 250_000));
+        String requiredPackage = tv ? TV_PACKAGE : PHONE_PACKAGE;
+        if (current.optInt("schema") != 1
+                || !requiredPackage.equals(current.optString("package"))
+                || !channel.equals(current.optString("platform"))) {
+            throw new SecurityException("Canal oficial de atualização inválido.");
+        }
+        JSONArray result = new JSONArray();
+        if (!current.optBoolean("available")) return result;
+        String tag = current.optString("tag", "");
+        String version = current.optString("version", "");
+        String prefix = tv ? TV_PREFIX : PHONE_PREFIX;
+        if (!tag.equals(prefix + version) || versionValue(version) < 0)
+            throw new SecurityException("Versão do canal inconsistente.");
+        JSONObject release = new JSONObject();
+        release.put("tag_name", tag);
+        release.put("draft", false);
+        release.put("prerelease", false);
+        release.put("assets", current.getJSONArray("assets"));
+        result.put(release);
+        return result;
     }
 
     private static void post(Activity activity, Status callback, String message) {
