@@ -38,8 +38,9 @@ import java.util.regex.Pattern;
  * installed signing certificate, then opens Android PackageInstaller.
  *
  * Android may require approval / "install unknown apps"; never sidestep it.
- * The companion has two legacy 1.3 signers. Select the 1.4 APK whose
- * signature matches THIS installation, preserving TV pairing preferences.
+ * The companion has two legacy 1.3 signers. Select the APK variant whose
+ * signature matches THIS installation. Search the latest published releases
+ * instead of hardcoding the current version in the APK.
  */
 public final class TclUpdateManager {
     private static final String TAG = "TclUpdater";
@@ -49,8 +50,8 @@ public final class TclUpdateManager {
             "https://github.com/" + REPO + "/releases/download/";
     private static final String PHONE_PACKAGE = "com.tclremote.livre";
     private static final String TV_PACKAGE = "com.tclremote.tvcompanion";
-    private static final String PHONE_TAG = "tcl-phone-v2.2";
-    private static final String TV_TAG = "tv-complemento-v1.4";
+    private static final String PHONE_PREFIX = "tcl-phone-v";
+    private static final String TV_PREFIX = "tv-complemento-v";
     private static final int MAX_DOWNLOAD = 85 * 1024 * 1024;
     private static final String TV_CERT_A =
             "3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add";
@@ -78,31 +79,50 @@ public final class TclUpdateManager {
                         PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES;
                 PackageInfo installed = pm.getPackageInfo(pkg, flags);
                 String signer = sha256(currentSigner(installed));
-                String tag = TV_PACKAGE.equals(pkg) ? TV_TAG : PHONE_TAG;
-                String base = DOWNLOAD_PREFIX + tag + "/";
-                JSONObject release = new JSONObject(readUtf8(
-                        API + "/releases/tags/" + tag, 800_000));
-                if (!tag.equals(release.optString("tag_name"))) {
-                    throw new IllegalStateException("A versão publicada não corresponde ao canal TCL.");
+                boolean tv = TV_PACKAGE.equals(pkg);
+                String prefix = tv ? TV_PREFIX : PHONE_PREFIX;
+                JSONArray releases = new JSONArray(readUtf8(
+                        API + "/releases?per_page=80", 2_500_000));
+                JSONObject release = null;
+                String version = "";
+                int best = -1;
+                for (int i = 0; i < releases.length(); i++) {
+                    JSONObject candidate = releases.getJSONObject(i);
+                    if (candidate.optBoolean("draft") || candidate.optBoolean("prerelease"))
+                        continue;
+                    String tagName = candidate.optString("tag_name", "");
+                    if (!tagName.startsWith(prefix)) continue;
+                    String ver = tagName.substring(prefix.length());
+                    int code = versionValue(ver);
+                    if (code > best) {
+                        release = candidate;
+                        version = ver;
+                        best = code;
+                    }
                 }
-                if (sameOrOlder(release.optString("tag_name"), installed.versionName)) {
+                if (release == null) {
+                    throw new IllegalStateException("Não existe uma atualização TCL publicada.");
+                }
+                if (best <= versionValue(installed.versionName)) {
                     post(activity, callback, "Você já tem a versão mais recente.");
                     return;
                 }
+                String tag = release.getString("tag_name");
+                String base = DOWNLOAD_PREFIX + tag + "/";
                 JSONArray assets = release.getJSONArray("assets");
                 String expectedName;
-                if (TV_PACKAGE.equals(pkg)) {
+                if (tv) {
                     if (TV_CERT_A.equals(signer)) {
-                        expectedName = "Controle_TCL_TV_v1.4_cert3382.apk";
+                        expectedName = "Controle_TCL_TV_v" + version + "_cert3382.apk";
                     } else if (TV_CERT_B.equals(signer)) {
-                        expectedName = "Controle_TCL_TV_v1.4_cert8b2b.apk";
+                        expectedName = "Controle_TCL_TV_v" + version + "_cert8b2b.apk";
                     } else {
                         throw new IllegalStateException(
                                 "Sua TV usa uma assinatura não reconhecida. " +
                                 "Não vou apagar a configuração nem forçar uma reinstalação.");
                     }
                 } else {
-                    expectedName = "Controle_TCL_Livre_v2.2.apk";
+                    expectedName = "Controle_TCL_Livre_v" + version + ".apk";
                 }
 
                 JSONObject asset = null;
@@ -185,13 +205,14 @@ public final class TclUpdateManager {
         });
     }
 
-    private static boolean sameOrOlder(String remoteTag, String localVersion) {
-        Matcher a = Pattern.compile("v(\\d+)\\.(\\d+)").matcher(remoteTag);
-        Matcher b = Pattern.compile("(\\d+)\\.(\\d+)").matcher(localVersion == null ? "" : localVersion);
-        if (!a.find() || !b.find()) return false;
-        int remote = Integer.parseInt(a.group(1)) * 1000 + Integer.parseInt(a.group(2));
-        int current = Integer.parseInt(b.group(1)) * 1000 + Integer.parseInt(b.group(2));
-        return remote <= current;
+    private static int versionValue(String value) {
+        Matcher found = Pattern.compile("^(\\d+)\\.(\\d+)(?:[-+].*)?$")
+                .matcher(value == null ? "" : value);
+        if (!found.matches()) return -1;
+        int major = Integer.parseInt(found.group(1));
+        int minor = Integer.parseInt(found.group(2));
+        if (major > 100 || minor > 999) return -1;
+        return major * 1000 + minor;
     }
 
     private static byte[] currentSigner(PackageInfo info) {
