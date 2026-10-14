@@ -44,6 +44,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_rescue_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_tcl_v21_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -v
       - name: Compilar release sem R8 agressivo
         run: |
           cd source
