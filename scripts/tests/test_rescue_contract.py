@@ -5,6 +5,7 @@ These tests run against the prepared upstream working tree, not the override
 templates. They cannot prove behavior on a real TCL television.
 """
 import re
+import os
 import unittest
 from pathlib import Path
 
@@ -22,9 +23,14 @@ class RescueContractTests(unittest.TestCase):
         cls.gradle = (APP / "build.gradle.kts").read_text(encoding="utf-8")
 
     def test_identity_and_code(self):
-        self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
-        self.assertIn("versionCode = 18", self.gradle)
-        self.assertIn('versionName = "1.8-Resgate-Teste"', self.gradle)
+        if os.environ.get("TCL_APPROVED_UI") == "1":
+            self.assertIn('applicationId = "com.tclremote.livre.preview"', self.gradle)
+            self.assertIn("versionCode = 19", self.gradle)
+            self.assertIn('versionName = "1.9-Tela-Aprovada-Preview"', self.gradle)
+        else:
+            self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
+            self.assertIn("versionCode = 18", self.gradle)
+            self.assertIn('versionName = "1.8-Resgate-Teste"', self.gradle)
 
     def test_no_incomplete_catalog_in_rescue(self):
         self.assertIn("AppShortcutStripSquare(", self.screen)
