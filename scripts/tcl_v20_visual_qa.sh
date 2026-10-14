@@ -5,6 +5,8 @@ mkdir -p screenshot-output
 APK='qa-base/BASE_APP_2_0_REASSINAR_NAO_INSTALAR.apk'
 test -s "$APK"
 adb install -r -t "$APK"
+# Skip runtime notification dialog on disposable emulator to capture the UI.
+adb shell pm grant com.tclremote.livre android.permission.POST_NOTIFICATIONS
 
 # The compiled screenshot uses the same v2.0 UI code. The debug signer is
 # disposable, on a fresh emulator ONLY; never distribute this QA APK.
@@ -38,7 +40,8 @@ check_and_capture() {
   adb shell uiautomator dump "/sdcard/$name.xml" >/dev/null 2>&1 || true
   adb pull "/sdcard/$name.xml" "screenshot-output/$name.xml" >/dev/null 2>&1 || true
   if ! adb shell pidof com.tclremote.livre >/dev/null; then
-    echo "FAIL: app crashed on viewport $name" >&2
+    echo "FAIL: app exited on viewport $name (capturing AndroidRuntime)." >&2
+    adb logcat -d -v threadtime -s AndroidRuntime:E ActivityTaskManager:E > "screenshot-output/$name.log" || true
     exit 1
   fi
 }
