@@ -43,6 +43,8 @@ jobs:
       - name: Testes de regressao do resgate
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+      - name: Verificar sintaxe do bloqueio de assinatura
+        run: bash -n scripts/sign_update_apk.sh
       - name: Aviso sobre chave de assinatura nao persistente
         run: |
           mkdir -p output
