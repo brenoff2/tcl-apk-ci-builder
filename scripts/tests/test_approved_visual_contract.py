@@ -22,16 +22,17 @@ class ApprovedUiContract(unittest.TestCase):
         cls.screen = (KOTLIN / "RemoteScreen.kt").read_text()
         cls.gradle = (APP / "build.gradle.kts").read_text()
 
-    def test_side_by_side_install_does_not_replace_17(self):
-        self.assertIn('applicationId = "com.tclremote.livre.preview"', self.gradle)
-        self.assertNotIn('applicationId = "com.tclremote.livre"', self.gradle)
-        self.assertIn("versionCode = 19", self.gradle)
+    def test_single_app_identity_and_version(self):
+        expected = ("com.tclremote.livre" if os.environ.get("TCL_RELEASE_SINGLE_APP") == "1"
+                    else "com.tclremote.livre.preview")
+        self.assertIn('applicationId = "' + expected + '"', self.gradle)
+        self.assertIn("versionCode = 20", self.gradle)
 
     def test_has_all_screenshot_sections(self):
         for section in ("TclApprovedHeader(", "TclInstalledAppsBar(",
                         '"Reprodução"', "PlaybackTransportBar(",
                         "TclSideRocker(", "RemotePadStage(", "TclQuickAction(",
-                        "TclBottomTabs("):
+                        "TclTextInputDialog("):
             with self.subTest(section=section):
                 self.assertIn(section, self.skin)
 
@@ -39,7 +40,7 @@ class ApprovedUiContract(unittest.TestCase):
         for callback in ("onPower()", "onOpenSettings", "onOpenDiscovery",
                          "onQuickApp = onQuickApp", "onRemoteKey(key)", "onVolumeUp()",
                          "onVolumeDown()", "onKeyboardText", "onKeyboardBackspace",
-                         "onKeyboardEnter", "onToggleVoice()", "onCyclePadMode()",
+                         "onSendText", "onToggleVoice()", "onCyclePadMode()",
                          "onTabSelected(HomeTab.Cast)"):
             with self.subTest(callback=callback):
                 self.assertIn(callback, self.skin)
@@ -63,9 +64,39 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('Text("Ver todos  ›")', catalog)
         self.assertIn("TclApprovedHomeScreen(", self.nav)
 
+    def test_no_fixed_bottom_bar_or_forced_dark_theme(self):
+        self.assertNotIn("TclBottomTabs(", self.skin)
+        self.assertNotIn("darkColorScheme(", self.skin)
+        self.assertNotIn("bottomBar = {", self.skin)
+        self.assertIn("MaterialTheme.colorScheme.background", self.skin)
+        self.assertIn("MaterialTheme.colorScheme.primary", self.skin)
+        self.assertIn("windowInsetsPadding(WindowInsets.safeDrawing)", self.skin)
+
+    def test_keyboard_buffered_text_without_virtual_ok_click(self):
+        self.assertIn("onSendText(draft)", self.skin)
+        self.assertIn('onSendText = { text: String ->', self.nav)
+        self.assertIn("tvRemoteViewModel.sendText(text, submit = false)", self.nav)
+        self.assertNotIn("onEnter = onKeyboardEnter", self.skin)
+
+    def test_pairing_survives_discovery_id_rotation_and_relaunch(self):
+        catalog = (KOTLIN / "TclInstalledApps.kt").read_text()
+        self.assertIn('putString("pair:$host", code)', catalog)
+        self.assertIn('putString("pair:name:$nameKey", code)', catalog)
+        self.assertIn("editor.commit()", catalog)
+        self.assertIn("prefs.all.entries", catalog)
+        self.assertIn("TclTvAppApi.apps(host, code)", catalog)
+        self.assertIn('putString("favorites:$host", serialized)', catalog)
+
+    def test_headphones_use_companion_not_remote_red_key(self):
+        self.assertIn("TclTvAppApi.headphones(host, code)", self.skin)
+        self.assertNotIn("KEYCODE_PROG_RED", self.skin)
+        playback = (KOTLIN / "PlaybackTransportBar.kt").read_text()
+        self.assertIn("onHeadphones()", playback)
+        self.assertNotIn("KEYCODE_PROG_RED", playback)
+
     def test_no_overlap_regression_and_cast_still_available(self):
         self.assertIn(".verticalScroll(rememberScrollState())", self.skin)
-        self.assertIn(".coerceAtLeast(0.dp).coerceAtMost(215.dp)", self.skin)
+        self.assertIn(".coerceAtLeast(0.dp).coerceAtMost(if (compactHeight) 178.dp else 226.dp)", self.skin)
         self.assertIn("HomeScreen(", self.skin)
         self.assertIn("RemotePadMode.Touchpad -> RemotePadMode.NumberPad", self.nav)
         self.assertIn("internal fun KeyboardDialog(", self.screen)
