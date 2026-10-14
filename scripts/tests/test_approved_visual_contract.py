@@ -28,7 +28,7 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn("versionCode = 19", self.gradle)
 
     def test_has_all_screenshot_sections(self):
-        for section in ("TclApprovedHeader(", '"Aplicativos"', '"Ver todos  ›"',
+        for section in ("TclApprovedHeader(", "TclInstalledAppsBar(",
                         '"Reprodução"', "PlaybackTransportBar(",
                         "TclSideRocker(", "RemotePadStage(", "TclQuickAction(",
                         "TclBottomTabs("):
@@ -48,13 +48,20 @@ class ApprovedUiContract(unittest.TestCase):
             self.assertIn(enum, self.skin)
 
     def test_favorites_route_and_persistence_not_bypassed(self):
-        self.assertIn("AppShortcutStripSquare(", self.skin)
-        self.assertIn("Constant.PREF_REMOTE_APP_ORDER", self.skin)
-        self.assertIn("Screen.QuickLaunchOrder.route", self.nav)
+        self.assertIn("TclInstalledAppsBar(", self.skin)
+        self.assertNotIn("AppShortcutStripSquare(", self.skin)
+        self.assertIn("tvHost = sessionState.connectedDevice?.ipAddress", self.skin)
+        self.assertIn("tvIdentity = sessionState.connectedDevice?.id", self.skin)
+        catalog = (KOTLIN / "TclInstalledApps.kt").read_text()
+        self.assertIn("LaunchedEffect(host, pairing, refresh)", catalog)
+        self.assertIn('request(host, code, "/apps")', catalog)
+        self.assertIn('"/launch"', catalog)
+        self.assertIn('savedFavoriteIds(', catalog)
+        self.assertIn('"favorites:$deviceKey"', catalog)
+        self.assertIn('TvOfficialApp(', catalog)
+        self.assertIn('OfficialTvIcon(', catalog)
+        self.assertIn('Text("Ver todos  ›")', catalog)
         self.assertIn("TclApprovedHomeScreen(", self.nav)
-        self.assertIn('RemoteShortcutApp("disney_plus"', self.custom)
-        self.assertIn('RemoteShortcutApp("iptv"', self.custom)
-        self.assertNotIn("TclInstalledAppsBar(", self.skin)
 
     def test_no_overlap_regression_and_cast_still_available(self):
         self.assertIn(".verticalScroll(rememberScrollState())", self.skin)
