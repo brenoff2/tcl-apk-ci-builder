@@ -1,0 +1,83 @@
+name: TCL Tela Aprovada - Previa Paralela (nao substitui 1.7)
+
+on:
+  push:
+    branches: ['feat/tcl-tela-aprovada-v19']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tcl-approved-ui-preview
+  cancel-in-progress: true
+
+jobs:
+  build-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - name: Android 36
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - name: Python and Pillow
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Apache-2.0 Android remote source
+        run: |
+          git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+      - name: Prepare screenshot-approved side-by-side APK
+        run: |
+          TCL_RESCUE_STABLE=1 TCL_APPROVED_UI=1 TCL_PREVIEW_SIDE_BY_SIDE=1 python3 scripts/prepare_tcl.py
+          grep -q 'applicationId = "com.tclremote.livre.preview"' source/app/build.gradle.kts
+          grep -q 'versionCode = 19' source/app/build.gradle.kts
+          grep -q 'TclApprovedHomeScreen(' source/app/src/main/java/com/hari/androidtvremote/navigation/AppNavGraph.kt
+          ! grep -q 'TclInstalledAppsBar(' source/app/src/main/java/com/hari/androidtvremote/ui/app/RemoteScreen.kt
+      - name: Regression tests (legacy and approved screen)
+        run: |
+          TCL_APPROVED_UI=1 python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+          bash -n scripts/sign_update_apk.sh
+      - name: Build preview APK
+        run: |
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Verify isolated preview package and certificate
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          APK=source/app/build/outputs/apk/debug/app-debug.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK" | tee output/APK_ASSINATURA.txt
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" | head -n 8 | tee output/APK_IDENTIDADE.txt
+          grep -q "name='com.tclremote.livre.preview'" output/APK_IDENTIDADE.txt
+          grep -q "versionCode='19'" output/APK_IDENTIDADE.txt
+          sha256sum "$APK" | tee output/APK_SHA256.txt
+          cp "$APK" output/Controle_TCL_Tela_Aprovada_1.9_PREVIA_PARALELA.apk
+          cat > output/LEIA_ANTES_DE_INSTALAR.txt <<'NOTICE'
+          PREVIA PARALELA DO CONTROLE TCL
+          Este aplicativo possui ID com.tclremote.livre.preview.
+          Ele pode ser instalado AO LADO do Controle TCL Livre 1.7.
+          NAO substitui nem atualiza 1.7.
+          Nao desinstale a versao 1.7; as configuracoes dela ficam separadas.
+          A interface e os comandos ainda exigem homologacao visual e na TV.
+          A atualizacao real depende de recuperar a chave privada correspondente
+          ao certificado 49:DE:7C:9A:D9:7B:F4:CF:B2:40:9F:5E:64:80:AB:21:
+          BF:F8:16:F0:93:F8:E7:DF:66:A3:3C:CE:61:07:7A:04.
+          NOTICE
+      - name: Publish PREVIEW only
+        uses: actions/upload-artifact@v4
+        with:
+          name: TCL_1.9_PREVIA_PARALELA_NAO_ATUALIZA_1.7
+          path: output/
+          if-no-files-found: error
+          retention-days: 30
