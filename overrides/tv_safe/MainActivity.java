@@ -1,5 +1,16 @@
 package dk.fez.bluetoothquickconnect;
 
+import android.Manifest;
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.pm.PackageManager;
+import android.provider.Settings;
+import android.view.KeyEvent;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
 import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
@@ -24,6 +35,7 @@ public final class MainActivity extends Activity {
     private static final int TEXT = Color.rgb(236, 244, 255);
     private static final int MUTED = Color.rgb(164, 188, 217);
     private TextView status;
+    private static final int REQ_BT_CONNECT = 11;
 
     private TextView label(String value, int size, int color) {
         TextView text = new TextView(this);
@@ -83,20 +95,121 @@ public final class MainActivity extends Activity {
         root.addView(status);
 
         root.addView(action("Ativar conexão com o celular", v -> startBridge()));
+
+        TextView headphone = label("Fones Bluetooth pareados", 16, MUTED);
+        root.addView(headphone);
+        root.addView(action("Selecionar fone de ouvido", v -> chooseHeadphones()));
+        root.addView(action("Reconectar fone selecionado", v -> reconnectHeadphones()));
+        root.addView(action("Configurações Bluetooth da TV", v -> openBluetoothSettings()));
         root.addView(action("Desativar conexão", v -> {
             stopService(new Intent(this, TclCatalogService.class));
             status.setText("Conexão desativada");
         }));
 
         root.addView(label(
-                "Permissões: somente acesso à rede local e um serviço visível enquanto estiver ativo. "
-                + "Nenhuma permissão de Acessibilidade ou acesso aos dados da tela.", 14, MUTED));
+                "O catálogo de aplicativos usa somente rede local. A conexão com fones "
+                + "já pareados solicita Bluetooth quando você escolher os fones. "
+                + "Não há permissão de Acessibilidade nem de leitura da tela.", 14, MUTED));
         root.addView(label(
                 "O serviço permanece ativo ao voltar para a tela inicial da TV. "
                 + "Se a TV reiniciar, abra este aplicativo para reativar.", 14, MUTED));
 
         setContentView(scroll);
         startBridge();
+    }
+
+    private boolean bluetoothReady() {
+        if (Build.VERSION.SDK_INT >= 31 &&
+                checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)
+                    != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT}, REQ_BT_CONNECT);
+            if (status != null) status.setText("Autorize o acesso aos fones Bluetooth já pareados.");
+            return false;
+        }
+        return true;
+    }
+
+    @Override public void onRequestPermissionsResult(
+            int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_BT_CONNECT) {
+            if (grantResults.length > 0 &&
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED)
+                showHeadphones();
+            else if (status != null)
+                status.setText("Permissão Bluetooth negada. O catálogo de apps continua funcionando.");
+        }
+    }
+
+    private void chooseHeadphones() {
+        if (bluetoothReady()) showHeadphones();
+    }
+
+    private void showHeadphones() {
+        try {
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            if (adapter == null) {
+                status.setText("Esta TCL não informou um adaptador Bluetooth.");
+                return;
+            }
+            Set<BluetoothDevice> bonded = adapter.getBondedDevices();
+            List<BluetoothDevice> found = new ArrayList<>();
+            List<String> labels = new ArrayList<>();
+            if (bonded != null) {
+                for (BluetoothDevice device : bonded) {
+                    String name = device.getName();
+                    if (name == null || name.trim().isEmpty()) name = "Dispositivo Bluetooth";
+                    found.add(device);
+                    labels.add(name + " (" + device.getAddress() + ")");
+                }
+            }
+            if (found.isEmpty()) {
+                status.setText("Nenhum dispositivo pareado. Faça o pareamento nas configurações Bluetooth.");
+                return;
+            }
+            new AlertDialog.Builder(this)
+                    .setTitle("Escolher fones já pareados")
+                    .setItems(labels.toArray(new String[0]), (dialog, index) -> {
+                        BluetoothDevice chosen = found.get(index);
+                        String name = chosen.getName();
+                        MappingStore.save(this, KeyEvent.KEYCODE_PROG_RED,
+                                new MappingStore.DeviceMapping(chosen.getAddress(),
+                                        name != null ? name : chosen.getAddress()));
+                        status.setText("Fones selecionados: " +
+                                (name != null ? name : chosen.getAddress()));
+                    })
+                    .setNegativeButton("Cancelar", null)
+                    .show();
+        } catch (SecurityException error) {
+            status.setText("Sem permissão para consultar dispositivos Bluetooth.");
+        } catch (RuntimeException error) {
+            status.setText("Bluetooth indisponível: " + error.getMessage());
+        }
+    }
+
+    private void reconnectHeadphones() {
+        if (!bluetoothReady()) return;
+        MappingStore.DeviceMapping mapping =
+                MappingStore.get(this, KeyEvent.KEYCODE_PROG_RED);
+        if (mapping == null) {
+            status.setText("Escolha primeiro um fone Bluetooth pareado.");
+            return;
+        }
+        BluetoothRecoverAction.recoverOrOpen(this, mapping);
+        status.setText("Tentando reconectar " + mapping.name +
+                ". Se a TV impedir a reconexão automática, use as configurações Bluetooth.");
+    }
+
+    private void openBluetoothSettings() {
+        try {
+            startActivity(new Intent(Settings.ACTION_BLUETOOTH_SETTINGS));
+        } catch (RuntimeException error) {
+            try {
+                startActivity(new Intent(Settings.ACTION_SETTINGS));
+            } catch (RuntimeException ignored) {
+                status.setText("Abra o menu Bluetooth nas configurações da TCL.");
+            }
+        }
     }
 
     private void startBridge() {
