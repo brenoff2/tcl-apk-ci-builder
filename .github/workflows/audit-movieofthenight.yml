@@ -1,8 +1,5 @@
 name: AnyTV - auditar fonte comercial BR
 on:
-  push:
-    branches: ['feat/tcl-v22-updates-back-bluetooth']
-    paths: ['.github/workflows/audit-movieofthenight.yml']
   workflow_dispatch:
 permissions:
   contents: read
