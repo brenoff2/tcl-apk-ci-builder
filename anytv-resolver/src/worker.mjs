@@ -70,11 +70,16 @@ export function validateLink(provider, value) {
     return "https://" + HOSTS[provider] + "/detail?gti=" + id;
   }
   if (provider === "apple") {
-    // The path is the Apple TV title identifier. Omit affiliate/tracking values.
-    // playableId is used for a purchase/rental path and is not needed here.
-    const allowed = new Set(["at", "ct", "itscg", "itsct"]);
-    if ([...link.searchParams.keys()].some((key) => !allowed.has(key))) return null;
-    return "https://" + HOSTS[provider] + link.pathname;
+    // A real Apple TV+ subscription response can include playableId. Keep that
+    // strictly validated value, but strip tracking/affiliate parameters.
+    const allowed = new Set(["at", "ct", "itscg", "itsct", "playableId"]);
+    const keys = [...link.searchParams.keys()];
+    if (keys.length > 5 || keys.some((key) => !allowed.has(key)) ||
+        new Set(keys).size !== keys.length) return null;
+    const playableId = link.searchParams.get("playableId");
+    if (playableId !== null && !/^[A-Za-z0-9._:-]{5,120}$/.test(playableId)) return null;
+    return "https://" + HOSTS[provider] + link.pathname +
+      (playableId ? "?playableId=" + encodeURIComponent(playableId) : "");
   }
   if (provider === "hbo") {
     if ([...link.searchParams.keys()].some((key) => key !== "utm_source")) return null;
