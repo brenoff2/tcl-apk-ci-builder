@@ -34,5 +34,11 @@ jobs:
           PY
       - name: Run security, budget, provider and cache regression tests
         run: node --test anytv-resolver/src/worker.test.mjs
+      - name: Cloudflare Worker bundle dry-run (no deployment, no token)
+        run: |
+          set -euo pipefail
+          cd anytv-resolver
+          npx --yes wrangler@4.45.0 deploy --dry-run --config wrangler.jsonc --outdir dist-dry-run
+          test -f dist-dry-run/worker.js || test -f dist-dry-run/worker.mjs
       - name: Never deploy to production or use API secrets in CI
         run: echo 'OFFLINE_CONTRACTS_ONLY; no API key, app build or Cloudflare deployment.'
