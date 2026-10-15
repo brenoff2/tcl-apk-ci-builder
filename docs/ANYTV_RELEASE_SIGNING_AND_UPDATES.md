@@ -230,3 +230,11 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 
 - Run `38807438687` passou pelos testes gerais no celular, mas falhou em `Validar telas de streaming reais`: a etapa específica rodava em outro processo sem `TCL_V35`, então seu contrato calculava erroneamente o `versionCode` antigo 34 apesar do código do aplicativo ser 35. Corrigido **na própria etapa** ao declarar `env: TCL_V35: '1'` (commit `acea60cdfda36a58fb8c18a7aec495fbafbec43e`).
 - Build não é homologado até o sucesso integral dos jobs, assinatura 2026, auditoria e verificação física. Não confundir testes de tela verde com abertura real de título no streaming.
+
+
+### Resultado parcial de build e assinatura — 15/10/2026
+
+- Run de build `38807767381`: job **TV success**, artefato GitHub Actions `12006569557` baixado, contém `AnyTV_TV_2_3_RELEASE_UNSIGNED.apk`. Manifesto declara `com.tclremote.tvcompanion`, `versionCode=14`, `versionName=2.3-AnyTV`.
+- TV assinada em ambiente privado usando **chave permanente original da migração 2026**, sem troca de identidade. Saída `AnyTV-Connect-v2.3-ASSINADO.apk`, SHA-256 `dbc3a497687aa8c9226375bfbf31cce2b6d2c1eb608db993bd06acfc814f9700`. `apksigner verify`: **Verifies**, APK v1/v2/v3 válidos, cert SHA-256 `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c` idêntico ao Connect 2.2 instalado por migração.
+- APK assinado da TV arquivado no Drive em `AnyTV - Releases/tv/AnyTV-Connect-v2.3-ASSINADO-CERT2026.apk`, ID `1vSNLHjFiH8SXxDyWZUKAFmo58i9uA-to`, upload confirmado. **Isso não é OTA publicada**: canal GitHub `updates/tv/cert2026/current.apk` ainda não foi populado; teste físico de atualização não feito.
+- Job **phone** permaneceu em compilação Android na última verificação, ainda sem artefato assinado. Não divulgar conjunto 2.9.6/2.3 como homologado até confirmar phone + teste físico dos dois.
