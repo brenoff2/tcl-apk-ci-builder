@@ -63,7 +63,7 @@ class PhoneUpdatesAndBack(unittest.TestCase):
 
     def test_single_package_higher_version(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.apk)
-        self.assertIn("versionCode = 29", self.apk)
+        self.assertIn("versionCode = 30", self.apk)
 
 
 class TvUpdateAndBluetooth(unittest.TestCase):
