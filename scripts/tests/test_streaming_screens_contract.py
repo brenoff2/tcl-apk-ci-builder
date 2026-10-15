@@ -108,6 +108,34 @@ class StreamingScreens(unittest.TestCase):
             inspect_link("netflix", "https://evil.example/title/80175798"),
             "unsafe")
 
+    def test_personal_mode_keeps_user_api_key_private_and_optional(self):
+        from pathlib import Path
+        resolver = Path("overrides/AnyTvPersonalLinks.kt").read_text(encoding="utf-8")
+        preparer = Path("scripts/prepare_tcl.py").read_text(encoding="utf-8")
+        assert 'overrides/AnyTvPersonalLinks.kt' in preparer
+        for fragment in (
+            "AndroidKeyStore", "AES/GCM/NoPadding", "X-API-Key",
+            "api.movieofthenight.com/v4/shows/",
+            'country=br', "validatedLink(", "NotInSubscription",
+            "NoSupportedLink", "subscription", "free", "addon",
+            "com.netflix.ninja", "com.disney.disneyplus",
+            "com.apple.atve.androidtv.appletv", "com.wbd.stream",
+        ):
+            self.assertIn(fragment, resolver)
+        self.assertIn("AnyTvPersonalKeys.write(context, personalKeyDraft.trim())", self.screen)
+        self.assertIn("AnyTvPersonalLinks.resolve(personalKey, title, packageName)", self.screen)
+        self.assertIn("StreamingCatalog.titleDeepLink(token, title, packageName)", self.screen)
+        self.assertNotIn("ANYTV_MOVIE_API_KEY", resolver)
+        self.assertNotIn("secrets.ANYTV_MOVIE_API_KEY", self.screen)
+
+    def test_tv_apple_playable_id_requires_allowlisted_parameters(self):
+        from pathlib import Path
+        bridge = Path("overrides/tv_safe/TvAppBridge.java").read_text(encoding="utf-8")
+        self.assertIn('path.matches("/(?:[a-z]{2}/)?(?:movie|show)/', bridge)
+        self.assertIn('query.matches("playableId=', bridge)
+        self.assertIn('u.getQueryParameter("playableId")', bridge)
+        self.assertIn('"tv.apple.com".equals(host)', bridge)
+
     def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
         self.assertIn("versionCode = 33", self.gradle)
