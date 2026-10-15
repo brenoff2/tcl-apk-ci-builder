@@ -9,10 +9,7 @@ if (typeof secret !== "string" || secret.length < 8) {
   throw new Error("PROVIDER_SECRET_NOT_CONFIGURED");
 }
 const checks = [
-  ["Zootopia 2", "movie/1084242", "disney"],
-  ["Birdman", "movie/194662", "hbo"],
-  ["Jurassic Park", "movie/329", "prime"],
-  ["O Irlandês", "movie/398978", "netflix"],
+  ["The Gorge / Apple TV", "movie/950396", "apple"],
 ];
 let success = 0;
 for (const [label, id, provider] of checks) {
