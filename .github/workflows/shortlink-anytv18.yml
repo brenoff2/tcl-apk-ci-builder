@@ -1,0 +1,53 @@
+name: Criar link curto do AnyTV Connect 1.8 para TCL
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/shortlink-anytv18.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  shorten:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Conferir APK oficial antes de encurtar
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.8/Controle_TCL_TV_v1.8_cert8b2b.apk'
+          code=$(curl --location --silent --show-error --output /dev/null --write-out '%{http_code}' --max-time 45 "$target")
+          test "$code" = '200' || { echo "APK oficial indisponivel: HTTP $code"; exit 1; }
+      - name: Criar e validar um endereco bem curto
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.8/Controle_TCL_TV_v1.8_cert8b2b.apk'
+          for alias in atv18 tv18b atv18tcl; do
+            response=$(curl -sS --get --max-time 20 -w '\n%{http_code}' \
+              --data-urlencode 'format=simple' \
+              --data-urlencode "url=$target" \
+              --data-urlencode "shorturl=$alias" 'https://is.gd/create.php')
+            status=${response##*$'\n'}
+            link=${response%$'\n'*}
+            if [ "$status" = '200' ] && [ "$link" = "https://is.gd/$alias" ]; then
+              resolved=$(curl -sS --get --max-time 20 --data-urlencode 'format=simple' \
+                --data-urlencode "shorturl=$alias" 'https://is.gd/forward.php')
+              if [ "$resolved" = "$target" ]; then
+                echo "LINK_CURTO_VALIDADO=$link"
+                echo "APK_ORIGINAL=$resolved"
+                echo "O link curto redireciona para o APK 8b2b oficial de 1.8"
+                exit 0
+              fi
+              echo 'O provedor criou um link, mas o destino nao passou na verificacao.'
+              exit 1
+            fi
+            if [ "$status" = '406' ]; then
+              echo "Alias $alias indisponivel, testando outra opcao."
+              continue
+            fi
+            echo "Servico de links retornou HTTP $status. $link"
+            exit 1
+          done
+          echo 'Todos os enderecos curtos escolhidos ja estavam ocupados.'
+          exit 1
