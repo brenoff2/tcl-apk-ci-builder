@@ -227,6 +227,11 @@ export async function catalogRequest(request, env, deps = {}) {
     if (cached && cached.expires_at > now) {
       return asJson(JSON.parse(cached.payload), 200, { "x-anytv-cache": "hit" });
     }
+    // Count uncached catalog lookups against the same bounded upstream budget.
+    // Prevent an unauthenticated public catalog from becoming an unlimited TMDB proxy.
+    if (monthlyCap(env) === null || !(await reserveQuota(env, now))) {
+      return asJson({ status: "monthly_quota_exhausted" }, 429);
+    }
     const transport = deps.fetch || fetch;
     const reply = await transport(upstream.toString(), {
       headers: { Authorization: "Bearer " + env.TMDB_READ_TOKEN, Accept: "application/json" },
