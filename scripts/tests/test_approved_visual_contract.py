@@ -76,7 +76,12 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn("windowInsetsPadding(WindowInsets.safeDrawing)", self.skin)
 
     def test_keyboard_buffered_text_without_virtual_ok_click(self):
-        if os.environ.get("TCL_V21") == "1":
+        if os.environ.get("TCL_V27") == "1":
+            # Upstream IME may replace rather than append partial edits.
+            self.assertIn("fun sendDraft()", self.skin)
+            self.assertIn("onSendText(draft)", self.skin)
+            self.assertNotIn("onAppendText(value.substring(previous.length))", self.skin)
+        elif os.environ.get("TCL_V21") == "1":
             self.assertIn("onAppendText(value.substring(previous.length))", self.skin)
         else:
             self.assertIn("onSendText(draft)", self.skin)
