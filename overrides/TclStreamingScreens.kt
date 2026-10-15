@@ -609,11 +609,11 @@ internal fun TclStreamingScreens(
             title = { Text(title.name) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(title.overview.ifBlank { "Sinopse indisponível." })
                     if (titleActionFeedback != null) {
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    Text(title.overview.ifBlank { "Sinopse indisponível." })
                     Text("A TV poderá abrir a busca do título se este serviço aceitar " +
                         "pesquisa externa. Não existe deep link universal de reprodução.",
                         fontSize = 12.sp)
