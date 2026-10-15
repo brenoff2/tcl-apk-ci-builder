@@ -1,5 +1,19 @@
 # AnyTV — releases, assinaturas e atualizações
 
+## Situação atual verificada — 15/10/2026 (sem alteração de canais)
+
+**Fontes de verdade, verificadas:** `overrides/` e scripts no repositório são o código-fonte; `updates/android/current.json`, `updates/android/current.apk`, `updates/tv/current.json`, `updates/tv/cert8b2b/current.apk` e `updates/tv/cert3382/current.apk` no GitHub são **os canais do botão Buscar atualizações** (ver `overrides/common/TclUpdateManager.java`). A pasta [Google Drive / AnyTV - Releases](https://drive.google.com/drive/folders/1JFVKw2bBxqqVNTQj8PwkT3DeEWz111kf) contém o histórico e cópias assinadas, **não é atualmente o endpoint consultado pelo aplicativo**. Pastas de assinaturas privadas e públicas no Drive são separadas e não devem ser publicadas.
+
+**Publicado no updater GitHub:** AnyTV Android **2.9.4 (versionCode 33)** e AnyTV Connect **2.1** com duas variantes de certificado (8b2b e 3382). Releases assinadas destas versões existem no GitHub. O Drive possui as respectivas cópias versionadas em `AnyTV - Releases/android/` e `AnyTV - Releases/tv/cert8b2b/` e `cert3382/`, mas os `current.apk` listados no Drive têm datas anteriores às cópias versionadas; **não considerá-los atualizados sem conferir hash/assinatura**.
+
+**Próxima atualização em preparação:** compilação CI das fontes **Android 2.9.5 (versionCode 34)** e **TV 2.2 (versionCode 13)** aprovada ([build](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/38791483823)), entregando **APKs não assinados**. O fluxo [publicar 2.9.5 + 2.2](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/38794562320) terminou em estado de espera `STAGING_WAITING_FOR_SIGNED_ZIP_NO_OTA_CHANGE`: não recebeu o ZIP com os três APKs assinados e, portanto, **NÃO publicou a OTA 2.9.5/2.2**. Um workflow verde com esse estado **não significa publicação**. Não tentar instalar APKs de CI não assinados sobre os já instalados. Não publicar os ZIPs de chaves privadas nem senhas.
+
+**Próxima sequência obrigatória, sem reiniciar etapas já concluídas:** obter em ambiente privado as três assinaturas originais; assinar os binários correspondentes aos builds auditados; verificar package, `versionCode`, certificado, alinhamento e SHA-256; enviar **somente APKs assinados** ao mecanismo de staging previsto; executar/verificar o fluxo de publicação OTA; confirmar por readback `current.json`, `current.apk` e GitHub Releases de Android e das duas variantes de TV; sincronizar **cópias correspondentes e identificadas** ao Drive Releases (não tocar nas pastas de chaves); testar atualização nos dois dispositivos. O fluxo de OTA não deve ser reexecutado se já houver publicação igual ou posterior.
+
+**Decisão:** os dois canais coexistem, mas com funções diferentes. **GitHub = código, build, releases e updater em uso. Google Drive = arquivo de APKs assinados e assinaturas privadas/públicas separadas.** Manter o desenvolvimento exclusivamente no branch `feat/tcl-v22-updates-back-bluetooth`; não editar `main` nem sobrescrever arquivos `current` sem prova de assinatura e hash.
+
+---
+
 ## Android 2.7 — correção de protocolo de digitação (15/10/2026 UTC)
 
 - [Investigação e implementação](https://github.com/brenoff2/tcl-apk-ci-builder/commit/e673f75acceb941cf4ae2e85156c29941fee62dc): baseada no [PR #25 do tronikos/androidtvremote2](https://github.com/tronikos/androidtvremote2/pull/25), no [código oficial send_text](https://github.com/tronikos/androidtvremote2/blob/main/src/androidtvremote2/remote.py) e nas [limitações documentadas no issue #32](https://github.com/tronikos/androidtvremote2/issues/32).
