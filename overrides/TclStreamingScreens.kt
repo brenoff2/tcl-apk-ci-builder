@@ -7,6 +7,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,13 +35,21 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import java.net.URLEncoder
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.Normalizer
 
-internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String)
+internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String)
+internal data class StreamingGenre(val id: Int, val name: String)
+internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
 internal data class StreamingResults(val titles: List<StreamingTitle>, val more: Boolean)
 
 /** Real TMDB/JustWatch availability. This API cannot start playback on a third-party TV app. */
@@ -47,7 +65,7 @@ private object StreamingCatalog {
             "disney" in v -> "disneyplus"
             "globoplay" in v -> "globoplay"
             "hbomax" in v || v == "max" -> "hbomax"
-            "appletv" in v -> "appletvplus"
+            "appletv" in v -> "appletv"
             "paramount" in v -> "paramountplus"
             "crunchyroll" in v -> "crunchyroll"
             "plutotv" in v -> "plutotv"
@@ -84,36 +102,83 @@ private object StreamingCatalog {
         }
     }
 
-    suspend fun discover(token: String, app: String, media: String, page: Int): StreamingResults =
+    suspend fun genres(token: String, media: String): List<StreamingGenre> =
         withContext(Dispatchers.IO) {
-            val alias = provider(app) ?: return@withContext StreamingResults(emptyList(), false)
-            val providers = get(token, "watch/providers/$media?language=pt-BR&watch_region=BR")
-                .optJSONArray("results") ?: JSONArray()
-            var id = 0
-            for (i in 0 until providers.length()) {
-                val entry = providers.optJSONObject(i) ?: continue
-                if (norm(entry.optString("provider_name")) == alias) {
-                    id = entry.optInt("provider_id"); break
-                }
+            val data = get(token, "genre/$media/list?language=pt-BR").optJSONArray("genres")
+                ?: JSONArray()
+            (0 until data.length()).mapNotNull { index ->
+                val entry = data.optJSONObject(index) ?: return@mapNotNull null
+                val id = entry.optInt("id")
+                val name = entry.optString("name")
+                if (id > 0 && name.isNotBlank()) StreamingGenre(id, name) else null
             }
-            if (id == 0) return@withContext StreamingResults(emptyList(), false)
-            val result = get(token, "discover/$media?language=pt-BR&watch_region=BR" +
-                "&with_watch_providers=$id&with_watch_monetization_types=flatrate" +
-                "&include_adult=false&sort_by=popularity.desc&page=$page")
-            val items = result.optJSONArray("results") ?: JSONArray()
-            val titles = buildList {
-                for (i in 0 until items.length()) {
-                    val item = items.optJSONObject(i) ?: continue
-                    val movieId = item.optInt("id")
-                    val name = item.optString(if (media == "tv") "name" else "title")
-                    if (movieId > 0 && name.isNotBlank()) {
-                        add(StreamingTitle(movieId, name, item.optString("overview"),
-                            item.optString("poster_path").takeIf { it.startsWith("/") } ?: ""))
-                    }
-                }
-            }
-            StreamingResults(titles, page < result.optInt("total_pages", page))
         }
+
+    private fun mapTitles(items: JSONArray, media: String, genre: Int): List<StreamingTitle> =
+        buildList {
+            for (i in 0 until items.length()) {
+                val entry = items.optJSONObject(i) ?: continue
+                val movieId = entry.optInt("id")
+                val name = entry.optString(if (media == "tv") "name" else "title")
+                val itemGenres = entry.optJSONArray("genre_ids")
+                val matchGenre = genre == 0 || (itemGenres != null &&
+                    (0 until itemGenres.length()).any { itemGenres.optInt(it) == genre })
+                if (movieId > 0 && name.isNotBlank() && matchGenre) {
+                    add(StreamingTitle(movieId, name, entry.optString("overview"),
+                        entry.optString("poster_path").takeIf { it.startsWith("/") } ?: "", media))
+                }
+            }
+        }
+
+    private fun providerId(token: String, app: String, media: String): Int {
+        val alias = provider(app) ?: return 0
+        val providers = get(token, "watch/providers/$media?language=pt-BR&watch_region=BR")
+            .optJSONArray("results") ?: JSONArray()
+        for (i in 0 until providers.length()) {
+            val entry = providers.optJSONObject(i) ?: continue
+            if (norm(entry.optString("provider_name")) == alias) return entry.optInt("provider_id")
+        }
+        return 0
+    }
+
+    private fun offeredInBrazil(token: String, item: StreamingTitle, providerId: Int): Boolean {
+        val result = get(token, "${item.media}/${item.id}/watch/providers")
+            .optJSONObject("results")?.optJSONObject("BR")?.optJSONArray("flatrate")
+            ?: return false
+        return (0 until result.length()).any {
+            result.optJSONObject(it)?.optInt("provider_id") == providerId
+        }
+    }
+
+    suspend fun discover(
+        token: String, app: String, media: String, page: Int, genre: Int, query: String
+    ): StreamingResults = withContext(Dispatchers.IO) {
+        val providerId = providerId(token, app, media)
+        if (providerId == 0) return@withContext StreamingResults(emptyList(), false)
+        val search = query.isNotBlank()
+        val url = if (search)
+            "search/$media?language=pt-BR&include_adult=false&query=" +
+                URLEncoder.encode(query, "UTF-8") + "&page=$page"
+        else "discover/$media?language=pt-BR&watch_region=BR" +
+            "&with_watch_providers=$providerId&with_watch_monetization_types=flatrate" +
+            (if (genre > 0) "&with_genres=$genre" else "") +
+            "&include_adult=false&sort_by=popularity.desc&page=$page"
+        val result = get(token, url)
+        val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media, genre)
+        // Search endpoints have no provider filter: verify real BR subscription offers.
+        val titles = if (search) coroutineScope {
+            val limit = Semaphore(4)
+            candidates.map { item ->
+                async {
+                    val available = limit.withPermit {
+                        runCatching { offeredInBrazil(token, item, providerId) }.getOrDefault(false)
+                    }
+                    if (available) item else null
+                }
+            }.awaitAll().filterNotNull()
+        } else candidates
+        StreamingResults(titles, page < result.optInt("total_pages", page))
+    }
 }
 
 @Composable
