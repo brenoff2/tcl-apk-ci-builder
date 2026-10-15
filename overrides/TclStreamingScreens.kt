@@ -211,6 +211,8 @@ internal fun TclStreamingScreens(
     var gridView by remember { mutableStateOf(prefs.getBoolean("streaming_grid", false)) }
     var showSaved by remember { mutableStateOf(false) }
     var detailsPackage by remember { mutableStateOf<String?>(null) }
+    var titleActionPending by remember { mutableStateOf(false) }
+    var titleActionFeedback by remember { mutableStateOf<String?>(null) }
     var favorites by remember {
         mutableStateOf(runCatching {
             val arr = JSONArray(prefs.getString("streaming_favorites", "[]"))
@@ -292,21 +294,30 @@ internal fun TclStreamingScreens(
     }
 
     fun searchOnTv(title: StreamingTitle, packageName: String) {
+        if (titleActionPending) return
         if (host.isBlank() || pairing.isBlank()) {
-            message = "Conecte e vincule a TCL para localizar o título."
+            titleActionFeedback = "Vincule o AnyTV Connect com o código de oito dígitos. " +
+                "A conexão do controle remoto é independente."
             return
         }
+        titleActionPending = true
+        titleActionFeedback = "Enviando comando à TCL…"
         scope.launch {
-            message = null
-            runCatching { TclTvAppApi.searchTitle(host, pairing, packageName, title.name) }
-                .onSuccess { mode ->
-                    message = when (mode) {
-                        "search" -> "Busca pelo título enviada à TCL. Selecione o resultado."
-                        "opened_app" -> "O serviço não aceita busca externa; o aplicativo foi aberto."
-                        else -> "O serviço não pôde ser aberto na TV."
-                    }
+            try {
+                val mode = TclTvAppApi.searchTitle(host, pairing, packageName, title.name)
+                titleActionFeedback = when (mode) {
+                    "search" -> "Busca enviada ao aplicativo na TCL. Confira o resultado na TV."
+                    "opened_app" -> "Aplicativo aberto na TCL. O AnyTV Connect instalado " +
+                        "não conseguiu abrir a ficha exata deste título; faça a busca no serviço."
+                    else -> "O aplicativo não pôde ser aberto. Confira se o serviço está instalado " +
+                        "e se o AnyTV Connect está vinculado."
                 }
-                .onFailure { message = "Atualize o AnyTV Connect na TCL para pesquisar títulos." }
+            } catch (error: Exception) {
+                titleActionFeedback = error.message?.let { "Não foi possível abrir: " + it }
+                    ?: "Não foi possível abrir o serviço na TCL."
+            } finally {
+                titleActionPending = false
+            }
         }
     }
 
@@ -592,11 +603,17 @@ internal fun TclStreamingScreens(
     if (title != null) {
         val pkg = detailsPackage ?: selected?.packageName.orEmpty()
         AlertDialog(
-            onDismissRequest = { details = null; detailsPackage = null },
+            onDismissRequest = {
+                details = null; detailsPackage = null; titleActionFeedback = null
+            },
             title = { Text(title.name) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
+                    if (titleActionFeedback != null) {
+                        Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     Text("A TV poderá abrir a busca do título se este serviço aceitar " +
                         "pesquisa externa. Não existe deep link universal de reprodução.",
                         fontSize = 12.sp)
@@ -613,12 +630,19 @@ internal fun TclStreamingScreens(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    details = null; detailsPackage = null
-                    if (pkg.isNotBlank()) searchOnTv(title, pkg)
-                }) { Text("Localizar título na TCL") }
+                    if (pkg.isBlank()) {
+                        titleActionFeedback = "O aplicativo deste título não foi encontrado na TCL."
+                    } else {
+                        searchOnTv(title, pkg)
+                    }
+                }, enabled = !titleActionPending) {
+                    Text(if (titleActionPending) "Abrindo…" else "Abrir na TCL")
+                }
             },
             dismissButton = {
-                TextButton(onClick = { details = null; detailsPackage = null }) {
+                TextButton(onClick = {
+                    details = null; detailsPackage = null; titleActionFeedback = null
+                }) {
                     Text("Voltar")
                 }
             }
