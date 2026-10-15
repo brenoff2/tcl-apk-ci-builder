@@ -399,18 +399,19 @@ internal fun TclStreamingScreens(
                         "Confira 'Onde assistir e links disponíveis' antes de abrir."
                     return@launch
                 }
-                if (offered == null) {
-                    titleActionFeedback = "Não foi possível confirmar a disponibilidade brasileira " +
-                        "deste título agora. Verifique a conexão e tente novamente."
-                    return@launch
-                }
-                val link = runCatching {
+                // If TMDB is temporarily unavailable, preserve the existing
+                // search function rather than interrupting remote navigation.
+                // Crucially, do NOT attempt an unverified deep link.
+                val link = if (offered == true) runCatching {
                     StreamingCatalog.titleDeepLink(token, title, packageName)
-                }.getOrNull()
+                }.getOrNull() else null
                 val mode = if (link != null)
                     TclTvAppApi.openTitle(host, pairing, packageName, link, title.name)
                 else TclTvAppApi.searchTitle(host, pairing, packageName, title.name)
-                titleActionFeedback = when (mode) {
+                titleActionFeedback = if (offered == null) {
+                    "Não foi possível confirmar a disponibilidade no Brasil. " +
+                        "Busca convencional solicitada ao streaming; confirme o resultado na TCL."
+                } else when (mode) {
                     "detail_requested" -> "Link da ficha enviado ao streaming. Confira o título na TCL."
                     "search" -> "Busca enviada ao aplicativo na TCL. Confira o resultado na TV."
                     "opened_app" -> "Aplicativo aberto na TCL. O AnyTV Connect instalado " +
