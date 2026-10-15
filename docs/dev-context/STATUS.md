@@ -36,6 +36,6 @@ end-context-state -->
 
 **Produto:** em fluxo separado, obter as tres assinaturas no ambiente privado; conferir package, versao, certificado e SHA-256 antes de staging/OTA; homologar em dispositivo. Nada disso foi executado por este piloto.
 
-**Este piloto:** criar validador de contexto, mapa auditado, instrucoes do Projeto ChatGPT, canario em conversa nova. Nao alterar aplicativos.
+**Este piloto:** AGENTS, STATUS, DECISIONS, CHANGELOG, mapa manual, validador, testes, instrucoes do Projeto ChatGPT, workflow documental e roteiro de canario ja versionados na branch `docs/anytv-chatgpt-context-pilot`. Cartographer permanece **CARTOGRAPHER_BLOCKED** (sem Bun/rede no executor isolado); **nao foi instalado nem executado**. Validacao local de contratos executada; CI remota e homologacao em chat novo **NAO_EXECUTADO**. Proxima acao: revisar PR documental, salvar instrucoes no Projeto ChatGPT Web e executar o canario em conversa nova. Nao alterar aplicativos.
 
 `observed_commit` aponta para a branch de desenvolvimento; o commit da branch documental tem SHA diferente.
