@@ -62,8 +62,8 @@ class SafeTvCompanionTests(unittest.TestCase):
 
     def test_package_and_version_and_no_old_java(self):
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
-        self.assertIn("versionCode = " + ("7" if os.environ.get("TCL_TV_V16") == "1" else "6" if os.environ.get("TCL_TV_V15") == "1" else "5" if os.environ.get("TCL_TV_V14") == "1" else "4"), self.gradle)
-        self.assertIn('versionName = "' + ("1.6-AnyTV" if os.environ.get("TCL_TV_V16") == "1" else "1.5-AnyTV" if os.environ.get("TCL_TV_V15") == "1" else "1.4-Catalogo-Fones-Atualiza" if os.environ.get("TCL_TV_V14") == "1" else "1.3-Catalogo-Fones") + '"', self.gradle)
+        self.assertIn("versionCode = " + ("8" if os.environ.get("TCL_TV_V17") == "1" else "7" if os.environ.get("TCL_TV_V16") == "1" else "6" if os.environ.get("TCL_TV_V15") == "1" else "5" if os.environ.get("TCL_TV_V14") == "1" else "4"), self.gradle)
+        self.assertIn('versionName = "' + ("1.7-AnyTV" if os.environ.get("TCL_TV_V17") == "1" else "1.6-AnyTV" if os.environ.get("TCL_TV_V16") == "1" else "1.5-AnyTV" if os.environ.get("TCL_TV_V15") == "1" else "1.4-Catalogo-Fones-Atualiza" if os.environ.get("TCL_TV_V14") == "1" else "1.3-Catalogo-Fones") + '"', self.gradle)
         actual = {p.name for p in SRC.glob("*.java")}
         self.assertEqual(actual, {
             "MainActivity.java", "TclCatalogService.java", "TvAppBridge.java",
