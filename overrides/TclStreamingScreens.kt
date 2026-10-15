@@ -31,7 +31,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -89,18 +88,15 @@ private object StreamingCatalog {
                 .any { it in norm(app.name) || it in norm(app.packageName) }
 
     private fun get(token: String, route: String): JSONObject {
-        require(token.isNotBlank()) { "Informe seu token de leitura TMDB." }
-        val connection = URL("https://api.themoviedb.org/3/$route")
+        val connection = URL("https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/$route")
             .openConnection() as HttpURLConnection
         try {
             connection.connectTimeout = 6000
             connection.readTimeout = 9000
             connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("Authorization", "Bearer $token")
             val status = connection.responseCode
             if (status !in 200..299) {
-                error(if (status == 401 || status == 403) "Token TMDB não autorizado."
-                    else "TMDB indisponível (HTTP $status).")
+                error("Catálogo temporariamente indisponível (HTTP $status).")
             }
             return JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
         } finally {
@@ -279,15 +275,8 @@ internal fun TclStreamingScreens(
         context.getSharedPreferences("anytv_streaming_catalog", Context.MODE_PRIVATE)
     }
     val scope = rememberCoroutineScope()
-    var token by remember { mutableStateOf(prefs.getString("tmdb_token", "").orEmpty()) }
-    var tokenDraft by remember { mutableStateOf(token) }
-    // For private use only. Read only on-device; the GitHub Actions secret is
-    // never fetched into the phone or embedded in the APK.
-    var personalKey by remember {
-        mutableStateOf(runCatching { AnyTvPersonalKeys.read(context) }.getOrDefault(""))
-    }
-    var personalKeyDraft by remember { mutableStateOf(personalKey) }
-    var editToken by remember { mutableStateOf(false) }
+    // The client never requires user-supplied API credentials.
+    val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     var all by remember { mutableStateOf(false) }
@@ -395,9 +384,9 @@ internal fun TclStreamingScreens(
             try {
                 // Personal-mode live link source takes priority over sparse Wikidata.
                 // It is optional, never baked into the APK and never sent to the TV.
-                val personalLookup = if (personalKey.isNotBlank()) runCatching {
-                    AnyTvPersonalLinks.resolve(personalKey, title, packageName)
-                } else null
+                val personalLookup = runCatching {
+                    AnyTvPersonalLinks.resolve(title, packageName)
+                }
                 when (val direct = personalLookup?.getOrNull()) {
                     is AnyTvPersonalResult.Direct -> {
                         val mode = TclTvAppApi.openTitle(
@@ -538,46 +527,6 @@ internal fun TclStreamingScreens(
                                 contentDescription = "Fechar Streaming"
                             }) { Text("×", fontSize = 24.sp) }
                     }
-                    if (editToken || token.isBlank()) {
-                        Text("Para consultar filmes e séries reais, configure um token de leitura " +
-                            "TMDB. Aplicativos sem provedor TMDB continuam disponíveis para abertura na TV.",
-                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        OutlinedTextField(value = personalKeyDraft,
-                            onValueChange = { personalKeyDraft = it.trim() },
-                            label = { Text("Chave de streaming (opcional)") },
-                            visualTransformation = PasswordVisualTransformation(),
-                            singleLine = true, modifier = Modifier.fillMaxWidth())
-                        Text("Uso pessoal: chave da Movie of the Night. Ela fica " +
-                            "criptografada neste celular e permite abrir mais fichas " +
-                            "sem depender da Cloudflare. Deixe vazia para o método anterior.",
-                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        OutlinedTextField(value = tokenDraft,
-                            onValueChange = { tokenDraft = it.trim() },
-                            label = { Text("Token TMDB") },
-                            visualTransformation = PasswordVisualTransformation(),
-                            singleLine = true, modifier = Modifier.fillMaxWidth())
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedButton(onClick = {
-                                context.startActivity(Intent(Intent.ACTION_VIEW,
-                                    Uri.parse("https://www.themoviedb.org/settings/api")))
-                            }) { Text("Obter token") }
-                            Spacer(Modifier.weight(1f))
-                            Button(onClick = {
-                                val stored = runCatching {
-                                    AnyTvPersonalKeys.write(context, personalKeyDraft.trim())
-                                }
-                                if (stored.isFailure) {
-                                    message = "Não foi possível guardar a chave com proteção " +
-                                        "do Android. Nenhuma credencial foi salva."
-                                } else {
-                                    personalKey = personalKeyDraft.trim()
-                                    token = tokenDraft
-                                    prefs.edit().putString("tmdb_token", tokenDraft).apply()
-                                    editToken = false; page = 1
-                                }
-                            }) { Text("Salvar") }
-                        }
-                    }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically) {
@@ -601,12 +550,6 @@ internal fun TclStreamingScreens(
                             contentDescription = if (gridView) "Visualização em lista" else "Visualização em grade"
                         }) {
                             Text(if (gridView) "☷" else "▦", fontSize = 19.sp)
-                        }
-                        IconButton(onClick = { editToken = !editToken },
-                            modifier = Modifier.size(40.dp).semantics {
-                                contentDescription = "Configurar catálogo"
-                            }) {
-                            Text("⚙", fontSize = 19.sp)
                         }
                     }
                     if (!showSaved) {
