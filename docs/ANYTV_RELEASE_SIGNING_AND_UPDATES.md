@@ -97,3 +97,41 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 - **Homologação necessária:** no telefone instalado com 2.7, manter o campo de pesquisa da TCL selecionado; digitar `Teste AnyTV 27`, pressionar **Enviar** e observar o conteúdo na TV. Repetir com o teclado virtual oculto apenas se o campo conservar o foco. Registrar aplicativo/versão da TV, resultado com teclado visível/oculto, sintomas de conexão e, se falhar, logs temporários de `RemoteSession`, `ImeBatchEdit`, `RemoteInput` e `Keyboard`, ocultando valores sensíveis do texto digitado.
 - **Critério de aceite:** a CI pode verificar a codificação, mas sucesso end-to-end depende de inserção real, ausência de duplicação/perda e validação em mais de um campo de texto. Não publicar uma correção especulativa de contadores.
 
+
+
+---
+
+## Continuidade AnyTV — 15/10/2026 — reinstalação, streaming e Cloudflare (reconciliação)
+
+### Fato novo informado pelo usuário
+
+- O usuário declarou que **já instalou** os APKs de migração no celular e na TCL após a troca das assinaturas. **Não há aqui verificação física independente** da identidade instalada, pareamento, versão mostrada em ambos ou funcionamento do atalho; registrar como *instalação relatada pelo usuário*, não homologação end-to-end.
+- APKs de migração: `AnyTV-v2.9.5-NOVA-ASSINATURA.apk` (celular, Drive file `1jTkhRu-zOdzBjhEIz-odRUdeEw4jovnl`) e `AnyTV-Connect-v2.2-NOVA-ASSINATURA.apk` (TV, Drive file `1ZImSLAc_BfFLj-XKVxrtZAyN6tz1gb3_`). Usam **certificados NOVOS**, incompatíveis com atualização in-place sobre instalações assinadas com as chaves antigas.
+- Backup de recuperação cifrado no branch: `signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin`, SHA Git blob `fe0ad75f981e9940eae88b2bcfbc8c1b17a3d9a9`; documentação `signing-recovery/README.md`. Arquivos de recuperação privados separados no Drive **AnyTV - Assinaturas Privadas - Nao Compartilhar**: `ANYTV_RECOVERY_SECRET_2026_PRIVADO.txt` e `ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin`. **Nunca copiar segredo privado, senha ou keystore aberto ao GitHub, APK, CI log ou documentação.** Os canais OTA antigos mantêm os certificados antigos e **ainda NÃO foram migrados para os novos certificados**. A próxima atualização DEVE usar as chaves novas, confirmar suas impressões SHA-256 e criar canal de atualização consistente; não trocar silenciosamente `current.apk` das instalações legadas.
+- Identidades novas documentadas em `signing-recovery/README.md`: telefone `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`; TV `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c`. Verificações complementares no dispositivo ainda pendentes.
+
+### Pesquisa já realizada — NÃO REPETIR
+
+- API **Movie of the Night / Streaming Availability**: pesquisa e chamadas reais concluídas em 15/10/2026 para **Netflix, Disney+, Prime Video, Apple TV+ e HBO Max** no Brasil. Evidências: `scripts/audit_movieofthenight.py`, CI `38776166751`, teste de contrato ao vivo `38778069911` (sucesso), e `anytv-resolver/README.md`. Os retornos são **URLs candidatas para a ficha de um título**, não prova de abertura ou reprodução na TCL.
+- O repositório já contém `anytv-resolver/src/worker.mjs`, `anytv-resolver/migrations/0001_create_tables.sql`, `anytv-resolver/wrangler.jsonc` e testes. CI offline passou em `38780901151`; `wrangler deploy --dry-run` **não significa implantação real**. Não reimplementar módulo do zero.
+- Na API, a credencial `ANYTV_MOVIE_API_KEY` já foi utilizada nos testes GitHub Actions, conforme sucesso do teste ao vivo, mas **não é automaticamente compartilhada com Cloudflare**. Não pedir uma nova chave sem verificar autorização e configuração já existentes. Para o Worker, colocar a MESMA credencial como **Cloudflare Secret**, jamais em `vars`, código, APK ou repositório. Não expor o valor ao usuário ou logs. Confirmar franquia, licença e atribuição antes de uso comercial.
+- O catálogo usa TMDB ID; endpoint proposto do Worker `GET /v1/resolve/movie/<TMDB-ID>/<provider>` ou `/tv/`, com `country=br`. O Worker valida domínios e rotas, restringe assinatura/grátis, aplica cache D1 e cota global padrão conservadora (200 chamadas/mês) e devolve `link_candidate` com `verified_on_tv:false`.
+- A estratégia de **abrir a ficha** deve usar os IDs/URLs oficiais de cada provedor e intent do pacote correto na TV, com fallback de busca quando o streaming não suportar deep link. Não prometer que qualquer link abre diretamente o filme, sem teste TCL físico. Preservar pareamento, funções do controle e interface aprovadas.
+
+### Cloudflare — separar problema de MCP de trabalho pendente no AnyTV
+
+- O usuário informou que o antigo problema de **conexão MCP ao Cloudflare foi resolvido**. Isso **não prova** que o Worker do AnyTV tenha sido implantado. O canônico do resolvedor marca expressamente `NÃO implantado, não conectado aos APKs`, e `wrangler.jsonc` ainda traz `REPLACE_WITH_D1_DATABASE_UUID` e `workers_dev:false`.
+- Próxima ação de engenharia: validar conexão e permissões Cloudflare; criar ambiente **dedicado ao AnyTV**, separado da infraestrutura CLFCJ; criar/bindar D1 e aplicar migrações; definir credenciais via **Secrets** (`ANYTV_MOVIE_API_KEY` e autenticação de cliente apropriada); estabelecer domínio/rota e monitoramento de consumo; implantar o Worker e testar `/health` e resolução real sem revelar credenciais. **Não implantar no Cloudflare/Business OS da CLFCJ** por conveniência.
+- O código piloto aceita `ANYTV_CLIENT_TOKEN` estático para testes servidor-servidor, porém documenta que **não pode ser embutido no APK**. Antes de conectar app a endpoint público, implementar autenticação por identidade/dispositivo, token curto/revogável e cotas; validar segurança/custos.
+- Só então ligar o app à URL HTTPS autorizada do resolver; preservar fallback para busca no provedor. Homologação física por provedor: Netflix, Disney+, Prime, Apple TV+, Max; conferir que foi aberta a **ficha correta** no aplicativo e não somente a home ou a pesquisa.
+
+### Sequência sem retrabalho (prioridades)
+
+1. Confirmar por readback os hashes/certificados dos novos APKs publicados no Drive e testar pareamento + controles atuais; não refazer builds sem necessidade.
+2. Corrigir a trilha permanente de **novas assinaturas** e updater para permitir a próxima versão sem nova reinstalação, mantendo canais legados intactos.
+3. Verificar disponibilidade efetiva de Cloudflare e autorização para ambiente próprio AnyTV, secret Movie of the Night, domínio e D1; usar código piloto existente, sem reescrever.
+4. Integrar app ↔ Worker ↔ Connect, testes controlados e fallback seguro.
+5. Homologar por título/serviço diretamente na TCL, registrar problemas por plataforma, corrigir apenas falhas comprovadas.
+6. Atualizar ESTE canônico em cada marco com link para commit, build, APK, hash, status de implantação e resultado físico. Não tratar tarefa planejada como concluída.
+
+**Escopo desta reconciliação:** atualização documental somente; **não** implanta Worker, altera APK, libera distribuição OTA nova nem testa a TCL remotamente.
