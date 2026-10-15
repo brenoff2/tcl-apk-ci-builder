@@ -2,9 +2,16 @@
   "schema": 1,
   "platform": "android",
   "package": "com.tclremote.livre",
-  "available": false,
-  "version": null,
-  "tag": null,
-  "assets": [],
-  "note": "Release de atualização bloqueado até APK de assinatura compatível ser publicado e verificado."
+  "available": true,
+  "version": "2.9.2",
+  "versionCode": 31,
+  "tag": "tcl-phone-v2.9.2",
+  "assets": [
+    {
+      "name": "Controle_TCL_Livre_v2.9.2.apk",
+      "size": 28314468,
+      "digest": "sha256:f34510aebb686e88912b56eb6c2a6b655e5365b5d09c4e5ccb6dee97e5941e0d",
+      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tcl-phone-v2.9.2/Controle_TCL_Livre_v2.9.2.apk"
+    }
+  ]
 }
