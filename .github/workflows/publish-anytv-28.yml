@@ -23,7 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(gh api repos/${{ github.repository }}/actions/runs/38672036441 --jq .conclusion)" = success
-          git cat-file -e 6029abd3c9730bf24a8aec18cdca0919cf426637^{commit}
+          test "$(gh api repos/${{ github.repository }}/commits/6029abd3c9730bf24a8aec18cdca0919cf426637 --jq .sha)" = 6029abd3c9730bf24a8aec18cdca0919cf426637
           if gh release view tcl-phone-v2.8 >/dev/null 2>&1; then
             echo 'A v2.8 release already exists, refusing overwrite'; exit 1
           fi
