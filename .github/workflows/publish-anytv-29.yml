@@ -1,0 +1,77 @@
+name: Publish signed AnyTV Android 2.9
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-29.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Require successful integration build and previous stable release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/${{ github.repository }}/actions/runs/38685224860 --jq .conclusion)" = success
+          if gh release view tcl-phone-v2.9 >/dev/null 2>&1; then
+            echo 'Version 2.9 release already exists; refusing to overwrite'; exit 1
+          fi
+          echo 'af9c615a0f3d27e0026991f7330feb7b9de58cac139d91135ebe07cb071b073f  updates/android/current.apk' | sha256sum --check
+          cmp updates/android/current.apk updates/android/AnyTV-v2.8.apk
+      - name: Fetch and verify permanently signed 2.9 APK
+        shell: bash
+        env:
+          SIGNED_SOURCE: 'https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-c464-820e-bf61-52e420ecfde8/raw?se=2026-10-15T05%3A24%3A00Z&sp=r&sv=2026-02-06&sr=b&scid=fc227c41-5092-516a-b7b0-b0453d4384d1&skoid=4a431cd2-eafd-49c7-90be-bbb4d45e696d&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-15T03%3A57%3A41Z&ske=2026-10-16T03%3A57%3A41Z&sks=b&skv=2026-02-06&sig=7J1Fu/Nt6Py3OBG8F7mm%2BHgkIO8WxOu1h3fQwHP2QLY%3D'
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          curl --fail --location --retry 3 --connect-timeout 20 --max-time 240 "$SIGNED_SOURCE" -o output/AnyTV-2.9.apk
+          echo '67e100180ecc9d6a56d8cb1a68f15df1d1d3d7d3f7d91649b09c0539f289a806  output/AnyTV-2.9.apk' | sha256sum --check
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          "$bt/aapt" dump badging output/AnyTV-2.9.apk | grep -q "name='com.tclremote.livre' versionCode='29' versionName='2.9-AnyTV'"
+          "$bt/apksigner" verify --verbose --print-certs output/AnyTV-2.9.apk > output/cert.txt
+          grep -qi 'df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8' output/cert.txt
+          "$bt/zipalign" -c 4 output/AnyTV-2.9.apk
+      - name: Publish signed current APK and immutable 2.9 archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp output/AnyTV-2.9.apk updates/android/AnyTV-v2.9.apk
+          cp output/AnyTV-2.9.apk updates/android/current.apk
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f updates/android/current.apk updates/android/AnyTV-v2.9.apk
+          git diff --cached --quiet && { echo "Nothing to publish"; exit 1; }
+          git commit -m "release(android): verified signed AnyTV 2.9 streaming enhancements [skip ci]"
+          git push
+      - name: Publish official GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp output/AnyTV-2.9.apk Controle_TCL_Livre_v2.9.apk
+          gh release create tcl-phone-v2.9 Controle_TCL_Livre_v2.9.apk --target feat/tcl-v22-updates-back-bluetooth --title "AnyTV Android 2.9" --notes "Streaming: busca real por título, gêneros, grade/lista e favoritos persistentes. Busca de título na TCL exige AnyTV Connect 1.7 compatível; nem todos os serviços aceitam ACTION_SEARCH. Deep link direto e reprodução não são garantidos. O complemento TV 8b2b permanece no canal 1.6 até assinatura e homologação da 1.7."
+      - name: Verify release, history and current channel are byte-identical
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p output/release
+          gh release download tcl-phone-v2.9 -p Controle_TCL_Livre_v2.9.apk -D output/release
+          echo '67e100180ecc9d6a56d8cb1a68f15df1d1d3d7d3f7d91649b09c0539f289a806  output/release/Controle_TCL_Livre_v2.9.apk' | sha256sum --check
+          cmp output/AnyTV-2.9.apk updates/android/current.apk
+          cmp output/AnyTV-2.9.apk updates/android/AnyTV-v2.9.apk
+          cmp output/AnyTV-2.9.apk output/release/Controle_TCL_Livre_v2.9.apk
+          echo ANYTV_29_PUBLISHED_AND_VERIFIED
