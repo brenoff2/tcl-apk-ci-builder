@@ -67,7 +67,7 @@ changes = {
     'applicationId = "dk.fez.bluetoothquickconnect"':
         'applicationId = "com.tclremote.tvcompanion"',
     'targetSdk = 33': 'targetSdk = 34',
-    'versionCode = 1': 'versionCode = 7',
+    'versionCode = 1': 'versionCode = 8',
     'versionName = "0.1.0"': 'versionName = "1.6-AnyTV"',
 }
 for old, new in changes.items():
@@ -96,5 +96,6 @@ assert not (base / "RemoteButtonService.java").exists()
 assert "installedApps()" in (base / "TvAppBridge.java").read_text()
 assert '"/launch"' in (base / "TvAppBridge.java").read_text()
 assert '"/headphones"' in (base / "TvAppBridge.java").read_text()
+assert '"/title-search"' in (base / "TvAppBridge.java").read_text()
 assert "MappingStore" in (base / "MainActivity.java").read_text()
 print("TCL_TV_SAFE_1_3_NO_ACCESSIBILITY_REAL_APPS_AND_PAIRED_HEADPHONES_OK")
