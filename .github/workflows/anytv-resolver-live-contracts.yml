@@ -1,0 +1,25 @@
+name: AnyTV commercial resolver - live provider contract (one-shot)
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/anytv-resolver-live-contracts.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Offline regression tests (no remote requests)
+        run: node --test anytv-resolver/src/worker.test.mjs
+      - name: Check five real Brazilian provider links with protected commercial API key
+        env:
+          ANYTV_MOVIE_API_KEY: ${{ secrets.ANYTV_MOVIE_API_KEY }}
+        run: node anytv-resolver/scripts/one-time-live-check.mjs
