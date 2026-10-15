@@ -122,6 +122,15 @@ internal object TclTvAppApi {
                 JSONObject().put("package", packageName).toString())).optBoolean("launched")
         }
 
+    suspend fun searchTitle(
+        host: String, code: String, packageName: String, title: String
+    ): String = withContext(Dispatchers.IO) {
+        val body = JSONObject().put("package", packageName)
+            .put("title", title.take(180)).toString()
+        JSONObject(request(host, code, "/title-search", body))
+            .optString("mode", "unavailable")
+    }
+
     suspend fun openBluetoothSettings(host: String, code: String): Boolean =
         withContext(Dispatchers.IO) {
             runCatching {
