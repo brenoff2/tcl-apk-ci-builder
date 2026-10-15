@@ -67,8 +67,8 @@ changes = {
     'applicationId = "dk.fez.bluetoothquickconnect"':
         'applicationId = "com.tclremote.tvcompanion"',
     'targetSdk = 33': 'targetSdk = 34',
-    'versionCode = 1': 'versionCode = 8',
-    'versionName = "0.1.0"': 'versionName = "1.7-AnyTV"',
+    'versionCode = 1': 'versionCode = 9',
+    'versionName = "0.1.0"': 'versionName = "1.8-AnyTV"',
 }
 for old, new in changes.items():
     if config.count(old) != 1:
