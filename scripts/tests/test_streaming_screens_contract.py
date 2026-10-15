@@ -22,7 +22,7 @@ class StreamingScreens(unittest.TestCase):
     def test_tmdb_catalog_uses_only_live_region_specific_results(self):
         for target in (
             "api.themoviedb.org/3/", "watch_region=BR",
-            "with_watch_providers=$id", "with_watch_monetization_types=flatrate",
+            "with_watch_providers=$providerId", "with_watch_monetization_types=flatrate",
             "Authorization", "Bearer $token", "JustWatch"
         ):
             self.assertIn(target, self.screen)
