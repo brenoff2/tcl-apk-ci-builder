@@ -281,6 +281,12 @@ internal fun TclStreamingScreens(
     val scope = rememberCoroutineScope()
     var token by remember { mutableStateOf(prefs.getString("tmdb_token", "").orEmpty()) }
     var tokenDraft by remember { mutableStateOf(token) }
+    // For private use only. Read only on-device; the GitHub Actions secret is
+    // never fetched into the phone or embedded in the APK.
+    var personalKey by remember {
+        mutableStateOf(runCatching { AnyTvPersonalKeys.read(context) }.getOrDefault(""))
+    }
+    var personalKeyDraft by remember { mutableStateOf(personalKey) }
     var editToken by remember { mutableStateOf(false) }
     var showCredits by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
@@ -387,6 +393,43 @@ internal fun TclStreamingScreens(
         titleActionFeedback = "Enviando comando à TCL…"
         scope.launch {
             try {
+                // Personal-mode live link source takes priority over sparse Wikidata.
+                // It is optional, never baked into the APK and never sent to the TV.
+                val personalLookup = if (personalKey.isNotBlank()) runCatching {
+                    AnyTvPersonalLinks.resolve(personalKey, title, packageName)
+                } else null
+                when (val direct = personalLookup?.getOrNull()) {
+                    is AnyTvPersonalResult.Direct -> {
+                        val mode = TclTvAppApi.openTitle(
+                            host, pairing, packageName, direct.url, title.name)
+                        titleActionFeedback = when (mode) {
+                            "detail_requested" -> "Link da ficha enviado ao streaming. " +
+                                "Confirme na TCL se abriu o filme correto."
+                            "search" -> "Busca solicitada ao aplicativo na TCL; confira o resultado."
+                            "opened_app" -> "O streaming abriu, mas não aceitou o link " +
+                                "da ficha. Faça a busca pelo título na televisão."
+                            else -> "O streaming não conseguiu abrir esta ficha na TV."
+                        }
+                        return@launch
+                    }
+                    AnyTvPersonalResult.NotInSubscription -> {
+                        titleActionFeedback = "A fonte de streaming não confirma este título " +
+                            "na assinatura selecionada no Brasil. " +
+                            "Aluguel e canais adicionais não são assinatura básica."
+                        return@launch
+                    }
+                    AnyTvPersonalResult.NoSupportedLink -> {
+                        val mode = TclTvAppApi.searchTitle(
+                            host, pairing, packageName, title.name)
+                        titleActionFeedback = if (mode == "search")
+                            "A fonte confirmou a assinatura, mas não forneceu um link " +
+                                "compatível; a busca foi solicitada na TV."
+                            else "A ficha direta não é compatível com a TCL. " +
+                                "Abra a busca no aplicativo."
+                        return@launch
+                    }
+                    else -> Unit // No personal key or a temporary API error: existing fallback.
+                }
                 // Provider IDs are worldwide; subscription rights are regional.
                 // Fail closed when the TMDB BR availability check is negative or unknown.
                 val appName = apps.firstOrNull { it.packageName == packageName }?.name
@@ -499,6 +542,15 @@ internal fun TclStreamingScreens(
                         Text("Para consultar filmes e séries reais, configure um token de leitura " +
                             "TMDB. Aplicativos sem provedor TMDB continuam disponíveis para abertura na TV.",
                             fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedTextField(value = personalKeyDraft,
+                            onValueChange = { personalKeyDraft = it.trim() },
+                            label = { Text("Chave de streaming (opcional)") },
+                            visualTransformation = PasswordVisualTransformation(),
+                            singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Text("Uso pessoal: chave da Movie of the Night. Ela fica " +
+                            "criptografada neste celular e permite abrir mais fichas " +
+                            "sem depender da Cloudflare. Deixe vazia para o método anterior.",
+                            fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedTextField(value = tokenDraft,
                             onValueChange = { tokenDraft = it.trim() },
                             label = { Text("Token TMDB") },
@@ -511,9 +563,18 @@ internal fun TclStreamingScreens(
                             }) { Text("Obter token") }
                             Spacer(Modifier.weight(1f))
                             Button(onClick = {
-                                token = tokenDraft
-                                prefs.edit().putString("tmdb_token", tokenDraft).apply()
-                                editToken = false; page = 1
+                                val stored = runCatching {
+                                    AnyTvPersonalKeys.write(context, personalKeyDraft.trim())
+                                }
+                                if (stored.isFailure) {
+                                    message = "Não foi possível guardar a chave com proteção " +
+                                        "do Android. Nenhuma credencial foi salva."
+                                } else {
+                                    personalKey = personalKeyDraft.trim()
+                                    token = tokenDraft
+                                    prefs.edit().putString("tmdb_token", tokenDraft).apply()
+                                    editToken = false; page = 1
+                                }
                             }) { Text("Salvar") }
                         }
                     }
