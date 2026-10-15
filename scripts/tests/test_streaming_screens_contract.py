@@ -41,9 +41,19 @@ class StreamingScreens(unittest.TestCase):
             self.assertIn(fragment, self.screen)
         self.assertIn("searchTitle(", self.apps)
 
-    def test_update_identity_is_29(self):
+    def test_compact_catalog_layout_regression(self):
+        self.assertIn("BasicTextField(value = searchDraft", self.screen)
+        self.assertIn("Modifier.weight(1f).height(42.dp)", self.screen)
+        self.assertIn("GridCells.Adaptive(94.dp)", self.screen)
+        self.assertIn("GridItemSpan(maxLineSpan)", self.screen)
+        self.assertIn('Text("ⓘ Fontes: TMDB / JustWatch"', self.screen)
+        self.assertNotIn('Text("Catálogo brasileiro"', self.screen)
+        self.assertNotIn('Text("Streaming", fontSize = 21.sp', self.screen)
+        self.assertNotIn('Button(onClick = { openOnTv(app) }, modifier = Modifier.fillMaxWidth())', self.screen)
+
+    def test_update_identity_is_30(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
-        self.assertIn("versionCode = 29", self.gradle)
+        self.assertIn("versionCode = 30", self.gradle)
 
 if __name__ == "__main__":
     unittest.main()
