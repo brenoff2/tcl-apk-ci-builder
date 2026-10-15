@@ -164,3 +164,12 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 - Bancos D1 na conta consultada: **lista vazia**. O Worker `anytv-link-resolver-pilot` continua sendo código piloto, NÃO deploy realizado. Este inventário vale exclusivamente para a conta MCP consultada, não para outras contas Cloudflare não conectadas.
 - Decisão de isolamento: **não modificar Worker CLFCJ nem compartilhar seus bindings/segredos**. Para provisionamento persistente do AnyTV, primeiro confirmar conta/ambiente segregado; depois configurar D1, segredos e autenticação sem chave embutida no APK.
 - CI de integração do app no GitHub estava em execução, **não homologada como sucesso** nesta consulta; não publicar OTA nova até sinal verde, assinatura nova verificável e teste físico.
+
+
+### Execução Cloudflare — D1 real criado e migrado (15/10/2026)
+
+- Cloudflare MCP `execute` criou D1 **`anytv-link-resolver`** na conta autenticada, UUID `9bab6598-d019-4e88-8b29-a327ff0cfd00`, sem replicação de leitura; resposta HTTP 200 / `success: true`.
+- Commit `f14437fc2e83b51bb57e561f97b4aefbd27f3c9f` substituiu o UUID placeholder em `anytv-resolver/wrangler.jsonc`. Não inseriu chaves ou tokens.
+- Migração SQL baseada em `anytv-resolver/migrations/0001_create_tables.sql` aplicada via API de D1: `monthly_quota`, `link_cache`, `idx_anytv_cache_expiry`. As três operações retornaram `success: true`.
+- **Readback remoto comprovado** por `SELECT name FROM sqlite_master WHERE type IN ('table','index') ORDER BY name`: ambos os nomes de tabelas e índice presentes. D1 foi criado como recurso **novo do AnyTV**, sem alteração dos três Workers CLFCJ existentes.
+- **Ainda não feito:** Worker implantado com bindings, secret `ANYTV_MOVIE_API_KEY` no Cloudflare, autenticação segura de APK, domínio público e integração/testes físicos. GitHub secret não migra automaticamente ao Cloudflare; não copiar credencial para código, CI ou logs. Sem exposição de endpoint público até validação de segredos e autenticação.
