@@ -96,7 +96,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
-        self.assertIn("versionCode = 32", self.gradle)
+        self.assertIn("versionCode = 33", self.gradle)
 
 if __name__ == "__main__":
     unittest.main()
