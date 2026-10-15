@@ -68,7 +68,7 @@ changes = {
         'applicationId = "com.tclremote.tvcompanion"',
     'targetSdk = 33': 'targetSdk = 34',
     'versionCode = 1': 'versionCode = 8',
-    'versionName = "0.1.0"': 'versionName = "1.6-AnyTV"',
+    'versionName = "0.1.0"': 'versionName = "1.7-AnyTV"',
 }
 for old, new in changes.items():
     if config.count(old) != 1:
