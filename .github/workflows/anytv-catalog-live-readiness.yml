@@ -1,0 +1,18 @@
+name: AnyTV catalog public readiness (release gate)
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths:
+      - '.github/workflows/anytv-catalog-live-readiness.yml'
+      - 'scripts/check_anytv_catalog_readiness.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  catalog-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate public backend before any streaming APK release
+        run: python3 scripts/check_anytv_catalog_readiness.py
