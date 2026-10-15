@@ -51,9 +51,16 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("Streaming", fontSize = 21.sp', self.screen)
         self.assertNotIn('Button(onClick = { openOnTv(app) }, modifier = Modifier.fillMaxWidth())', self.screen)
 
-    def test_update_identity_is_30(self):
+    def test_tv_16_missing_search_route_falls_back_to_launch(self):
+        self.assertIn('path == "/title-search"', self.apps)
+        self.assertIn('status == 404 || status == 405', self.apps)
+        self.assertIn('if (mode == "unsupported")', self.apps)
+        self.assertIn('if (open(host, code, packageName)) "opened_app"', self.apps)
+        self.assertIn('if (status == 401)', self.apps)
+
+    def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
-        self.assertIn("versionCode = 30", self.gradle)
+        self.assertIn("versionCode = 31", self.gradle)
 
 if __name__ == "__main__":
     unittest.main()
