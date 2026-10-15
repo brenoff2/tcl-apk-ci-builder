@@ -39,8 +39,8 @@ copyfile("overrides/AnyTvSplashScreen.kt", "source/app/src/main/java/com/hari/an
 gradle = Path("source/app/build.gradle.kts")
 cfg = gradle.read_text(encoding="utf-8")
 assert cfg.count("versionCode = 23") == 1 and cfg.count('versionName = "2.3-TCL"') == 1
-cfg = cfg.replace("versionCode = 23","versionCode = 27").replace('versionName = "2.3-TCL"','versionName = "2.7-AnyTV"')
+cfg = cfg.replace("versionCode = 23","versionCode = 28").replace('versionName = "2.3-TCL"','versionName = "2.8-AnyTV"')
 gradle.write_text(cfg, encoding="utf-8")
-print("ANYTV_BRAND_ICON_WORDMARK_VERSION27_READY")
+print("ANYTV_BRAND_ICON_WORDMARK_VERSION28_READY")
 
 print("ANYTV_PHONE_DISPLAY_NAME_READY")
