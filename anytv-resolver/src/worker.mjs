@@ -89,7 +89,7 @@ export function inspectOffers(show, expectedId, provider) {
       !show.streamingOptions || typeof show.streamingOptions !== "object") {
     throw new Error("invalid_upstream_title");
   }
-  const offers = show.streamingOptions.br;
+  const offers = show.streamingOptions.br ?? [];
   if (!Array.isArray(offers)) throw new Error("invalid_upstream_region");
   const eligible = offers.filter((offer) =>
     offer && offer.service && offer.service.id === provider &&
@@ -157,7 +157,7 @@ function report(result, fromCache) {
 export async function handleRequest(request, env, deps = {}) {
   if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
   const parsed = new URL(request.url);
-  if (parsed.pathname === "/health") return asJson({ status: "ok", deployed: false });
+  if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
   if (!env?.ANYTV_CLIENT_TOKEN || !env?.ANYTV_MOVIE_API_KEY ||
       !env?.DB || !env?.RATE_LIMIT || monthlyCap(env) === null) {
     return asJson({ status: "not_configured" }, 503);
