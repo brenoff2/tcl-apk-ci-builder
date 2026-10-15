@@ -31,12 +31,19 @@ class StreamingScreens(unittest.TestCase):
 
     def test_no_unverified_playback_claim(self):
         self.assertIn("TclTvAppApi.open(host, pairing, app.packageName)", self.screen)
-        self.assertIn("não garante um link de reprodução", self.screen)
+        self.assertIn("Não existe deep link universal", self.screen)
         self.assertNotIn("startPlaybackOnTv", self.screen)
 
-    def test_update_identity_is_28_and_tv_unchanged(self):
+    def test_search_genres_grid_and_favorites(self):
+        for fragment in ("search/$media?", "genre/$media/list", "with_genres=$genre",
+                         "offeredInBrazil(", "StreamingFavorite(", "streaming_favorites",
+                         "LazyVerticalGrid(", "Localizar título na TCL"):
+            self.assertIn(fragment, self.screen)
+        self.assertIn("searchTitle(", self.apps)
+
+    def test_update_identity_is_29(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
-        self.assertIn("versionCode = 28", self.gradle)
+        self.assertIn("versionCode = 29", self.gradle)
 
 if __name__ == "__main__":
     unittest.main()
