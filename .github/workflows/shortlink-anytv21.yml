@@ -1,0 +1,50 @@
+name: Criar link curto do AnyTV Connect 2.1 para TCL
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/shortlink-anytv21.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  shorten:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Confirmar o APK de destino
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v2.1/Controle_TCL_TV_v2.1_cert8b2b.apk'
+          test "$(curl -LsS --max-time 45 -o /dev/null -w '%{http_code}' "$target")" = 200
+      - name: Criar link ultracurto sem paginas intermediarias
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v2.1/Controle_TCL_TV_v2.1_cert8b2b.apk'
+          # da.gd tem dominio curto e redireciona sem pagina intermediaria.
+          short=$(curl -GsS --max-time 20 --data-urlencode "url=$target" 'https://da.gd/s' 2>/dev/null || true)
+          if [[ "$short" =~ ^https://da\.gd/[a-zA-Z0-9]+$ ]]; then
+            direct=$(curl -sS --max-time 20 -o /dev/null -w '%{redirect_url}' "$short" || true)
+            if [ "$direct" = "$target" ]; then
+              echo "LINK_CURTO_VALIDADO=$short"
+              echo "DESTINO_APK=$target"
+              exit 0
+            fi
+          fi
+          # Segundo provedor, com alias legivel para digitar pelo controle remoto.
+          for alias in a21tv atv21tcl; do
+            raw=$(curl -sS --max-time 20 -X POST -H 'Accept: application/json' \
+               --data-urlencode "url=$target" --data-urlencode "alias=$alias" 'https://spoo.me/' || true)
+            link=$(printf '%s' "$raw" | python3 -c 'import json,sys;\ntry: print(json.load(sys.stdin).get("short_url", ""))\nexcept: print("")' 2>/dev/null || true)
+            if [ "$link" = "https://spoo.me/$alias" ]; then
+              direct=$(curl -sS --max-time 20 -o /dev/null -w '%{redirect_url}' "$link" || true)
+              if [ "$direct" = "$target" ]; then
+                echo "LINK_CURTO_VALIDADO=$link"
+                echo "DESTINO_APK=$target"
+                exit 0
+              fi
+            fi
+          done
+          echo 'Falhou a criacao ou verificacao de um link curto direto.'
+          exit 1
