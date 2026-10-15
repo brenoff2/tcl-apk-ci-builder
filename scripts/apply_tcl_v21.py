@@ -183,4 +183,11 @@ assert "RemoteDirection.END_LONG" in viewmodel.read_text()
 assert "byte[] combined = mMessageManager.createImeBatchEditCompatV2(" in session.read_text()
 assert "int resolvedIme = syncedImeCounter >= 0 ? syncedImeCounter : 0;" in session.read_text()
 assert "TclResponsivePad.kt" in {p.name for p in UI.glob("*.kt")}
+# Preserve a JVM-only golden-byte regression test for the Android TV Remote v2
+# IME serializer. Test sources are generated from this maintained override,
+# never edited only in the temporary upstream clone.
+ime_test_dir = ROOT / "src/test/java/com/hari/androidtvremote/androidLib/remote"
+ime_test_dir.mkdir(parents=True, exist_ok=True)
+copyfile("overrides/tests/RemoteImeWireTest.java", ime_test_dir / "RemoteImeWireTest.java")
+
 print("TCL_V21_PAD_IME_HOLD_PATCH_OK")

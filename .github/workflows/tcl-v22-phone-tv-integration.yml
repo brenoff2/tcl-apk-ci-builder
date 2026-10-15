@@ -61,6 +61,10 @@ jobs:
           cd source
           chmod +x gradlew
           ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Testar serializacao IME Remote v2 contra mensagens de referencia
+        run: |
+          cd source
+          ./gradlew :app:testDebugUnitTest --tests 'com.hari.androidtvremote.androidLib.remote.RemoteImeWireTest' --no-daemon --stacktrace
       - name: Auditar APK e guardar release nao assinado
         run: |
           set -euo pipefail

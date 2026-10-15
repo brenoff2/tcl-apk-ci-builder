@@ -72,3 +72,14 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 6. Comparar hash de origem, release e `current.apk` após a publicação. O workflow `.github/workflows/publish-anytv-25-16.yml` foi convertido em **verificação somente leitura** para que um rerun nunca rebaixe a versão publicada.
 7. Guardar backups privados no Drive em **AnyTV - Assinaturas Privadas - Nao Compartilhar**. Os certificados públicos têm backup separado. Não inserir chaves privadas no repositório.
 8. Afirmar instalação/atualização completa no dispositivo apenas após homologação real; CI e acesso ao download não substituem esse teste.
+---
+
+## Auditoria adicional IME 2.7 — 14/10/2026 (horário de Salvador)
+
+- **Estado preservado:** Android 2.7 e TV 1.6 continuam os APKs distribuídos. Nenhuma nova versão foi publicada por causa desta auditoria; a homologação física ainda é obrigatória.
+- **Comparação de implementação:** `scripts/apply_tcl_v21.py` substitui a dupla injeção por **um** `RemoteImeBatchEdit`, utiliza contadores provenientes de `RemoteSession`, inicia em 0/0 até a TV informá-los e define o cursor de acordo com `tronikos/androidtvremote2`. O PR upstream #25 está merged. O issue #32 registra comportamentos diferentes de foco, teclado virtual e substituição/anexação por aplicativo.
+- **Ampliação de CI:** `overrides/tests/RemoteImeWireTest.java` é copiado para a árvore gerada na compilação; executa três testes JVM de frames binários, contemplando texto ASCII, UTF-8/contadores diferentes de zero e framing Protobuf de mensagens longas. Rodar `testDebugUnitTest` em GitHub Actions **não** homologa a transmissão na TCL.
+- **Ponto de atenção de UX, sem alterar o release 2.7:** o editor exibe "Comando transmitido" após chamar um callback Unit, embora a função ainda possa retornar por falta de conexão ou falha na fila/socket. Em uma próxima correção, distinguir solicitação, gravação no socket e confirmação visual na TV.
+- **Homologação necessária:** no telefone instalado com 2.7, manter o campo de pesquisa da TCL selecionado; digitar `Teste AnyTV 27`, pressionar **Enviar** e observar o conteúdo na TV. Repetir com o teclado virtual oculto apenas se o campo conservar o foco. Registrar aplicativo/versão da TV, resultado com teclado visível/oculto, sintomas de conexão e, se falhar, logs temporários de `RemoteSession`, `ImeBatchEdit`, `RemoteInput` e `Keyboard`, ocultando valores sensíveis do texto digitado.
+- **Critério de aceite:** a CI pode verificar a codificação, mas sucesso end-to-end depende de inserção real, ausência de duplicação/perda e validação em mais de um campo de texto. Não publicar uma correção especulativa de contadores.
+
