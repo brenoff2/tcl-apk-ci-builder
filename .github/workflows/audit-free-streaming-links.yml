@@ -1,0 +1,103 @@
+name: Probe free streaming title links for AnyTV (read only)
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/audit-free-streaming-links.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned unofficial read-only public JustWatch client
+        run: python -m pip install --disable-pip-version-check simple-justwatch-python-api==1.4.0 requests==2.32.3
+      - name: Probe Brazilian title offers and unauthenticated API gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > audit.py <<'PY'
+          import json
+          import re
+          import unicodedata
+          from urllib.parse import urlparse
+          import requests
+          from simplejustwatchapi import search
+          
+          cases = [
+              ("Zootopia 2", 2025, "Zootopia 2"),
+              ("Birdman", 2014, "Birdman"),
+              ("Jurassic Park", 1993, "Jurassic Park: O Parque dos Dinossauros"),
+          ]
+          report = {"country": "BR", "mode": "read-only, no API keys", "titles": []}
+          def normalized(s):
+              return re.sub(r"[^a-z0-9]+", " ", unicodedata.normalize("NFKD", s.lower()).encode("ascii", "ignore").decode()).strip()
+          
+          def check_public_api(name, url):
+              try:
+                  r=requests.get(url,timeout=15,headers={"Accept":"application/json"})
+                  print(f"API_GATE {name}: http={r.status_code} key_supplied=no")
+                  report.setdefault("api_gates",{})[name]=r.status_code
+              except Exception as exc:
+                  print(f"API_GATE {name}: transport_error={type(exc).__name__}")
+                  report.setdefault("api_gates",{})[name]=str(type(exc).__name__)
+          
+          check_public_api("watchmode", "https://api.watchmode.com/v1/title/movie-329/sources?regions=BR")
+          check_public_api("movieofthenight", "https://api.movieofthenight.com/v4/shows/tt0107290")
+          for name,year,alternate in cases:
+              matches=[]
+              errors=[]
+              for query in dict.fromkeys([name,alternate]):
+                  try:
+                      results=search(query,country="BR",language="pt",count=12)
+                      print(f"QUERY {name}: q={query!r}, results={len(results)}")
+                      for item in results:
+                          if getattr(item,"object_type","")!="MOVIE": continue
+                          y=getattr(item,"release_year",None)
+                          if y==year:
+                              matches.append(item)
+                  except Exception as exc:
+                      print(f"QUERY_ERROR {name}: {type(exc).__name__}: {str(exc)[:145]}")
+                      errors.append(type(exc).__name__)
+                  if matches: break
+              matched = sorted(matches,key=lambda x:(normalized(x.title or "")!=normalized(name), len(x.offers or [])),reverse=False)
+              chosen=matched[0] if matched else None
+              record={"movie":name,"year":year,"matched":bool(chosen),"query_errors":errors}
+              if chosen:
+                  record.update({"title":chosen.title,"tmdb_id":chosen.tmdb_id,"imdb_id":chosen.imdb_id,"justwatch_url":chosen.url,"offers":[]})
+                  offers = chosen.offers or []
+                  for offer in offers:
+                      pkg=getattr(offer,"package",None)
+                      if not pkg:continue
+                      u=offer.url or ""
+                      info={
+                          "provider":getattr(pkg,"name",""),
+                          "technical_name":getattr(pkg,"technical_name",""),
+                          "type":offer.monetization_type,
+                          "url":u[:220],
+                          "url_host":urlparse(u).hostname,
+                          "title_link":bool(re.search(r"(title|detail|browse|movie|show|watch|entity)",u,re.I))
+                      }
+                      if not any(x["provider"]==info["provider"] and x["type"]==info["type"] for x in record["offers"]):
+                          record["offers"].append(info)
+                  print("TITLE",name,"match",record["title"],"TMDB",record["tmdb_id"],"offers",len(record["offers"]))
+                  for o in record["offers"][:25]:
+                      print(" OFFER",o["provider"],o["type"],o["url_host"],"link=",o["url"][:160])
+              else:
+                  print("TITLE",name,"NO_EXACT_YEAR_MATCH")
+              report["titles"].append(record)
+          open("justwatch-br-live-audit.json","w",encoding="utf-8").write(json.dumps(report,ensure_ascii=False,indent=2))
+          # Probe only; providers can change and an Android TV open remains unverified.
+          PY
+          python -u audit.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: anytv-free-streaming-source-br-audit
+          path: justwatch-br-live-audit.json
+          if-no-files-found: warn
+          retention-days: 7
