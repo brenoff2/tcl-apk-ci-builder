@@ -90,7 +90,7 @@ internal object TclTvAppApi {
             if (status == 401) throw IllegalStateException("Código incorreto. Confira os 8 dígitos na TCL.")
             // AnyTV Connect 1.6 does not have /title-search: return a typed
             // capability result so the caller can use the existing /launch.
-            if ((status == 404 || status == 405) && path == "/title-search") {
+            if ((status == 404 || status == 405) && (path == "/title-search" || path == "/title-open")) {
                 return "{\"mode\":\"unsupported\"}"
             }
             if (status == 404 && path == "/headphones") {
@@ -145,6 +145,23 @@ internal object TclTvAppApi {
             if (failure?.message?.contains("Código incorreto") == true) throw failure
             if (open(host, code, packageName)) "opened_app" else "unavailable"
         }
+    }
+
+    suspend fun openTitle(
+        host: String, code: String, packageName: String, url: String, title: String
+    ): String = withContext(Dispatchers.IO) {
+        val body = JSONObject().put("package", packageName)
+            .put("url", url).toString()
+        val result = runCatching {
+            JSONObject(request(host, code, "/title-open", body))
+                .optString("mode", "unavailable")
+        }
+        if (result.getOrNull() == "detail_requested") return@withContext "detail_requested"
+        val failure = result.exceptionOrNull()
+        if (failure?.message?.contains("Código incorreto") == true) throw failure
+        // Connect 1.9 only accepts Disney links. Treat its HTTP 400 and 409
+        // as capability gaps; do not silently claim a title was displayed.
+        searchTitle(host, code, packageName, title)
     }
 
     suspend fun openBluetoothSettings(host: String, code: String): Boolean =
