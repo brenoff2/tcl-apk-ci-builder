@@ -29,9 +29,9 @@ jobs:
           from simplejustwatchapi import search
           
           cases = [
-              ("Zootopia 2", 2025, "Zootopia 2"),
-              ("Birdman", 2014, "Birdman"),
-              ("Jurassic Park", 1993, "Jurassic Park: O Parque dos Dinossauros"),
+              ("Zootopia 2", 2025, "Zootopia 2", "1084242"),
+              ("Birdman", 2014, "Birdman", "194662"),
+              ("Jurassic Park", 1993, "Jurassic Park: O Parque dos Dinossauros", "329"),
           ]
           report = {"country": "BR", "mode": "read-only, no API keys", "titles": []}
           def normalized(s):
@@ -48,24 +48,26 @@ jobs:
           
           check_public_api("watchmode", "https://api.watchmode.com/v1/title/movie-329/sources?regions=BR")
           check_public_api("movieofthenight", "https://api.movieofthenight.com/v4/shows/tt0107290")
-          for name,year,alternate in cases:
+          for name,year,alternate,expected_tmdb in cases:
               matches=[]
               errors=[]
               for query in dict.fromkeys([name,alternate]):
                   try:
-                      results=search(query,country="BR",language="pt",count=12)
+                      results=search(query,country="BR",language="pt",count=35)
                       print(f"QUERY {name}: q={query!r}, results={len(results)}")
                       for item in results:
                           if getattr(item,"object_type","")!="MOVIE": continue
                           y=getattr(item,"release_year",None)
                           if y==year:
                               matches.append(item)
+                              print(" CANDIDATE", name, item.title, "tmdb="+str(item.tmdb_id), "year="+str(y))
                   except Exception as exc:
                       print(f"QUERY_ERROR {name}: {type(exc).__name__}: {str(exc)[:145]}")
                       errors.append(type(exc).__name__)
-                  if matches: break
-              matched = sorted(matches,key=lambda x:(normalized(x.title or "")!=normalized(name), len(x.offers or [])),reverse=False)
-              chosen=matched[0] if matched else None
+                  if any(str(m.tmdb_id)==expected_tmdb for m in matches): break
+              chosen=next((m for m in matches if str(m.tmdb_id)==expected_tmdb),None)
+              # Fail closed on conflicting titles; never treat a trailer or documentary
+              # as a match just because title/year are superficially similar.
               record={"movie":name,"year":year,"matched":bool(chosen),"query_errors":errors}
               if chosen:
                   record.update({"title":chosen.title,"tmdb_id":chosen.tmdb_id,"imdb_id":chosen.imdb_id,"justwatch_url":chosen.url,"offers":[]})
