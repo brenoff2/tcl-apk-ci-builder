@@ -41,10 +41,12 @@ class PhoneUpdatesAndBack(unittest.TestCase):
         self.assertIn('android:exported="false"', self.manifest)
         self.assertIn("getPackageArchiveInfo(", self.updater)
         self.assertIn("getApkContentsSigners()", self.updater)
-        self.assertIn("MessageDigest.isEqual(currentSigner(installed), currentSigner(next))", self.updater)
+        self.assertIn("MessageDigest.isEqual(currentSigner(installed),", self.updater)
+        self.assertIn("archiveSigner(pm, apk.getAbsolutePath(), next, pkg)", self.updater)
         self.assertIn("PackageInstaller.SessionParams.USER_ACTION_REQUIRED", self.updater)
         self.assertIn('"/current.apk"', self.updater)
-        self.assertIn("MessageDigest.isEqual(currentSigner(installed), currentSigner(next))", self.updater)
+        self.assertIn("MessageDigest.isEqual(currentSigner(installed),", self.updater)
+        self.assertIn("archiveSigner(pm, apk.getAbsolutePath(), next, pkg)", self.updater)
         self.assertNotIn("SilentInstall", self.updater)
 
     def test_centered_stage_small_ok_and_keyboard_send(self):
