@@ -22,9 +22,9 @@ class StreamingScreens(unittest.TestCase):
 
     def test_tmdb_catalog_uses_only_live_region_specific_results(self):
         for target in (
-            "api.themoviedb.org/3/", "watch_region=BR",
-            "with_watch_providers=$providerId", "with_watch_monetization_types=flatrate",
-            "Authorization", "Bearer $token", "JustWatch"
+            "anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/",
+            "watch_region=BR", "with_watch_providers=$providerId",
+            "with_watch_monetization_types=flatrate", "JustWatch"
         ):
             self.assertIn(target, self.screen)
         self.assertNotIn("fakeResults", self.screen)
@@ -109,25 +109,23 @@ class StreamingScreens(unittest.TestCase):
             inspect_link("netflix", "https://evil.example/title/80175798"),
             "unsafe")
 
-    def test_personal_mode_keeps_user_api_key_private_and_optional(self):
-        from pathlib import Path
+    def test_link_lookup_uses_backend_without_device_api_key(self):
         resolver = Path("overrides/AnyTvPersonalLinks.kt").read_text(encoding="utf-8")
         preparer = Path("scripts/prepare_tcl.py").read_text(encoding="utf-8")
-        assert 'overrides/AnyTvPersonalLinks.kt' in preparer
+        self.assertIn("overrides/AnyTvPersonalLinks.kt", preparer)
         for fragment in (
-            "AndroidKeyStore", "AES/GCM/NoPadding", "X-API-Key",
-            "api.movieofthenight.com/v4/shows/",
-            'country=br', "validatedLink(", "NotInSubscription",
-            "NoSupportedLink", "subscription", "free", "addon",
+            "anytv-link-resolver-pilot.brenoff.workers.dev/v1/resolve/",
+            "validatedLink(", "NotInSubscription", "NoSupportedLink",
             "com.netflix.ninja", "com.disney.disneyplus",
             "com.apple.atve.androidtv.appletv", "com.wbd.stream",
         ):
             self.assertIn(fragment, resolver)
-        self.assertIn("AnyTvPersonalKeys.write(context, personalKeyDraft.trim())", self.screen)
-        self.assertIn("AnyTvPersonalLinks.resolve(personalKey, title, packageName)", self.screen)
+        self.assertIn("AnyTvPersonalLinks.resolve(title, packageName)", self.screen)
         self.assertIn("StreamingCatalog.titleDeepLink(token, title, packageName)", self.screen)
-        self.assertNotIn("ANYTV_MOVIE_API_KEY", resolver)
-        self.assertNotIn("secrets.ANYTV_MOVIE_API_KEY", self.screen)
+        self.assertNotIn("AndroidKeyStore", resolver)
+        self.assertNotIn("X-API-Key", resolver)
+        self.assertNotIn("tokenDraft", self.screen)
+        self.assertNotIn("personalKeyDraft", self.screen)
 
     def test_tv_apple_playable_id_requires_allowlisted_parameters(self):
         from pathlib import Path
