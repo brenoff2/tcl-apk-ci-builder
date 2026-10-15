@@ -13,7 +13,7 @@ const checks = [
   ["Birdman", "movie/194662", "hbo"],
   ["Jurassic Park", "movie/329", "prime"],
   ["O Irlandês", "movie/398978", "netflix"],
-  ["Jurassic Park / Apple TV", "movie/329", "apple"],
+  ["The Gorge / Apple TV", "movie/950396", "apple"],
 ];
 let success = 0;
 for (const [label, id, provider] of checks) {
