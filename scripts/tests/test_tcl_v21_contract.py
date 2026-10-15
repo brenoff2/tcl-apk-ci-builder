@@ -92,9 +92,14 @@ class TclV21Contract(unittest.TestCase):
         self.assertIn("Channel<() -> Unit>(Channel.UNLIMITED)", self.vm)
 
     def test_keyboard_live_typing_and_paste_not_clicking_selected_key(self):
-        self.assertIn('Text("Digitar na TV ao vivo"', self.screen)
-        self.assertIn("onAppendText(value.substring(previous.length))", self.screen)
-        self.assertIn("onBackspace(previous.length - value.length)", self.screen)
+        if os.environ.get("TCL_V27") == "1":
+            self.assertIn("fun sendDraft()", self.screen)
+            self.assertIn("onSendText(draft)", self.screen)
+            self.assertNotIn("onAppendText(value.substring(previous.length))", self.screen)
+        else:
+            self.assertIn('Text("Digitar na TV ao vivo"', self.screen)
+            self.assertIn("onAppendText(value.substring(previous.length))", self.screen)
+            self.assertIn("onBackspace(previous.length - value.length)", self.screen)
         self.assertIn("onKeyboardText = tvRemoteViewModel::sendKeyboardText", self.nav)
         self.assertIn("onAppendText = onKeyboardText", self.screen)
         self.assertIn("keyAndTextWrites.trySend", self.vm)
