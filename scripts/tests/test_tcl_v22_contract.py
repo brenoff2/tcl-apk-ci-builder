@@ -63,7 +63,7 @@ class PhoneUpdatesAndBack(unittest.TestCase):
 
     def test_single_package_higher_version(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.apk)
-        self.assertIn("versionCode = 28", self.apk)
+        self.assertIn("versionCode = 29", self.apk)
 
 
 class TvUpdateAndBluetooth(unittest.TestCase):
@@ -94,7 +94,7 @@ class TvUpdateAndBluetooth(unittest.TestCase):
         self.assertIn("headphoneStatus = result", self.bridge)
 
     def test_tv_inplace_update_support(self):
-        self.assertIn("versionCode = 7", self.gradle)
+        self.assertIn("versionCode = 8", self.gradle)
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
         self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
         self.assertNotIn("BIND_ACCESSIBILITY_SERVICE", self.manifest)
