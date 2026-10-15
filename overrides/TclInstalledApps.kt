@@ -179,7 +179,7 @@ private fun savedFavoriteIds(raw: String?): List<String> =
     } catch (_: Exception) { emptyList() }
 
 @Composable
-private fun OfficialTvIcon(app: TvOfficialApp, size: Dp) {
+internal fun OfficialTvIcon(app: TvOfficialApp, size: Dp) {
     val bitmap: ImageBitmap? = remember(app.icon) {
         try {
             val decoded = Base64.decode(app.icon, Base64.DEFAULT)
@@ -235,6 +235,7 @@ fun TclInstalledAppsBar(
     }
     var showPair by remember(deviceKey, host) { mutableStateOf(false) }
     var showManager by remember(deviceKey, host) { mutableStateOf(false) }
+    var showStreaming by remember(deviceKey, host) { mutableStateOf(false) }
     var busy by remember(deviceKey, host) { mutableStateOf(false) }
     var errorText by remember(deviceKey, host) { mutableStateOf<String?>(null) }
     var refresh by remember(deviceKey, host) { mutableStateOf(0) }
@@ -307,6 +308,11 @@ fun TclInstalledAppsBar(
             TextButton(onClick = {
                 if (host.isBlank()) errorText = "Conecte a TCL primeiro."
                 else if (pairing.isBlank()) showPair = true
+                else showStreaming = true
+            }) { Text("Streaming") }
+            TextButton(onClick = {
+                if (host.isBlank()) errorText = "Conecte a TCL primeiro."
+                else if (pairing.isBlank()) showPair = true
                 else if (allApps.isEmpty()) refresh++
                 else showManager = true
             }) { Text("Ver todos  ›") }
@@ -371,6 +377,11 @@ fun TclInstalledAppsBar(
                 }) { Text("Tentar") }
             }
         }
+    }
+
+    if (showStreaming) {
+        TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
+            onDismiss = { showStreaming = false })
     }
 
     if (showPair) {
