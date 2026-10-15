@@ -96,7 +96,7 @@ class TvUpdateAndBluetooth(unittest.TestCase):
         self.assertIn("headphoneStatus = result", self.bridge)
 
     def test_tv_inplace_update_support(self):
-        self.assertIn("versionCode = 13", self.gradle)
+        self.assertIn("versionCode = " + ("14" if os.environ.get("TCL_TV_V23") == "1" else "13"), self.gradle)
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
         self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
         self.assertNotIn("BIND_ACCESSIBILITY_SERVICE", self.manifest)
