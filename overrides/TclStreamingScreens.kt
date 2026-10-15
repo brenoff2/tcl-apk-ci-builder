@@ -157,6 +157,19 @@ private object StreamingCatalog {
     }
 
     /**
+     * Region-aware preflight for the selected subscription provider.
+     * A foreign-provider Wikidata link is not evidence of Brazilian rights.
+     * Null means the catalogue check itself was inconclusive (e.g. offline).
+     */
+    suspend fun titleAvailableInBrazil(token: String, title: StreamingTitle, app: String): Boolean? =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val id = providerId(token, app, title.media)
+                if (id <= 0) null else offeredInBrazil(token, title, id)
+            }.getOrNull()
+        }
+
+    /**
      * Non-authenticated title-ID crosswalk. TMDB supplies a Wikidata QID,
      * Wikidata stores provider IDs. No IDs are guessed from a film name.
      */
@@ -374,6 +387,23 @@ internal fun TclStreamingScreens(
         titleActionFeedback = "Enviando comando à TCL…"
         scope.launch {
             try {
+                // Provider IDs are worldwide; subscription rights are regional.
+                // Fail closed when the TMDB BR availability check is negative or unknown.
+                val appName = apps.firstOrNull { it.packageName == packageName }?.name
+                    ?: "serviço selecionado"
+                val offered = StreamingCatalog.titleAvailableInBrazil(
+                    token, title, appName)
+                if (offered == false) {
+                    titleActionFeedback = "Segundo o catálogo TMDB/JustWatch, este título não está " +
+                        "confirmado na assinatura de " + appName + " no Brasil. " +
+                        "Confira 'Onde assistir e links disponíveis' antes de abrir."
+                    return@launch
+                }
+                if (offered == null) {
+                    titleActionFeedback = "Não foi possível confirmar a disponibilidade brasileira " +
+                        "deste título agora. Verifique a conexão e tente novamente."
+                    return@launch
+                }
                 val link = runCatching {
                     StreamingCatalog.titleDeepLink(token, title, packageName)
                 }.getOrNull()
