@@ -3,15 +3,15 @@
   "platform": "android",
   "package": "com.tclremote.livre",
   "available": true,
-  "version": "2.9.2",
-  "versionCode": 31,
-  "tag": "tcl-phone-v2.9.2",
+  "version": "2.9.3",
+  "versionCode": 32,
+  "tag": "tcl-phone-v2.9.3",
   "assets": [
     {
-      "name": "Controle_TCL_Livre_v2.9.2.apk",
+      "name": "Controle_TCL_Livre_v2.9.3.apk",
       "size": 28314468,
-      "digest": "sha256:f34510aebb686e88912b56eb6c2a6b655e5365b5d09c4e5ccb6dee97e5941e0d",
-      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tcl-phone-v2.9.2/Controle_TCL_Livre_v2.9.2.apk"
+      "digest": "sha256:d549be2c1a07bc7b6a7449300ac4bd5b07ebf760a723e55f8cf5bc5e2262f6bf",
+      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tcl-phone-v2.9.3/Controle_TCL_Livre_v2.9.3.apk"
     }
   ]
 }
