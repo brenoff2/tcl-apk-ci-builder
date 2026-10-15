@@ -135,3 +135,11 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 6. Atualizar ESTE canônico em cada marco com link para commit, build, APK, hash, status de implantação e resultado físico. Não tratar tarefa planejada como concluída.
 
 **Escopo desta reconciliação:** atualização documental somente; **não** implanta Worker, altera APK, libera distribuição OTA nova nem testa a TCL remotamente.
+
+
+### Implementação iniciada — canais de atualização com novas assinaturas (15/10/2026)
+
+- Commit `2858e3951df4214f3a072dbb73680af8fbf2d63e`: `overrides/common/TclUpdateManager.java` passou a reconhecer as novas identidades **por SHA-256 de certificado**: telefone `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`, TV `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c`.
+- Seleção determinística: telefone antigo → `updates/android/current.apk`; telefone novo → `updates/android/cert2026/current.apk`; TV 3382 → `updates/tv/cert3382/current.apk`; TV 8b2b → `updates/tv/cert8b2b/current.apk`; TV nova → `updates/tv/cert2026/current.apk`. Assinatura desconhecida é bloqueada. Permanece a exigência de pacote e certificado idênticos, `versionCode` maior e confirmação pelo PackageInstaller.
+- **ATENÇÃO: implementação de código, ainda NÃO disponível nos APKs já instalados e ainda NÃO publicada como novo binário assinado.** Os dois arquivos `cert2026/current.apk` não foram distribuídos por esse commit, e a publicação da próxima versão deverá criá-los após assinatura nova, verificação de pacote, versão, certificado, hash e instalação. Não preencher canais `cert2026` com os APKs 2.9.5/2.2 já instalados como se fossem atualização (códigos iguais).
+- Os canais antigos permanecem intactos. No primeiro novo release, conferir que a compilação realmente inclui esse `TclUpdateManager.java` e homologar o botão Buscar atualizações no celular e na TV. Nunca declarar OTA funcional sem teste end-to-end.
