@@ -76,6 +76,16 @@ test("identifies authentic Disney, Netflix, Prime, Apple and HBO links", () => {
     "https://play.hbomax.com/show/a0a085b8-6657-46ca-9476-6af0070b9cce");
 });
 
+test("preserves only validated Apple TV+ playableId and drops affiliate params", () => {
+  const url = "https://tv.apple.com/br/movie/the-gorge/umc.cmc.26o403koqo2klixc0jtqy6tmc" +
+    "?at=1000l3V2&playableId=tvs.sbd.9001%3A271469518";
+  assert.equal(validateLink("apple", url),
+    "https://tv.apple.com/br/movie/the-gorge/umc.cmc.26o403koqo2klixc0jtqy6tmc" +
+    "?playableId=tvs.sbd.9001%3A271469518");
+  assert.equal(validateLink("apple", url + "&playableId=another"), null);
+  assert.equal(validateLink("apple", url + "&redirect=https://evil.example"), null);
+});
+
 test("rejects unsafe hosts, credentials, schemes, parameters and mismatched providers", () => {
   assert.equal(validateLink("netflix", "https://evil.com/title/80175798"), null);
   assert.equal(validateLink("netflix", "https://www.netflix.com@evil.com/title/80175798"), null);
