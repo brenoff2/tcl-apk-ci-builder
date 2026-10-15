@@ -1,70 +1,13 @@
 package com.hari.androidtvremote.ui.app
 
-import android.content.Context
-import android.security.keystore.KeyGenParameterSpec
-import android.security.keystore.KeyProperties
-import android.util.Base64
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
 import java.net.URLDecoder
 import java.net.URLEncoder
-import java.nio.charset.StandardCharsets
-import java.security.KeyStore
-import javax.crypto.Cipher
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
-import javax.crypto.spec.GCMParameterSpec
-
-/** Optional, private on-device API key. Never built into APK or sent to the TV. */
-internal object AnyTvPersonalKeys {
-    private const val ALIAS = "anytv_personal_streaming_key_v1"
-    private const val PREFS = "anytv_personal_private"
-    private const val ENTRY = "movie_of_night_encrypted"
-
-    private fun secretKey(): SecretKey {
-        val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        val existing = store.getKey(ALIAS, null) as? SecretKey
-        if (existing != null) return existing
-        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")
-        generator.init(KeyGenParameterSpec.Builder(ALIAS,
-            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT)
-            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-            .setKeySize(256).build())
-        return generator.generateKey()
-    }
-
-    fun read(context: Context): String {
-        val stored = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(ENTRY, null) ?: return ""
-        val bytes = Base64.decode(stored, Base64.NO_WRAP)
-        require(bytes.size >= 12 + 16) { "Credencial criptografada inválida." }
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, secretKey(),
-            GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
-        return String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), StandardCharsets.UTF_8)
-    }
-
-    fun write(context: Context, apiKey: String) {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (apiKey.isBlank()) {
-            check(prefs.edit().remove(ENTRY).commit()) { "Falha ao limpar credencial." }
-            return
-        }
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.ENCRYPT_MODE, secretKey())
-        val packed = cipher.iv + cipher.doFinal(apiKey.toByteArray(StandardCharsets.UTF_8))
-        check(prefs.edit().putString(ENTRY,
-            Base64.encodeToString(packed, Base64.NO_WRAP)).commit()) {
-            "Não foi possível guardar a chave protegida."
-        }
-    }
-}
 
 internal sealed class AnyTvPersonalResult {
     data class Direct(val url: String) : AnyTvPersonalResult()
@@ -134,45 +77,29 @@ internal object AnyTvPersonalLinks {
         }
     }
 
-    suspend fun resolve(apiKey: String, title: StreamingTitle, packageName: String):
+    /** Resolve official title link through the AnyTV backend. No client API key. */
+    suspend fun resolve(title: StreamingTitle, packageName: String):
         AnyTvPersonalResult? = withContext(Dispatchers.IO) {
         val provider = providerForPackage(packageName) ?: return@withContext null
-        require(apiKey.isNotBlank()) { "Configure sua chave da API de streaming." }
         require(title.id > 0 && title.media in setOf("movie", "tv")) {
             "Identificador inválido."
         }
-        val wanted = title.media + "/" + title.id
-        val remote = URL("https://api.movieofthenight.com/v4/shows/" +
-            title.media + "%2F" + title.id + "?country=br&series_granularity=show")
-        val conn = remote.openConnection() as HttpURLConnection
+        val url = URL("https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/resolve/" +
+            title.media + "/" + title.id + "/" + provider)
+        val conn = url.openConnection() as HttpURLConnection
         try {
             conn.connectTimeout = 5000
             conn.readTimeout = 8000
             conn.setRequestProperty("Accept", "application/json")
-            conn.setRequestProperty("X-API-Key", apiKey)
             val status = conn.responseCode
-            if (status == 401 || status == 403)
-                error("Chave Movie of the Night não autorizada. Verifique nas configurações.")
-            if (status !in 200..299) error("Catálogo de links indisponível (HTTP " + status + ").")
+            if (status == 404) return@withContext AnyTvPersonalResult.NotInSubscription
+            if (status == 409) return@withContext AnyTvPersonalResult.NoSupportedLink
+            if (status !in 200..299) return@withContext null
             val response = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-            if (response.optString("tmdbId") != wanted)
-                error("O identificador do título não corresponde ao filme escolhido.")
-            val options = response.optJSONObject("streamingOptions")
-                ?.optJSONArray("br") ?: JSONArray()
-            val offers = (0 until options.length()).mapNotNull { i ->
-                options.optJSONObject(i)
-            }.filter { offer ->
-                offer.optJSONObject("service")?.optString("id") == provider &&
-                    offer.optString("type") in setOf("subscription", "free") &&
-                    (!offer.has("addon") || offer.isNull("addon"))
-            }
-            if (offers.isEmpty()) return@withContext AnyTvPersonalResult.NotInSubscription
-            val links = offers.mapNotNull { validatedLink(provider, it.optString("link")) }
-                .distinct()
-            when (links.size) {
-                1 -> AnyTvPersonalResult.Direct(links.single())
-                else -> AnyTvPersonalResult.NoSupportedLink
-            }
+            if (response.optString("status") != "link_candidate") return@withContext null
+            val candidate = validatedLink(provider, response.optString("url"))
+                ?: return@withContext AnyTvPersonalResult.NoSupportedLink
+            AnyTvPersonalResult.Direct(candidate)
         } finally {
             conn.disconnect()
         }
