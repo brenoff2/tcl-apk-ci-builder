@@ -79,6 +79,7 @@ jobs:
           TCL_V30: '1'
           TCL_V33: '1'
           TCL_V34: '1'
+          TCL_V35: '1'
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_rescue_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
@@ -157,6 +158,7 @@ jobs:
           TCL_TV_V16: '1'
           TCL_TV_V21: '1'
           TCL_TV_V22: '1'
+          TCL_TV_V23: '1'
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_safe_tv_companion.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -k TvUpdateAndBluetooth -v
