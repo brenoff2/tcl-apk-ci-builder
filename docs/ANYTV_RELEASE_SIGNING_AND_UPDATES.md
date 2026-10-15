@@ -1,5 +1,19 @@
 # AnyTV — releases, assinaturas e atualizações
 
+## Android 2.7 — correção de protocolo de digitação (15/10/2026 UTC)
+
+- [Investigação e implementação](https://github.com/brenoff2/tcl-apk-ci-builder/commit/e673f75acceb941cf4ae2e85156c29941fee62dc): baseada no [PR #25 do tronikos/androidtvremote2](https://github.com/tronikos/androidtvremote2/pull/25), no [código oficial send_text](https://github.com/tronikos/androidtvremote2/blob/main/src/androidtvremote2/remote.py) e nas [limitações documentadas no issue #32](https://github.com/tronikos/androidtvremote2/issues/32).
+- O editor passa a transmitir **o texto completo como um único RemoteImeBatchEdit**, não diferenças por caractere, que são substituídas em alguns apps. A UI não afirma que o texto apareceu na TV: apenas que o comando foi enviado à conexão.
+- O código de transporte obtém `ime_counter` e `field_counter` enviados pelo serviço remoto; antes de recebê-los usa 0/0 como a referência oficial, **não contadores inventados**. Também reseta os contadores quando a conexão é finalizada. O cursor IME usa `max(0, len(texto)-1)`.
+- O envio deve ocorrer quando um campo de pesquisa/texto está focado na TV. Algumas interfaces não aceitam edição enquanto o teclado virtual da TV está visível; nem todo aplicativo segue a mesma política de adicionar/substituir texto. Nenhum teste de integração real em uma TV TCL foi executado.
+- Aplicativo `com.tclremote.livre`, `versionName=2.7-AnyTV`, `versionCode=27`; certificado SHA256 original `df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8`.
+- APK [AnyTV 2.7](https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tcl-phone-v2.7/Controle_TCL_Livre_v2.7.apk), SHA-256 `66f76ba5f486c9d91d954c75b7d27358399e7a18e775ef9e3546e07286d888cc`.
+- `updates/android/current.apk` atualizado para o binário acima, histórico preservado em `updates/android/AnyTV-v2.7.apk`; cópias assinadas no Drive `AnyTV - Releases/android/`. Publicação e comparação de hash confirmadas no [workflow](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/38662701238).
+- **Próxima validação necessária:** abrir um campo de busca na TV, mantê-lo selecionado, enviar "Teste AnyTV 27" pelo editor e observar a inserção. Repetir com o teclado virtual da TV oculto, se houver falha.
+
+---
+
+
 ## Android 2.6 — correções reais de interface e texto (15/10/2026 UTC)
 
 - Código fonte: commit `fa9e15db78c589dde421e5caa26a51ecb155df94` (mais correções de CI), exclusivamente no branch `feat/tcl-v22-updates-back-bluetooth`. O branch `main` não foi alterado.
