@@ -12,7 +12,7 @@
     {
       "binding": "DB",
       "database_name": "anytv-link-resolver",
-      "database_id": "REPLACE_WITH_D1_DATABASE_UUID",
+      "database_id": "9bab6598-d019-4e88-8b29-a327ff0cfd00",
       "migrations_dir": "migrations"
     }
   ],
