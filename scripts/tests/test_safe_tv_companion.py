@@ -73,7 +73,7 @@ class SafeTvCompanionTests(unittest.TestCase):
         self.assertIn('android:name="com.disney.disneyplus"', self.manifest)
 
     def test_provider_link_validation(self):
-        for marker in ("validProviderTitleLink(", "openProviderTitle(", "www.netflix.com",
+        for marker in ("validProviderTitleLink(", "openProviderTitle(", "www.netflix.com", "app.primevideo.com", "getEncodedQuery()",
                        "www.primevideo.com", "tv.apple.com", "play.hbomax.com",
                        "nflx://www.netflix.com/title/", "direct.setPackage(pkg)"):
             self.assertIn(marker, self.bridge)
