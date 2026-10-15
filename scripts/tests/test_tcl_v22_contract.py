@@ -52,16 +52,18 @@ class PhoneUpdatesAndBack(unittest.TestCase):
         self.assertIn("Modifier.size(size * .19f)", stage)
         self.assertIn("modifier = Modifier.weight(1f).fillMaxWidth()", self.skin)
         self.assertIn("coerceAtMost(stageHeight)", self.skin)
-        self.assertIn("var liveTyping by rememberSaveable { mutableStateOf(false) }", self.skin)
+        self.assertNotIn("var liveTyping by", self.skin)
+        self.assertIn("fun sendDraft()", self.skin)
+        self.assertIn("Comando transmitido.", self.skin)
         self.assertIn('Text("Enviar")', self.skin)
-        self.assertIn("if (!liveTyping) onSendText(draft)", self.skin)
+        self.assertIn("onSendText(draft)", self.skin)
         splash = (UI / "SplashScreen.kt").read_text()
         self.assertIn('text = "v$installedVersion"', splash)
         self.assertNotIn("Android TV Remote", splash)
 
     def test_single_package_higher_version(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.apk)
-        self.assertIn("versionCode = 26", self.apk)
+        self.assertIn("versionCode = 27", self.apk)
 
 
 class TvUpdateAndBluetooth(unittest.TestCase):

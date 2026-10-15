@@ -98,7 +98,7 @@ keyboard_patch = """    fun sendText(text: String, submit: Boolean) {
         // Resending the entire buffer at every edit can duplicate characters.
         keyAndTextWrites.trySend {
             app.androidRemoteTv?.sendText(
-                text, ++imeCounter, resolvedImeFieldCounter()
+                text, imeCounter, resolvedImeFieldCounter()
             )
         }
     }
@@ -118,6 +118,13 @@ keyboard_patch = """    fun sendText(text: String, submit: Boolean) {
 """
 viewmodel.write_text(vm_text[:first] + keyboard_patch + vm_text[last:])
 
+# The Android TV remote v2 IME counters are supplied by the television.
+# Do not generate one locally before receiving the first TV batch edit.
+replace_once(viewmodel,
+    "val currentCounter = ++imeCounter",
+    "val currentCounter = imeCounter")
+
+
 session = REMOTE / "RemoteSession.java"
 replace_once(session,
     """        byte[] part1 = mMessageManager.createImeText(
@@ -133,6 +140,19 @@ replace_once(session,
         byte[] combined = mMessageManager.createImeBatchEditCompatV2(
                 text, resolvedIme, resolvedField);
 """)
+
+# Matches tronikos/androidtvremote2 PR #25: zero until remote_ime_batch_edit
+# supplies counters. Earlier arbitrary values could be silently ignored by
+# the TV. Reset them on disconnect to avoid state from an earlier session.
+replace_once(session,
+    "int resolvedIme = syncedImeCounter >= 0 ? syncedImeCounter : Math.max(imeCounter, 0);",
+    "int resolvedIme = syncedImeCounter >= 0 ? syncedImeCounter : 0;")
+replace_once(session,
+    "int resolvedField = syncedFieldCounter >= 0 ? syncedFieldCounter : Math.max(fieldCounter, 0);",
+    "int resolvedField = syncedFieldCounter >= 0 ? syncedFieldCounter : 0;")
+replace_once(session,
+    "        syncedVoiceSessionId = -1;\n        if (packetParser != null)",
+    "        syncedVoiceSessionId = -1;\n        syncedImeCounter = -1;\n        syncedFieldCounter = -1;\n        if (packetParser != null)")
 
 message = REMOTE / "RemoteMessageManager.java"
 replace_once(message,
@@ -161,5 +181,6 @@ assert 'applicationId = "com.tclremote.livre.preview"' not in gradle.read_text()
 assert "RemoteDirection.START_LONG" in viewmodel.read_text()
 assert "RemoteDirection.END_LONG" in viewmodel.read_text()
 assert "byte[] combined = mMessageManager.createImeBatchEditCompatV2(" in session.read_text()
+assert "int resolvedIme = syncedImeCounter >= 0 ? syncedImeCounter : 0;" in session.read_text()
 assert "TclResponsivePad.kt" in {p.name for p in UI.glob("*.kt")}
 print("TCL_V21_PAD_IME_HOLD_PATCH_OK")

@@ -26,7 +26,7 @@ class ApprovedUiContract(unittest.TestCase):
         expected = ("com.tclremote.livre" if os.environ.get("TCL_RELEASE_SINGLE_APP") == "1"
                     else "com.tclremote.livre.preview")
         self.assertIn('applicationId = "' + expected + '"', self.gradle)
-        self.assertIn("versionCode = " + ("26" if os.environ.get("TCL_V26") == "1" else "25" if os.environ.get("TCL_V25") == "1" else "24" if os.environ.get("TCL_V24") == "1" else "23" if os.environ.get("TCL_V23") == "1" else "22" if os.environ.get("TCL_V22") == "1" else "21" if os.environ.get("TCL_V21") == "1" else "20"), self.gradle)
+        self.assertIn("versionCode = " + ("27" if os.environ.get("TCL_V27") == "1" else "26" if os.environ.get("TCL_V26") == "1" else "25" if os.environ.get("TCL_V25") == "1" else "24" if os.environ.get("TCL_V24") == "1" else "23" if os.environ.get("TCL_V23") == "1" else "22" if os.environ.get("TCL_V22") == "1" else "21" if os.environ.get("TCL_V21") == "1" else "20"), self.gradle)
 
     def test_has_all_screenshot_sections(self):
         sections = ["TclApprovedHeader(", "TclInstalledAppsBar(",

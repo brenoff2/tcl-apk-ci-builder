@@ -632,28 +632,17 @@ private fun TclTextInputDialog(
     onSendText: (String) -> Unit
 ) {
     var draft by rememberSaveable { mutableStateOf("") }
-    var liveTyping by rememberSaveable { mutableStateOf(false) }
     var note by remember { mutableStateOf<String?>(null) }
 
-    fun changeText(value: String) {
-        val previous = draft
-        if (value == previous) return
-        draft = value
-        note = null
-        if (!liveTyping) return
-
-        // Deliver only the changed portion to the Android TV Remote v2 IME.
-        // Resending the entire buffer at every keystroke can duplicate text.
-        when {
-            value.startsWith(previous) -> onAppendText(value.substring(previous.length))
-            previous.startsWith(value) -> onBackspace(previous.length - value.length)
-            else -> {
-                // Composing text, selection replacement or pasted correction:
-                // clear the previously mirrored buffer and insert the new one.
-                if (previous.isNotEmpty()) onBackspace(previous.length)
-                if (value.isNotEmpty()) onAppendText(value)
-            }
+    fun sendDraft() {
+        if (draft.isBlank()) {
+            note = "Digite algum texto antes de enviar."
+            return
         }
+        // TV Remote v2: send one complete batch, not per-character deltas.
+        onSendText(draft)
+        note = "Comando transmitido. Se não aparecer na TV, selecione um campo " +
+            "de texto e tente com o teclado virtual da TV oculto."
     }
 
     AlertDialog(
@@ -662,62 +651,26 @@ private fun TclTextInputDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    "Abra e selecione primeiro um campo de pesquisa ou texto na TV. " +
-                    "O teclado do celular não controla menus que não aceitam digitação.",
+                    "Selecione um campo de pesquisa ou texto na TV. O protocolo " +
+                        "pode ignorar o texto quando não há campo ativo. " +
+                        "Alguns aplicativos exigem ocultar o teclado virtual da TV.",
                     color = TclMuted
                 )
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Digitar na TV ao vivo", color = TclText)
-                    Switch(
-                        checked = liveTyping,
-                        onCheckedChange = { next ->
-                            if (next && !liveTyping && draft.isNotEmpty()) {
-                                onSendText(draft)
-                                note = "Texto enviado ao campo que estiver ativo na TV."
-                            }
-                            liveTyping = next
-                        }
-                    )
-                }
                 OutlinedTextField(
                     value = draft,
-                    onValueChange = ::changeText,
+                    onValueChange = { draft = it; note = null },
                     label = { Text("Digite ou cole aqui") },
                     minLines = 2,
                     maxLines = 5,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    keyboardActions = KeyboardActions(onDone = {
-                        if (draft.isNotBlank() && !liveTyping) {
-                            onSendText(draft)
-                            note = "Comando enviado. Verifique o campo selecionado na TV."
-                        }
-                    }),
+                    keyboardActions = KeyboardActions(onDone = { sendDraft() }),
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (note != null) Text(note.orEmpty(), color = TclBlue)
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    if (draft.isNotBlank()) {
-                        if (!liveTyping) onSendText(draft)
-                        note = if (liveTyping) {
-                            "Digitação ao vivo ativada; o texto já foi transmitido enquanto você digitava."
-                        } else {
-                            "Comando enviado. Verifique o campo selecionado na TV."
-                        }
-                    } else {
-                        note = "Digite algum texto antes de enviar."
-                    }
-                }
-            ) {
-                Text("Enviar")
-            }
+            TextButton(onClick = { sendDraft() }) { Text("Enviar") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Fechar") }
