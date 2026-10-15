@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { handleRequest, inspectOffers, validateLink } from "./worker.mjs";
+import { handleRequest, catalogRequest, inspectOffers, validateLink } from "./worker.mjs";
 
 const FIX = Object.freeze({
   disney: "https://www.disneyplus.com/browse/entity-8f08a8df-8b2f-49e1-9130-1e842b90f185",
@@ -253,4 +253,48 @@ test("health probe does not reveal private configuration", async () => {
   assert.equal(r.status, 200);
   const text = await r.text();
   assert.equal(text.includes("private-pilot-access"), false);
+});
+
+test("catalog proxy refuses to run without Cloudflare secret", async () => {
+  const response = await catalogRequest(
+    new Request("https://anytv.invalid/v1/catalog/genre/movie/list"),
+    { RATE_LIMIT: { limit: async () => ({ success: true }) }, DB: {} }
+  );
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).status, "catalog_not_configured");
+});
+
+test("catalog proxy rejects arbitrary paths and regions without contacting TMDB", async () => {
+  const env = { TMDB_READ_TOKEN: "server-only", DB: {}, RATE_LIMIT: { limit: async () => ({ success: true }) } };
+  for (const url of [
+    "/v1/catalog/evil/host",
+    "/v1/catalog/search/movie?language=en-US&query=x",
+    "/v1/catalog/discover/movie?watch_region=US",
+    "/v1/catalog/movie/0/external_ids",
+    "/v1/catalog/search/movie?query=" + "x".repeat(91),
+  ]) {
+    const response = await catalogRequest(new Request("https://anytv.invalid" + url), env);
+    assert.equal(response.status, 400, url);
+  }
+});
+
+test("catalog proxy keeps TMDB secret on server and caches read-only responses", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "secret-server-only";
+  let calls = 0;
+  const request = new Request("https://anytv.invalid/v1/catalog/genre/movie/list?language=pt-BR");
+  const dependencies = { now: () => Date.parse("2026-10-15T12:00:00Z"), fetch: async (url, init) => {
+    calls++;
+    assert.equal(new URL(url).hostname, "api.themoviedb.org");
+    assert.equal(init.headers.Authorization, "Bearer secret-server-only");
+    return new Response(JSON.stringify({ genres: [{ id: 28, name: "Ação" }] }), { status: 200 });
+  }};
+  for (let i = 0; i < 2; i++) {
+    const response = await catalogRequest(request, env, dependencies);
+    assert.equal(response.status, 200);
+    const body = await response.text();
+    assert.equal(body.includes("secret-server-only"), false);
+    assert.match(body, /genres/);
+  }
+  assert.equal(calls, 1);
 });
