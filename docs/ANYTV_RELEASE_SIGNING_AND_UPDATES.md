@@ -298,3 +298,11 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 - Verificação de presença do GitHub Actions Secret `38819572673`: `ANYTV_MOVIE_API_KEY` presente; `ANYTV_TMDB_READ_TOKEN` e `CLOUDFLARE_API_TOKEN` ausentes. Nenhum valor foi exibido.
 - Adicionado `.github/workflows/anytv-private-secrets-provision.yml`, commit `bfef26b1902a99404b1a499e786798ffdc8ca8e6`: execução **manual** e fail-closed, exige todos os três secrets já configurados no GitHub; transfere Movie of the Night e TMDB para o Worker por API Cloudflare sem imprimir valores, verifica somente nomes e exige Worker privado. Não altera as chaves de assinatura Android, não disponibiliza Worker publicamente nem publica APK.
 - **Estado exato**: fluxo de transferência preparado, **não executado**, pois os dois pré-requisitos continuam faltando. Não declarar implantação completa nem pedir inserção de tokens no APK. Depois da provisão é necessário decidir autenticação de dispositivo/abuso, validar catálogo e resolução em produção com segurança e distribuir via OTA (não reinstalação manual).
+
+
+### Proteção do catálogo contra consumo ilimitado — 15/10/2026
+
+- Auditoria P0 mostrou que `catalogRequest()` possuía rate limit por IP e cache, mas não reservava quota mensal antes de acessar TMDB. Uma rota pública poderia gerar chamadas sem o teto do resolvedor. Corrigido para chamar `reserveQuota()` após cache miss e antes de cada request upstream, reutilizando teto `MAX_UPSTREAM_CALLS_MONTH` existente. Commits `5c3241f7996d83adefd53f3a74315655cede7878` e teste de limite `0d3d6e81b1480d6a71a4942d47cbb00fd84ae117`.
+- Teste GitHub Actions offline `38822990768`: **success**, incluindo teste de bloqueio HTTP 429 ao atingir quota, sintaxe Node, testes de segurança e bundle dry-run Wrangler.
+- Mesmo código validado atualizado no Worker **privado** `anytv-link-resolver-pilot`; API Cloudflare respondeu HTTP 200/success=true; readback `subdomain.enabled=false`. Não exposto em domínio público e não publicado APK novo.
+- Continuidade condicionada a secrets seguros TMDB/MovieOfTheNight + autorização real para acesso de clientes, teste end-to-end do catálogo/provedores e somente então novo OTA. Não trocar as assinaturas Android, não pedir reinstalação manual e não confundir CI verde com streaming funcional.
