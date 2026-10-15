@@ -182,3 +182,10 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 - Endpoint `workers.dev` **DESABILITADO**, conforme GET `/subdomain` = `{enabled:false,previews_enabled:false}`; **nenhum hostname público configurado**. Não anunciar como API funcional até segredos e autenticação apropriados estarem presentes, uma rota segura estar definida e testes ao vivo aprovados.
 - Cloudflare MCP comprovou D1 criado e tabelas `monthly_quota`, `link_cache`, índice `idx_anytv_cache_expiry`; configurações vinculadas no arquivo versionado `anytv-resolver/wrangler.jsonc`. Não reutilizar credenciais nem recursos CLFCJ.
 - **Próxima etapa obrigatória:** configurar segredo comercial no Cloudflare por canal seguro sem expor seu valor; vincular RATE_LIMIT apropriado; substituir autenticação piloto por solução de identidade/dispositivo não compartilhada no APK, respeitar licenças; somente depois habilitar rota pública e integrar cliente/Connect. Não modificar aplicativos já instalados enquanto assinatura e distribuição nova não estiverem verificadas.
+
+
+### Worker Cloudflare — rate limit implantado e conferido (15/10/2026)
+
+- Reenvio do mesmo código `anytv-resolver/src/worker.mjs` com três bindings no Worker `anytv-link-resolver-pilot`: `DB` (D1 `anytv-link-resolver`), `MAX_UPSTREAM_CALLS_MONTH` (texto `200`) e `RATE_LIMIT` (`ratelimit`, namespace `275913`, limite nominal `20` por 60 segundos). API de upload retornou HTTP 200 / `success:true`.
+- Readback remoto `GET /workers/scripts/anytv-link-resolver-pilot/settings` confirmou exatamente os tipos `DB:d1`, `MAX_UPSTREAM_CALLS_MONTH:plain_text`, `RATE_LIMIT:ratelimit`. `GET /subdomain` confirmou `enabled:false`. Não foram alterados os Workers CLFCJ.
+- O rate limit é aproximação de tráfego e **não substitui** quota mensal atômica do D1, autenticação e checagem da franquia contratada. Segredos `ANYTV_MOVIE_API_KEY` e autenticação de cliente permanecem sem configuração comprovada neste Worker. Não habilitar rota pública nem declarar funcionamento end-to-end.
