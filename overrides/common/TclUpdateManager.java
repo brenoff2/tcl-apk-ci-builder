@@ -75,8 +75,11 @@ public final class TclUpdateManager {
         new Thread(() -> {
             try {
                 PackageManager pm = app.getPackageManager();
+                // Some Android TV PackageManagers omit signingInfo for archive APKs.
+                // Ask for both formats and retain a checked legacy fallback.
                 int flags = Build.VERSION.SDK_INT >= 28 ?
-                        PackageManager.GET_SIGNING_CERTIFICATES : PackageManager.GET_SIGNATURES;
+                        (PackageManager.GET_SIGNING_CERTIFICATES | PackageManager.GET_SIGNATURES)
+                        : PackageManager.GET_SIGNATURES;
                 PackageInfo installed = pm.getPackageInfo(pkg, flags);
                 String signer = sha256(currentSigner(installed));
                 boolean tv = TV_PACKAGE.equals(pkg);
@@ -134,7 +137,8 @@ public final class TclUpdateManager {
                     post(activity, callback, "O aplicativo já está atualizado.");
                     return;
                 }
-                if (!MessageDigest.isEqual(currentSigner(installed), currentSigner(next))) {
+                if (!MessageDigest.isEqual(currentSigner(installed),
+                        archiveSigner(pm, apk.getAbsolutePath(), next, pkg))) {
                     apk.delete();
                     throw new SecurityException(
                             "Assinatura diferente da instalada. Atualização bloqueada sem desinstalar.");
@@ -198,12 +202,37 @@ public final class TclUpdateManager {
     }
 
     private static byte[] currentSigner(PackageInfo info) {
-        Signature[] signatures = Build.VERSION.SDK_INT >= 28
-                ? info.signingInfo.getApkContentsSigners() : info.signatures;
-        if (signatures == null || signatures.length != 1) {
-            throw new SecurityException("Certificado ausente ou assinatura múltipla incompatível.");
+        // The Android TV archive parser can return null signingInfo even
+        // when the downloaded APK has a valid v1/v2/v3 signature.
+        Signature[] signatures = null;
+        if (info != null && Build.VERSION.SDK_INT >= 28 && info.signingInfo != null) {
+            signatures = info.signingInfo.getApkContentsSigners();
+        }
+        if ((signatures == null || signatures.length == 0) && info != null) {
+            signatures = info.signatures;
+        }
+        if (signatures == null || signatures.length != 1 || signatures[0] == null) {
+            throw new SecurityException(
+                    "Certificado do APK não disponível neste Android. Instalação bloqueada.");
         }
         return signatures[0].toByteArray();
+    }
+
+    private static byte[] archiveSigner(PackageManager pm, String fileName,
+                                        PackageInfo archive, String packageName) {
+        try {
+            return currentSigner(archive);
+        } catch (SecurityException notAvailable) {
+            // GET_SIGNING_CERTIFICATES returns null on some TV firmware
+            // builds. Retry the deprecated but supported v1 signature field.
+            PackageInfo legacy = pm.getPackageArchiveInfo(
+                    fileName, PackageManager.GET_SIGNATURES);
+            if (legacy == null || !packageName.equals(legacy.packageName)) {
+                throw new SecurityException(
+                        "Pacote de atualização não verificável nesta TV.");
+            }
+            return currentSigner(legacy);
+        }
     }
 
     private static String sha256(byte[] bytes) throws Exception {
