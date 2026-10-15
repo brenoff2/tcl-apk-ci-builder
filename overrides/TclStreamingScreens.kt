@@ -156,6 +156,76 @@ private object StreamingCatalog {
         }
     }
 
+    /**
+     * Non-authenticated title-ID crosswalk. TMDB supplies a Wikidata QID,
+     * Wikidata stores provider IDs. No IDs are guessed from a film name.
+     */
+    suspend fun titleDeepLink(token: String, title: StreamingTitle, packageName: String): String? =
+        withContext(Dispatchers.IO) {
+            val provider = when (packageName) {
+                "com.netflix.ninja", "com.netflix.mediaclient" -> "netflix"
+                "com.disney.disneyplus" -> "disney"
+                "com.amazon.amazonvideo.livingroom", "com.amazon.avod.thirdpartyclient" -> "prime"
+                "com.apple.atve.androidtv.appletv" -> "apple"
+                "com.wbd.stream" -> "max"
+                else -> return@withContext null
+            }
+            val ids = get(token, title.media + "/" + title.id + "/external_ids")
+            val qid = ids.optString("wikidata_id").takeIf {
+                it.matches(Regex("Q[1-9][0-9]{0,11}"))
+            } ?: return@withContext null
+            val connection = URL("https://www.wikidata.org/wiki/Special:EntityData/" +
+                    qid + ".json").openConnection() as HttpURLConnection
+            val claims = try {
+                connection.connectTimeout = 5000
+                connection.readTimeout = 8000
+                connection.setRequestProperty("Accept", "application/json")
+                connection.setRequestProperty("User-Agent",
+                    "AnyTV/2.9.3 (https://github.com/brenoff2/tcl-apk-ci-builder)")
+                if (connection.responseCode != 200) return@withContext null
+                val entity = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                    .optJSONObject("entities")?.optJSONObject(qid)
+                    ?: return@withContext null
+                entity.optJSONObject("claims") ?: return@withContext null
+            } finally {
+                connection.disconnect()
+            }
+            fun uniqueClaim(property: String): String? {
+                val statements = claims.optJSONArray(property) ?: return null
+                val values = (0 until statements.length()).mapNotNull { i ->
+                    val statement = statements.optJSONObject(i) ?: return@mapNotNull null
+                    if (statement.optString("rank") == "deprecated") return@mapNotNull null
+                    val snak = statement.optJSONObject("mainsnak") ?: return@mapNotNull null
+                    if (snak.optString("snaktype") != "value") return@mapNotNull null
+                    snak.optJSONObject("datavalue")?.optString("value")
+                        ?.takeIf { it.isNotBlank() }
+                }.distinct()
+                return values.singleOrNull()
+            }
+            when (provider) {
+                "netflix" -> uniqueClaim("P1874")
+                    ?.takeIf { it.matches(Regex("[0-9]{6,9}")) }
+                    ?.let { "https://www.netflix.com/title/" + it }
+                "disney" -> uniqueClaim("P13902")
+                    ?.takeIf { it.matches(Regex("entity-[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}")) }
+                    ?.let { "https://www.disneyplus.com/browse/" + it }
+                "prime" -> uniqueClaim("P14462")
+                    ?.takeIf { it.matches(Regex("amzn[0-9]\\.dv\\.gti\\.[a-f0-9-]{36}")) }
+                    ?.let { "https://www.primevideo.com/detail/" + it }
+                    ?: uniqueClaim("P8055")
+                        ?.takeIf { it.matches(Regex("B[0-9A-Z]{9}")) }
+                        ?.let { "https://www.primevideo.com/detail/" + it }
+                "apple" -> uniqueClaim(if (title.media == "tv") "P9751" else "P9586")
+                    ?.takeIf { it.matches(Regex("umc\\.cmc\\.[a-z0-9]{22,25}")) }
+                    ?.let { "https://tv.apple.com/" +
+                        (if (title.media == "tv") "show/" else "movie/") + it }
+                "max" -> uniqueClaim("P8298")
+                    ?.takeIf { it.matches(Regex("(movie|show)/[a-f0-9-]{36}")) }
+                    ?.let { "https://play.hbomax.com/" + it }
+                else -> null
+            }
+        }
+
     suspend fun discover(
         token: String, app: String, media: String, page: Int, genre: Int, query: String
     ): StreamingResults = withContext(Dispatchers.IO) {
@@ -304,8 +374,14 @@ internal fun TclStreamingScreens(
         titleActionFeedback = "Enviando comando à TCL…"
         scope.launch {
             try {
-                val mode = TclTvAppApi.searchTitle(host, pairing, packageName, title.name)
+                val link = runCatching {
+                    StreamingCatalog.titleDeepLink(token, title, packageName)
+                }.getOrNull()
+                val mode = if (link != null)
+                    TclTvAppApi.openTitle(host, pairing, packageName, link, title.name)
+                else TclTvAppApi.searchTitle(host, pairing, packageName, title.name)
                 titleActionFeedback = when (mode) {
+                    "detail_requested" -> "Link da ficha enviado ao streaming. Confira o título na TCL."
                     "search" -> "Busca enviada ao aplicativo na TCL. Confira o resultado na TV."
                     "opened_app" -> "Aplicativo aberto na TCL. O AnyTV Connect instalado " +
                         "não conseguiu abrir a ficha exata deste título; faça a busca no serviço."
