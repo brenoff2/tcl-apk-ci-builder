@@ -94,6 +94,20 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('if (open(host, code, packageName)) "opened_app"', self.apps)
         self.assertIn('if (failure?.message?.contains("Código incorreto") == true) throw failure', self.apps)
 
+    def test_licensed_source_offline_link_validation(self):
+        # CI exercises the candidate commercial-source parser without API secrets.
+        from scripts.audit_movieofthenight import inspect_link, collect_offers
+        self.assertEqual(
+            inspect_link("netflix", "https://www.netflix.com/title/80175798"),
+            "candidate")
+        self.assertEqual(
+            inspect_link("disney", "https://www.disneyplus.com/browse/entity-8f08a8df-8b2f-49e1-9130-1e842b90f185"),
+            "candidate")
+        self.assertFalse(collect_offers({"streamingOptions": {"us": []}}, "prime")["found"])
+        self.assertEqual(
+            inspect_link("netflix", "https://evil.example/title/80175798"),
+            "unsafe")
+
     def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
         self.assertIn("versionCode = 33", self.gradle)
