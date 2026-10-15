@@ -357,12 +357,11 @@ internal fun TclStreamingScreens(
                     Row(modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        TextButton(onClick = {
+                        IconButton(onClick = {
                             selected = null; details = null; message = null
-                        }, modifier = Modifier.height(40.dp),
-                            contentPadding = PaddingValues(horizontal = 3.dp)) {
-                            Text("‹", fontSize = 24.sp)
-                        }
+                        }, modifier = Modifier.size(40.dp).semantics {
+                            contentDescription = "Voltar aos serviços"
+                        }) { Text("‹", fontSize = 24.sp) }
                         OfficialTvIcon(app, 32.dp)
                         Text(app.name, fontWeight = FontWeight.SemiBold,
                             modifier = Modifier.weight(1f).padding(start = 3.dp),
@@ -373,11 +372,10 @@ internal fun TclStreamingScreens(
                             modifier = Modifier.height(40.dp)) {
                             Text("Abrir na TCL", fontSize = 12.sp, maxLines = 1)
                         }
-                        TextButton(onClick = onDismiss,
-                            contentPadding = PaddingValues(horizontal = 3.dp),
-                            modifier = Modifier.height(40.dp)) {
-                            Text("×", fontSize = 24.sp)
-                        }
+                        IconButton(onClick = onDismiss,
+                            modifier = Modifier.size(40.dp).semantics {
+                                contentDescription = "Fechar Streaming"
+                            }) { Text("×", fontSize = 24.sp) }
                     }
                     if (editToken || token.isBlank()) {
                         Text("Para consultar filmes e séries reais, configure um token de leitura " +
