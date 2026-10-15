@@ -40,6 +40,14 @@ jobs:
           python3 scripts/apply_tcl_sticky_controls.py
           python3 scripts/apply_anytv_brand.py
           python3 -c 'import pathlib, xml.etree.ElementTree as ET; files=list(pathlib.Path("source/app/src/main/res").glob("values*/tcl_localization.xml")); assert len(files)==16, len(files); [ET.parse(p) for p in files]; print("TCL_I18N_XML_VALID",len(files))'
+      - name: Validate replacement signer updater routing (phone)
+        run: |
+          set -euo pipefail
+          cmp overrides/common/TclUpdateManager.java source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q '0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c' source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q 'suffix = "android/cert2026"' source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q 'suffix = "tv/cert2026"' source/app/src/main/java/tcl/shared/TclUpdateManager.java
       - name: Validar regressao e atualizacao segura
         env:
           TCL_APPROVED_UI: '1'
@@ -108,6 +116,14 @@ jobs:
           git clone --depth 1 https://github.com/fezdk/bluetooth-quick-connect.git tv-source
           test "$(git -C tv-source rev-parse HEAD)" = "508b5f148e1945911085f1789051c59d76c0278b"
           python3 scripts/prepare_companion_safe.py
+      - name: Validate replacement signer updater routing (TV)
+        run: |
+          set -euo pipefail
+          cmp overrides/common/TclUpdateManager.java tv-source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' tv-source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q '0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c' tv-source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q 'suffix = "android/cert2026"' tv-source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q 'suffix = "tv/cert2026"' tv-source/app/src/main/java/tcl/shared/TclUpdateManager.java
       - name: Auditar fonte e permissoes
         env:
           TCL_TV_V14: '1'
