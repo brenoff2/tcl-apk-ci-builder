@@ -39,8 +39,8 @@ public class RemoteImeWireTest {
         assertEquals(177, frame.length);
         assertEquals(frame.length - prefixLength, declaredLength);
         assertEquals((21 << 3) | 2, coded.readTag()); // only remote_ime_batch_edit
-        assertEquals(declaredLength - (coded.getTotalBytesRead() - prefixLength),
-                coded.readByteArray().length); // one batch, no extra key injection
+        assertEquals(171, coded.readByteArray().length); // exactly one batch
+        assertEquals(frame.length, coded.getTotalBytesRead()); // no key injection
         assertEquals(0, coded.readTag());
     }
 }
