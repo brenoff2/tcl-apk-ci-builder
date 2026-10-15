@@ -57,6 +57,13 @@ public final class TclUpdateManager {
             "3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add";
     private static final String TV_CERT_B =
             "8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da";
+    // Permanent replacement identities (2026-10-15); never mix with legacy channels.
+    private static final String PHONE_CERT_MIGRATION =
+            "2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f";
+    private static final String PHONE_CERT_LEGACY =
+            "df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8";
+    private static final String TV_CERT_MIGRATION =
+            "0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c";
 
     public interface Status {
         void show(String value);
@@ -90,12 +97,21 @@ public final class TclUpdateManager {
                         suffix = "tv/cert3382";
                     } else if (TV_CERT_B.equals(signer)) {
                         suffix = "tv/cert8b2b";
+                    } else if (TV_CERT_MIGRATION.equals(signer)) {
+                        suffix = "tv/cert2026";
                     } else {
                         throw new SecurityException(
                                 "Assinatura da TV desconhecida. Não é seguro instalar por cima.");
                     }
                 } else {
-                    suffix = "android";
+                    if (PHONE_CERT_MIGRATION.equals(signer)) {
+                        suffix = "android/cert2026";
+                    } else if (PHONE_CERT_LEGACY.equals(signer)) {
+                        suffix = "android";
+                    } else {
+                        throw new SecurityException(
+                                "Assinatura do celular desconhecida. Atualização bloqueada.");
+                    }
                 }
                 // A real signed APK, not a JSON pointer or version-specific URL.
                 // Each TV signer receives a different current.apk.
