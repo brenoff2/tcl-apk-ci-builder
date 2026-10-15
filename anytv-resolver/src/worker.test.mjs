@@ -209,6 +209,35 @@ test("non-subscription title is a safe, cacheable non-availability response", as
   assert.equal((await result.json()).status, "not_available");
 });
 
+test("missing BR country means unavailable, not an API transport failure", () => {
+  const noBrazil = { tmdbId: "movie/329", streamingOptions: { us: [
+    mockOffer("prime", FIX.prime)] } };
+  assert.deepEqual(inspectOffers(noBrazil, "movie/329", "prime"),
+    { status: "not_available" });
+});
+
+test("short lived cache expires and makes another explicitly budgeted lookup", async () => {
+  const env = makeEnv(2);
+  let calls = 0;
+  let timestamp = Date.parse("2026-10-15T12:00:00Z");
+  const deps = {
+    now: () => timestamp,
+    fetch: async () => {
+      calls++;
+      return response(show("movie/329", [mockOffer("prime", FIX.prime)]));
+    }
+  };
+  const a = await handleRequest(request("/v1/resolve/movie/329/prime"), env, deps);
+  assert.equal(a.status, 200);
+  timestamp += (6 * 3600 + 1) * 1000;
+  const b = await handleRequest(request("/v1/resolve/movie/329/prime"), env, deps);
+  assert.equal(b.status, 200);
+  assert.equal(calls, 2);
+  assert.equal(env._months.get("2026-10"), 2);
+  const c = await handleRequest(request("/v1/resolve/movie/398978/netflix"), env, deps);
+  assert.equal(c.status, 429);
+});
+
 test("health probe does not reveal private configuration", async () => {
   const r = await handleRequest(request("/health", null), {});
   assert.equal(r.status, 200);
