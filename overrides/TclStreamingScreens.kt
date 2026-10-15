@@ -224,7 +224,7 @@ private object StreamingCatalog {
                     ?.let { "https://www.disneyplus.com/browse/" + it }
                 "prime" -> uniqueClaim("P14462")
                     ?.takeIf { it.matches(Regex("amzn[0-9]\\.dv\\.gti\\.[a-f0-9-]{36}")) }
-                    ?.let { "https://www.primevideo.com/detail/" + it }
+                    ?.let { "https://app.primevideo.com/detail?gti=" + it }
                     ?: uniqueClaim("P8055")
                         ?.takeIf { it.matches(Regex("B[0-9A-Z]{9}")) }
                         ?.let { "https://www.primevideo.com/detail/" + it }
