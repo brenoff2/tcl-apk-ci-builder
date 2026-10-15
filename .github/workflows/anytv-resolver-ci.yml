@@ -1,0 +1,38 @@
+name: AnyTV commercial resolver - offline contracts
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths:
+      - 'anytv-resolver/**'
+      - '.github/workflows/anytv-resolver-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check source syntax
+        run: node --check anytv-resolver/src/worker.mjs
+      - name: Validate SQL migration using in-memory SQLite
+        run: |
+          python3 - <<'PY'
+          import sqlite3
+          from pathlib import Path
+          db = sqlite3.connect(':memory:')
+          db.executescript(Path('anytv-resolver/migrations/0001_create_tables.sql').read_text())
+          db.execute('INSERT INTO monthly_quota (month,used) VALUES (?,?)', ('2026-10', 0))
+          r = db.execute('UPDATE monthly_quota SET used=used+1 WHERE month=? AND used<? RETURNING used', ('2026-10', 1)).fetchone()
+          assert r == (1,), r
+          assert db.execute('UPDATE monthly_quota SET used=used+1 WHERE month=? AND used<? RETURNING used', ('2026-10', 1)).fetchone() is None
+          print('SQLITE_QUOTA_ATOMIC_OK')
+          PY
+      - name: Run security, budget, provider and cache regression tests
+        run: node --test anytv-resolver/src/worker.test.mjs
+      - name: Never deploy to production or use API secrets in CI
+        run: echo 'OFFLINE_CONTRACTS_ONLY; no API key, app build or Cloudflare deployment.'
