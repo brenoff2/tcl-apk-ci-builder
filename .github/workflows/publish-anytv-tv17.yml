@@ -1,0 +1,129 @@
+name: Publish signed AnyTV Connect 1.7 compatible TV updates
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-tv17.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: anytv-tv-17-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Validate original installed channels and existing build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/${{ github.repository }}/actions/runs/38696987242 --jq .conclusion)" = success
+          echo 'fbb216082f23278cdccbe0625416376b69143a080010c097d4601cd9322fe86b  updates/tv/cert8b2b/current.apk' | sha256sum -c -
+          echo '62dc534c243059fc5ede6ffa2576700fb69dc852e686ffc49a92258e562d9378  updates/tv/cert3382/current.apk' | sha256sum -c -
+          cmp updates/tv/cert8b2b/current.apk updates/tv/cert8b2b/AnyTV-Connect-v1.6.apk
+          cmp updates/tv/cert3382/current.apk updates/tv/cert3382/AnyTV-Connect-v1.6.apk
+          if gh release view tv-complemento-v1.7 >/dev/null 2>&1; then
+            echo 'Refusing to replace an existing TV 1.7 release'; exit 1
+          fi
+      - name: Download two independently signed and previously verified APKs
+        env:
+          SRC_8B2B: "https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-6b78-820e-a87f-f2e8229da05a/raw?se=2026-10-15T07%3A56%3A27Z&sp=r&sv=2026-02-06&sr=b&scid=af994e76-aaf8-51b5-bc6f-a4a95ad61a27&skoid=4a431cd2-eafd-49c7-90be-bbb4d45e696d&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-15T04%3A13%3A00Z&ske=2026-10-16T04%3A13%3A00Z&sks=b&skv=2026-02-06&sig=wuO1l%2B2uR90udgUQYzWBM41gvLj8w/8P0f1RoerM2Zc%3D"
+          SRC_3382: "https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-4fe0-820e-b100-99f98f93b548/raw?se=2026-10-15T07%3A56%3A27Z&sp=r&sv=2026-02-06&sr=b&scid=f7ac8b4e-8bc2-5baf-b40c-291db6d05b77&skoid=4a431cd2-eafd-49c7-90be-bbb4d45e696d&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-15T03%3A04%3A04Z&ske=2026-10-16T03%3A04%3A04Z&sks=b&skv=2026-02-06&sig=sfym6D0IxofyQjJcDEsM3rxVM6jgFmUGoUS8GQK%2Bu/4%3D"
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          curl --fail --location --retry 3 --connect-timeout 15 --max-time 180 "$SRC_8B2B" -o output/Controle_TCL_TV_v1.7_cert8b2b.apk
+          curl --fail --location --retry 3 --connect-timeout 15 --max-time 180 "$SRC_3382" -o output/Controle_TCL_TV_v1.7_cert3382.apk
+          echo 'dcaf7d599bcdde7649ce300bb12f71d033513fa2a4269d2b70da7a3d8bbc01ab  output/Controle_TCL_TV_v1.7_cert8b2b.apk' | sha256sum -c -
+          echo 'cb4a68ae50d57195e7a2ea3238bac8a3259bebe8cfd036eac5b7eef25e89a030  output/Controle_TCL_TV_v1.7_cert3382.apk' | sha256sum -c -
+      - name: Check package identity, versionCode, signatures and zip alignment
+        shell: bash
+        run: |
+          set -euo pipefail
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          for item in '8b2b 8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da' '3382 3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add'; do
+            type="${item%% *}"; expected_cert="${item##* }"
+            apk="output/Controle_TCL_TV_v1.7_cert${type}.apk"
+            "$bt/aapt" dump badging "$apk" | grep -q "name='com.tclremote.tvcompanion' versionCode='8' versionName='1.7-AnyTV'"
+            "$bt/apksigner" verify --verbose --print-certs "$apk" > "output/verify-${type}.txt"
+            grep -q '^Verifies$' "output/verify-${type}.txt"
+            grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' "output/verify-${type}.txt"
+            grep -qi "$expected_cert" "output/verify-${type}.txt"
+            "$bt/zipalign" -c 4 "$apk"
+          done
+      - name: Create versioned GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create tv-complemento-v1.7 output/Controle_TCL_TV_v1.7_cert8b2b.apk output/Controle_TCL_TV_v1.7_cert3382.apk --target feat/tcl-v22-updates-back-bluetooth --title 'AnyTV Connect 1.7' --notes 'Atualizacao compativel para as duas assinaturas existentes. Adiciona busca delegada pelo titulo usando ACTION_SEARCH; a ficha especifica do filme ainda depende do streaming e de homologacao fisica. Sem desinstalar nem trocar assinatura.' --latest=false
+          mkdir -p released
+          gh release download tv-complemento-v1.7 -p 'Controle_TCL_TV_v1.7_cert*.apk' -D released
+          cmp output/Controle_TCL_TV_v1.7_cert8b2b.apk released/Controle_TCL_TV_v1.7_cert8b2b.apk
+          cmp output/Controle_TCL_TV_v1.7_cert3382.apk released/Controle_TCL_TV_v1.7_cert3382.apk
+      - name: Publish the REAL automatic-update APK paths and metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp output/Controle_TCL_TV_v1.7_cert8b2b.apk updates/tv/cert8b2b/AnyTV-Connect-v1.7.apk
+          cp output/Controle_TCL_TV_v1.7_cert8b2b.apk updates/tv/cert8b2b/current.apk
+          cp output/Controle_TCL_TV_v1.7_cert3382.apk updates/tv/cert3382/AnyTV-Connect-v1.7.apk
+          cp output/Controle_TCL_TV_v1.7_cert3382.apk updates/tv/cert3382/current.apk
+          cat > updates/tv/current.json <<'JSON'
+          {
+            "schema": 1,
+            "platform": "tv",
+            "package": "com.tclremote.tvcompanion",
+            "available": true,
+            "version": "1.7",
+            "tag": "tv-complemento-v1.7",
+            "assets": [
+              {
+                "name": "Controle_TCL_TV_v1.7_cert8b2b.apk",
+                "size": 316095,
+                "digest": "sha256:dcaf7d599bcdde7649ce300bb12f71d033513fa2a4269d2b70da7a3d8bbc01ab",
+                "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.7/Controle_TCL_TV_v1.7_cert8b2b.apk"
+              },
+              {
+                "name": "Controle_TCL_TV_v1.7_cert3382.apk",
+                "size": 316095,
+                "digest": "sha256:cb4a68ae50d57195e7a2ea3238bac8a3259bebe8cfd036eac5b7eef25e89a030",
+                "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.7/Controle_TCL_TV_v1.7_cert3382.apk"
+              }
+            ]
+          }
+          JSON
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f updates/tv/cert8b2b/current.apk updates/tv/cert8b2b/AnyTV-Connect-v1.7.apk updates/tv/cert3382/current.apk updates/tv/cert3382/AnyTV-Connect-v1.7.apk updates/tv/current.json
+          git diff --cached --quiet && { echo 'No update artifacts changed'; exit 1; }
+          git commit -m 'release(tv): compatible signed AnyTV Connect 1.7 becomes current [skip ci]'
+          git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+          cmp output/Controle_TCL_TV_v1.7_cert8b2b.apk updates/tv/cert8b2b/current.apk
+          cmp output/Controle_TCL_TV_v1.7_cert3382.apk updates/tv/cert3382/current.apk
+      - name: Check public automatic-update endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/tv'
+          for item in '8b2b dcaf7d599bcdde7649ce300bb12f71d033513fa2a4269d2b70da7a3d8bbc01ab' '3382 cb4a68ae50d57195e7a2ea3238bac8a3259bebe8cfd036eac5b7eef25e89a030'; do
+            set -- $item; type="$1"; checksum="$2"
+            verified=0
+            for retry in $(seq 1 10); do
+              if curl --fail --silent --show-error --location --max-time 60 "${base}/cert${type}/current.apk?check=${GITHUB_RUN_ID}-${retry}" -o "public-${type}.apk" && test "$(sha256sum "public-${type}.apk" | cut -d' ' -f1)" = "$checksum"; then verified=1; break; fi
+              sleep 4
+            done
+            test "$verified" = 1 || { echo "PUBLIC_CURRENT_NOT_READY: ${type}"; exit 1; }
+          done
+          echo 'ANYTV_CONNECT_1_7_BOTH_SIGNERS_CURRENT_AND_RELEASE_VERIFIED'
