@@ -155,3 +155,12 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 - Em 15/10/2026 a conexão Cloudflare MCP foi verificada pelo método `whoami`; a conta autenticada é `Brenoff@gmail.com's Account`. **Isto comprova apenas acesso MCP**, não ambiente AnyTV implantado nem autorização para usar recursos compartilhados com CLFCJ. Exigir isolamento de recursos e confirmação da conta/ambiente adequado antes de provisionamento persistente.
 - Próximo contrato de UX: escolher filme → selecionar streaming → consultar automaticamente o resolvedor → enviar URL candidata segura para o Connect → tentar abrir ficha no aplicativo oficial, com fallback de busca. Sem formulários de configuração de API e sem afirmar sucesso até teste físico na TCL.
 - Separar fases: (1) canal de atualização seguro com novas assinaturas; (2) implantação do backend AnyTV isolado; (3) autenticação e ligação dos clientes sem segredo embutido; (4) homologação dos deep links nos cinco serviços. Toda mudança de código/APK/Worker deve atualizar este documento com commit, status e teste efetivo.
+
+
+### Inventário Cloudflare MCP verificado — 15/10/2026
+
+- Leitura via conexão oficial Cloudflare MCP (`whoami`, `GET /accounts/{account_id}/workers/scripts`, `GET /accounts/{account_id}/d1/database`) retornou HTTP 200 em ambas as listagens, conta **Brenoff@gmail.com's Account**.
+- Workers existentes: `clfcj-extension-updates`, `clfcj-mcp-gateway`, `clfcj-pjecalc-egress-relay`. **Nenhum Worker `anytv-*` foi encontrado**.
+- Bancos D1 na conta consultada: **lista vazia**. O Worker `anytv-link-resolver-pilot` continua sendo código piloto, NÃO deploy realizado. Este inventário vale exclusivamente para a conta MCP consultada, não para outras contas Cloudflare não conectadas.
+- Decisão de isolamento: **não modificar Worker CLFCJ nem compartilhar seus bindings/segredos**. Para provisionamento persistente do AnyTV, primeiro confirmar conta/ambiente segregado; depois configurar D1, segredos e autenticação sem chave embutida no APK.
+- CI de integração do app no GitHub estava em execução, **não homologada como sucesso** nesta consulta; não publicar OTA nova até sinal verde, assinatura nova verificável e teste físico.
