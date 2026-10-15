@@ -37,7 +37,7 @@ class StreamingScreens(unittest.TestCase):
     def test_search_genres_grid_and_favorites(self):
         for fragment in ("search/$media?", "genre/$media/list", "with_genres=$genre",
                          "offeredInBrazil(", "StreamingFavorite(", "streaming_favorites",
-                         "LazyVerticalGrid(", "Localizar título na TCL"):
+                         "LazyVerticalGrid(", "titleActionFeedback"):
             self.assertIn(fragment, self.screen)
         self.assertIn("searchTitle(", self.apps)
 
@@ -54,9 +54,24 @@ class StreamingScreens(unittest.TestCase):
     def test_tv_16_missing_search_route_falls_back_to_launch(self):
         self.assertIn('path == "/title-search"', self.apps)
         self.assertIn('status == 404 || status == 405', self.apps)
-        self.assertIn('if (mode == "unsupported")', self.apps)
+        self.assertIn('if (mode == "search" || mode == "opened_app")', self.apps)
         self.assertIn('if (open(host, code, packageName)) "opened_app"', self.apps)
         self.assertIn('if (status == 401)', self.apps)
+
+    def test_title_button_keeps_dialog_open_and_displays_true_result(self):
+        self.assertIn('titleActionPending by remember', self.screen)
+        self.assertIn('titleActionFeedback by remember', self.screen)
+        self.assertIn('if (titleActionFeedback != null)', self.screen)
+        self.assertIn('Text(if (titleActionPending) "Abrindo…" else "Abrir na TCL")', self.screen)
+        self.assertIn('A conexão do controle remoto é independente', self.screen)
+        self.assertIn('O AnyTV Connect instalado', self.screen)
+        self.assertIn('Não foi possível abrir: ', self.screen)
+        self.assertNotIn('details = null; detailsPackage = null\n                    if (pkg.isNotBlank()) searchOnTv', self.screen)
+
+    def test_title_fallback_keeps_security_and_basic_launch(self):
+        self.assertIn('val search = runCatching {', self.apps)
+        self.assertIn('if (open(host, code, packageName)) "opened_app"', self.apps)
+        self.assertIn('if (failure?.message?.contains("Código incorreto") == true) throw failure', self.apps)
 
     def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
