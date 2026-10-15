@@ -1,0 +1,54 @@
+name: Verify AnyTV public update endpoint
+on:
+  push:
+    branches: [feat/tcl-v22-updates-back-bluetooth]
+    paths:
+      - updates/android/current.apk
+      - updates/android/current.json
+      - .github/workflows/verify-anytv-update-endpoint.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+      - name: Validate latest version, signed release and local channel
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha='f34510aebb686e88912b56eb6c2a6b655e5365b5d09c4e5ccb6dee97e5941e0d'
+          echo "$sha  updates/android/current.apk" | sha256sum -c -
+          cmp updates/android/current.apk updates/android/AnyTV-v2.9.2.apk
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          j = json.loads(Path('updates/android/current.json').read_text())
+          assert (j['schema'],j['platform'],j['package'],j['available']) == (1,'android','com.tclremote.livre',True)
+          assert (j['version'],j['versionCode'],j['tag']) == ('2.9.2',31,'tcl-phone-v2.9.2')
+          assert len(j['assets']) == 1
+          assert j['assets'][0]['digest'] == 'sha256:f34510aebb686e88912b56eb6c2a6b655e5365b5d09c4e5ccb6dee97e5941e0d'
+          assert j['assets'][0]['size'] == Path('updates/android/current.apk').stat().st_size
+          print('ANYTV_UPDATE_METADATA_CURRENT_VERIFIED')
+          PY
+          mkdir -p verify-release
+          gh release download tcl-phone-v2.9.2 -p Controle_TCL_Livre_v2.9.2.apk -D verify-release
+          echo "$sha  verify-release/Controle_TCL_Livre_v2.9.2.apk" | sha256sum -c -
+      - name: Test public URL used by the installed update button
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha='f34510aebb686e88912b56eb6c2a6b655e5365b5d09c4e5ccb6dee97e5941e0d'
+          url='https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/current.apk'
+          curl --fail --location --retry 2 --connect-timeout 12 --max-time 180 \
+            --header 'User-Agent: Controle-TCL-Livre-Updater' \
+            --header 'Accept: application/vnd.github+json,application/octet-stream,*/*' \
+            --dump-header public-headers.txt "$url" -o public-current.apk
+          echo "$sha  public-current.apk" | sha256sum -c -
+          cmp public-current.apk updates/android/current.apk
+          echo 'ANYTV_PUBLIC_RAW_URL_MATCHES_LATEST_292'
