@@ -72,10 +72,21 @@ class SafeTvCompanionTests(unittest.TestCase):
         self.assertNotIn('startPlayback', self.bridge)
         self.assertIn('android:name="com.disney.disneyplus"', self.manifest)
 
+    def test_provider_link_validation(self):
+        for marker in ("validProviderTitleLink(", "openProviderTitle(", "www.netflix.com",
+                       "www.primevideo.com", "tv.apple.com", "play.hbomax.com",
+                       "nflx://www.netflix.com/title/", "direct.setPackage(pkg)"):
+            self.assertIn(marker, self.bridge)
+        for pkg in ("com.netflix.ninja", "com.disney.disneyplus",
+                    "com.amazon.amazonvideo.livingroom", "com.apple.atve.androidtv.appletv",
+                    "com.wbd.stream"):
+            self.assertIn(pkg, self.bridge)
+            self.assertIn('android:name="' + pkg + '"', self.manifest)
+
     def test_package_and_version_and_no_old_java(self):
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
-        self.assertIn("versionCode = " + ("10" if os.environ.get("TCL_TV_V19") == "1" else "9" if os.environ.get("TCL_TV_V18") == "1" else "8" if os.environ.get("TCL_TV_V17") == "1" else "7" if os.environ.get("TCL_TV_V16") == "1" else "6" if os.environ.get("TCL_TV_V15") == "1" else "5" if os.environ.get("TCL_TV_V14") == "1" else "4"), self.gradle)
-        self.assertIn('versionName = "' + ("1.9-AnyTV" if os.environ.get("TCL_TV_V19") == "1" else "1.8-AnyTV" if os.environ.get("TCL_TV_V18") == "1" else "1.7-AnyTV" if os.environ.get("TCL_TV_V17") == "1" else "1.6-AnyTV" if os.environ.get("TCL_TV_V16") == "1" else "1.5-AnyTV" if os.environ.get("TCL_TV_V15") == "1" else "1.4-Catalogo-Fones-Atualiza" if os.environ.get("TCL_TV_V14") == "1" else "1.3-Catalogo-Fones") + '"', self.gradle)
+        self.assertIn("versionCode = " + ("11" if os.environ.get("TCL_TV_V20") == "1" else "10" if os.environ.get("TCL_TV_V19") == "1" else "9" if os.environ.get("TCL_TV_V18") == "1" else "8" if os.environ.get("TCL_TV_V17") == "1" else "7" if os.environ.get("TCL_TV_V16") == "1" else "6" if os.environ.get("TCL_TV_V15") == "1" else "5" if os.environ.get("TCL_TV_V14") == "1" else "4"), self.gradle)
+        self.assertIn('versionName = "' + ("2.0-AnyTV" if os.environ.get("TCL_TV_V20") == "1" else "1.9-AnyTV" if os.environ.get("TCL_TV_V19") == "1" else "1.8-AnyTV" if os.environ.get("TCL_TV_V18") == "1" else "1.7-AnyTV" if os.environ.get("TCL_TV_V17") == "1" else "1.6-AnyTV" if os.environ.get("TCL_TV_V16") == "1" else "1.5-AnyTV" if os.environ.get("TCL_TV_V15") == "1" else "1.4-Catalogo-Fones-Atualiza" if os.environ.get("TCL_TV_V14") == "1" else "1.3-Catalogo-Fones") + '"', self.gradle)
         actual = {p.name for p in SRC.glob("*.java")}
         self.assertEqual(actual, {
             "MainActivity.java", "TclCatalogService.java", "TvAppBridge.java",
