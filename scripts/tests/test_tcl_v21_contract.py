@@ -27,8 +27,8 @@ class TclV21Contract(unittest.TestCase):
     def test_one_real_phone_package_not_a_preview(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
         self.assertNotIn("com.tclremote.livre.preview", self.gradle)
-        self.assertIn("versionCode = " + ("28" if os.environ.get("TCL_V28") == "1" else "27" if os.environ.get("TCL_V27") == "1" else "26" if os.environ.get("TCL_V26") == "1" else "25" if os.environ.get("TCL_V25") == "1" else "24" if os.environ.get("TCL_V24") == "1" else "23" if os.environ.get("TCL_V23") == "1" else "22" if os.environ.get("TCL_V22") == "1" else "21"), self.gradle)
-        self.assertIn('versionName = "' + ("2.8-AnyTV" if os.environ.get("TCL_V28") == "1" else "2.7-AnyTV" if os.environ.get("TCL_V27") == "1" else "2.6-AnyTV" if os.environ.get("TCL_V26") == "1" else "2.5-AnyTV" if os.environ.get("TCL_V25") == "1" else "2.4-AnyTV" if os.environ.get("TCL_V24") == "1" else "2.3-TCL" if os.environ.get("TCL_V23") == "1" else "2.2-TCL" if os.environ.get("TCL_V22") == "1" else "2.1-TCL") + '"', self.gradle)
+        self.assertIn("versionCode = " + ("29" if os.environ.get("TCL_V29") == "1" else "28" if os.environ.get("TCL_V28") == "1" else "27" if os.environ.get("TCL_V27") == "1" else "26" if os.environ.get("TCL_V26") == "1" else "25" if os.environ.get("TCL_V25") == "1" else "24" if os.environ.get("TCL_V24") == "1" else "23" if os.environ.get("TCL_V23") == "1" else "22" if os.environ.get("TCL_V22") == "1" else "21"), self.gradle)
+        self.assertIn('versionName = "' + ("2.9-AnyTV" if os.environ.get("TCL_V29") == "1" else "2.8-AnyTV" if os.environ.get("TCL_V28") == "1" else "2.7-AnyTV" if os.environ.get("TCL_V27") == "1" else "2.6-AnyTV" if os.environ.get("TCL_V26") == "1" else "2.5-AnyTV" if os.environ.get("TCL_V25") == "1" else "2.4-AnyTV" if os.environ.get("TCL_V24") == "1" else "2.3-TCL" if os.environ.get("TCL_V23") == "1" else "2.2-TCL" if os.environ.get("TCL_V22") == "1" else "2.1-TCL") + '"', self.gradle)
 
     def test_roomy_dpad_no_artificial_178dp_cap(self):
         self.assertIn("TclResponsivePad(", self.screen)
