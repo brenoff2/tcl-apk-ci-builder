@@ -139,7 +139,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
-        with: {name: ANYTV_PHONE_2_5_UNSIGNED_TO_SIGN, path: phone-artifact}
+        with: {name: ANYTV_PHONE_2_6_UNSIGNED_TO_SIGN, path: phone-artifact}
       - uses: actions/download-artifact@v4
         with: {name: ANYTV_TV_1_6_UNSIGNED_DUAS_ASSINATURAS, path: tv-artifact}
       - run: |
