@@ -3,6 +3,10 @@ name: AnyTV 2.9.5 + Connect 2.2 personal direct streaming links build
 on:
   push:
     branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths-ignore:
+      - 'docs/**'
+      - 'signing-recovery/**'
+      - 'anytv-resolver/**'
   workflow_dispatch:
 
 permissions:
