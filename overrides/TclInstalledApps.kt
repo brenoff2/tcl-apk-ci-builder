@@ -88,6 +88,11 @@ internal object TclTvAppApi {
             }
             val status = conn.responseCode
             if (status == 401) throw IllegalStateException("Código incorreto. Confira os 8 dígitos na TCL.")
+            // AnyTV Connect 1.6 does not have /title-search: return a typed
+            // capability result so the caller can use the existing /launch.
+            if ((status == 404 || status == 405) && path == "/title-search") {
+                return "{\"mode\":\"unsupported\"}"
+            }
             if (status == 404 && path == "/headphones") {
                 throw IllegalStateException("Para reconectar os fones, instale Controle TCL TV 1.3 na televisão.")
             }
@@ -127,8 +132,13 @@ internal object TclTvAppApi {
     ): String = withContext(Dispatchers.IO) {
         val body = JSONObject().put("package", packageName)
             .put("title", title.take(180)).toString()
-        JSONObject(request(host, code, "/title-search", body))
+        val mode = JSONObject(request(host, code, "/title-search", body))
             .optString("mode", "unavailable")
+        if (mode == "unsupported") {
+            // Never regress to 'nothing happens' on Connect 1.6.
+            // /launch is supported by every paired AnyTV Connect version.
+            if (open(host, code, packageName)) "opened_app" else "unavailable"
+        } else mode
     }
 
     suspend fun openBluetoothSettings(host: String, code: String): Boolean =
