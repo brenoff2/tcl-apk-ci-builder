@@ -32,6 +32,9 @@ jobs:
               ("Zootopia 2", 2025, "Zootopia 2", "1084242"),
               ("Birdman", 2014, "Birdman", "194662"),
               ("Jurassic Park", 1993, "Jurassic Park: O Parque dos Dinossauros", "329"),
+          ("The Irishman", 2019, "O Irlandês", "398978"),
+          ("The Adam Project", 2022, "O Projeto Adam", "696806"),
+          ("Inside Out 2", 2024, "Divertida Mente 2", "1022789"),
           ]
           report = {"country": "BR", "mode": "read-only, no API keys", "titles": []}
           def normalized(s):
