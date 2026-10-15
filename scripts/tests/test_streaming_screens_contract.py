@@ -41,6 +41,15 @@ class StreamingScreens(unittest.TestCase):
             self.assertIn(fragment, self.screen)
         self.assertIn("searchTitle(", self.apps)
 
+    def test_multi_service_id_crosswalk(self):
+        for claim in ('P1874', 'P13902', 'P14462', 'P8055', 'P9586', 'P9751', 'P8298'):
+            self.assertIn(claim, self.screen)
+        self.assertIn('wikidata_id', self.screen)
+        self.assertIn('titleDeepLink(token, title, packageName)', self.screen)
+        self.assertIn('TclTvAppApi.openTitle(', self.screen)
+        self.assertIn('request(host, code, "/title-open", body)', self.apps)
+        self.assertIn('"detail_requested"', self.screen)
+
     def test_compact_catalog_layout_regression(self):
         self.assertIn("BasicTextField(value = searchDraft", self.screen)
         self.assertIn("Modifier.weight(1f).height(42.dp)", self.screen)
@@ -75,7 +84,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
-        self.assertIn("versionCode = 31", self.gradle)
+        self.assertIn("versionCode = 32", self.gradle)
 
 if __name__ == "__main__":
     unittest.main()
