@@ -210,11 +210,11 @@ public final class TvAppBridge {
                 JSONObject obj = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
                 String pkg = obj.optString("package", "");
                 String url = obj.optString("url", "");
-                if (!validDisneyTitleLink(pkg, url)) {
+                if (!validProviderTitleLink(pkg, url)) {
                     write(socket.getOutputStream(), 400, "{\"error\":\"invalid_title_link\"}");
                     return;
                 }
-                boolean requested = openDisneyTitle(pkg, url);
+                boolean requested = openProviderTitle(pkg, url);
                 write(socket.getOutputStream(), requested ? 200 : 409,
                         "{\"mode\":\"" + (requested ? "detail_requested" : "unavailable") + "\"}");
             } else if (parts[0].equals("POST") && parts[1].equals("/headphones")) {
@@ -365,6 +365,76 @@ public final class TvAppBridge {
             Log.w(TAG, "Installed app refused external title search", e);
         }
         return launchInstalled(pkg) ? "opened_app" : "unavailable";
+    }
+
+    /** Only provider-owned schemes and paths are accepted from the paired LAN. */
+    private boolean validProviderTitleLink(String pkg, String url) {
+        if (pkg == null || url == null || url.length() < 16 || url.length() > 250) return false;
+        try {
+            Uri u = Uri.parse(url);
+            if (!"https".equals(u.getScheme()) || u.getPort() != -1
+                    || u.getUserInfo() != null || u.getFragment() != null
+                    || u.getQuery() != null) return false;
+            String host = u.getHost();
+            String path = u.getPath();
+            if (host == null || path == null) return false;
+            switch (pkg) {
+                case "com.netflix.ninja":
+                case "com.netflix.mediaclient":
+                    return "www.netflix.com".equals(host)
+                        && path.matches("/title/[0-9]{6,9}");
+                case "com.disney.disneyplus":
+                    return validDisneyTitleLink(pkg, url);
+                case "com.amazon.amazonvideo.livingroom":
+                case "com.amazon.avod.thirdpartyclient":
+                    return "www.primevideo.com".equals(host)
+                        && (path.matches("/detail/B[0-9A-Z]{9}")
+                        || path.matches("/detail/amzn[0-9]\\.dv\\.gti\\.[a-f0-9-]{36}"));
+                case "com.apple.atve.androidtv.appletv":
+                    return "tv.apple.com".equals(host)
+                        && path.matches("/(movie|show)/umc\\.cmc\\.[a-z0-9]{22,25}");
+                case "com.wbd.stream":
+                    return "play.hbomax.com".equals(host)
+                        && path.matches("/(movie|show)/[a-f0-9-]{36}");
+                default:
+                    return false;
+            }
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private boolean openProviderTitle(String pkg, String url) {
+        if (!validProviderTitleLink(pkg, url) || !launchers().containsKey(pkg)) return false;
+        Intent direct = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+        direct.setPackage(pkg);
+        direct.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            if (direct.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(direct);
+                // Android accepted the intent; the UI result is not verifiable here.
+                return true;
+            }
+        } catch (SecurityException | ActivityNotFoundException e) {
+            Log.w(TAG, "Provider refused external title URL", e);
+        }
+        if ("com.disney.disneyplus".equals(pkg)) return openDisneyTitle(pkg, url);
+        if (("com.netflix.ninja".equals(pkg) || "com.netflix.mediaclient".equals(pkg))) {
+            String id = Uri.parse(url).getLastPathSegment();
+            Intent netflix = new Intent(Intent.ACTION_VIEW,
+                    Uri.parse("nflx://www.netflix.com/title/" + id));
+            netflix.setPackage(pkg);
+            netflix.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            try {
+                if (netflix.resolveActivity(context.getPackageManager()) != null) {
+                    context.startActivity(netflix);
+                    return true;
+                }
+            } catch (SecurityException | ActivityNotFoundException e) {
+                Log.w(TAG, "Netflix scheme refused", e);
+            }
+        }
+        return false;
     }
 
     private String verifiedDisneyTitleLink(String pkg, String title) {
