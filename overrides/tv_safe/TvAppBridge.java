@@ -373,28 +373,33 @@ public final class TvAppBridge {
         try {
             Uri u = Uri.parse(url);
             if (!"https".equals(u.getScheme()) || u.getPort() != -1
-                    || u.getUserInfo() != null || u.getFragment() != null
-                    || u.getQuery() != null) return false;
+                    || u.getUserInfo() != null || u.getFragment() != null) return false;
             String host = u.getHost();
             String path = u.getPath();
             if (host == null || path == null) return false;
             switch (pkg) {
                 case "com.netflix.ninja":
                 case "com.netflix.mediaclient":
-                    return "www.netflix.com".equals(host)
+                    return u.getQuery() == null && "www.netflix.com".equals(host)
                         && path.matches("/title/[0-9]{6,9}");
                 case "com.disney.disneyplus":
-                    return validDisneyTitleLink(pkg, url);
+                    return u.getQuery() == null && validDisneyTitleLink(pkg, url);
                 case "com.amazon.amazonvideo.livingroom":
                 case "com.amazon.avod.thirdpartyclient":
-                    return "www.primevideo.com".equals(host)
-                        && (path.matches("/detail/B[0-9A-Z]{9}")
-                        || path.matches("/detail/amzn[0-9]\\.dv\\.gti\\.[a-f0-9-]{36}"));
+                    // Official Android app deep links use a single GTI query key.
+                    // Verify the entire encoded query, not arbitrary parameters.
+                    if ("app.primevideo.com".equals(host) && "/detail".equals(path)) {
+                        String query = u.getEncodedQuery();
+                        return query != null &&
+                            query.matches("gti=amzn[0-9]\\.dv\\.gti\\.[a-f0-9-]{36}");
+                    }
+                    return u.getQuery() == null && "www.primevideo.com".equals(host)
+                        && path.matches("/detail/B[0-9A-Z]{9}");
                 case "com.apple.atve.androidtv.appletv":
-                    return "tv.apple.com".equals(host)
+                    return u.getQuery() == null && "tv.apple.com".equals(host)
                         && path.matches("/(movie|show)/umc\\.cmc\\.[a-z0-9]{22,25}");
                 case "com.wbd.stream":
-                    return "play.hbomax.com".equals(host)
+                    return u.getQuery() == null && "play.hbomax.com".equals(host)
                         && path.matches("/(movie|show)/[a-f0-9-]{36}");
                 default:
                     return false;
