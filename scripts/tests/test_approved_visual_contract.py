@@ -101,7 +101,8 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertNotIn("KEYCODE_PROG_RED", playback)
 
     def test_no_overlap_regression_and_cast_still_available(self):
-        self.assertIn(".verticalScroll(rememberScrollState())", self.skin)
+        self.assertIn("modifier = Modifier.weight(1f).fillMaxWidth()", self.skin)
+        self.assertIn("coerceAtMost(stageHeight)", self.skin)
         if os.environ.get("TCL_V21") == "1":
             self.assertIn("TclResponsivePad(", self.skin)
             self.assertNotIn("178.dp", self.skin)
