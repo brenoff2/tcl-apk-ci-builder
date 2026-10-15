@@ -94,12 +94,17 @@ class TvUpdateAndBluetooth(unittest.TestCase):
         self.assertIn("headphoneStatus = result", self.bridge)
 
     def test_tv_inplace_update_support(self):
-        self.assertIn("versionCode = 8", self.gradle)
+        self.assertIn("versionCode = 9", self.gradle)
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
         self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
         self.assertNotIn("BIND_ACCESSIBILITY_SERVICE", self.manifest)
         self.assertIn("TV_CERT_A", self.updater)
         self.assertIn("TV_CERT_B", self.updater)
+        self.assertIn("PackageManager.GET_SIGNING_CERTIFICATES | PackageManager.GET_SIGNATURES", self.updater)
+        self.assertIn("info.signingInfo != null", self.updater)
+        self.assertIn("info.signatures", self.updater)
+        self.assertIn("archiveSigner(pm, apk.getAbsolutePath(), next, pkg)", self.updater)
+        self.assertIn("MessageDigest.isEqual(currentSigner(installed)", self.updater)
         self.assertIn("TclInstallResultReceiver", self.manifest)
 
 
