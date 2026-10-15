@@ -1,0 +1,28 @@
+name: Short link AnyTV Connect 2.2 migration
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  shorten:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate destination and create short link
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='https://drive.google.com/uc?export=download&id=1ZImSLAc_BfFLj-XKVxrtZAyN6tz1gb3_'
+          curl -fLsS --max-time 40 "$target" -o /tmp/anytv.apk
+          test "$(wc -c </tmp/anytv.apk)" -eq 320191
+          python3 - <<'PY'
+          import zipfile
+          with zipfile.ZipFile('/tmp/anytv.apk') as z:
+              assert 'AndroidManifest.xml' in z.namelist()
+          PY
+          short=$(curl -fGsS --max-time 20 --data-urlencode "url=$target" 'https://da.gd/s')
+          case "$short" in https://da.gd/*) ;; *) echo 'INVALID_SHORT'; exit 1;; esac
+          redirect=$(curl -sS -o /dev/null --max-time 20 -w '%{redirect_url}' "$short")
+          test "$redirect" = "$target"
+          echo "SHORT_LINK=$short"
+          echo "DESTINATION_VALIDATED=$target"
