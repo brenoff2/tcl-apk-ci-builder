@@ -29,7 +29,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -410,18 +411,24 @@ internal fun TclStreamingScreens(
                             onClick = { media = "tv"; genre = 0; page = 1; showSaved = false },
                             label = { Text("Séries", fontSize = 12.sp) })
                         Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { showSaved = !showSaved; page = 1 },
-                            contentPadding = PaddingValues(horizontal = 2.dp)) {
-                            Text(if (showSaved) "Catálogo" else "♥ Lista", fontSize = 12.sp)
+                        IconButton(onClick = { showSaved = !showSaved; page = 1 },
+                            modifier = Modifier.size(40.dp).semantics {
+                                contentDescription = if (showSaved) "Voltar ao catálogo" else "Minha lista"
+                            }) {
+                            Text(if (showSaved) "▤" else "♥", fontSize = 20.sp)
                         }
-                        TextButton(onClick = {
+                        IconButton(onClick = {
                             gridView = !gridView
                             prefs.edit().putBoolean("streaming_grid", gridView).apply()
-                        }, contentPadding = PaddingValues(horizontal = 2.dp)) {
+                        }, modifier = Modifier.size(40.dp).semantics {
+                            contentDescription = if (gridView) "Visualização em lista" else "Visualização em grade"
+                        }) {
                             Text(if (gridView) "☷" else "▦", fontSize = 19.sp)
                         }
-                        TextButton(onClick = { editToken = !editToken },
-                            contentPadding = PaddingValues(horizontal = 2.dp)) {
+                        IconButton(onClick = { editToken = !editToken },
+                            modifier = Modifier.size(40.dp).semantics {
+                                contentDescription = "Configurar catálogo"
+                            }) {
                             Text("⚙", fontSize = 19.sp)
                         }
                     }
