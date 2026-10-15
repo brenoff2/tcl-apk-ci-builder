@@ -4,6 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -25,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -193,6 +198,7 @@ internal fun TclStreamingScreens(
     var token by remember { mutableStateOf(prefs.getString("tmdb_token", "").orEmpty()) }
     var tokenDraft by remember { mutableStateOf(token) }
     var editToken by remember { mutableStateOf(false) }
+    var showCredits by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     var all by remember { mutableStateOf(false) }
     var media by remember { mutableStateOf("movie") }
@@ -308,14 +314,14 @@ internal fun TclStreamingScreens(
         Surface(modifier = Modifier.fillMaxSize().padding(8.dp),
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface) {
-            Column(modifier = Modifier.fillMaxSize().padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Streaming", fontSize = 21.sp, fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f))
-                    TextButton(onClick = onDismiss) { Text("Fechar") }
-                }
+            Column(modifier = Modifier.fillMaxSize().padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 if (selected == null) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Streaming", fontSize = 20.sp, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f))
+                        TextButton(onClick = onDismiss) { Text("Fechar") }
+                    }
                     Text("Escolha um aplicativo realmente instalado na TCL.",
                         fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -347,25 +353,29 @@ internal fun TclStreamingScreens(
                     }
                 } else {
                     val app = selected!!
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { selected = null; details = null; message = null }) {
-                            Text("‹ Voltar")
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        TextButton(onClick = {
+                            selected = null; details = null; message = null
+                        }, modifier = Modifier.height(40.dp),
+                            contentPadding = PaddingValues(horizontal = 3.dp)) {
+                            Text("‹", fontSize = 24.sp)
                         }
-                        OfficialTvIcon(app, 38.dp)
+                        OfficialTvIcon(app, 32.dp)
                         Text(app.name, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f).padding(start = 8.dp),
-                            maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    Button(onClick = { openOnTv(app) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("Abrir " + app.name + " na TCL", maxLines = 1)
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Catálogo brasileiro", modifier = Modifier.weight(1f))
-                        TextButton(onClick = { showSaved = !showSaved; page = 1 }) {
-                            Text(if (showSaved) "Catálogo" else "♥ Minha lista")
+                            modifier = Modifier.weight(1f).padding(start = 3.dp),
+                            maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            fontSize = 16.sp)
+                        TextButton(onClick = { openOnTv(app) },
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                            modifier = Modifier.height(40.dp)) {
+                            Text("Abrir na TCL", fontSize = 12.sp, maxLines = 1)
                         }
-                        TextButton(onClick = { editToken = !editToken }) {
-                            Text(if (editToken) "Ocultar" else "Configurar")
+                        TextButton(onClick = onDismiss,
+                            contentPadding = PaddingValues(horizontal = 3.dp),
+                            modifier = Modifier.height(40.dp)) {
+                            Text("×", fontSize = 24.sp)
                         }
                     }
                     if (editToken || token.isBlank()) {
@@ -390,32 +400,61 @@ internal fun TclStreamingScreens(
                             }) { Text("Salvar") }
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedButton(onClick = { media = "movie"; genre = 0; page = 1 },
-                            enabled = media != "movie" && !showSaved) { Text("Filmes") }
-                        OutlinedButton(onClick = { media = "tv"; genre = 0; page = 1 },
-                            enabled = media != "tv" && !showSaved) { Text("Séries") }
+                        FilterChip(selected = media == "movie" && !showSaved,
+                            onClick = { media = "movie"; genre = 0; page = 1; showSaved = false },
+                            label = { Text("Filmes", fontSize = 12.sp) })
+                        FilterChip(selected = media == "tv" && !showSaved,
+                            onClick = { media = "tv"; genre = 0; page = 1; showSaved = false },
+                            label = { Text("Séries", fontSize = 12.sp) })
                         Spacer(Modifier.weight(1f))
+                        TextButton(onClick = { showSaved = !showSaved; page = 1 },
+                            contentPadding = PaddingValues(horizontal = 2.dp)) {
+                            Text(if (showSaved) "Catálogo" else "♥ Lista", fontSize = 12.sp)
+                        }
                         TextButton(onClick = {
                             gridView = !gridView
                             prefs.edit().putBoolean("streaming_grid", gridView).apply()
-                        }) { Text(if (gridView) "☰ Lista" else "▦ Grade") }
+                        }, contentPadding = PaddingValues(horizontal = 2.dp)) {
+                            Text(if (gridView) "☷" else "▦", fontSize = 19.sp)
+                        }
+                        TextButton(onClick = { editToken = !editToken },
+                            contentPadding = PaddingValues(horizontal = 2.dp)) {
+                            Text("⚙", fontSize = 19.sp)
+                        }
                     }
                     if (!showSaved) {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            OutlinedTextField(value = searchDraft,
+                            BasicTextField(value = searchDraft,
                                 onValueChange = { searchDraft = it },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true, label = { Text("Buscar título") },
+                                modifier = Modifier.weight(1f).height(42.dp)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline,
+                                        RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                textStyle = TextStyle(fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface),
+                                singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
                                     searchTerm = searchDraft.trim(); page = 1
-                                }))
+                                }),
+                                decorationBox = { field ->
+                                    Box(contentAlignment = Alignment.CenterStart) {
+                                        if (searchDraft.isEmpty()) Text("Buscar título",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 14.sp)
+                                        field()
+                                    }
+                                })
                             Button(onClick = {
                                 searchTerm = searchDraft.trim(); page = 1
-                            }) { Text("Buscar") }
+                            }, modifier = Modifier.height(42.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp)) {
+                                Text("Buscar", fontSize = 13.sp)
+                            }
                             if (searchTerm.isNotBlank()) TextButton(onClick = {
                                 searchDraft = ""; searchTerm = ""; page = 1
                             }) { Text("×") }
@@ -446,7 +485,7 @@ internal fun TclStreamingScreens(
                     )
                     if (gridView) {
                         LazyVerticalGrid(
-                            columns = GridCells.Adaptive(105.dp),
+                            columns = GridCells.Adaptive(94.dp),
                             modifier = Modifier.weight(1f),
                             horizontalArrangement = Arrangement.spacedBy(7.dp),
                             verticalArrangement = Arrangement.spacedBy(11.dp)
@@ -465,7 +504,7 @@ internal fun TclStreamingScreens(
                                             model = "https://image.tmdb.org/t/p/w185" + title.poster,
                                             contentDescription = "Cartaz: " + title.name,
                                             contentScale = ContentScale.Crop,
-                                            modifier = Modifier.size(101.dp, 149.dp)
+                                            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)
                                         )
                                     }
                                     Text(title.name, fontSize = 11.sp, maxLines = 2,
@@ -473,9 +512,14 @@ internal fun TclStreamingScreens(
                                         overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            if (more && !showSaved) item {
+                            if (more && !showSaved) item(span = {
+                                GridItemSpan(maxLineSpan)
+                            }) {
                                 OutlinedButton(onClick = { if (!loading) page++ },
-                                    enabled = !loading) { Text("Mais") }
+                                    enabled = !loading,
+                                    modifier = Modifier.fillMaxWidth()) {
+                                    Text("Carregar mais")
+                                }
                             }
                         }
                     } else {
@@ -523,11 +567,21 @@ internal fun TclStreamingScreens(
                         }
                     }
                 }
-                Text("Disponibilidade no Brasil: TMDB / JustWatch. " +
-                    "Este produto usa a API TMDB, mas não é endossado ou certificado pelo TMDB.",
-                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("ⓘ Fontes: TMDB / JustWatch",
+                    modifier = Modifier.clickable { showCredits = true },
+                    fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1)
             }
         }
+    }
+    if (showCredits) {
+        AlertDialog(onDismissRequest = { showCredits = false },
+            title = { Text("Fontes do catálogo") },
+            text = { Text("Disponibilidade no Brasil: TMDB / JustWatch. " +
+                "Este produto usa a API TMDB, mas não é endossado ou certificado pelo TMDB.") },
+            confirmButton = {
+                TextButton(onClick = { showCredits = false }) { Text("Fechar") }
+            })
     }
     val title = details
     if (title != null) {
