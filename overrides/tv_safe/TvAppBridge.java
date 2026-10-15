@@ -6,6 +6,8 @@ import android.os.Build;
 import android.content.pm.PackageManager;
 import android.view.KeyEvent;
 import android.content.Intent;
+import android.content.ActivityNotFoundException;
+import android.net.Uri;
 import android.app.SearchManager;
 import android.content.SharedPreferences;
 import android.content.pm.ResolveInfo;
@@ -49,6 +51,9 @@ public final class TvAppBridge {
     private static final String PREFS = "tcl_companion_bridge";
     private static final String CODE = "pair_code";
     private static final int MAX_APPS = 160;
+    private static final String DISNEY_PACKAGE = "com.disney.disneyplus";
+    private static final String ZOOTOPIA_2_LINK =
+            "https://www.disneyplus.com/browse/entity-8f08a8df-8b2f-49e1-9130-1e842b90f185";
 
     private final Context context;
     private final ExecutorService workers = Executors.newFixedThreadPool(2);
@@ -185,7 +190,33 @@ public final class TvAppBridge {
                     return;
                 }
                 String mode = searchTitleInApp(pkg, title);
+                // Preserve mode=search for AnyTV 2.9.2 compatibility when a
+                // known official title link was dispatched, not confirmed.
                 write(socket.getOutputStream(), 200, "{\"mode\":\"" + mode + "\"}");
+            } else if (parts[0].equals("POST") && parts[1].equals("/title-open")) {
+                // Future clients may submit a provider URL they resolved
+                // independently. Never accept arbitrary web URLs or packages.
+                if (size < 1 || size > 2048) {
+                    write(socket.getOutputStream(), 400, "{\"error\":\"invalid_body\"}");
+                    return;
+                }
+                byte[] bytes = new byte[size];
+                int read = 0;
+                while (read < size) {
+                    int count = in.read(bytes, read, size - read);
+                    if (count < 0) throw new java.io.IOException("Incomplete HTTP body");
+                    read += count;
+                }
+                JSONObject obj = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
+                String pkg = obj.optString("package", "");
+                String url = obj.optString("url", "");
+                if (!validDisneyTitleLink(pkg, url)) {
+                    write(socket.getOutputStream(), 400, "{\"error\":\"invalid_title_link\"}");
+                    return;
+                }
+                boolean requested = openDisneyTitle(pkg, url);
+                write(socket.getOutputStream(), requested ? 200 : 409,
+                        "{\"mode\":\"" + (requested ? "detail_requested" : "unavailable") + "\"}");
             } else if (parts[0].equals("POST") && parts[1].equals("/headphones")) {
                 // Only pre-paired devices explicitly selected in this TV app.
                 String result = requestHeadphones();
@@ -313,6 +344,14 @@ public final class TvAppBridge {
     }
 
     private String searchTitleInApp(String pkg, String title) {
+        // Known, independently verified provider entity links are safe to
+        // dispatch without scraping or guessing IDs from the TMDB id.
+        String direct = verifiedDisneyTitleLink(pkg, title);
+        if (direct != null && openDisneyTitle(pkg, direct)) {
+            // Legacy phone 2.9.2 understands only "search" or "opened_app".
+            // "search" prevents it from re-launching the provider home.
+            return "search";
+        }
         try {
             Intent search = new Intent(Intent.ACTION_SEARCH);
             search.setPackage(pkg);
@@ -326,6 +365,69 @@ public final class TvAppBridge {
             Log.w(TAG, "Installed app refused external title search", e);
         }
         return launchInstalled(pkg) ? "opened_app" : "unavailable";
+    }
+
+    private String verifiedDisneyTitleLink(String pkg, String title) {
+        if (!DISNEY_PACKAGE.equals(pkg)) return null;
+        String value = java.text.Normalizer.normalize(title, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}+", "")
+                .toLowerCase(java.util.Locale.ROOT).trim();
+        if (value.equals("zootopia 2") || value.equals("zootropolis 2")) {
+            return ZOOTOPIA_2_LINK;
+        }
+        return null;
+    }
+
+    private boolean validDisneyTitleLink(String pkg, String url) {
+        if (!DISNEY_PACKAGE.equals(pkg) || url == null || url.length() > 200) return false;
+        try {
+            Uri uri = Uri.parse(url);
+            // No userinfo, arbitrary ports, query parameters, fragments,
+            // redirects or non-Disney domains are accepted through LAN.
+            return "https".equals(uri.getScheme())
+                    && "www.disneyplus.com".equals(uri.getHost())
+                    && uri.getPort() == -1
+                    && uri.getUserInfo() == null
+                    && uri.getQuery() == null
+                    && uri.getFragment() == null
+                    && uri.getPath() != null
+                    && uri.getPath().matches("/browse/entity-[a-fA-F0-9]{8}(?:-[a-fA-F0-9]{4}){3}-[a-fA-F0-9]{12}");
+        } catch (RuntimeException e) {
+            return false;
+        }
+    }
+
+    private boolean openDisneyTitle(String pkg, String url) {
+        if (!validDisneyTitleLink(pkg, url) || !launchers().containsKey(pkg)) return false;
+        Uri uri = Uri.parse(url);
+        // Launch only the verified installed provider, never an unpinned
+        // browser intent or a third-party activity.
+        Intent deepLink = new Intent(Intent.ACTION_VIEW, uri);
+        deepLink.setPackage(pkg);
+        deepLink.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            if (deepLink.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(deepLink);
+                return true;  // Request dispatched, NOT proof the film was displayed.
+            }
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Log.w(TAG, "Disney+ official entity VIEW refused", e);
+        }
+        // Disney+ also advertises this provider scheme in multistream's
+        // verified manifest inventory. Only derive it from validated UUID.
+        String id = uri.getLastPathSegment().substring("entity-".length());
+        Intent alternate = new Intent(Intent.ACTION_VIEW, Uri.parse("disneyplus://" + id));
+        alternate.setPackage(pkg);
+        alternate.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            if (alternate.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(alternate);
+                return true;
+            }
+        } catch (ActivityNotFoundException | SecurityException e) {
+            Log.w(TAG, "Disney+ app scheme refused", e);
+        }
+        return false;
     }
 
     private boolean launchInstalled(String pkg) {
