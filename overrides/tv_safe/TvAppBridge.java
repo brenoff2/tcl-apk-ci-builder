@@ -6,6 +6,7 @@ import android.os.Build;
 import android.content.pm.PackageManager;
 import android.view.KeyEvent;
 import android.content.Intent;
+import android.app.SearchManager;
 import android.content.SharedPreferences;
 import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
@@ -160,6 +161,31 @@ public final class TvAppBridge {
                 boolean opened = launchInstalled(pkg);
                 write(socket.getOutputStream(), opened ? 200 : 404,
                         "{\"launched\":" + opened + "}");
+            } else if (parts[0].equals("POST") && parts[1].equals("/title-search")) {
+                // Opt-in, paired LAN request. Search is delegated ONLY to the
+                // selected app if it explicitly exports ACTION_SEARCH.
+                if (size < 1 || size > 2048) {
+                    write(socket.getOutputStream(), 400, "{\"error\":\"invalid_body\"}");
+                    return;
+                }
+                byte[] bytes = new byte[size];
+                int read = 0;
+                while (read < size) {
+                    int count = in.read(bytes, read, size - read);
+                    if (count < 0) throw new java.io.IOException("Incomplete HTTP body");
+                    read += count;
+                }
+                JSONObject obj = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
+                String pkg = obj.optString("package", "");
+                String title = obj.optString("title", "").trim();
+                if (title.length() < 1 || title.length() > 180 ||
+                    !pkg.matches("[a-zA-Z][a-zA-Z0-9_]*(\\.[a-zA-Z][a-zA-Z0-9_]*)+") ||
+                    !launchers().containsKey(pkg)) {
+                    write(socket.getOutputStream(), 400, "{\"error\":\"invalid_search\"}");
+                    return;
+                }
+                String mode = searchTitleInApp(pkg, title);
+                write(socket.getOutputStream(), 200, "{\"mode\":\"" + mode + "\"}");
             } else if (parts[0].equals("POST") && parts[1].equals("/headphones")) {
                 // Only pre-paired devices explicitly selected in this TV app.
                 String result = requestHeadphones();
@@ -284,6 +310,22 @@ public final class TvAppBridge {
             } catch (Exception ignored) {}
         }
         return array;
+    }
+
+    private String searchTitleInApp(String pkg, String title) {
+        try {
+            Intent search = new Intent(Intent.ACTION_SEARCH);
+            search.setPackage(pkg);
+            search.putExtra(SearchManager.QUERY, title);
+            search.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (search.resolveActivity(context.getPackageManager()) != null) {
+                context.startActivity(search);
+                return "search";
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "Installed app refused external title search", e);
+        }
+        return launchInstalled(pkg) ? "opened_app" : "unavailable";
     }
 
     private boolean launchInstalled(String pkg) {
