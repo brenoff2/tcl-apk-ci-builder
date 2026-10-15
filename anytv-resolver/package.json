@@ -1,0 +1,11 @@
+{
+  "name": "anytv-commercial-resolver-pilot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test src/worker.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
