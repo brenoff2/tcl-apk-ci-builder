@@ -50,6 +50,17 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('request(host, code, "/title-open", body)', self.apps)
         self.assertIn('"detail_requested"', self.screen)
 
+    def test_check_brazilian_subscription_before_remote_title_open(self):
+        self.assertIn('suspend fun titleAvailableInBrazil(', self.screen)
+        self.assertIn('offeredInBrazil(token, title, id)', self.screen)
+        self.assertIn('if (offered == false)', self.screen)
+        self.assertIn('if (offered == null)', self.screen)
+        self.assertIn('return@launch', self.screen)
+        self.assertIn('titleDeepLink(token, title, packageName)', self.screen)
+        self.assertLess(self.screen.index('if (offered == false)'),
+                        self.screen.index('titleDeepLink(token, title, packageName)', self.screen.index('fun searchOnTv(')))
+        self.assertIn('Confira \'Onde assistir e links disponíveis\'', self.screen)
+
     def test_compact_catalog_layout_regression(self):
         self.assertIn("BasicTextField(value = searchDraft", self.screen)
         self.assertIn("Modifier.weight(1f).height(42.dp)", self.screen)
