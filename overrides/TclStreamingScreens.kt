@@ -197,6 +197,48 @@ internal fun TclStreamingScreens(
     var all by remember { mutableStateOf(false) }
     var media by remember { mutableStateOf("movie") }
     var page by remember { mutableStateOf(1) }
+    var searchDraft by remember { mutableStateOf("") }
+    var searchTerm by remember { mutableStateOf("") }
+    var genre by remember { mutableStateOf(0) }
+    var genres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
+    var gridView by remember { mutableStateOf(prefs.getBoolean("streaming_grid", false)) }
+    var showSaved by remember { mutableStateOf(false) }
+    var detailsPackage by remember { mutableStateOf<String?>(null) }
+    var favorites by remember {
+        mutableStateOf(runCatching {
+            val arr = JSONArray(prefs.getString("streaming_favorites", "[]"))
+            (0 until arr.length()).mapNotNull { i ->
+                val o = arr.optJSONObject(i) ?: return@mapNotNull null
+                val id = o.optInt("id")
+                val kind = o.optString("media")
+                val pkg = o.optString("package")
+                if (id <= 0 || pkg.isBlank() || (kind != "tv" && kind != "movie"))
+                    return@mapNotNull null
+                StreamingFavorite(
+                    StreamingTitle(id, o.optString("name"), o.optString("overview"),
+                        o.optString("poster"), kind), pkg)
+            }
+        }.getOrDefault(emptyList<StreamingFavorite>()))
+    }
+    fun isFavorite(title: StreamingTitle, packageName: String): Boolean =
+        favorites.any { it.title.id == title.id && it.title.media == title.media &&
+            it.packageName == packageName }
+    fun toggleFavorite(title: StreamingTitle, packageName: String) {
+        favorites = if (isFavorite(title, packageName)) favorites.filterNot {
+            it.title.id == title.id && it.title.media == title.media &&
+                it.packageName == packageName
+        } else listOf(StreamingFavorite(title, packageName)) + favorites
+        val json = JSONArray()
+        favorites.forEach { value ->
+            json.put(JSONObject().put("id", value.title.id)
+                .put("media", value.title.media)
+                .put("package", value.packageName)
+                .put("name", value.title.name)
+                .put("overview", value.title.overview)
+                .put("poster", value.title.poster))
+        }
+        prefs.edit().putString("streaming_favorites", json.toString()).apply()
+    }
     var titles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var more by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
@@ -204,14 +246,20 @@ internal fun TclStreamingScreens(
     var details by remember { mutableStateOf<StreamingTitle?>(null) }
     val displayed = remember(apps, all) { apps.filter { all || StreamingCatalog.streaming(it) } }
 
-    LaunchedEffect(selected?.packageName, media, page, token) {
+    LaunchedEffect(token, media) {
+        genres = if (token.isBlank()) emptyList() else
+            runCatching { StreamingCatalog.genres(token, media) }
+                .getOrDefault(emptyList())
+    }
+
+    LaunchedEffect(selected?.packageName, media, page, token, genre, searchTerm, showSaved) {
         val app = selected ?: return@LaunchedEffect
         if (page == 1) { titles = emptyList(); more = false }
-        if (token.isBlank()) return@LaunchedEffect
+        if (showSaved || token.isBlank()) return@LaunchedEffect
         loading = true
         message = null
         try {
-            val response = StreamingCatalog.discover(token, app.name, media, page)
+            val response = StreamingCatalog.discover(token, app.name, media, page, genre, searchTerm)
             titles = if (page == 1) response.titles else (titles + response.titles).distinctBy { it.id }
             more = response.more
             if (page == 1 && response.titles.isEmpty())
@@ -233,6 +281,25 @@ internal fun TclStreamingScreens(
                     .onSuccess { message = if (it) "Abertura solicitada na TCL." else "A TV não abriu o aplicativo." }
                     .onFailure { message = it.message ?: "Não foi possível abrir na TV." }
             }
+        }
+    }
+
+    fun searchOnTv(title: StreamingTitle, packageName: String) {
+        if (host.isBlank() || pairing.isBlank()) {
+            message = "Conecte e vincule a TCL para localizar o título."
+            return
+        }
+        scope.launch {
+            message = null
+            runCatching { TclTvAppApi.searchTitle(host, pairing, packageName, title.name) }
+                .onSuccess { mode ->
+                    message = when (mode) {
+                        "search" -> "Busca pelo título enviada à TCL. Selecione o resultado."
+                        "opened_app" -> "O serviço não aceita busca externa; o aplicativo foi aberto."
+                        else -> "O serviço não pôde ser aberto na TV."
+                    }
+                }
+                .onFailure { message = "Atualize o AnyTV Connect na TCL para pesquisar títulos." }
         }
     }
 
@@ -262,7 +329,9 @@ internal fun TclStreamingScreens(
                         verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         items(displayed, key = { it.packageName }) { app ->
                             Row(modifier = Modifier.fillMaxWidth().clickable {
-                                    selected = app; media = "movie"; page = 1; message = null
+                                    selected = app; media = "movie"; genre = 0; page = 1
+                                    searchDraft = ""; searchTerm = ""; showSaved = false
+                                    message = null
                                 }.padding(7.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
@@ -292,6 +361,9 @@ internal fun TclStreamingScreens(
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Catálogo brasileiro", modifier = Modifier.weight(1f))
+                        TextButton(onClick = { showSaved = !showSaved; page = 1 }) {
+                            Text(if (showSaved) "Catálogo" else "♥ Minha lista")
+                        }
                         TextButton(onClick = { editToken = !editToken }) {
                             Text(if (editToken) "Ocultar" else "Configurar")
                         }
@@ -318,45 +390,135 @@ internal fun TclStreamingScreens(
                             }) { Text("Salvar") }
                         }
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedButton(onClick = { media = "movie"; page = 1 },
-                            enabled = media != "movie") { Text("Filmes") }
-                        OutlinedButton(onClick = { media = "tv"; page = 1 },
-                            enabled = media != "tv") { Text("Séries") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(onClick = { media = "movie"; genre = 0; page = 1 },
+                            enabled = media != "movie" && !showSaved) { Text("Filmes") }
+                        OutlinedButton(onClick = { media = "tv"; genre = 0; page = 1 },
+                            enabled = media != "tv" && !showSaved) { Text("Séries") }
+                        Spacer(Modifier.weight(1f))
+                        TextButton(onClick = {
+                            gridView = !gridView
+                            prefs.edit().putBoolean("streaming_grid", gridView).apply()
+                        }) { Text(if (gridView) "☰ Lista" else "▦ Grade") }
                     }
-                    if (loading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    if (message != null) Text(message.orEmpty(), fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    LazyColumn(modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        items(titles, key = { it.id }) { title ->
-                            Row(modifier = Modifier.fillMaxWidth()
-                                .clickable { details = title }.padding(vertical = 4.dp),
-                                horizontalArrangement = Arrangement.spacedBy(9.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                if (title.poster.isNotEmpty()) {
-                                    AsyncImage(
-                                        model = "https://image.tmdb.org/t/p/w185" + title.poster,
-                                        contentDescription = "Cartaz: " + title.name,
-                                        contentScale = ContentScale.Crop,
-                                        modifier = Modifier.size(63.dp, 95.dp)
-                                    )
-                                }
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(title.name, fontWeight = FontWeight.SemiBold,
-                                        maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                    Text(title.overview.ifBlank { "Sinopse indisponível." },
-                                        fontSize = 12.sp, maxLines = 3,
-                                        overflow = TextOverflow.Ellipsis)
-                                    Text("Ver detalhes ›", fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.primary)
-                                }
+                    if (!showSaved) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            OutlinedTextField(value = searchDraft,
+                                onValueChange = { searchDraft = it },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true, label = { Text("Buscar título") },
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = {
+                                    searchTerm = searchDraft.trim(); page = 1
+                                }))
+                            Button(onClick = {
+                                searchTerm = searchDraft.trim(); page = 1
+                            }) { Text("Buscar") }
+                            if (searchTerm.isNotBlank()) TextButton(onClick = {
+                                searchDraft = ""; searchTerm = ""; page = 1
+                            }) { Text("×") }
+                        }
+                        Row(modifier = Modifier.fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            FilterChip(selected = genre == 0,
+                                onClick = { genre = 0; page = 1 },
+                                label = { Text("Todos") })
+                            genres.forEach { option ->
+                                FilterChip(selected = genre == option.id,
+                                    onClick = { genre = option.id; page = 1 },
+                                    label = { Text(option.name) })
                             }
                         }
-                        if (more) item {
-                            OutlinedButton(onClick = { if (!loading) page++ },
-                                enabled = !loading, modifier = Modifier.fillMaxWidth()) {
-                                Text("Carregar mais")
+                    } else {
+                        Text("Filmes e séries favoritos de todos os serviços",
+                            fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (loading && !showSaved) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    if (message != null) Text(message.orEmpty(), fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    val visibleTitles = if (showSaved) favorites.map { it.title } else titles
+                    if (showSaved && visibleTitles.isEmpty()) Text(
+                        "Sua lista está vazia. Abra um título e toque em Adicionar aos favoritos.",
+                        fontSize = 12.sp
+                    )
+                    if (gridView) {
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(105.dp),
+                            modifier = Modifier.weight(1f),
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                            verticalArrangement = Arrangement.spacedBy(11.dp)
+                        ) {
+                            gridItems(visibleTitles) { title ->
+                                Column(modifier = Modifier.clickable {
+                                    details = title
+                                    detailsPackage = if (showSaved)
+                                        favorites.firstOrNull { it.title.id == title.id &&
+                                            it.title.media == title.media }?.packageName
+                                            ?: app.packageName
+                                        else app.packageName
+                                }, horizontalAlignment = Alignment.CenterHorizontally) {
+                                    if (title.poster.isNotBlank()) {
+                                        AsyncImage(
+                                            model = "https://image.tmdb.org/t/p/w185" + title.poster,
+                                            contentDescription = "Cartaz: " + title.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.size(101.dp, 149.dp)
+                                        )
+                                    }
+                                    Text(title.name, fontSize = 11.sp, maxLines = 2,
+                                        textAlign = TextAlign.Center,
+                                        overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            if (more && !showSaved) item {
+                                OutlinedButton(onClick = { if (!loading) page++ },
+                                    enabled = !loading) { Text("Mais") }
+                            }
+                        }
+                    } else {
+                        LazyColumn(modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                            items(visibleTitles) { title ->
+                                val itemPackage = if (showSaved)
+                                    favorites.firstOrNull { it.title.id == title.id &&
+                                        it.title.media == title.media }?.packageName
+                                        ?: app.packageName
+                                    else app.packageName
+                                Row(modifier = Modifier.fillMaxWidth().clickable {
+                                    details = title; detailsPackage = itemPackage
+                                }.padding(vertical = 4.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    if (title.poster.isNotEmpty()) {
+                                        AsyncImage(
+                                            model = "https://image.tmdb.org/t/p/w185" + title.poster,
+                                            contentDescription = "Cartaz: " + title.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.size(63.dp, 95.dp)
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(title.name, fontWeight = FontWeight.SemiBold,
+                                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        Text(title.overview.ifBlank { "Sinopse indisponível." },
+                                            fontSize = 12.sp, maxLines = 3,
+                                            overflow = TextOverflow.Ellipsis)
+                                        Text("Ver título ›", fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.primary)
+                                    }
+                                    TextButton(onClick = { toggleFavorite(title, itemPackage) }) {
+                                        Text(if (isFavorite(title, itemPackage)) "♥" else "♡")
+                                    }
+                                }
+                            }
+                            if (more && !showSaved) item {
+                                OutlinedButton(onClick = { if (!loading) page++ },
+                                    enabled = !loading, modifier = Modifier.fillMaxWidth()) {
+                                    Text("Carregar mais")
+                                }
                             }
                         }
                     }
@@ -369,24 +531,37 @@ internal fun TclStreamingScreens(
     }
     val title = details
     if (title != null) {
+        val pkg = detailsPackage ?: selected?.packageName.orEmpty()
         AlertDialog(
-            onDismissRequest = { details = null },
+            onDismissRequest = { details = null; detailsPackage = null },
             title = { Text(title.name) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
-                    Text("O catálogo informa disponibilidade, não garante um link de reprodução " +
-                        "direto nos aplicativos da TV.")
+                    Text("A TV poderá abrir a busca do título se este serviço aceitar " +
+                        "pesquisa externa. Não existe deep link universal de reprodução.",
+                        fontSize = 12.sp)
+                    TextButton(onClick = { if (pkg.isNotBlank()) toggleFavorite(title, pkg) }) {
+                        Text(if (isFavorite(title, pkg)) "♥ Remover dos favoritos"
+                            else "♡ Adicionar aos favoritos")
+                    }
+                    TextButton(onClick = {
+                        context.startActivity(Intent(Intent.ACTION_VIEW,
+                            Uri.parse("https://www.themoviedb.org/" +
+                                title.media + "/" + title.id + "/watch?locale=BR")))
+                    }) { Text("Onde assistir e links disponíveis") }
                 }
             },
             confirmButton = {
                 TextButton(onClick = {
-                    details = null
-                    selected?.let { openOnTv(it) }
-                }) { Text("Abrir app na TCL") }
+                    details = null; detailsPackage = null
+                    if (pkg.isNotBlank()) searchOnTv(title, pkg)
+                }) { Text("Localizar título na TCL") }
             },
             dismissButton = {
-                TextButton(onClick = { details = null }) { Text("Voltar") }
+                TextButton(onClick = { details = null; detailsPackage = null }) {
+                    Text("Voltar")
+                }
             }
         )
     }
