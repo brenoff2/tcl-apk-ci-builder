@@ -1,0 +1,23 @@
+name: AnyTV - auditar fonte comercial BR
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/audit-movieofthenight.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Offline unit tests
+        run: python -m unittest discover -s scripts/tests -p 'test_movieofthenight_audit.py' -v
+      - name: Live audit with protected key
+        env:
+          ANYTV_MOVIE_API_KEY: ${{ secrets.ANYTV_MOVIE_API_KEY }}
+        run: python scripts/audit_movieofthenight.py
