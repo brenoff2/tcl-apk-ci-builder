@@ -132,13 +132,19 @@ internal object TclTvAppApi {
     ): String = withContext(Dispatchers.IO) {
         val body = JSONObject().put("package", packageName)
             .put("title", title.take(180)).toString()
-        val mode = JSONObject(request(host, code, "/title-search", body))
-            .optString("mode", "unavailable")
-        if (mode == "unsupported") {
-            // Never regress to 'nothing happens' on Connect 1.6.
-            // /launch is supported by every paired AnyTV Connect version.
+        // Connect 1.6 has no /title-search. Keep the reliable /launch path,
+        // and surface 401 instead of silently swallowing invalid pairing.
+        val search = runCatching {
+            JSONObject(request(host, code, "/title-search", body))
+                .optString("mode", "unavailable")
+        }
+        val mode = search.getOrNull()
+        if (mode == "search" || mode == "opened_app") mode
+        else {
+            val failure = search.exceptionOrNull()
+            if (failure?.message?.contains("Código incorreto") == true) throw failure
             if (open(host, code, packageName)) "opened_app" else "unavailable"
-        } else mode
+        }
     }
 
     suspend fun openBluetoothSettings(host: String, code: String): Boolean =
