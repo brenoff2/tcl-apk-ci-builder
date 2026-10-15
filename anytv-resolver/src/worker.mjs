@@ -156,6 +156,98 @@ function report(result, fromCache) {
 }
 
 /**
+ * Read-only TMDB catalog proxy for the AnyTV Android client.
+ * The Android package never receives or submits an API credential.
+ * This endpoint stays inaccessible until deployed behind a dedicated route
+ * with TMDB_READ_TOKEN configured as a Cloudflare Worker Secret.
+ */
+export async function catalogRequest(request, env, deps = {}) {
+  if (!env?.TMDB_READ_TOKEN || !env?.RATE_LIMIT || !env?.DB) {
+    return asJson({ status: "catalog_not_configured" }, 503);
+  }
+  const parsed = new URL(request.url);
+  const route = parsed.pathname.replace(/^\/v1\/catalog\//, "");
+  const patterns = [
+    /^genre\/(movie|tv)\/list$/,
+    /^watch\/providers\/(movie|tv)$/,
+    /^(movie|tv)\/[1-9][0-9]{0,9}\/watch\/providers$/,
+    /^(movie|tv)\/[1-9][0-9]{0,9}\/external_ids$/,
+    /^(discover|search)\/(movie|tv)$/,
+  ];
+  if (!patterns.some(p => p.test(route))) return asJson({ status: "bad_request" }, 400);
+  const allowed = new Set([
+    "language", "watch_region", "with_watch_providers",
+    "with_watch_monetization_types", "include_adult",
+    "sort_by", "page", "query", "with_genres",
+  ]);
+  const keys = [...parsed.searchParams.keys()];
+  if (keys.length > 9 || keys.some(k => !allowed.has(k)) ||
+      new Set(keys).size !== keys.length) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const page = parsed.searchParams.get("page") || "1";
+  if (!/^[1-9][0-9]?$/.test(page) || Number(page) > 50) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const provider = parsed.searchParams.get("with_watch_providers");
+  if (provider !== null && !/^[1-9][0-9]{0,5}$/.test(provider)) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const genre = parsed.searchParams.get("with_genres");
+  if (genre !== null && !/^[1-9][0-9]{0,5}$/.test(genre)) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const query = parsed.searchParams.get("query");
+  if (query !== null && (query.length < 1 || query.length > 90)) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  if ((parsed.searchParams.get("watch_region") || "BR") !== "BR" ||
+      (parsed.searchParams.get("language") || "pt-BR") !== "pt-BR" ||
+      (parsed.searchParams.get("include_adult") || "false") !== "false" ||
+      (parsed.searchParams.get("with_watch_monetization_types") || "flatrate") !== "flatrate" ||
+      (parsed.searchParams.get("sort_by") || "popularity.desc") !== "popularity.desc") {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  try {
+    const ip = request.headers.get("cf-connecting-ip") || "unknown";
+    if (!(await env.RATE_LIMIT.limit({ key: "catalog:" + ip })).success) {
+      return asJson({ status: "rate_limited" }, 429);
+    }
+    const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
+    const upstream = new URL("https://api.themoviedb.org/3/" + route);
+    for (const [k, v] of parsed.searchParams) upstream.searchParams.set(k, v);
+    upstream.searchParams.set("language", "pt-BR");
+    if (route.startsWith("discover/") || route.startsWith("watch/providers/")) {
+      upstream.searchParams.set("watch_region", "BR");
+    }
+    const key = "tmdb:" + upstream.pathname + upstream.search;
+    const cached = await env.DB.prepare(
+      "SELECT payload,expires_at FROM link_cache WHERE cache_key = ? LIMIT 1"
+    ).bind(key).first();
+    if (cached && cached.expires_at > now) {
+      return asJson(JSON.parse(cached.payload), 200, { "x-anytv-cache": "hit" });
+    }
+    const transport = deps.fetch || fetch;
+    const reply = await transport(upstream.toString(), {
+      headers: { Authorization: "Bearer " + env.TMDB_READ_TOKEN, Accept: "application/json" },
+      redirect: "error",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!reply.ok) return asJson({ status: "catalog_unavailable" }, 503);
+    const payload = await reply.text();
+    if (payload.length > 450000) return asJson({ status: "catalog_unavailable" }, 503);
+    const parsedPayload = JSON.parse(payload);
+    await env.DB.prepare(
+      "INSERT INTO link_cache(cache_key,payload,expires_at) VALUES (?,?,?) " +
+      "ON CONFLICT(cache_key) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at"
+    ).bind(key, JSON.stringify(parsedPayload), now + 3600).run();
+    return asJson(parsedPayload);
+  } catch {
+    return asJson({ status: "catalog_unavailable" }, 503);
+  }
+}
+
+/**
  * Inject clock/fetch for deterministic unit tests.
  * Does NOT authorize replaying arbitrary link strings from callers.
  */
@@ -163,6 +255,7 @@ export async function handleRequest(request, env, deps = {}) {
   if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
   const parsed = new URL(request.url);
   if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
+  if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
   if (!env?.ANYTV_CLIENT_TOKEN || !env?.ANYTV_MOVIE_API_KEY ||
       !env?.DB || !env?.RATE_LIMIT || monthlyCap(env) === null) {
     return asJson({ status: "not_configured" }, 503);
