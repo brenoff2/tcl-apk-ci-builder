@@ -298,3 +298,21 @@ test("catalog proxy keeps TMDB secret on server and caches read-only responses",
   }
   assert.equal(calls, 1);
 });
+
+test("catalog uncached lookups stop at monthly upstream cap", async () => {
+  const env = makeEnv(1);
+  env.TMDB_READ_TOKEN = "server-only";
+  let calls = 0;
+  const dependencies = { now: () => Date.parse("2026-10-15T12:00:00Z"), fetch: async () => {
+    calls++;
+    return new Response(JSON.stringify({ results: [] }), { status: 200 });
+  }};
+  const first = await catalogRequest(
+    new Request("https://anytv.invalid/v1/catalog/discover/movie?page=1"), env, dependencies);
+  const next = await catalogRequest(
+    new Request("https://anytv.invalid/v1/catalog/discover/movie?page=2"), env, dependencies);
+  assert.equal(first.status, 200);
+  assert.equal(next.status, 429);
+  assert.equal((await next.json()).status, "monthly_quota_exhausted");
+  assert.equal(calls, 1);
+});
