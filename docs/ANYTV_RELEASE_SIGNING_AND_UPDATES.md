@@ -218,3 +218,9 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 - Run `38806837750` falhou novamente antes do build, agora devido a asserts de `versionCode 34` em `test_approved_visual_contract.py`, `test_tcl_v22_contract.py`, `test_streaming_screens_contract.py` e `versionCode 13` no teste TV do último. Eram contratos fixados à versão antiga apesar de a CI preparar `2.9.6` / `2.3`.
 - Commits de correção de contratos sem desabilitá-los: `566a266f687874607f12796d3fb08d60ed216748` (visual do celular); `3aa380195fea83d92103b191768e00a46d559bcc` e `06d8fbba00f8af52b169e6a44b31dbca1d99277e` (TV/import); `fb30cb74f1cabb4d1d3cc6e94181b849661e08ed` (teste de update celular); `137f3ef37cf3d1118f4aef74768d1b16db1b2c04` (streaming). Os testes continuam verificando a versão exata, selecionada pelos flags `TCL_V35` e `TCL_TV_V23`; releases legados preservados.
 - Run `38807133701` iniciado para validar o conjunto; último readback: `in_progress`. Não marcar compilação, assinatura, OTA nem homologação como concluídas até readback positivo dos jobs/artifacts e teste físico.
+
+
+### Nova rodada de CI de homologação — correções adicionais de contratos (15/10/2026)
+
+- Run `38807133701`: TV iniciou compilação, celular falhou em teste `test_tcl_v21_contract.py` porque esse teste legado ainda impunha `versionCode 34` em lugar do código 35. Identificada e corrigida também sua expectativa `versionName 2.9.5` para a versão 2.9.6 quando `TCL_V35=1`, preservando as expectativas antigas. Commits `fd26cae73b53f3d2645dcea68516a438e82f3f28` e `0fcb980ff6a7f4734b323c73c68ef3e8df326e21`.
+- Uma nova execução de build foi acionada pelo último commit. **Não existe ainda homologação comprovada** de binário 2.9.6/2.3; nenhuma publicação de APK incremental foi realizada. Os arquivos antigos instalados permanecem como estavam.
