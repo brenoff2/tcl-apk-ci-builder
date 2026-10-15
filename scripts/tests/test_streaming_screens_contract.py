@@ -45,6 +45,7 @@ class StreamingScreens(unittest.TestCase):
         for claim in ('P1874', 'P13902', 'P14462', 'P8055', 'P9586', 'P9751', 'P8298'):
             self.assertIn(claim, self.screen)
         self.assertIn('wikidata_id', self.screen)
+        self.assertIn('"https://app.primevideo.com/detail?gti=" + it', self.screen)
         self.assertIn('titleDeepLink(token, title, packageName)', self.screen)
         self.assertIn('TclTvAppApi.openTitle(', self.screen)
         self.assertIn('request(host, code, "/title-open", body)', self.apps)
