@@ -224,3 +224,9 @@ Os arquivos atuais também foram preservados no Google Drive na pasta **AnyTV - 
 
 - Run `38807133701`: TV iniciou compilação, celular falhou em teste `test_tcl_v21_contract.py` porque esse teste legado ainda impunha `versionCode 34` em lugar do código 35. Identificada e corrigida também sua expectativa `versionName 2.9.5` para a versão 2.9.6 quando `TCL_V35=1`, preservando as expectativas antigas. Commits `fd26cae73b53f3d2645dcea68516a438e82f3f28` e `0fcb980ff6a7f4734b323c73c68ef3e8df326e21`.
 - Uma nova execução de build foi acionada pelo último commit. **Não existe ainda homologação comprovada** de binário 2.9.6/2.3; nenhuma publicação de APK incremental foi realizada. Os arquivos antigos instalados permanecem como estavam.
+
+
+### Terceira rodada — streaming CI corrigido (15/10/2026)
+
+- Run `38807438687` passou pelos testes gerais no celular, mas falhou em `Validar telas de streaming reais`: a etapa específica rodava em outro processo sem `TCL_V35`, então seu contrato calculava erroneamente o `versionCode` antigo 34 apesar do código do aplicativo ser 35. Corrigido **na própria etapa** ao declarar `env: TCL_V35: '1'` (commit `acea60cdfda36a58fb8c18a7aec495fbafbec43e`).
+- Build não é homologado até o sucesso integral dos jobs, assinatura 2026, auditoria e verificação física. Não confundir testes de tela verde com abertura real de título no streaming.
