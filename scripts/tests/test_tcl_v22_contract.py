@@ -34,7 +34,9 @@ class PhoneUpdatesAndBack(unittest.TestCase):
     def test_update_button_and_signed_install(self):
         self.assertIn('title = "Buscar atualizações"', self.settings)
         self.assertIn("TclUpdateManager.check(activity)", self.settings)
-        self.assertIn("R.drawable.anytv_wordmark", (SRC / "com/hari/androidtvremote/ui/app/TclApprovedHomeScreen.kt").read_text())
+        self.assertIn("R.drawable.anytv_wordmark", (UI / "SplashScreen.kt").read_text())
+        self.assertNotIn("R.drawable.anytv_wordmark", self.skin)
+        self.assertNotIn("v$installedVersion", self.skin)
         self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
         self.assertIn('android:exported="false"', self.manifest)
         self.assertIn("getPackageArchiveInfo(", self.updater)
@@ -45,9 +47,21 @@ class PhoneUpdatesAndBack(unittest.TestCase):
         self.assertIn("MessageDigest.isEqual(currentSigner(installed), currentSigner(next))", self.updater)
         self.assertNotIn("SilentInstall", self.updater)
 
+    def test_centered_stage_small_ok_and_keyboard_send(self):
+        stage = (UI / "TclResponsivePad.kt").read_text()
+        self.assertIn("Modifier.size(size * .19f)", stage)
+        self.assertIn("modifier = Modifier.weight(1f).fillMaxWidth()", self.skin)
+        self.assertIn("coerceAtMost(stageHeight)", self.skin)
+        self.assertIn("var liveTyping by rememberSaveable { mutableStateOf(false) }", self.skin)
+        self.assertIn('Text("Enviar")', self.skin)
+        self.assertIn("if (!liveTyping) onSendText(draft)", self.skin)
+        splash = (UI / "SplashScreen.kt").read_text()
+        self.assertIn('text = "v$installedVersion"', splash)
+        self.assertNotIn("Android TV Remote", splash)
+
     def test_single_package_higher_version(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.apk)
-        self.assertIn("versionCode = 25", self.apk)
+        self.assertIn("versionCode = 26", self.apk)
 
 
 class TvUpdateAndBluetooth(unittest.TestCase):

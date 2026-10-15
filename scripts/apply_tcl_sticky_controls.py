@@ -1,48 +1,89 @@
 #!/usr/bin/env python3
-"""Keep remote transport centered and quick action toolbar anchored to screen bottom."""
+"""Center the complete D-pad/volume/channel stage between playback and footer.
+
+Keep the display hierarchy constrained to the actual viewport height:
+  toolbar + installed apps + playback
+  equally shared free space / D-pad / free space
+  fixed bottom action row
+No verticalScroll on the center stage: weighted children inside a scrollable
+column are unconstrained and are not centered against the bottom toolbar.
+"""
 from pathlib import Path
+
 p = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclApprovedHomeScreen.kt")
-s = p.read_text(encoding="utf-8")
+source = p.read_text(encoding="utf-8")
 top = """    BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .background(Brush.verticalGradient(listOf(TclSurface, TclBg, TclBg)))
     ) {
 """
-assert s.count(top) == 1
-s=s.replace(top,top+"""        val outerWidth = maxWidth\n        val outerHeight = maxHeight\n        Column(modifier = Modifier.fillMaxSize()) {
-""")
-s=s.replace("val compactHeight = maxHeight < 760.dp", "val compactHeight = outerHeight < 760.dp")
-s=s.replace("val tightHeight = maxHeight < 650.dp", "val tightHeight = outerHeight < 650.dp")
-s=s.replace("horizontal = if (maxWidth < 360.dp)", "horizontal = if (outerWidth < 360.dp)")
-scroll="""            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+head_marker = "                    TclApprovedHeader("
+stage_marker = """                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        // The old 178dp cap"""
+footer_marker = """                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        val buttonDiameter"""
+spacer_marker = "                    Spacer(Modifier.height(2.dp))"
+end_marker = "\n    if (headsetStatus != null) {"
+
+assert source.count(top) == 1
+start = source.index(top)
+head_start = source.index(head_marker, start)
+stage_start = source.index(stage_marker, head_start)
+footer_start = source.index(footer_marker, stage_start)
+spacer_start = source.index(spacer_marker, footer_start)
+end = source.index(end_marker, spacer_start)
+assert source.count(footer_marker) == 1
+header = source[head_start:stage_start]
+stage = source[stage_start:footer_start]
+footer = source[footer_start:spacer_start]
+
+# Bound the D-pad to the actual free viewport height, then center the complete
+# D-pad and both rockers as one unit. A 50% OK button retains its own hit zone.
+stage = stage.replace(
+    ".coerceAtLeast(0.dp).coerceAtMost(280.dp)",
+    ".coerceAtLeast(0.dp).coerceAtMost(280.dp).coerceAtMost(stageHeight)"
+)
+assert "coerceAtMost(stageHeight)" in stage
+
+layout = top + """        val outerWidth = maxWidth
+        val outerHeight = maxHeight
+        val compactHeight = outerHeight < 760.dp
+        val tightHeight = outerHeight < 650.dp
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .padding(
+                        horizontal = if (outerWidth < 360.dp) 8.dp else 12.dp,
+                        vertical = if (tightHeight) 4.dp else 8.dp
+                    ),
+                verticalArrangement = Arrangement.spacedBy(
+                    if (tightHeight) 6.dp else if (compactHeight) 8.dp else 10.dp
+                )
+            ) {
+""" + header + """            }
+            // The gap above the stage is exactly the gap below it, regardless
+            // of screen height and the height of the installed-app strip.
+            BoxWithConstraints(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                val stageHeight = maxHeight
+""" + stage + """            }
+            Box(modifier = Modifier.fillMaxWidth()
+                .padding(
+                    horizontal = if (outerWidth < 360.dp) 8.dp else 12.dp,
+                    vertical = if (tightHeight) 4.dp else 8.dp
+                )) {
+""" + footer + """            }
+        }
+    }
 """
-assert s.count(scroll)==1
-s=s.replace(scroll,"""            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-""")
-anchor='                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {\n                        val buttonDiameter'
-start=s.index(anchor)
-end=s.index('                    Spacer(Modifier.height(2.dp))',start)
-end+=len('                    Spacer(Modifier.height(2.dp))')
-footer=s[start:end].replace('                    Spacer(Modifier.height(2.dp))','')
-s=s[:start]+s[end:]
-closure='''        }
-    }
-
-    if (headsetStatus != null) {'''
-assert s.count(closure)==1
-new='''        }
-        // The bottom actions stay in place even when the TV app list scrolls.
-'''+footer+'''        }
-    }
-
-    if (headsetStatus != null) {'''
-s=s.replace(closure,new)
-assert 'weight(1f)' in s and s.count('val buttonDiameter') == 1
-p.write_text(s, encoding="utf-8")
-print("TCL_STICKY_BOTTOM_ACTIONS_READY")
+updated = source[:start] + layout + source[end:]
+assert updated.count("TclApprovedHeader(") == 2
+assert updated.count("TclResponsivePad(") == 1
+assert updated.count("val buttonDiameter") == 1
+assert "modifier = Modifier.weight(1f).fillMaxWidth()" in updated
+assert "coerceAtMost(stageHeight)" in updated
+p.write_text(updated, encoding="utf-8")
+print("ANYTV_CENTERED_REMOTE_STAGE_WITH_STICKY_FOOTER_OK")

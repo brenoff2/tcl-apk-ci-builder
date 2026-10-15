@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
@@ -73,7 +72,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import kotlin.math.sin
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
@@ -85,7 +83,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.hari.androidtvremote.R
 import com.hari.androidtvremote.androidLib.remote.Remotemessage
 import com.hari.androidtvremote.utils.Constant
 
@@ -458,14 +455,6 @@ private fun TclApprovedHeader(
     onCast: () -> Unit,
     onSettings: () -> Unit
 ) {
-    // Visible version is read from the installed APK, not duplicated in UI constants.
-    val appContext = LocalContext.current
-    val installedVersion = remember(appContext) {
-        runCatching {
-            appContext.packageManager.getPackageInfo(appContext.packageName, 0)
-                .versionName.orEmpty().substringBefore("-")
-        }.getOrDefault("?")
-    }
     // A slim toolbar, not a second oversized connected-status card.
     Row(
         modifier = Modifier.fillMaxWidth()
@@ -473,12 +462,6 @@ private fun TclApprovedHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.anytv_wordmark),
-            contentDescription = "AnyTV — selecionar televisão",
-            modifier = Modifier.width(73.dp).height(28.dp)
-                .clickable(onClick = onChooseTv)
-        )
         Row(
             modifier = Modifier.weight(1f).clickable(onClick = onChooseTv),
             verticalAlignment = Alignment.CenterVertically,
@@ -492,10 +475,6 @@ private fun TclApprovedHeader(
             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Trocar televisão",
                 tint = TclMuted, modifier = Modifier.size(13.dp))
         }
-        Text(
-            "v$installedVersion", fontSize = 10.sp, color = TclMuted, maxLines = 1,
-            modifier = Modifier.semantics { contentDescription = "Versão $installedVersion" }
-        )
         TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar",
             Color(0xFFFF4775), onPower)
         TclHeaderAction(Icons.Filled.Cast, "Transmitir", TclBlue, onCast)
@@ -653,7 +632,7 @@ private fun TclTextInputDialog(
     onSendText: (String) -> Unit
 ) {
     var draft by rememberSaveable { mutableStateOf("") }
-    var liveTyping by rememberSaveable { mutableStateOf(true) }
+    var liveTyping by rememberSaveable { mutableStateOf(false) }
     var note by remember { mutableStateOf<String?>(null) }
 
     fun changeText(value: String) {
@@ -679,7 +658,7 @@ private fun TclTextInputDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Teclado da TCL") },
+        title = { Text("Editor de texto") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
@@ -712,9 +691,9 @@ private fun TclTextInputDialog(
                     maxLines = 5,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = {
-                        if (!liveTyping && draft.isNotEmpty()) {
+                        if (draft.isNotBlank() && !liveTyping) {
                             onSendText(draft)
-                            note = "Texto enviado ao campo que estiver ativo na TV."
+                            note = "Comando enviado. Verifique o campo selecionado na TV."
                         }
                     }),
                     modifier = Modifier.fillMaxWidth()
@@ -725,15 +704,19 @@ private fun TclTextInputDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (!liveTyping && draft.isNotEmpty()) {
-                        onSendText(draft)
-                        note = "Texto enviado ao campo que estiver ativo na TV."
+                    if (draft.isNotBlank()) {
+                        if (!liveTyping) onSendText(draft)
+                        note = if (liveTyping) {
+                            "Digitação ao vivo ativada; o texto já foi transmitido enquanto você digitava."
+                        } else {
+                            "Comando enviado. Verifique o campo selecionado na TV."
+                        }
                     } else {
-                        onDismiss()
+                        note = "Digite algum texto antes de enviar."
                     }
                 }
             ) {
-                Text(if (liveTyping) "Concluir" else "Enviar texto")
+                Text("Enviar")
             }
         },
         dismissButton = {

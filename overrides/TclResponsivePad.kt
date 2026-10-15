@@ -225,7 +225,7 @@ private fun TclHoldDPad(
             Icons.Filled.KeyboardArrowRight
         )
         TclHeldZone(
-            modifier = Modifier.size(size * .38f)
+            modifier = Modifier.size(size * .19f)
                 .clip(CircleShape)
                 .background(Brush.radialGradient(listOf(
                     accent.copy(alpha = 0.38f),
@@ -243,7 +243,7 @@ private fun TclHoldDPad(
             Text(
                 "OK",
                 color = foreground,
-                fontSize = if (size < 228.dp) 23.sp else 27.sp,
+                fontSize = if (size < 228.dp) 12.sp else 14.sp,
                 fontWeight = FontWeight.Bold
             )
         }
