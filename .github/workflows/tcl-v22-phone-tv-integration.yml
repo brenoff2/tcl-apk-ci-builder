@@ -135,8 +135,8 @@ jobs:
             echo 'PERMISSAO SENSIVEL NA TV'; exit 1
           fi
           "$BT/zipalign" -f 4 "$APK" output/AnyTV_TV_1_8_RELEASE_UNSIGNED.apk
-          "$BT/zipalign" -c 4 output/AnyTV_TV_1_7_RELEASE_UNSIGNED.apk
-          sha256sum output/AnyTV_TV_1_7_RELEASE_UNSIGNED.apk > output/SHA256.txt
+          "$BT/zipalign" -c 4 output/AnyTV_TV_1_8_RELEASE_UNSIGNED.apk
+          sha256sum output/AnyTV_TV_1_8_RELEASE_UNSIGNED.apk > output/SHA256.txt
           echo 'NAO INSTALAR. Gerar versoes assinadas com ambos certificados TV 1.3.' > output/LEIA.txt
       - uses: actions/upload-artifact@v4
         with:
