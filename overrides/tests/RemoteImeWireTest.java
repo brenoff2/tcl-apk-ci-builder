@@ -16,10 +16,12 @@ import org.junit.Test;
 public class RemoteImeWireTest {
     private final RemoteMessageManager manager = new RemoteMessageManager();
 
+
+    // The serializer writes two explicit zero-valued int32 fields (08 00, 10 00).
     @Test
     public void fullTextIsExactlyOneImeBatchWithZeroCounters() {
         assertArrayEquals(
-                HexFormat.of().parseHex("1daa011a1a1808011214080d100d1a0e546573746520416e795456203237"),
+                HexFormat.of().parseHex("21aa011e080010001a1808011214080d100d1a0e546573746520416e795456203237"),
                 manager.createImeBatchEditCompatV2("Teste AnyTV 27", 0, 0));
     }
 
