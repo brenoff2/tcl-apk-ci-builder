@@ -1,0 +1,83 @@
+name: Publish cert2026 baseline channels (phone 2.9.6 / TV 2.3)
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-cert2026-baseline.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: anytv-cert2026-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Reconstruct signed phone APK from exact successful unsigned build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p incoming signed
+          gh run download 38807767381 --name ANYTV_PHONE_2_9_5_UNSIGNED_TO_SIGN --dir incoming
+          echo '2a58b874c2500d9b2f3086a415ae4c9bcd10e020f73f37906cdb465e5cd521a2  incoming/AnyTV_2_9_6_RELEASE_UNSIGNED.apk' | sha256sum -c -
+          echo 'b76a698a7667fdbabddcd4c168bb09d4e0d91d363db46eb32b39bf63cce88cf2  .github/anytv-296-patch/phone-signed.patch.zst' | sha256sum -c -
+          zstd -d -f --patch-from=incoming/AnyTV_2_9_6_RELEASE_UNSIGNED.apk .github/anytv-296-patch/phone-signed.patch.zst -o signed/AnyTV-v2.9.6.apk
+          cp .github/anytv-296-patch/tv-signed.apk signed/AnyTV-Connect-v2.3.apk
+          echo 'f2f21295c194c6bdb0c6df8d6f1076de1997a575993faafed624489f4f390850  signed/AnyTV-v2.9.6.apk' | sha256sum -c -
+          echo 'dbc3a497687aa8c9226375bfbf31cce2b6d2c1eb608db993bd06acfc814f9700  signed/AnyTV-Connect-v2.3.apk' | sha256sum -c -
+      - name: Check matching permanent certificates and newer version codes
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/aapt" dump badging signed/AnyTV-v2.9.6.apk | grep -q "name='com.tclremote.livre' versionCode='35'"
+          "$BT/aapt" dump badging signed/AnyTV-Connect-v2.3.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='14'"
+          "$BT/apksigner" verify --verbose --print-certs signed/AnyTV-v2.9.6.apk > phone-cert.txt
+          "$BT/apksigner" verify --verbose --print-certs signed/AnyTV-Connect-v2.3.apk > tv-cert.txt
+          grep -q '^Verifies$' phone-cert.txt
+          grep -q '^Verifies$' tv-cert.txt
+          grep -qi '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' phone-cert.txt
+          grep -qi '0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c' tv-cert.txt
+          "$BT/zipalign" -c 4 signed/AnyTV-v2.9.6.apk
+          "$BT/zipalign" -c 4 signed/AnyTV-Connect-v2.3.apk
+      - name: Publish ONLY the new signing identity channels
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p updates/android/cert2026 updates/tv/cert2026
+          cp signed/AnyTV-v2.9.6.apk updates/android/cert2026/current.apk
+          cp signed/AnyTV-Connect-v2.3.apk updates/tv/cert2026/current.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f updates/android/cert2026/current.apk updates/tv/cert2026/current.apk
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m 'release(anytv): cert2026 OTA baselines 2.9.6 and 2.3 [skip ci]'
+            git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+          fi
+      - name: Confirm published GitHub raw bytes and hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir fetched
+          for i in 1 2 3 4 5 6; do
+            ok=1
+            curl -fLsS --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/cert2026/current.apk?attempt=$i" -o fetched/phone.apk || ok=0
+            curl -fLsS --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/tv/cert2026/current.apk?attempt=$i" -o fetched/tv.apk || ok=0
+            if [ "$ok" = 1 ] && cmp -s fetched/phone.apk signed/AnyTV-v2.9.6.apk && cmp -s fetched/tv.apk signed/AnyTV-Connect-v2.3.apk; then
+              echo 'ANYTV_CERT2026_CHANNELS_PUBLISHED_READBACK_OK'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'Readback failed; do not mark OTA published' >&2
+          exit 1
