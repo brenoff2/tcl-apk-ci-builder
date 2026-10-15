@@ -1,0 +1,26 @@
+{
+  // Pilot template only. No automatic deployment or exposed workers.dev route.
+  "name": "anytv-link-resolver-pilot",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-15",
+  "workers_dev": false,
+  "observability": { "enabled": false },
+  "vars": {
+    "MAX_UPSTREAM_CALLS_MONTH": "200"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "anytv-link-resolver",
+      "database_id": "REPLACE_WITH_D1_DATABASE_UUID",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "ratelimits": [
+    {
+      "name": "RATE_LIMIT",
+      "namespace_id": "275913",
+      "simple": { "limit": 20, "period": 60 }
+    }
+  ]
+}
