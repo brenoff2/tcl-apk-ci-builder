@@ -1,8 +1,5 @@
 name: AnyTV commercial resolver - live provider contract (one-shot)
 on:
-  push:
-    branches: ['feat/tcl-v22-updates-back-bluetooth']
-    paths: ['.github/workflows/anytv-resolver-live-contracts.yml']
   workflow_dispatch:
 permissions:
   contents: read
