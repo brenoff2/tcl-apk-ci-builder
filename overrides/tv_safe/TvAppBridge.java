@@ -396,8 +396,18 @@ public final class TvAppBridge {
                     return u.getQuery() == null && "www.primevideo.com".equals(host)
                         && path.matches("/detail/B[0-9A-Z]{9}");
                 case "com.apple.atve.androidtv.appletv":
-                    return u.getQuery() == null && "tv.apple.com".equals(host)
-                        && path.matches("/(movie|show)/umc\\.cmc\\.[a-z0-9]{22,25}");
+                    // Apple TV+ links returned for Brazil have /br/movie/slug/umc...
+                    // and may require a single playableId. Never accept arbitrary params.
+                    if (!"tv.apple.com".equals(host) ||
+                        !path.matches("/(?:[a-z]{2}/)?(?:movie|show)/(?:[a-z0-9-]{1,120}/)?umc\\.cmc\\.[a-z0-9]{15,40}"))
+                        return false;
+                    if (u.getQuery() == null) return true;
+                    String query = u.getEncodedQuery();
+                    String playable = u.getQueryParameter("playableId");
+                    return query != null &&
+                        query.matches("playableId=[A-Za-z0-9._%:-]{5,150}") &&
+                        playable != null &&
+                        playable.matches("[A-Za-z0-9._:-]{5,120}");
                 case "com.wbd.stream":
                     return u.getQuery() == null && "play.hbomax.com".equals(host)
                         && path.matches("/(movie|show)/[a-f0-9-]{36}");
