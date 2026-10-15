@@ -3,20 +3,20 @@
   "platform": "tv",
   "package": "com.tclremote.tvcompanion",
   "available": true,
-  "version": "1.8",
-  "tag": "tv-complemento-v1.8",
+  "version": "1.9",
+  "tag": "tv-complemento-v1.9",
   "assets": [
     {
-      "name": "Controle_TCL_TV_v1.8_cert8b2b.apk",
-      "size": 316095,
-      "digest": "sha256:94c80c27ed5dee7932812dd37a66ae20e398b83fe09c15530404b69deff2cc7b",
-      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.8/Controle_TCL_TV_v1.8_cert8b2b.apk"
+      "name": "Controle_TCL_TV_v1.9_cert8b2b.apk",
+      "size": 320191,
+      "digest": "sha256:66e5ccaaf47904222cd519e9f51f96c78f7d263e74ee05e85187dc9afdd60a8f",
+      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.9/Controle_TCL_TV_v1.9_cert8b2b.apk"
     },
     {
-      "name": "Controle_TCL_TV_v1.8_cert3382.apk",
-      "size": 316095,
-      "digest": "sha256:6be8a1a3e41316f7125a9135ecd7e03d6fd693a70abf97ef1ec1fd758340e360",
-      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.8/Controle_TCL_TV_v1.8_cert3382.apk"
+      "name": "Controle_TCL_TV_v1.9_cert3382.apk",
+      "size": 320191,
+      "digest": "sha256:886dec21e2a867dfe1632a6cc11b2e6b971314e64aae31536fc9a5069d2c8800",
+      "browser_download_url": "https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.9/Controle_TCL_TV_v1.9_cert3382.apk"
     }
   ]
 }

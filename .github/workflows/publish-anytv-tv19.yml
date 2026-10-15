@@ -1,0 +1,69 @@
+name: Publish AnyTV Connect 1.9 direct-title hotfix
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-tv19.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Verify source code TV build and signed distribution
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/${{ github.repository }}/actions/jobs/116486372095 --jq .conclusion)" = success
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          for item in '8b2b 8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da' '3382 3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add'; do
+            kind="${item%% *}"; cert="${item##* }"
+            apk="updates/tv/cert${kind}/current.apk"
+            cmp "$apk" "updates/tv/cert${kind}/AnyTV-Connect-v1.9.apk"
+            "$bt/aapt" dump badging "$apk" | grep -q "name='com.tclremote.tvcompanion' versionCode='10' versionName='1.9-AnyTV'"
+            "$bt/apksigner" verify --verbose --print-certs "$apk" > "verify-${kind}.txt"
+            grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' "verify-${kind}.txt"
+            grep -qi "$cert" "verify-${kind}.txt"
+            "$bt/zipalign" -c 4 "$apk"
+          done
+          echo '66e5ccaaf47904222cd519e9f51f96c78f7d263e74ee05e85187dc9afdd60a8f  updates/tv/cert8b2b/current.apk' | sha256sum -c -
+          echo '886dec21e2a867dfe1632a6cc11b2e6b971314e64aae31536fc9a5069d2c8800  updates/tv/cert3382/current.apk' | sha256sum -c -
+          test -s updates/tv/current.json
+          if gh release view tv-complemento-v1.9 >/dev/null 2>&1; then
+            echo 'Existing 1.9 release found; refusing overwrite'; exit 1
+          fi
+      - name: Publish official release and compare bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cp updates/tv/cert8b2b/current.apk Controle_TCL_TV_v1.9_cert8b2b.apk
+          cp updates/tv/cert3382/current.apk Controle_TCL_TV_v1.9_cert3382.apk
+          gh release create tv-complemento-v1.9 Controle_TCL_TV_v1.9_cert8b2b.apk Controle_TCL_TV_v1.9_cert3382.apk --target feat/tcl-v22-updates-back-bluetooth --title 'AnyTV Connect 1.9' --notes 'Hotfix: tenta abrir a ficha oficial de Zootopia 2 no Disney+ usando um link de entidade conhecido. Mantem os controles, aplicativos e Bluetooth. O resultado depende do handler Disney+ instalado na TV; nao implica que a ficha foi homologada fisicamente.' --latest=false
+          mkdir -p released
+          gh release download tv-complemento-v1.9 -p 'Controle_TCL_TV_v1.9_cert*.apk' -D released
+          cmp Controle_TCL_TV_v1.9_cert8b2b.apk released/Controle_TCL_TV_v1.9_cert8b2b.apk
+          cmp Controle_TCL_TV_v1.9_cert3382.apk released/Controle_TCL_TV_v1.9_cert3382.apk
+      - name: Validate publicly served current.apk for both variants
+        run: |
+          set -euo pipefail
+          base='https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/tv'
+          for item in '8b2b 66e5ccaaf47904222cd519e9f51f96c78f7d263e74ee05e85187dc9afdd60a8f' '3382 886dec21e2a867dfe1632a6cc11b2e6b971314e64aae31536fc9a5069d2c8800'; do
+            set -- $item; kind="$1"; expected="$2"; ok=0
+            for attempt in $(seq 1 10); do
+              if curl -fLsS --max-time 45 "${base}/cert${kind}/current.apk?cache=${GITHUB_RUN_ID}-${attempt}" -o "current-${kind}.apk" &&
+                  test "$(sha256sum "current-${kind}.apk" | cut -d' ' -f1)" = "$expected"; then
+                ok=1; break
+              fi
+              sleep 4
+            done
+            test "$ok" = 1 || { echo "PUBLIC_ENDPOINT_NOT_READY_${kind}"; exit 1; }
+          done
+          echo 'ANYTV_TV19_CERT8B2B_CERT3382_PUBLIC_CURRENT_OK'
