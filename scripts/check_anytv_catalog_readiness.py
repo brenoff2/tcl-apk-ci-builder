@@ -27,6 +27,7 @@ for route, array_name in ROUTES:
                     print("HTTP_BODY_STATUS: " + str(body.get("status", body.get("code", "unknown")))[:80], file=sys.stderr)
                     print("HTTP_BODY_KEYS: " + ",".join(sorted(body.keys()))[:160], file=sys.stderr)
                     print("HTTP_BODY_ERRORS: " + str(body.get("errors", "none"))[:240], file=sys.stderr)
+                    print("CF_ERROR_DIAG: " + " ".join(str(body.get(k, ""))[:90] for k in ("error_code","error_name","error_category","title","detail","cloudflare_error")), file=sys.stderr)
                     print("HTTP_BODY_MESSAGE: " + str(body.get("message", body.get("error", "not_provided")))[:180], file=sys.stderr)
             except Exception:
                 pass
