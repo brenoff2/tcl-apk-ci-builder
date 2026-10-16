@@ -25,6 +25,7 @@ for route, array_name in ROUTES:
             print("WORKER_FAILURE_TYPE: " + str(error.headers.get("x-anytv-failure-type", "not_set")), file=sys.stderr)
             print("WORKER_FAILURE_REASON: " + str(error.headers.get("x-anytv-failure-reason", "not_set")), file=sys.stderr)
             print("WORKER_FAILURE_DETAIL_CODE: " + str(error.headers.get("x-anytv-failure-detail-code", "not_set")), file=sys.stderr)
+            print("WORKER_SANITIZED_ERROR: " + str(error.headers.get("x-anytv-sanitized-error", "not_set"))[:160], file=sys.stderr)
             print("HTTP_DIAG: server=" + str(error.headers.get("server")) + " cf-ray=" + str(bool(error.headers.get("cf-ray"))) + " content-type=" + str(error.headers.get("content-type")), file=sys.stderr)
             try:
                 body = json.loads(error.read(1000))
