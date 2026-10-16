@@ -237,7 +237,7 @@ export async function catalogRequest(request, env, deps = {}) {
     }
     // TMDB offers either a v4 Read Access Token (Bearer) or a 32-char v3 API key.
     // Both stay exclusively in Cloudflare Secrets; no credential reaches the app.
-    const credential = String(env.TMDB_READ_TOKEN).trim().replace(/^Bearer\s+/i, "");
+    const credential = String(env.TMDB_READ_TOKEN).trim().replace(/^Bearer\s+/i, "").replace(/\s+/g, "");
     const v3Key = /^[a-f0-9]{32}$/i.test(credential);
     if (v3Key) upstream.searchParams.set("api_key", credential);
     const transport = deps.fetch || fetch;
