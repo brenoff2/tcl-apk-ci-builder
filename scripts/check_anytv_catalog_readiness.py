@@ -18,8 +18,8 @@ for route, array_name in ROUTES:
         payload = json.loads(data)
         assert isinstance(payload, dict) and isinstance(payload.get(array_name), list)
         assert payload[array_name], "The live catalog is empty"
-    except Exception:
-        print("BLOCKED: catalog backend is not ready for OTA release", file=sys.stderr)
+    except Exception as error:
+        print("BLOCKED: catalog backend is not ready for OTA release: " + type(error).__name__ + " " + str(error)[:160], file=sys.stderr)
         raise SystemExit(1) from None
     print("PASS " + route.split("?")[0])
 print("ANYTV_CATALOG_LIVE_READINESS_OK")
