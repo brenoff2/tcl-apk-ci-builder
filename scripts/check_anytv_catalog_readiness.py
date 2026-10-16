@@ -20,6 +20,7 @@ for route, array_name in ROUTES:
         assert payload[array_name], "The live catalog is empty"
     except Exception as error:
         if hasattr(error, "headers"):
+            print("UPSTREAM_STATUS: " + str(error.headers.get("x-anytv-upstream-status", "not_set")), file=sys.stderr)
             print("HTTP_DIAG: server=" + str(error.headers.get("server")) + " cf-ray=" + str(bool(error.headers.get("cf-ray"))) + " content-type=" + str(error.headers.get("content-type")), file=sys.stderr)
             try:
                 body = json.loads(error.read(1000))
