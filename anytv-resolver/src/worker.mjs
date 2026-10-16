@@ -262,6 +262,15 @@ export async function catalogRequest(request, env, deps = {}) {
     return asJson(parsedPayload);
   } catch (error) {
     const detail = error instanceof Error ? String(error.message) : "";
+    // Diagnostic code only: never include upstream URLs, credentials or messages.
+    const diagnostic = /Invalid URL/i.test(detail) ? "invalid_url"
+      : /Fetch API cannot load/i.test(detail) ? "cf_fetch_denied"
+      : /outbound|not permitted|not allowed|blocked/i.test(detail) ? "outbound_block"
+      : /fetch is not|not a function/i.test(detail) ? "fetch_binding"
+      : /Invalid header|ByteString|Invalid character/i.test(detail) ? "bad_header"
+      : /network connection lost|network error/i.test(detail) ? "network_lost"
+      : /AbortSignal|signal/i.test(detail) ? "bad_signal"
+      : "unknown";
     const reason = /header|ByteString|Invalid character/i.test(detail) ? "invalid_header"
       : /timed|abort/i.test(detail) ? "timeout"
       : /fetch|network|DNS|connect/i.test(detail) ? "network"
@@ -270,7 +279,8 @@ export async function catalogRequest(request, env, deps = {}) {
     return asJson({ status: "catalog_unavailable" }, 503,
       { "x-anytv-failure-stage": diagnosticStage,
         "x-anytv-failure-type": error instanceof Error ? error.name : "unknown",
-        "x-anytv-failure-reason": reason });
+        "x-anytv-failure-reason": reason,
+        "x-anytv-failure-detail-code": diagnostic });
   }
 }
 
