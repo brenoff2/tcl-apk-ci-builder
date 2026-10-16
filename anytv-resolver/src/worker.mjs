@@ -262,6 +262,10 @@ export async function catalogRequest(request, env, deps = {}) {
     return asJson(parsedPayload);
   } catch (error) {
     const detail = error instanceof Error ? String(error.message) : "";
+    const sanitized = detail.replaceAll(String(env.TMDB_READ_TOKEN || ""), "[REDACTED]")
+      .replace(/https?:\\/\\/[^\\s]+/g, "[URL]")
+      .replace(/[A-Za-z0-9._+=\\/-]{24,}/g, "[LONG]")
+      .replace(/[^\\x20-\\x7e]/g, " ").slice(0,140);
     // Diagnostic code only: never include upstream URLs, credentials or messages.
     const diagnostic = /Invalid URL/i.test(detail) ? "invalid_url"
       : /Fetch API cannot load/i.test(detail) ? "cf_fetch_denied"
@@ -280,7 +284,8 @@ export async function catalogRequest(request, env, deps = {}) {
       { "x-anytv-failure-stage": diagnosticStage,
         "x-anytv-failure-type": error instanceof Error ? error.name : "unknown",
         "x-anytv-failure-reason": reason,
-        "x-anytv-failure-detail-code": diagnostic });
+        "x-anytv-failure-detail-code": diagnostic,
+        "x-anytv-sanitized-error": sanitized });
   }
 }
 
