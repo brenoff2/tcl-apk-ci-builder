@@ -21,6 +21,12 @@ for route, array_name in ROUTES:
     except Exception as error:
         if hasattr(error, "headers"):
             print("HTTP_DIAG: server=" + str(error.headers.get("server")) + " cf-ray=" + str(bool(error.headers.get("cf-ray"))) + " content-type=" + str(error.headers.get("content-type")), file=sys.stderr)
+            try:
+                body = json.loads(error.read(1000))
+                if isinstance(body, dict):
+                    print("HTTP_BODY_STATUS: " + str(body.get("status", body.get("code", "unknown")))[:80], file=sys.stderr)
+            except Exception:
+                pass
         print("BLOCKED: catalog backend is not ready for OTA release: " + type(error).__name__ + " " + str(error)[:160], file=sys.stderr)
         raise SystemExit(1) from None
     print("PASS " + route.split("?")[0])
