@@ -316,3 +316,32 @@ test("catalog uncached lookups stop at monthly upstream cap", async () => {
   assert.equal((await next.json()).status, "monthly_quota_exhausted");
   assert.equal(calls, 1);
 });
+
+test("TMDB v3 key stays server-only as upstream api_key", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "0123456789abcdef0123456789abcdef";
+  let seen = false;
+  const deps = { now: () => Date.parse("2026-10-15T12:00:00Z"), fetch: async (url, init) => {
+    const upstream = new URL(url);
+    assert.equal(upstream.searchParams.get("api_key"), env.TMDB_READ_TOKEN);
+    assert.equal(init.headers.Authorization, undefined);
+    seen = true;
+    return new Response(JSON.stringify({ genres: [{id:28,name:"Ação"}] }), {status:200});
+  }};
+  const response = await catalogRequest(new Request("https://anytv.invalid/v1/catalog/genre/movie/list"),env,deps);
+  assert.equal(response.status,200);
+  assert.equal((await response.text()).includes(env.TMDB_READ_TOKEN),false);
+  assert.equal(seen,true);
+});
+
+test("TMDB upstream error reports status without exposing credentials",async()=>{
+  const env=makeEnv();
+  env.TMDB_READ_TOKEN="server-only";
+  const response=await catalogRequest(new Request("https://anytv.invalid/v1/catalog/genre/movie/list"),env,{
+    now:()=>Date.parse("2026-10-15T12:00:00Z"),
+    fetch:async()=>new Response('unauthorized',{status:401})
+  });
+  assert.equal(response.status,503);
+  assert.equal(response.headers.get("x-anytv-upstream-status"),"401");
+  assert.equal((await response.text()).includes(env.TMDB_READ_TOKEN),false);
+});
