@@ -263,9 +263,9 @@ export async function catalogRequest(request, env, deps = {}) {
   } catch (error) {
     const detail = error instanceof Error ? String(error.message) : "";
     const sanitized = detail.replaceAll(String(env.TMDB_READ_TOKEN || ""), "[REDACTED]")
-      .replace(/https?:\\/\\/[^\\s]+/g, "[URL]")
-      .replace(/[A-Za-z0-9._+=\\/-]{24,}/g, "[LONG]")
-      .replace(/[^\\x20-\\x7e]/g, " ").slice(0,140);
+      .replace(/https?:\/\/\S+/g, "[URL]")
+      .replace(/[A-Za-z0-9._+=\/-]{24,}/g, "[LONG]")
+      .replace(/[^\x20-\x7e]/g, " ").slice(0,140);
     // Diagnostic code only: never include upstream URLs, credentials or messages.
     const diagnostic = /Invalid URL/i.test(detail) ? "invalid_url"
       : /Fetch API cannot load/i.test(detail) ? "cf_fetch_denied"
