@@ -25,6 +25,8 @@ for route, array_name in ROUTES:
                 body = json.loads(error.read(1000))
                 if isinstance(body, dict):
                     print("HTTP_BODY_STATUS: " + str(body.get("status", body.get("code", "unknown")))[:80], file=sys.stderr)
+                    print("HTTP_BODY_KEYS: " + ",".join(sorted(body.keys()))[:160], file=sys.stderr)
+                    print("HTTP_BODY_ERRORS: " + str(body.get("errors", "none"))[:240], file=sys.stderr)
                     print("HTTP_BODY_MESSAGE: " + str(body.get("message", body.get("error", "not_provided")))[:180], file=sys.stderr)
             except Exception:
                 pass
