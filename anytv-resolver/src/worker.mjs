@@ -245,7 +245,7 @@ export async function catalogRequest(request, env, deps = {}) {
     const reply = await transport(upstream.toString(), {
       headers: { ...(v3Key ? {} : { Authorization: "Bearer " + credential }),
         Accept: "application/json" },
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(8000),
     });
     if (!reply.ok) return asJson({ status: "catalog_unavailable" }, 503,
@@ -333,7 +333,7 @@ export async function handleRequest(request, env, deps = {}) {
         "X-API-Key": env.ANYTV_MOVIE_API_KEY,
         Accept: "application/json",
       },
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(8000),
     });
     if (!reply.ok) return asJson({ status: "source_unavailable" }, 503);
