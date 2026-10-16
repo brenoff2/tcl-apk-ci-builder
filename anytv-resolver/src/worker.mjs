@@ -208,6 +208,7 @@ export async function catalogRequest(request, env, deps = {}) {
       (parsed.searchParams.get("sort_by") || "popularity.desc") !== "popularity.desc") {
     return asJson({ status: "bad_request" }, 400);
   }
+  let diagnosticStage = "rate_limit";
   try {
     const ip = request.headers.get("cf-connecting-ip") || "unknown";
     if (!(await env.RATE_LIMIT.limit({ key: "catalog:" + ip })).success) {
@@ -221,6 +222,7 @@ export async function catalogRequest(request, env, deps = {}) {
       upstream.searchParams.set("watch_region", "BR");
     }
     const key = "tmdb:" + upstream.pathname + upstream.search;
+    diagnosticStage = "cache_read";
     const cached = await env.DB.prepare(
       "SELECT payload,expires_at FROM link_cache WHERE cache_key = ? LIMIT 1"
     ).bind(key).first();
@@ -229,6 +231,7 @@ export async function catalogRequest(request, env, deps = {}) {
     }
     // Count uncached catalog lookups against the same bounded upstream budget.
     // Prevent an unauthenticated public catalog from becoming an unlimited TMDB proxy.
+    diagnosticStage = "quota_reserve";
     if (monthlyCap(env) === null || !(await reserveQuota(env, now))) {
       return asJson({ status: "monthly_quota_exhausted" }, 429);
     }
@@ -238,6 +241,7 @@ export async function catalogRequest(request, env, deps = {}) {
     const v3Key = /^[a-f0-9]{32}$/i.test(credential);
     if (v3Key) upstream.searchParams.set("api_key", credential);
     const transport = deps.fetch || fetch;
+    diagnosticStage = "upstream_fetch";
     const reply = await transport(upstream.toString(), {
       headers: { ...(v3Key ? {} : { Authorization: "Bearer " + credential }),
         Accept: "application/json" },
@@ -246,16 +250,19 @@ export async function catalogRequest(request, env, deps = {}) {
     });
     if (!reply.ok) return asJson({ status: "catalog_unavailable" }, 503,
       { "x-anytv-upstream-status": String(reply.status) });
+    diagnosticStage = "upstream_body";
     const payload = await reply.text();
     if (payload.length > 450000) return asJson({ status: "catalog_unavailable" }, 503);
     const parsedPayload = JSON.parse(payload);
+    diagnosticStage = "cache_write";
     await env.DB.prepare(
       "INSERT INTO link_cache(cache_key,payload,expires_at) VALUES (?,?,?) " +
       "ON CONFLICT(cache_key) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at"
     ).bind(key, JSON.stringify(parsedPayload), now + 3600).run();
     return asJson(parsedPayload);
   } catch {
-    return asJson({ status: "catalog_unavailable" }, 503);
+    return asJson({ status: "catalog_unavailable" }, 503,
+      { "x-anytv-failure-stage": diagnosticStage });
   }
 }
 
