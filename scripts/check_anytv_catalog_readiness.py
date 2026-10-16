@@ -19,6 +19,8 @@ for route, array_name in ROUTES:
         assert isinstance(payload, dict) and isinstance(payload.get(array_name), list)
         assert payload[array_name], "The live catalog is empty"
     except Exception as error:
+        if hasattr(error, "headers"):
+            print("HTTP_DIAG: server=" + str(error.headers.get("server")) + " cf-ray=" + str(bool(error.headers.get("cf-ray"))) + " content-type=" + str(error.headers.get("content-type")), file=sys.stderr)
         print("BLOCKED: catalog backend is not ready for OTA release: " + type(error).__name__ + " " + str(error)[:160], file=sys.stderr)
         raise SystemExit(1) from None
     print("PASS " + route.split("?")[0])
