@@ -94,6 +94,7 @@ private object StreamingCatalog {
             connection.connectTimeout = 6000
             connection.readTimeout = 9000
             connection.setRequestProperty("Accept", "application/json")
+            connection.setRequestProperty("User-Agent", "AnyTV/2.9.8 (Android; streaming catalog client)")
             val status = connection.responseCode
             if (status !in 200..299) {
                 error("Catálogo temporariamente indisponível (HTTP $status).")
