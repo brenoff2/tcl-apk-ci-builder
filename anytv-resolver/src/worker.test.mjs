@@ -147,7 +147,7 @@ test("fetches a Brazilian subscription, sends key as header and caches it", asyn
       fetches++;
       assert.match(url, /\/shows\/movie%2F329\?country=br/);
       assert.equal(options.headers["X-API-Key"], env.ANYTV_MOVIE_API_KEY);
-      assert.equal(options.redirect, "error");
+      assert.equal(options.redirect, "manual");
       return response(show("movie/329", [mockOffer("prime", FIX.prime)]));
     }
   };
