@@ -237,7 +237,7 @@ export async function catalogRequest(request, env, deps = {}) {
     }
     // TMDB offers either a v4 Read Access Token (Bearer) or a 32-char v3 API key.
     // Both stay exclusively in Cloudflare Secrets; no credential reaches the app.
-    const credential = String(env.TMDB_READ_TOKEN).trim().replace(/^Bearer\\s+/i, "");
+    const credential = String(env.TMDB_READ_TOKEN).trim().replace(/^Bearer\s+/i, "");
     const v3Key = /^[a-f0-9]{32}$/i.test(credential);
     if (v3Key) upstream.searchParams.set("api_key", credential);
     const transport = deps.fetch || fetch;
@@ -261,9 +261,16 @@ export async function catalogRequest(request, env, deps = {}) {
     ).bind(key, JSON.stringify(parsedPayload), now + 3600).run();
     return asJson(parsedPayload);
   } catch (error) {
+    const detail = error instanceof Error ? String(error.message) : "";
+    const reason = /header|ByteString|Invalid character/i.test(detail) ? "invalid_header"
+      : /timed|abort/i.test(detail) ? "timeout"
+      : /fetch|network|DNS|connect/i.test(detail) ? "network"
+      : /signal/i.test(detail) ? "signal"
+      : "unknown";
     return asJson({ status: "catalog_unavailable" }, 503,
       { "x-anytv-failure-stage": diagnosticStage,
-        "x-anytv-failure-type": error instanceof Error ? error.name : "unknown" });
+        "x-anytv-failure-type": error instanceof Error ? error.name : "unknown",
+        "x-anytv-failure-reason": reason });
   }
 }
 
