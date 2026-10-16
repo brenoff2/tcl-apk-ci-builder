@@ -91,6 +91,7 @@ internal object AnyTvPersonalLinks {
             conn.connectTimeout = 5000
             conn.readTimeout = 8000
             conn.setRequestProperty("Accept", "application/json")
+            conn.setRequestProperty("User-Agent", "AnyTV/2.9.8 (Android; streaming catalog client)")
             val status = conn.responseCode
             if (status == 404) return@withContext AnyTvPersonalResult.NotInSubscription
             if (status == 409) return@withContext AnyTvPersonalResult.NoSupportedLink
