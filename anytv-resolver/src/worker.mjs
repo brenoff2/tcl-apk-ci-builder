@@ -232,13 +232,20 @@ export async function catalogRequest(request, env, deps = {}) {
     if (monthlyCap(env) === null || !(await reserveQuota(env, now))) {
       return asJson({ status: "monthly_quota_exhausted" }, 429);
     }
+    // TMDB offers either a v4 Read Access Token (Bearer) or a 32-char v3 API key.
+    // Both stay exclusively in Cloudflare Secrets; no credential reaches the app.
+    const credential = String(env.TMDB_READ_TOKEN);
+    const v3Key = /^[a-f0-9]{32}$/i.test(credential);
+    if (v3Key) upstream.searchParams.set("api_key", credential);
     const transport = deps.fetch || fetch;
     const reply = await transport(upstream.toString(), {
-      headers: { Authorization: "Bearer " + env.TMDB_READ_TOKEN, Accept: "application/json" },
+      headers: { ...(v3Key ? {} : { Authorization: "Bearer " + credential }),
+        Accept: "application/json" },
       redirect: "error",
       signal: AbortSignal.timeout(8000),
     });
-    if (!reply.ok) return asJson({ status: "catalog_unavailable" }, 503);
+    if (!reply.ok) return asJson({ status: "catalog_unavailable" }, 503,
+      { "x-anytv-upstream-status": String(reply.status) });
     const payload = await reply.text();
     if (payload.length > 450000) return asJson({ status: "catalog_unavailable" }, 503);
     const parsedPayload = JSON.parse(payload);
