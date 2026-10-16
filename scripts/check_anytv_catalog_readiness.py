@@ -11,7 +11,7 @@ ROUTES = [
 ]
 for route, array_name in ROUTES:
     try:
-        request = urllib.request.Request(ROOT + route, headers={"Accept": "application/json"})
+        request = urllib.request.Request(ROOT + route, headers={"Accept": "application/json", "User-Agent": "AnyTV/2.9.8 (Android; streaming catalog client)"})
         with urllib.request.urlopen(request, timeout=15) as response:
             data = response.read(450001)
             assert response.status == 200 and len(data) <= 450000
