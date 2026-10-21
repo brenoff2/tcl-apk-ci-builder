@@ -371,6 +371,8 @@ if os.environ.get("TCL_RESCUE_STABLE") == "1":
                  SRC / "ui/app/TclStreamingScreens.kt")
         copyfile("overrides/AnyTvPersonalLinks.kt",
                  SRC / "ui/app/AnyTvPersonalLinks.kt")
+        copyfile("overrides/AnyTvDeviceIdentity.kt",
+                 SRC / "ui/app/AnyTvDeviceIdentity.kt")
         # One-time 8-digit pairing enables LAN inventory requests to the
         # companion on the TV; subsequent connects fetch automatically.
         change("app/src/main/AndroidManifest.xml", [
