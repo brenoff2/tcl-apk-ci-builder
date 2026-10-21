@@ -208,8 +208,10 @@ export async function catalogRequest(request, env, deps = {}) {
   if (query !== null && (query.length < 1 || query.length > 90)) {
     return asJson({ status: "bad_request" }, 400);
   }
+  const lang = parsed.searchParams.get("language") || "pt-BR";
+  const trailerLanguage = /^(movie|tv)\/[1-9][0-9]{0,9}\/videos$/.test(route);
   if ((parsed.searchParams.get("watch_region") || "BR") !== "BR" ||
-      (parsed.searchParams.get("language") || "pt-BR") !== "pt-BR" ||
+      (lang !== "pt-BR" && !(trailerLanguage && lang === "en-US")) ||
       (parsed.searchParams.get("include_adult") || "false") !== "false" ||
       (parsed.searchParams.get("with_watch_monetization_types") || "flatrate") !== "flatrate" ||
       (parsed.searchParams.get("sort_by") || "popularity.desc") !== "popularity.desc") {
@@ -224,7 +226,7 @@ export async function catalogRequest(request, env, deps = {}) {
     const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
     const upstream = new URL("https://api.themoviedb.org/3/" + route);
     for (const [k, v] of parsed.searchParams) upstream.searchParams.set(k, v);
-    upstream.searchParams.set("language", "pt-BR");
+    upstream.searchParams.set("language", lang);
     if (route.startsWith("discover/") || route.startsWith("watch/providers/")) {
       upstream.searchParams.set("watch_region", "BR");
     }
