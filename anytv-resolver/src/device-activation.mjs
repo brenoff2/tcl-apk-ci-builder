@@ -42,6 +42,7 @@ export async function activateDevice(request, env, deps = {}) {
         ON CONFLICT(device_id) DO NOTHING`).bind(item.device_id, item.public_key, hash, now, now),
       env.DB.prepare(`UPDATE device_activations SET used_at=?,device_id=?
         WHERE code_hash=? AND used_at IS NULL AND expires_at>?
+          AND changes()=1
           AND EXISTS(SELECT 1 FROM device_keys WHERE device_id=? AND public_key=?)`)
         .bind(now, item.device_id, hash, now, item.device_id, item.public_key)
     ];
