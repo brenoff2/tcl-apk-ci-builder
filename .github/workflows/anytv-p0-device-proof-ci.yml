@@ -1,0 +1,27 @@
+name: AnyTV P0 device proof tests (isolated)
+on:
+  push:
+    branches:
+      - feat/anytv-p0-device-proof-verifier-20261020
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  device-proof:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: anytv-resolver
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax
+        run: |
+          node --check src/device-proof.mjs
+          node --check src/device-proof.test.mjs
+          node --check src/worker.mjs
+      - name: Resolver and device-proof regressions
+        run: npm test
