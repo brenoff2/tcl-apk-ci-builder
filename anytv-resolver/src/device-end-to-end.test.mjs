@@ -19,6 +19,9 @@ test("activation -> signed resolver -> replay denial; no upstream on denied traf
     prepare(sql) { return { bind(...args) { return {
       async first() {
         if (sql.includes("FROM device_keys")) return activated ? device : null;
+        if (sql.includes("FROM link_cache")) return {
+          payload: JSON.stringify({ status: "not_available" }), expires_at: seconds + 900
+        };
         throw Error("unexpected first statement");
       },
       async run() {
@@ -61,8 +64,9 @@ test("activation -> signed resolver -> replay denial; no upstream on denied traf
   assert.equal((await handleRequest(activation(), env, deps)).status, 201);
   assert.equal((await handleRequest(activation(), env, deps)).status, 403);
   const accepted = await handleRequest(signed(), env, deps);
-  assert.notEqual(accepted.status, 401);
-  assert.equal(upstream, 0); // mocked D1 has no cache/quota; no provider call
+  assert.equal(accepted.status, 404);
+  assert.equal((await accepted.json()).cached, true);
+  assert.equal(upstream, 0); // cache response: provider never contacted
   assert.equal((await handleRequest(signed(), env, deps)).status, 401);
   assert.equal(upstream, 0);
 });
