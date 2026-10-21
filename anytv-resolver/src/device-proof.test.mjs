@@ -122,3 +122,24 @@ test("resolver rejects unknown auth mode without falling back to pilot", async (
       { headers: { authorization: "Bearer private-pilot-access" } }), f.env, f.deps);
   assert.equal(response.status, 503);
 });
+
+test("Android Keystore-compatible P-256 signature verifies and rejects replay", async () => {
+  const f = await fixture();
+  const pair = await crypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const publicKey = b64(await crypto.subtle.exportKey("raw", pair.publicKey));
+  f.record.public_key = "p256:" + publicKey;
+  const stamp = String(Math.floor(now / 1000));
+  const nonce = "d".repeat(32);
+  const path = "/v1/resolve/movie/329/prime";
+  const payload = ["ANYTV1", "GET", path, stamp, nonce].join("\n");
+  const signature = b64(await crypto.subtle.sign(
+    { name: "ECDSA", hash: "SHA-256" }, pair.privateKey,
+    new TextEncoder().encode(payload)));
+  const req = new Request("https://resolver.test" + path, {
+    headers: { "x-anytv-device": id, "x-anytv-time": stamp,
+      "x-anytv-nonce": nonce, "x-anytv-signature": signature }
+  });
+  assert.equal(await verifyDeviceProof(req, f.env, f.deps), true);
+  assert.equal(await verifyDeviceProof(req, f.env, f.deps), false);
+});
