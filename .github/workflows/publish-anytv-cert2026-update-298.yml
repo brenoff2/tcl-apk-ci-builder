@@ -1,0 +1,78 @@
+name: Publish AnyTV phone 2.9.8 cert2026 OTA (verified signed APK)
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-cert2026-update-298.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: anytv-cert2026-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Confirm signed source is a successful P0 build
+        run: |
+          set -euo pipefail
+          gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/39661373378 \
+            --jq '.conclusion + " " + .head_branch' | grep -Fx 'success feat/anytv-p0-device-proof-verifier-20261020'
+      - name: Download and authenticate unsigned 2.9.8 candidate
+        run: |
+          set -euo pipefail
+          mkdir -p incoming signed
+          gh run download 39661373378 --name anytv-p0-unsigned-audit --dir incoming
+          echo '25684be7c4ee460c165f386e85f892ea593721b66aca8ec5a2ab4dbfec6946e7  incoming/AnyTV_2_9_8_RELEASE_UNSIGNED.apk' | sha256sum -c -
+      - name: Reconstruct only the audited signed APK (no private keys)
+        run: |
+          set -euo pipefail
+          python3 scripts/reconstruct_anytv_signed_from_metadata.py \
+            incoming/AnyTV_2_9_8_RELEASE_UNSIGNED.apk \
+            .github/anytv-298-patch/signed-reconstruction.json \
+            signed/AnyTV_2_9_8_SIGNED_CERT2026.apk
+          echo '18a568f5d84f0eab95a25d5ab36ea7a150eb53259158c4d559151463685d4c17  signed/AnyTV_2_9_8_SIGNED_CERT2026.apk' | sha256sum -c -
+      - name: Confirm permanent phone signature and strictly newer version
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/aapt" dump badging signed/AnyTV_2_9_8_SIGNED_CERT2026.apk | grep -q "name='com.tclremote.livre' versionCode='37' versionName='2.9.8-AnyTV'"
+          "$BT/apksigner" verify --verbose --print-certs signed/AnyTV_2_9_8_SIGNED_CERT2026.apk > signed-cert.txt
+          grep -q '^Verifies$' signed-cert.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-cert.txt
+          grep -qi '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' signed-cert.txt
+          "$BT/zipalign" -c 4 signed/AnyTV_2_9_8_SIGNED_CERT2026.apk
+          "$BT/aapt" dump badging updates/android/cert2026/current.apk | grep -q "name='com.tclremote.livre' versionCode='36'"
+      - name: Publish phone channel without touching TV or main
+        run: |
+          set -euo pipefail
+          cp signed/AnyTV_2_9_8_SIGNED_CERT2026.apk updates/android/cert2026/current.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f updates/android/cert2026/current.apk
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'Unexpected identical OTA'; exit 1; }
+          git commit -m 'release(anytv): publish verified phone 2.9.8 cert2026 OTA [skip ci]'
+          git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+      - name: Read back published OTA binary SHA-256
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/cert2026/current.apk?attempt=$attempt" -o published.apk || true
+            if test -s published.apk && cmp -s published.apk signed/AnyTV_2_9_8_SIGNED_CERT2026.apk; then
+              echo 'ANYTV_298_CERT2026_OTA_PUBLISHED_READBACK_OK'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'OTA readback mismatch' >&2
+          exit 1
