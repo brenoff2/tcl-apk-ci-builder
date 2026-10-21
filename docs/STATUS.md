@@ -11,3 +11,5 @@ Repositório: `brenoff2/tcl-apk-ci-builder`. Desenvolvimento no PR #3 draft (bra
 **Pendente:** comprovar ativação 201 e dispositivo em D1, resolver link elegível, e observar o título abrindo na TV; testar falhas, segurança e regressões. CI não equivale a teste físico.
 
 **Próxima entrega:** completar M08 e M09 sem reconstruir APKs desnecessariamente. Bloqueios reais: evidência de aparelho, disponibilidade/autorizações de provedores e eventuais erros reproduzíveis. Não declarar produto final.
+
+**Readback D1 posterior (2026-10-21):** um dispositivo com chave ativa, um codigo consumido, nenhum codigo pendente. O banco confirma vinculacao entre ativacao e chave ainda valida, embora o aplicativo tenha indicado rejeicao. Nao emitir novo codigo nem reinstalar antes do teste autenticado cliente-servidor. M08 permanece IN_QA ate comprovacao E2E.
