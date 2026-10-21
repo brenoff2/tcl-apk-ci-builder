@@ -175,6 +175,11 @@ export async function catalogRequest(request, env, deps = {}) {
     /^(movie|tv)\/[1-9][0-9]{0,9}\/watch\/providers$/,
     /^(movie|tv)\/[1-9][0-9]{0,9}\/external_ids$/,
     /^(discover|search)\/(movie|tv)$/,
+    /^trending\/(movie|tv)\/(day|week)$/,
+    /^(movie|tv)\/(popular|top_rated)$/,
+    /^movie\/(now_playing|upcoming)$/,
+    /^tv\/(on_the_air|airing_today)$/,
+    /^(movie|tv)\/[1-9][0-9]{0,9}\/(videos|similar|recommendations)$/,
   ];
   if (!patterns.some(p => p.test(route))) return asJson({ status: "bad_request" }, 400);
   const allowed = new Set([
