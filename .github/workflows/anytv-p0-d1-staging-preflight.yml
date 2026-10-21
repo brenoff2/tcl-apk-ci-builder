@@ -1,0 +1,62 @@
+name: AnyTV P0 isolated D1 remote read-only preflight
+on:
+  workflow_dispatch:
+    inputs:
+      staging_database_id:
+        description: 'Dedicated isolated AnyTV D1 database UUID (never the pilot production D1)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  isolated-d1-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Reject production database and absent staging credentials
+        env:
+          STAGING_DATABASE_ID: ${{ inputs.staging_database_id }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ANYTV_STAGING_CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ANYTV_STAGING_CF_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$STAGING_DATABASE_ID" =~ ^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$ ]]; then
+            echo 'Invalid staging D1 UUID'; exit 1
+          fi
+          if [[ "$STAGING_DATABASE_ID" == "9bab6598-d019-4e88-8b29-a327ff0cfd00" ]]; then
+            echo 'Production pilot D1 is forbidden'; exit 1
+          fi
+          if [[ -z "$CLOUDFLARE_ACCOUNT_ID" || -z "$CLOUDFLARE_API_TOKEN" ]]; then
+            echo 'Dedicated AnyTV staging credentials are not configured'; exit 1
+          fi
+          echo "Staging D1 ID validated; production D1 rejected."
+      - name: Query dedicated remote D1 without writing
+        working-directory: anytv-resolver
+        env:
+          STAGING_DATABASE_ID: ${{ inputs.staging_database_id }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ANYTV_STAGING_CF_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.ANYTV_STAGING_CF_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Explicitly create a transient config for a dedicated staging database.
+          cat > /tmp/anytv-staging-d1.toml <<EOF
+          name = "anytv-p0-staging-preflight"
+          main = "src/worker.mjs"
+          compatibility_date = "2026-10-01"
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "anytv-p0-staging"
+          database_id = "$STAGING_DATABASE_ID"
+          EOF
+          # Read-only introspection. Does not migrate, deploy, activate, or write.
+          npx --yes wrangler@4.45.3 d1 execute anytv-p0-staging \
+            --config /tmp/anytv-staging-d1.toml --remote \
+            --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name" \
+            --json > /tmp/anytv-staging-tables.json
+          node -e 'const fs=require("fs");const j=JSON.parse(fs.readFileSync("/tmp/anytv-staging-tables.json","utf8"));if(!Array.isArray(j))process.exit(1);console.log("Isolated remote D1 read-only introspection succeeded");'
