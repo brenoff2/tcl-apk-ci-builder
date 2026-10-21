@@ -1,0 +1,74 @@
+name: Publish AnyTV Connect 2.5 cert2026 OTA (signed and verified)
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-tv25-cert2026.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: anytv-cert2026-publish
+  cancel-in-progress: false
+jobs:
+  publish-tv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;35.0.0'
+      - name: Assert TV source build succeeded on isolated PR branch
+        run: |
+          set -euo pipefail
+          gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/39664549476 --jq '.conclusion + " " + .head_branch' | grep -Fx 'success feat/anytv-p0-device-proof-verifier-20261020'
+      - name: Download and authenticate TV 2.5 unsigned artifact
+        run: |
+          set -euo pipefail
+          mkdir -p incoming signed
+          gh run download 39664549476 --name anytv-tv25-unsigned-audit --dir incoming
+          echo '09f4c92af5d89b38407f85754de2c42da2afdd43376784cac3924e589a1f3f45  incoming/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk' | sha256sum -c -
+      - name: Reconstruct exact TV signed APK without private key
+        run: |
+          set -euo pipefail
+          python3 scripts/reconstruct_anytv_signed_from_metadata.py incoming/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk .github/anytv-tv25/signed-reconstruction.json signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk
+          echo '0113ac7289f644d683d486f41d8573ad3c94aa8fab0c3c62fc007e2e6e2a34e8  signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk' | sha256sum -c -
+      - name: Require new version, original cert and APK v2 signing
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/35.0.0"
+          "$BT/aapt" dump badging signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='16' versionName='2.5-AnyTV'"
+          "$BT/apksigner" verify --min-sdk-version 24 --verbose --print-certs signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk > tv-cert.txt
+          grep -q '^Verifies$' tv-cert.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' tv-cert.txt
+          grep -qi '0a5427237a2445c42520236469563dabceda6af8ddffc223c' tv-cert.txt
+          "$BT/zipalign" -c 4 signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk
+          "$BT/aapt" dump badging updates/tv/cert2026/current.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='15'"
+      - name: Publish ONLY TV cert2026 OTA
+        run: |
+          set -euo pipefail
+          cp signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk updates/tv/cert2026/current.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f updates/tv/cert2026/current.apk
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'Refusing identical TV OTA'; exit 1; }
+          git commit -m 'release(anytv): publish signed Connect 2.5 cert2026 OTA [skip ci]'
+          git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+      - name: Readback published binary from public OTA URL
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/tv/cert2026/current.apk?attempt=$attempt" -o published-tv.apk || true
+            if test -s published-tv.apk && cmp -s published-tv.apk signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk; then
+              echo 'ANYTV_TV25_CERT2026_OTA_PUBLISHED_READBACK_OK'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'TV OTA public readback mismatch' >&2
+          exit 1
