@@ -37,25 +37,31 @@ async function setup() {
       }
     }
   };
-  const request = (body = { device_id, public_key, activation_code: code }) =>
-    new Request("https://resolver.test/v1/device/activate",
-      { method: "POST", body: JSON.stringify(body) });
+  const request = async (body = { device_id, public_key, activation_code: code }, signingKey = keys.privateKey) => {
+    const payload = ["ANYTV-ACTIVATE1", body.device_id, body.public_key, body.activation_code].join("\n");
+    const algorithm = body.public_key.startsWith("p256:") ?
+      { name: "ECDSA", hash: "SHA-256" } : "Ed25519";
+    const proof = b64(await webcrypto.subtle.sign(algorithm, signingKey,
+      new TextEncoder().encode(payload)));
+    return new Request("https://resolver.test/v1/device/activate",
+      { method: "POST", body: JSON.stringify({ ...body, proof }) });
+  };
   return { env, request, registered, activation, deps: { now: () => now, subtle: webcrypto.subtle } };
 }
 
 test("operator-approved one-use code activates once, replay denied", async () => {
   const f = await setup();
-  assert.equal((await activateDevice(f.request(), f.env, f.deps)).status, 201);
+  assert.equal((await activateDevice(await f.request(), f.env, f.deps)).status, 201);
   assert.equal(f.registered.size, 1);
-  assert.equal((await activateDevice(f.request(), f.env, f.deps)).status, 403);
+  assert.equal((await activateDevice(await f.request(), f.env, f.deps)).status, 403);
   assert.equal(f.registered.size, 1);
 });
 
 test("invalid activation codes and malformed public keys are refused", async () => {
   const f = await setup();
-  const bad = f.request({ device_id, public_key: "invalid", activation_code: code });
+  const bad = await f.request({ device_id, public_key: "invalid", activation_code: code });
   assert.equal((await activateDevice(bad, f.env, f.deps)).status, 400);
-  assert.equal((await activateDevice(f.request({
+  assert.equal((await activateDevice(await f.request({
     device_id, public_key: "invalid", activation_code: code
   }), f.env, f.deps)).status, 400);
   assert.equal(f.registered.size, 0);
@@ -64,15 +70,15 @@ test("invalid activation codes and malformed public keys are refused", async () 
 test("denies when rate-limited or D1 transactional batch is absent", async () => {
   const f = await setup();
   f.env.RATE_LIMIT.limit = async () => ({ success: false });
-  assert.equal((await activateDevice(f.request(), f.env, f.deps)).status, 429);
+  assert.equal((await activateDevice(await f.request(), f.env, f.deps)).status, 429);
   f.env.DB.batch = undefined;
-  assert.equal((await activateDevice(f.request(), f.env, f.deps)).status, 503);
+  assert.equal((await activateDevice(await f.request(), f.env, f.deps)).status, 503);
 });
 
 test("activation endpoint is closed unless explicitly enabled", async () => {
   const f = await setup();
   delete f.env.ANYTV_DEVICE_ACTIVATION_ENABLED;
-  const response = await handleRequest(f.request(), f.env, f.deps);
+  const response = await handleRequest(await f.request(), f.env, f.deps);
   assert.equal(response.status, 405);
   assert.equal(f.registered.size, 0);
 });
@@ -83,7 +89,7 @@ test("Android Keystore P-256 public key activates with operator code", async () 
     { name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
   const key = "p256:" + b64(await webcrypto.subtle.exportKey("raw", pair.publicKey));
   const response = await activateDevice(
-    f.request({ device_id, public_key: key, activation_code: code }), f.env, f.deps);
+    await f.request({ device_id, public_key: key, activation_code: code }, pair.privateKey), f.env, f.deps);
   assert.equal(response.status, 201);
   assert.equal(f.registered.get(device_id).public_key, key);
 });
