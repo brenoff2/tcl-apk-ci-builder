@@ -3,6 +3,9 @@ on:
   push:
     branches:
       - feat/anytv-p0-device-proof-verifier-20261020
+  pull_request:
+    branches:
+      - feat/tcl-v22-updates-back-bluetooth
   workflow_dispatch:
 permissions:
   contents: read
