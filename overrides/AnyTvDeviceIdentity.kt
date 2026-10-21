@@ -71,10 +71,18 @@ internal object AnyTvDeviceIdentity {
     /** Only call following an explicit, trusted operator activation flow. */
     fun activate(context: Context, activationCode: String): Boolean {
         require(activationCode.matches(Regex("[A-Za-z0-9_-]{43}")))
+        val id = deviceId(context)
+        val key = publicKey()
+        val signature = Signature.getInstance("SHA256withECDSA")
+        signature.initSign(keyStore().getKey(ALIAS, null) as java.security.PrivateKey)
+        val payload = listOf("ANYTV-ACTIVATE1", id, key, activationCode).joinToString("\n")
+        signature.update(payload.toByteArray(StandardCharsets.UTF_8))
+        val proof = base64url(derToRaw(signature.sign()))
         val json = JSONObject()
-            .put("device_id", deviceId(context))
-            .put("public_key", publicKey())
+            .put("device_id", id)
+            .put("public_key", key)
             .put("activation_code", activationCode)
+            .put("proof", proof)
         val connection = URL("$BASE/v1/device/activate").openConnection() as HttpURLConnection
         return try {
             connection.requestMethod = "POST"
