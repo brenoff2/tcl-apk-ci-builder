@@ -373,3 +373,25 @@ test("discovery endpoints are allowlisted and cached without exposing TMDB token
     assert.equal((await catalogRequest(new Request("https://anytv.invalid/v1/catalog/" + route), env)).status, 400);
   }
 });
+
+test("English metadata is permitted only for trailer videos", async () => {
+  const env = { TMDB_READ_TOKEN: "server-only", DB: {}, RATE_LIMIT: { limit: async () => ({ success: true }) } };
+  for (const url of [
+    "/v1/catalog/discover/movie?language=en-US",
+    "/v1/catalog/trending/movie/week?language=en-US",
+    "/v1/catalog/movie/1/recommendations?language=en-US"
+  ]) {
+    assert.equal((await catalogRequest(new Request("https://anytv.invalid" + url), env)).status, 400);
+  }
+  const operational = makeEnv(10);
+  operational.TMDB_READ_TOKEN = "secret-server-only";
+  let upstream = "";
+  const response = await catalogRequest(
+    new Request("https://anytv.invalid/v1/catalog/movie/42/videos?language=en-US"),
+    operational, { fetch: async url => {
+      upstream = String(url);
+      return new Response(JSON.stringify({results: []}), {status: 200});
+    }});
+  assert.equal(response.status, 200);
+  assert.equal(new URL(upstream).searchParams.get("language"), "en-US");
+});
