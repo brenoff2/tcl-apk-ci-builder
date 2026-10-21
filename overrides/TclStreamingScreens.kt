@@ -581,37 +581,6 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
-                    /* Legacy provider-list below removed: discovery includes platform entries. */
-                    /*                    Text("Escolha um aplicativo realmente instalado na TCL.",
-                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Serviços", fontWeight = FontWeight.Medium,
-                            modifier = Modifier.weight(1f))
-                        TextButton(onClick = { all = !all }) {
-                            Text(if (all) "Só streaming" else "Ver todos")
-                        }
-                    }
-                    LazyColumn(modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(displayed, key = { it.packageName }) { app ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable {
-                                    selected = app; media = "movie"; genre = 0; page = 1
-                                    searchDraft = ""; searchTerm = ""; showSaved = false
-                                    message = null
-                                }.padding(7.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                OfficialTvIcon(app, 48.dp)
-                                Text(app.name, modifier = Modifier.weight(1f),
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("›", fontSize = 22.sp)
-                            }
-                        }
-                        if (displayed.isEmpty()) item {
-                            Text("Nenhum serviço identificado. Atualize os aplicativos da TCL.")
-                        }
-                    }
-                    */
                 } else {
                     val app = selected!!
                     Row(modifier = Modifier.fillMaxWidth(),
