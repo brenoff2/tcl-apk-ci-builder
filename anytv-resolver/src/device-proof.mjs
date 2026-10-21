@@ -18,6 +18,7 @@ const deviceIdPattern = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const noncePattern = /^[a-f0-9]{32,64}$/;
 const signaturePattern = /^[A-Za-z0-9_-]{86}$/;
 const keyPattern = /^[A-Za-z0-9_-]{43}$/;
+const p256Pattern = /^p256:[A-Za-z0-9_-]{87}$/;
 
 function decode64url(value) {
   const padded = value.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - value.length % 4) % 4);
@@ -47,14 +48,17 @@ export async function verifyDeviceProof(request, env, deps = {}) {
       "SELECT public_key,enabled,expires_at FROM device_keys WHERE device_id = ? LIMIT 1"
     ).bind(id).first();
     if (!device || device.enabled !== 1 || device.expires_at <= now ||
-        !keyPattern.test(device.public_key)) return false;
+        !(keyPattern.test(device.public_key) || p256Pattern.test(device.public_key))) return false;
     const url = new URL(request.url);
     const payload = ["ANYTV1", request.method, url.pathname + url.search, stamp, nonce].join("\n");
     const subtle = deps.subtle || crypto.subtle;
-    const key = await subtle.importKey("raw", decode64url(device.public_key),
-      { name: "Ed25519" }, false, ["verify"]);
-    const valid = await subtle.verify("Ed25519", key, decode64url(signature),
-      new TextEncoder().encode(payload));
+    const p256 = device.public_key.startsWith("p256:");
+    const encodedKey = p256 ? device.public_key.slice(5) : device.public_key;
+    const key = await subtle.importKey("raw", decode64url(encodedKey),
+      p256 ? { name: "ECDSA", namedCurve: "P-256" } : { name: "Ed25519" },
+      false, ["verify"]);
+    const valid = await subtle.verify(p256 ? { name: "ECDSA", hash: "SHA-256" } : "Ed25519",
+      key, decode64url(signature), new TextEncoder().encode(payload));
     if (!valid) return false;
     // Atomic insert makes the first signature usable once, preventing replay.
     // Deletion/retention of expired nonces must be handled separately.
