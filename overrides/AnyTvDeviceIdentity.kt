@@ -97,6 +97,7 @@ internal object AnyTvDeviceIdentity {
         val nonce = ByteArray(24).also(random::nextBytes)
         val nonceEncoded = nonce.joinToString("") { "%02x".format(it) }
         val message = listOf("ANYTV1", "GET", pathAndQuery, timestamp, nonceEncoded).joinToString("\n")
+        deviceId(context) // Ensure the Keystore alias exists before signing.
         val signature = Signature.getInstance("SHA256withECDSA")
         signature.initSign(keyStore().getKey(ALIAS, null) as java.security.PrivateKey)
         signature.update(message.toByteArray(StandardCharsets.UTF_8))
