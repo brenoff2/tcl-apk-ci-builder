@@ -14,6 +14,7 @@ WHERE code_hash=? AND used_at IS NULL AND expires_at>? AND valid_until>?
 ON CONFLICT(device_id) DO NOTHING"""
 CONSUME = """UPDATE device_activations SET used_at=?,device_id=?
 WHERE code_hash=? AND used_at IS NULL AND expires_at>?
+AND changes()=1
 AND EXISTS(SELECT 1 FROM device_keys WHERE device_id=? AND public_key=?)"""
 
 class DeviceActivationSql(unittest.TestCase):
@@ -38,8 +39,7 @@ class DeviceActivationSql(unittest.TestCase):
                 device, self.public, self.hash, self.now, self.now)).rowcount
             consumed = self.db.execute(CONSUME, (
                 self.now, device, self.hash, self.now, device, self.public)).rowcount
-            # D1 batch is atomic on SQL errors, not on zero changes.
-            # Roll back zero-change partial operations explicitly.
+            # A zero-row insert must not consume an approval code.
             if inserted != 1 or consumed != 1:
                 raise ValueError("activation denied")
 
