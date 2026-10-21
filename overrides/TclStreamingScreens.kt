@@ -323,6 +323,9 @@ internal fun TclStreamingScreens(
     var activationFeedback by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     var discoverySlide by remember { mutableStateOf(0) }
+    var discoveryProviderPackage by remember { mutableStateOf<String?>(null) }
+    var filteredShelves by remember { mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap()) }
+    var filterBusy by remember { mutableStateOf(false) }
     var globalSearchDraft by remember { mutableStateOf("") }
     var globalSearchTerm by remember { mutableStateOf("") }
     var globalSearchResults by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
@@ -412,6 +415,22 @@ internal fun TclStreamingScreens(
             relatedTitles = runCatching { StreamingCatalog.related(item.media, item.id) }
                 .getOrDefault(emptyList())
             detailLoading = false
+        }
+    }
+
+    LaunchedEffect(discoveryProviderPackage, apps) {
+        val app = displayed.firstOrNull { it.packageName == discoveryProviderPackage }
+        filteredShelves = emptyMap()
+        if (app != null) {
+            filterBusy = true
+            val result = linkedMapOf<String, List<StreamingTitle>>()
+            for ((label, kind) in listOf("Filmes disponíveis" to "movie", "Séries disponíveis" to "tv")) {
+                runCatching {
+                    StreamingCatalog.discover(token, app.name, kind, 1, 0, "")
+                }.onSuccess { if (it.titles.isNotEmpty()) result[label] = it.titles }
+            }
+            filteredShelves = result
+            filterBusy = false
         }
     }
 
@@ -607,11 +626,29 @@ internal fun TclStreamingScreens(
                         }
                         if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
                     }
+                    Text("Filtrar destaques por plataforma instalada na TV",
+                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(modifier = Modifier.fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(selected = discoveryProviderPackage == null,
+                            onClick = { discoveryProviderPackage = null },
+                            label = { Text("Todos") })
+                        displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
+                            FilterChip(selected = discoveryProviderPackage == app.packageName,
+                                onClick = { discoveryProviderPackage = app.packageName },
+                                label = { Text(app.name, maxLines = 1) })
+                        }
+                    }
+                    if (filterBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     Text("Descubra filmes e séries em várias plataformas.",
                         fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (discoveryLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    if (discoveryError != null) Text(discoveryError.orEmpty(), fontSize = 12.sp)
-                    val heroTitles = discoveryShelves["Em alta nesta semana"].orEmpty().take(6)
+                    if (discoveryError != null && discoveryProviderPackage == null) Text(discoveryError.orEmpty(), fontSize = 12.sp)
+                    if (discoveryProviderPackage != null && !filterBusy && filteredShelves.isEmpty())
+                        Text("Não há títulos de assinatura confirmados para este serviço no Brasil.")
+                    val visibleShelves = if (discoveryProviderPackage == null) discoveryShelves else filteredShelves
+                    val heroTitles = visibleShelves.values.firstOrNull().orEmpty().take(6)
                     if (heroTitles.isNotEmpty()) {
                         val current = heroTitles[discoverySlide % heroTitles.size]
                         AsyncImage(model = "https://image.tmdb.org/t/p/w780" + current.poster,
@@ -653,7 +690,7 @@ internal fun TclStreamingScreens(
                         }
                     }
                     LazyColumn(modifier = Modifier.weight(1f)) {
-                        discoveryShelves.forEach { (heading, shelf) ->
+                        visibleShelves.forEach { (heading, shelf) ->
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(heading, fontWeight = FontWeight.SemiBold)
