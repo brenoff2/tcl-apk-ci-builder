@@ -33,7 +33,7 @@ export async function activateDevice(request, env, deps = {}) {
     const publicKey = await subtle.importKey("raw", decode(p256 ? item.public_key.slice(5) : item.public_key),
       p256 ? { name: "ECDSA", namedCurve: "P-256" } : { name: "Ed25519" }, false, ["verify"]);
     const possession = new TextEncoder().encode(["ANYTV-ACTIVATE1", item.device_id,
-      item.public_key, item.activation_code].join("\\n"));
+      item.public_key, item.activation_code].join("\n"));
     const verified = await subtle.verify(p256 ? { name: "ECDSA", hash: "SHA-256" } : "Ed25519",
       publicKey, decode(item.proof), possession);
     if (!verified) return reply(403, "activation_denied");
