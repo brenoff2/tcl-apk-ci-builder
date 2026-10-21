@@ -117,3 +117,15 @@ jobs:
           "$BT/zipalign" -c 4 output/AnyTV_2_9_7_RELEASE_UNSIGNED.apk
           sha256sum output/AnyTV_2_9_7_RELEASE_UNSIGNED.apk > output/SHA256.txt
           echo 'NAO INSTALAR. Assinar com a chave permanente DF729774... da v2.0 e v2.1' > output/LEIA.txt
+      - name: Publicar artefato de auditoria nao assinado (sem OTA)
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-p0-unsigned-audit
+          path: |
+            output/AnyTV_2_9_7_RELEASE_UNSIGNED.apk
+            output/SHA256.txt
+            output/identidade.txt
+            output/manifesto.txt
+            output/LEIA.txt
+          if-no-files-found: error
+          retention-days: 7
