@@ -28,5 +28,7 @@ jobs:
           node --check src/worker.mjs
       - name: SQLite activation transaction regressions
         run: python3 -m unittest discover -s tests -p 'test_device_activation_sql.py' -v
+      - name: Cloudflare D1 local migration and activation smoke
+        run: bash scripts/d1-local-smoke.sh
       - name: Resolver and device-proof regressions
         run: npm test
