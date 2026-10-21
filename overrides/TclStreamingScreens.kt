@@ -236,6 +236,15 @@ private object StreamingCatalog {
             }
         }
 
+    /** Global editorial shelves independent of the TV's installed providers. */
+    suspend fun discoveryShelf(route: String, media: String): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+            require(route in setOf("trending/movie/week", "trending/tv/week",
+                "movie/now_playing", "movie/top_rated", "tv/on_the_air", "movie/popular"))
+            val payload = get("backend", route + "?language=pt-BR")
+            mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+        }
+
     suspend fun discover(
         token: String, app: String, media: String, page: Int, genre: Int, query: String
     ): StreamingResults = withContext(Dispatchers.IO) {
@@ -284,6 +293,13 @@ internal fun TclStreamingScreens(
     var activationBusy by remember { mutableStateOf(false) }
     var activationFeedback by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
+    var discoverySlide by remember { mutableStateOf(0) }
+    var discoveryShelves by remember {
+        mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap())
+    }
+    var discoveryLoading by remember { mutableStateOf(false) }
+    var discoveryError by remember { mutableStateOf<String?>(null) }
+
     var all by remember { mutableStateOf(false) }
     var media by remember { mutableStateOf("movie") }
     var page by remember { mutableStateOf(1) }
@@ -337,6 +353,25 @@ internal fun TclStreamingScreens(
     var message by remember { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<StreamingTitle?>(null) }
     val displayed = remember(apps, all) { apps.filter { all || StreamingCatalog.streaming(it) } }
+
+    LaunchedEffect(token) {
+        discoveryLoading = true
+        discoveryError = null
+        val shelves = linkedMapOf<String, List<StreamingTitle>>()
+        for ((name, route, kind) in listOf(
+            Triple("Em alta nesta semana", "trending/movie/week", "movie"),
+            Triple("Lançamentos recentes", "movie/now_playing", "movie"),
+            Triple("Mais bem avaliados no TMDB", "movie/top_rated", "movie"),
+            Triple("Séries em destaque", "trending/tv/week", "tv"),
+            Triple("Populares no TMDB", "movie/popular", "movie")
+        )) {
+            runCatching { StreamingCatalog.discoveryShelf(route, kind) }
+                .onSuccess { if (it.isNotEmpty()) shelves[name] = it }
+                .onFailure { discoveryError = "Algumas seções não puderam carregar." }
+        }
+        discoveryShelves = shelves
+        discoveryLoading = false
+    }
 
     LaunchedEffect(token, media) {
         genres = if (token.isBlank()) emptyList() else
@@ -478,7 +513,76 @@ internal fun TclStreamingScreens(
                             modifier = Modifier.weight(1f))
                         TextButton(onClick = onDismiss) { Text("Fechar") }
                     }
-                    Text("Escolha um aplicativo realmente instalado na TCL.",
+                    Text("Descubra filmes e séries em várias plataformas.",
+                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (discoveryLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    if (discoveryError != null) Text(discoveryError.orEmpty(), fontSize = 12.sp)
+                    val heroTitles = discoveryShelves["Em alta nesta semana"].orEmpty().take(6)
+                    if (heroTitles.isNotEmpty()) {
+                        val current = heroTitles[discoverySlide % heroTitles.size]
+                        AsyncImage(model = "https://image.tmdb.org/t/p/w780" + current.poster,
+                            contentDescription = "Destaque: " + current.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxWidth().height(150.dp).clickable {
+                                details = current
+                                detailsPackage = null
+                            })
+                        Text(current.name, fontWeight = FontWeight.Bold, maxLines = 2)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = {
+                                discoverySlide = (discoverySlide + heroTitles.size - 1) % heroTitles.size
+                            }) { Text("‹ Anterior") }
+                            OutlinedButton(onClick = {
+                                discoverySlide = (discoverySlide + 1) % heroTitles.size
+                            }) { Text("Próximo ›") }
+                            TextButton(onClick = {
+                                details = current
+                                detailsPackage = null
+                            }) { Text("Detalhes") }
+                        }
+                    }
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        discoveryShelves.forEach { (heading, shelf) ->
+                            item {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(heading, fontWeight = FontWeight.SemiBold)
+                                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                        shelf.take(12).forEach { item ->
+                                            Column(modifier = Modifier.width(116.dp).clickable {
+                                                details = item
+                                                detailsPackage = null
+                                            }) {
+                                                AsyncImage(model = "https://image.tmdb.org/t/p/w185" + item.poster,
+                                                    contentDescription = "Cartaz: " + item.name,
+                                                    modifier = Modifier.fillMaxWidth().height(158.dp),
+                                                    contentScale = ContentScale.Crop)
+                                                Text(item.name, maxLines = 2, fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            Text("Explorar por plataforma",
+                                fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
+                        }
+                        items(displayed, key = { it.packageName }) { app ->
+                            Row(modifier = Modifier.fillMaxWidth().clickable {
+                                selected = app; media = "movie"; genre = 0; page = 1
+                                searchDraft = ""; searchTerm = ""; showSaved = false; message = null
+                            }.padding(7.dp),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalAlignment = Alignment.CenterVertically) {
+                                OfficialTvIcon(app, 42.dp)
+                                Text(app.name, modifier = Modifier.weight(1f), maxLines = 1)
+                                Text("›", fontSize = 22.sp)
+                            }
+                        }
+                    }
+                    /* Legacy provider-list below removed: discovery includes platform entries. */
+                    /*                    Text("Escolha um aplicativo realmente instalado na TCL.",
                         fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Serviços", fontWeight = FontWeight.Medium,
@@ -507,6 +611,7 @@ internal fun TclStreamingScreens(
                             Text("Nenhum serviço identificado. Atualize os aplicativos da TCL.")
                         }
                     }
+                    */
                 } else {
                     val app = selected!!
                     Row(modifier = Modifier.fillMaxWidth(),
