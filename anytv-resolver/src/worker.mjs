@@ -1,3 +1,4 @@
+import { activateDevice } from "./device-activation.mjs";
 import { verifyDeviceProof } from "./device-proof.mjs";
 /**
  * AnyTV commercial resolver pilot.
@@ -295,8 +296,13 @@ export async function catalogRequest(request, env, deps = {}) {
  * Does NOT authorize replaying arbitrary link strings from callers.
  */
 export async function handleRequest(request, env, deps = {}) {
-  if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
   const parsed = new URL(request.url);
+  // Enrollment remains disabled by default, including on existing deployments.
+  if (parsed.pathname === "/v1/device/activate" &&
+      env?.ANYTV_DEVICE_ACTIVATION_ENABLED === "true") {
+    return activateDevice(request, env, deps);
+  }
+  if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
   if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
   if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
   if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB || !env?.RATE_LIMIT ||
