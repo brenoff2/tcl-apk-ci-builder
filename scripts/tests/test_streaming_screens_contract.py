@@ -129,6 +129,20 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn("tokenDraft", self.screen)
         self.assertNotIn("personalKeyDraft", self.screen)
 
+    def test_activation_ui_never_persists_codes_and_runs_off_main_thread(self):
+        identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
+        for fragment in (
+            "Ativar links diretos neste dispositivo",
+            "AnyTvDeviceIdentity.activate(context, submitted)",
+            "withContext(Dispatchers.IO)",
+            "activationDraft = \"\"",
+        ):
+            self.assertIn(fragment, self.screen)
+        self.assertIn('connection.responseCode == 201', identity)
+        self.assertIn('activationCode.matches(Regex(', identity)
+        self.assertNotIn('putString("activation', identity)
+        self.assertNotIn('putString("activation', self.screen)
+
     def test_tv_apple_playable_id_requires_allowlisted_parameters(self):
         from pathlib import Path
         bridge = Path("overrides/tv_safe/TvAppBridge.java").read_text(encoding="utf-8")
