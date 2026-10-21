@@ -40,6 +40,17 @@ export async function activateDevice(request, env, deps = {}) {
     const digest = new Uint8Array(await subtle.digest("SHA-256", decode(item.activation_code)));
     const hash = encode(digest);
     const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
+    // A lost HTTP 201 response must not strand a legitimately enrolled device.
+    // Reconfirm only if this exact code was consumed by the same device/key,
+    // and the bound identity remains enabled and unexpired. Never allow reuse
+    // with a different key, device or unverified possession proof.
+    const previous = await env.DB.prepare(`SELECT 1 AS matched
+      FROM device_activations a JOIN device_keys k ON k.device_id=a.device_id
+      WHERE a.code_hash=? AND a.used_at IS NOT NULL
+        AND a.device_id=? AND k.public_key=? AND k.enabled=1
+        AND k.expires_at>? LIMIT 1`)
+      .bind(hash, item.device_id, item.public_key, now).first();
+    if (previous?.matched === 1) return reply(201, "activated");
     // D1 batch is transactional. INSERT must be conditional on an unused code;
     // UPDATE consumes that code only if this device/key was inserted.
     const statements = [
