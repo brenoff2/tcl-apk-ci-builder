@@ -2,6 +2,7 @@
 // in APKs. No self-registration: a code hash must exist in D1 before activation.
 const uuid = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
 const token = /^[A-Za-z0-9_-]{43}$/;
+const p256Key = /^p256:[A-Za-z0-9_-]{87}$/;
 const reply = (status, code) => new Response(JSON.stringify({ status: code }), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store" }
 });
@@ -24,9 +25,11 @@ export async function activateDevice(request, env, deps = {}) {
     if (!item || typeof item !== "object" || Array.isArray(item) ||
         Object.keys(item).sort().join(",") !== "activation_code,device_id,public_key" ||
         !uuid.test(item.device_id) || !token.test(item.activation_code) ||
-        !token.test(item.public_key)) return reply(400, "invalid_request");
+        !(token.test(item.public_key) || p256Key.test(item.public_key))) return reply(400, "invalid_request");
     const subtle = deps.subtle || crypto.subtle;
-    await subtle.importKey("raw", decode(item.public_key), { name: "Ed25519" }, false, ["verify"]);
+    const p256 = item.public_key.startsWith("p256:");
+    await subtle.importKey("raw", decode(p256 ? item.public_key.slice(5) : item.public_key),
+      p256 ? { name: "ECDSA", namedCurve: "P-256" } : { name: "Ed25519" }, false, ["verify"]);
     const digest = new Uint8Array(await subtle.digest("SHA-256", decode(item.activation_code)));
     const hash = encode(digest);
     const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
