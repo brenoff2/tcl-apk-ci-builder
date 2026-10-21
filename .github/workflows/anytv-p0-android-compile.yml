@@ -92,6 +92,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
       - name: Validar telas de streaming reais
         env:
+          TCL_V37: '1'
           TCL_V36: '1'
           TCL_V35: '1'
         run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
