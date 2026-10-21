@@ -45,7 +45,9 @@ jobs:
         run: |
           set -euo pipefail
           # Explicitly create a transient config for a dedicated staging database.
-          cat > /tmp/anytv-staging-d1.toml <<EOF
+          CFG="$(mktemp ./wrangler.staging.XXXXXX.toml)"
+          trap 'rm -f "$CFG" /tmp/anytv-staging-tables.json' EXIT
+          cat > "$CFG" <<EOF
           name = "anytv-p0-staging-preflight"
           main = "src/worker.mjs"
           compatibility_date = "2026-10-01"
@@ -54,9 +56,20 @@ jobs:
           database_name = "anytv-p0-staging"
           database_id = "$STAGING_DATABASE_ID"
           EOF
-          # Read-only introspection. Does not migrate, deploy, activate, or write.
           npx --yes wrangler@4.45.3 d1 execute anytv-p0-staging \
-            --config /tmp/anytv-staging-d1.toml --remote \
+            --config "$CFG" --remote \
             --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name" \
             --json > /tmp/anytv-staging-tables.json
-          node -e 'const fs=require("fs");const j=JSON.parse(fs.readFileSync("/tmp/anytv-staging-tables.json","utf8"));if(!Array.isArray(j))process.exit(1);console.log("Isolated remote D1 read-only introspection succeeded");'
+          node -e '
+            const fs = require("fs");
+            const response = JSON.parse(fs.readFileSync("/tmp/anytv-staging-tables.json", "utf8"));
+            const rows = Array.isArray(response) ? response.flatMap(r => r.results || []) : [];
+            const names = new Set(rows.map(r => r.name));
+            const required = ["device_keys", "device_nonces", "device_activations"];
+            const missing = required.filter(name => !names.has(name));
+            if (missing.length) {
+              console.error("Staging schema missing: " + missing.join(", "));
+              process.exit(1);
+            }
+            console.log("Remote staging schema validated (read-only)");
+          '
