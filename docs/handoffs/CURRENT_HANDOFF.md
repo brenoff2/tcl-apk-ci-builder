@@ -9,3 +9,5 @@
 **Próxima ação específica:** conferir Cloudflare Worker/D1 por readback; registrar ativação de dispositivo real (201, registro válido e código consumido); acionar um título disponível e observar abertura na TV. Se falhar, reparar a causa exata. Só então avançar M08/M09.
 **Autorizações:** sem merge, troca de certificado, gasto novo, acesso externo ampliado, destruição ou promoção de gate sem aprovação aplicável.
 **Retomada:** ler handoff, comparar HEAD e status do repositório, atualizar evidências e prosseguir pelo menor passo funcional. Encerrar com Acompanhamento — ANYTV.
+
+**Retomada da V3:** próxima fase de produto Discovery Home no contrato `docs/ANYTV_DISCOVERY_HOME_V3.md`. Candidato de código Compose em `overrides/TclStreamingScreens.kt`, commit `e86fd062b4e1b458df385c0046f7a732520f9e08`; CI Android `39690224259` pendente na última leitura. Novas rotas na allowlist `anytv-resolver/src/worker.mjs` estão só na branch. Primeiro concluir CI, reparar falhas, validar layout e só então promover servidor e APK por gates separados. Preservar APK 2.9.8 instalado e backend P0 operacional.
