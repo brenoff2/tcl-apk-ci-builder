@@ -1015,6 +1015,21 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
+                    if (selected == null) {
+                        Text("Escolha um aplicativo da TCL para abrir este título:",
+                            fontSize = 12.sp)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
+                                FilterChip(
+                                    selected = detailsPackage == app.packageName,
+                                    onClick = { detailsPackage = app.packageName },
+                                    label = { Text(app.name, maxLines = 1, fontSize = 11.sp) })
+                            }
+                        }
+                        Text("A disponibilidade por assinatura deve ser confirmada na plataforma.",
+                            fontSize = 11.sp)
+                    }
                     Text("A TV poderá abrir a busca do título se este serviço aceitar " +
                         "pesquisa externa. Não existe deep link universal de reprodução.",
                         fontSize = 12.sp)
