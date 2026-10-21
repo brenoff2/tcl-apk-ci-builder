@@ -561,6 +561,7 @@ internal fun TclStreamingScreens(
                                 detailsPackage = null
                             })
                         Text(current.name, fontWeight = FontWeight.Bold, maxLines = 2)
+                        if (current.votes > 0) Text("★ TMDB " + String.format(java.util.Locale.US, "%.1f", current.rating), fontSize = 12.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = {
                                 discoverySlide = (discoverySlide + heroTitles.size - 1) % heroTitles.size
@@ -591,6 +592,7 @@ internal fun TclStreamingScreens(
                                                     modifier = Modifier.fillMaxWidth().height(158.dp),
                                                     contentScale = ContentScale.Crop)
                                                 Text(item.name, maxLines = 2, fontSize = 11.sp)
+                                                if (item.votes > 0) Text("★ " + String.format(java.util.Locale.US, "%.1f", item.rating), fontSize = 10.sp)
                                             }
                                         }
                                     }
