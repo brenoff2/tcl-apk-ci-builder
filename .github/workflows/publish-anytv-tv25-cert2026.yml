@@ -1,4 +1,4 @@
-name: Publish AnyTV Connect 2.5 cert2026 OTA (signed and verified)
+name: Publish AnyTV Connect 2.5 cert2026 OTA
 on:
   push:
     branches: ['feat/tcl-v22-updates-back-bluetooth']
@@ -22,7 +22,7 @@ jobs:
           fetch-depth: 0
       - uses: android-actions/setup-android@v4
       - run: sdkmanager 'build-tools;35.0.0'
-      - name: Assert TV source build succeeded on isolated PR branch
+      - name: Verify successful isolated TV source build
         run: |
           set -euo pipefail
           gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/39664549476 --jq '.conclusion + " " + .head_branch' | grep -Fx 'success feat/anytv-p0-device-proof-verifier-20261020'
@@ -32,52 +32,27 @@ jobs:
           mkdir -p incoming signed
           gh run download 39664549476 --name anytv-tv25-unsigned-audit --dir incoming
           echo '09f4c92af5d89b38407f85754de2c42da2afdd43376784cac3924e589a1f3f45  incoming/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk' | sha256sum -c -
-      - name: Reconstruct exact TV signed APK without private key
+      - name: Reconstruct exact signed APK with public metadata
         run: |
           set -euo pipefail
           python3 scripts/reconstruct_anytv_signed_from_metadata.py incoming/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk .github/anytv-tv25/signed-reconstruction.json signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk
           echo '0113ac7289f644d683d486f41d8573ad3c94aa8fab0c3c62fc007e2e6e2a34e8  signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk' | sha256sum -c -
-      - name: Require new version, original cert and APK v2 signing
+      - name: Verify TV version 16 and original signature
         run: |
           set -euo pipefail
           BT="$ANDROID_HOME/build-tools/35.0.0"
-          echo TV_CHECK_AAPT_NEW\n          "$BT/aapt" dump badging signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='16' versionName='2.5-AnyTV'"
-          echo TV_CHECK_SIGNER\n          "$BT/apksigner" verify --min-sdk-version 24 --verbose --print-certs signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk > tv-cert.txt
-          echo TV_CHECK_VERIFY_RESULT\n          grep -q '^Verifies tv-cert.txt
-          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' tv-cert.txt
-          grep -qi '0a5427237a2445c42520236469563dabceda6af8ddffc223c' tv-cert.txt
-          echo TV_CHECK_ZIPALIGN\n          "$BT/zipalign" -c 4 signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk
-          echo TV_CHECK_OLD_CODE\n          "$BT/aapt" dump badging updates/tv/cert2026/current.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='15'"
-      - name: Publish ONLY TV cert2026 OTA
-        run: |
-          set -euo pipefail
-          cp signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk updates/tv/cert2026/current.apk
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -f updates/tv/cert2026/current.apk
-          git diff --cached --check
-          git diff --cached --quiet && { echo 'Refusing identical TV OTA'; exit 1; }
-          git commit -m 'release(anytv): publish signed Connect 2.5 cert2026 OTA [skip ci]'
-          git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
-      - name: Readback published binary from public OTA URL
-        run: |
-          set -euo pipefail
-          for attempt in 1 2 3 4 5 6; do
-            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/tv/cert2026/current.apk?attempt=$attempt" -o published-tv.apk || true
-            if test -s published-tv.apk && cmp -s published-tv.apk signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk; then
-              echo 'ANYTV_TV25_CERT2026_OTA_PUBLISHED_READBACK_OK'
-              exit 0
-            fi
-            sleep 10
-          done
-          echo 'TV OTA public readback mismatch' >&2
-          exit 1
- tv-cert.txt
-          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' tv-cert.txt
-          grep -qi '0a5427237a2445c42520236469563dabceda6af8ddffc223c' tv-cert.txt
+          echo CHECK_TV_VERSION
+          "$BT/aapt" dump badging signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk | grep "name='com.tclremote.tvcompanion' versionCode='16' versionName='2.5-AnyTV'"
+          echo CHECK_TV_SIGNATURE
+          "$BT/apksigner" verify --min-sdk-version 24 --verbose --print-certs signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk > tv-cert.txt
+          grep '^Verifies$' tv-cert.txt
+          grep 'Verified using v2 scheme (APK Signature Scheme v2): true' tv-cert.txt
+          grep -i '0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c' tv-cert.txt
+          echo CHECK_TV_ALIGNMENT
           "$BT/zipalign" -c 4 signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk
-          "$BT/aapt" dump badging updates/tv/cert2026/current.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='15'"
-      - name: Publish ONLY TV cert2026 OTA
+          echo CHECK_PREVIOUS_TV_CODE
+          "$BT/aapt" dump badging updates/tv/cert2026/current.apk | grep "name='com.tclremote.tvcompanion' versionCode='15'"
+      - name: Publish only TV cert2026 current APK
         run: |
           set -euo pipefail
           cp signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk updates/tv/cert2026/current.apk
@@ -86,9 +61,9 @@ jobs:
           git add -f updates/tv/cert2026/current.apk
           git diff --cached --check
           git diff --cached --quiet && { echo 'Refusing identical TV OTA'; exit 1; }
-          git commit -m 'release(anytv): publish signed Connect 2.5 cert2026 OTA [skip ci]'
+          git commit -m 'release(anytv): signed Connect 2.5 cert2026 OTA [skip ci]'
           git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
-      - name: Readback published binary from public OTA URL
+      - name: Read back OTA public binary
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5 6; do
@@ -99,5 +74,5 @@ jobs:
             fi
             sleep 10
           done
-          echo 'TV OTA public readback mismatch' >&2
+          echo 'TV OTA readback mismatch' >&2
           exit 1
