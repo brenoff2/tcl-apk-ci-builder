@@ -279,6 +279,10 @@ internal fun TclStreamingScreens(
     // The client never requires user-supplied API credentials.
     val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
+    var showDeviceActivation by remember { mutableStateOf(false) }
+    var activationDraft by remember { mutableStateOf("") }
+    var activationBusy by remember { mutableStateOf(false) }
+    var activationFeedback by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     var all by remember { mutableStateOf(false) }
     var media by remember { mutableStateOf("movie") }
@@ -695,12 +699,79 @@ internal fun TclStreamingScreens(
                         }
                     }
                 }
+                TextButton(onClick = {
+                    activationDraft = ""
+                    activationFeedback = null
+                    showDeviceActivation = true
+                }) { Text("Ativar links diretos neste dispositivo", fontSize = 12.sp) }
                 Text("ⓘ Fontes: TMDB / JustWatch",
                     modifier = Modifier.clickable { showCredits = true },
                     fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1)
             }
         }
+    }
+    if (showDeviceActivation) {
+        AlertDialog(
+            onDismissRequest = { if (!activationBusy) showDeviceActivation = false },
+            title = { Text("Ativação dos links diretos") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Informe apenas o código de ativação individual fornecido " +
+                        "pelo operador do AnyTV. Não é uma chave de API.",
+                        fontSize = 12.sp)
+                    OutlinedTextField(
+                        value = activationDraft,
+                        onValueChange = {
+                            activationDraft = it.take(43)
+                            activationFeedback = null
+                        },
+                        singleLine = true,
+                        label = { Text("Código de ativação") },
+                        enabled = !activationBusy
+                    )
+                    if (activationFeedback != null) {
+                        Text(activationFeedback.orEmpty(), fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !activationBusy &&
+                        activationDraft.matches(Regex("[A-Za-z0-9_-]{43}")),
+                    onClick = {
+                        if (!activationBusy) {
+                            val submitted = activationDraft
+                            activationBusy = true
+                            scope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        AnyTvDeviceIdentity.activate(context, submitted)
+                                    }
+                                }
+                                activationDraft = ""
+                                activationBusy = false
+                                activationFeedback = if (result.getOrDefault(false)) {
+                                    "Dispositivo ativado. Links diretos disponíveis quando " +
+                                        "oferecidos pelo serviço."
+                                } else {
+                                    "Ativação não concluída. Confira o código ou tente novamente."
+                                }
+                            }
+                        }
+                    }
+                ) { Text(if (activationBusy) "Ativando…" else "Ativar") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !activationBusy,
+                    onClick = {
+                        activationDraft = ""
+                        showDeviceActivation = false
+                    }
+                ) { Text("Fechar") }
+            }
+        )
     }
     if (showCredits) {
         AlertDialog(onDismissRequest = { showCredits = false },
