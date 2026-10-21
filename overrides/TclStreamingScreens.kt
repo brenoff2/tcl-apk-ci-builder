@@ -904,6 +904,38 @@ internal fun TclStreamingScreens(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
+                    if (title.votes > 0) {
+                        Text("★ Nota TMDB: " +
+                            String.format(java.util.Locale.US, "%.1f", title.rating) +
+                            " (" + title.votes + " votos)", fontSize = 12.sp)
+                    }
+                    if (detailLoading) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    val video = trailerLink
+                    if (video != null) {
+                        TextButton(onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(video)))
+                        }) { Text("▶ Ver trailer") }
+                    } else if (!detailLoading) {
+                        Text("Trailer não disponível.", fontSize = 12.sp)
+                    }
+                    if (relatedTitles.isNotEmpty()) {
+                        Text("Você também pode gostar", fontWeight = FontWeight.SemiBold)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            relatedTitles.forEach { suggested ->
+                                Column(modifier = Modifier.width(100.dp).clickable {
+                                    details = suggested
+                                    detailsPackage = null
+                                }) {
+                                    AsyncImage(model = "https://image.tmdb.org/t/p/w185" + suggested.poster,
+                                        contentDescription = suggested.name,
+                                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                                        contentScale = ContentScale.Crop)
+                                    Text(suggested.name, fontSize = 11.sp, maxLines = 2)
+                                }
+                            }
+                        }
+                    }
                     Text("A TV poderá abrir a busca do título se este serviço aceitar " +
                         "pesquisa externa. Não existe deep link universal de reprodução.",
                         fontSize = 12.sp)
