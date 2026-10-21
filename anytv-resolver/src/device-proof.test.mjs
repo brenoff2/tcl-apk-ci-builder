@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { webcrypto as crypto } from "node:crypto";
 import { verifyDeviceProof } from "./device-proof.mjs";
+import { handleRequest } from "./worker.mjs";
 
 const b64 = bytes => Buffer.from(bytes).toString("base64url");
 const now = 1792530000000;
@@ -74,4 +75,50 @@ test("unknown device and DB errors never authorize", async () => {
   assert.equal(await verifyDeviceProof(await f.signed(), f.env, f.deps), false);
   f.env.DB.prepare = () => { throw Error("database outage"); };
   assert.equal(await verifyDeviceProof(await f.signed(), f.env, f.deps), false);
+});
+
+test("resolver device mode denies missing signatures without upstream calls", async () => {
+  const f = await fixture();
+  Object.assign(f.env, {
+    ANYTV_RESOLVER_AUTH_MODE: "device",
+    ANYTV_MOVIE_API_KEY: "private-provider-key",
+    RATE_LIMIT: { limit: async () => ({ success: true }) },
+    MAX_UPSTREAM_CALLS_MONTH: "1"
+  });
+  let upstreamCalls = 0;
+  const response = await handleRequest(
+    new Request("https://resolver.test/v1/resolve/movie/329/prime"),
+    f.env, { ...f.deps, fetch: async () => { upstreamCalls++; throw Error("upstream reached"); } }
+  );
+  assert.equal(response.status, 401);
+  assert.equal(upstreamCalls, 0);
+});
+
+test("resolver device mode accepts signed requests without a pilot bearer", async () => {
+  const f = await fixture();
+  Object.assign(f.env, {
+    ANYTV_RESOLVER_AUTH_MODE: "device",
+    ANYTV_MOVIE_API_KEY: "private-provider-key",
+    RATE_LIMIT: { limit: async () => ({ success: true }) },
+    MAX_UPSTREAM_CALLS_MONTH: "1"
+  });
+  const response = await handleRequest(
+    await f.signed("/v1/resolve/movie/329/prime?unexpected=1"), f.env, f.deps
+  );
+  // A valid signature reaches route validation; no upstream call is permitted.
+  assert.equal(response.status, 400);
+});
+
+test("resolver rejects unknown auth mode without falling back to pilot", async () => {
+  const f = await fixture();
+  Object.assign(f.env, {
+    ANYTV_RESOLVER_AUTH_MODE: "unrecognized",
+    ANYTV_CLIENT_TOKEN: "private-pilot-access",
+    ANYTV_MOVIE_API_KEY: "private-provider-key",
+    RATE_LIMIT: { limit: async () => ({ success: true }) }
+  });
+  const response = await handleRequest(
+    new Request("https://resolver.test/v1/resolve/movie/329/prime",
+      { headers: { authorization: "Bearer private-pilot-access" } }), f.env, f.deps);
+  assert.equal(response.status, 503);
 });
