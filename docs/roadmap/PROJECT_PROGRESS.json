@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "project": "ANYTV",
+  "baseline": "2026-10-21",
+  "repository": "brenoff2/tcl-apk-ci-builder",
+  "branch": "feat/anytv-p0-device-proof-verifier-20261020",
+  "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
+  "progress": {
+    "accepted": 7,
+    "total": 11,
+    "percent": 63,
+    "gate_note": "marcos técnicos; não significa homologação"
+  },
+  "milestones": [
+    {
+      "id": "M01",
+      "phase": "F0",
+      "name": "Inventário canônico",
+      "state": "ACCEPTED",
+      "evidence": "GitHub PR #3; README, docs, code, workflows",
+      "gate_approved": false
+    },
+    {
+      "id": "M02",
+      "phase": "F3",
+      "name": "Build celular 2.9.8 (37)",
+      "state": "ACCEPTED",
+      "evidence": "Actions 39661373378 success",
+      "gate_approved": false
+    },
+    {
+      "id": "M03",
+      "phase": "F3",
+      "name": "Build TV 2.5 (16)",
+      "state": "ACCEPTED",
+      "evidence": "Actions 39664549476 success",
+      "gate_approved": false
+    },
+    {
+      "id": "M04",
+      "phase": "F7",
+      "name": "OTA celular cert2026",
+      "state": "ACCEPTED",
+      "evidence": "Actions 39662586924; usuário confirmou atualização",
+      "gate_approved": false
+    },
+    {
+      "id": "M05",
+      "phase": "F7",
+      "name": "OTA TV cert2026",
+      "state": "ACCEPTED",
+      "evidence": "Actions 39665565951 success",
+      "gate_approved": false
+    },
+    {
+      "id": "M06",
+      "phase": "F4",
+      "name": "Migrações D1 device",
+      "state": "ACCEPTED",
+      "evidence": "Readback Cloudflare 2026-10-21 na conversa",
+      "gate_approved": false
+    },
+    {
+      "id": "M07",
+      "phase": "F4",
+      "name": "Worker device e bindings",
+      "state": "ACCEPTED",
+      "evidence": "Readback Cloudflare 2026-10-21 na conversa",
+      "gate_approved": false
+    },
+    {
+      "id": "M08",
+      "phase": "F4",
+      "name": "Ativação em dispositivo real",
+      "state": "IN_QA",
+      "evidence": null,
+      "gate_approved": false
+    },
+    {
+      "id": "M09",
+      "phase": "F5",
+      "name": "Abertura real de título na TV",
+      "state": "IN_QA",
+      "evidence": null,
+      "gate_approved": false
+    },
+    {
+      "id": "M10",
+      "phase": "F6",
+      "name": "Homologação integrada e rollback",
+      "state": "BACKLOG",
+      "evidence": null,
+      "gate_approved": false
+    },
+    {
+      "id": "M11",
+      "phase": "F8",
+      "name": "Operação estável e aceite final",
+      "state": "BACKLOG",
+      "evidence": null,
+      "gate_approved": false
+    }
+  ],
+  "gates": {
+    "F0": "NAO_HOMOLOGADO",
+    "F1": "NAO_HOMOLOGADO",
+    "F2": "NAO_HOMOLOGADO",
+    "F3": "NAO_HOMOLOGADO",
+    "F4": "NAO_HOMOLOGADO",
+    "F5": "NAO_HOMOLOGADO",
+    "F6": "NAO_HOMOLOGADO",
+    "F7": "NAO_HOMOLOGADO",
+    "F8": "NAO_HOMOLOGADO"
+  },
+  "history": [
+    {
+      "date": "2026-10-21",
+      "event": "baseline da diretriz mestre; 11 marcos próprios, sem importar percentuais da Fábrica"
+    }
+  ]
+}
