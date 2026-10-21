@@ -114,12 +114,14 @@ class StreamingScreens(unittest.TestCase):
         preparer = Path("scripts/prepare_tcl.py").read_text(encoding="utf-8")
         self.assertIn("overrides/AnyTvPersonalLinks.kt", preparer)
         for fragment in (
-            "anytv-link-resolver-pilot.brenoff.workers.dev/v1/resolve/",
+            'AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/resolve/"',
             "validatedLink(", "NotInSubscription", "NoSupportedLink",
             "com.netflix.ninja", "com.disney.disneyplus",
             "com.apple.atve.androidtv.appletv", "com.wbd.stream",
         ):
             self.assertIn(fragment, resolver)
+        identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
+        self.assertIn('RESOLVER_BASE = "https://anytv-link-resolver-pilot.brenoff.workers.dev"', identity)
         self.assertIn("AnyTvPersonalLinks.resolve(context, title, packageName)", self.screen)
         self.assertIn("AnyTvDeviceIdentity.attachProof(context, conn, url.toURI().rawPath)", resolver)
         self.assertIn("overrides/AnyTvDeviceIdentity.kt", preparer)
