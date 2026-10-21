@@ -348,7 +348,7 @@ test("TMDB upstream error reports status without exposing credentials",async()=>
 
 
 test("discovery endpoints are allowlisted and cached without exposing TMDB token", async () => {
-  const env = makeEnv();
+  const env = makeEnv(50);
   env.TMDB_READ_TOKEN = "secret-server-only";
   let calls = 0;
   const deps = { now: () => Date.parse("2026-10-21T12:00:00Z"),
