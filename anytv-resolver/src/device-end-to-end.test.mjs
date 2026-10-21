@@ -8,7 +8,7 @@ const seconds = Math.floor(now / 1000);
 const id = "12345678-1234-4234-8234-123456789abc";
 const b64 = b => Buffer.from(b).toString("base64url");
 
-test("activation -> signed resolver -> replay denial; no upstream on denied traffic", async () => {
+test("activation -> idempotent acknowledgment -> resolver; no upstream on denied traffic", async () => {
   const pair = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
   const publicKey = "p256:" + b64(await crypto.subtle.exportKey("raw", pair.publicKey));
   const code = b64(randomBytes(32));
@@ -18,6 +18,7 @@ test("activation -> signed resolver -> replay denial; no upstream on denied traf
   const db = {
     prepare(sql) { return { bind(...args) { return {
       async first() {
+        if (sql.includes("FROM device_activations a JOIN device_keys")) return activated && args[0] === codeHash && args[1] === id && args[2] === publicKey && args[3] < device.expires_at ? {matched:1} : null;
         if (sql.includes("FROM device_keys")) return activated ? device : null;
         if (sql.includes("FROM link_cache")) return {
           payload: JSON.stringify({ status: "not_available" }), expires_at: seconds + 900
@@ -66,7 +67,7 @@ test("activation -> signed resolver -> replay denial; no upstream on denied traf
       public_key: publicKey, proof: activationProof })
   });
   assert.equal((await handleRequest(activation(), env, deps)).status, 201);
-  assert.equal((await handleRequest(activation(), env, deps)).status, 403);
+  assert.equal((await handleRequest(activation(), env, deps)).status, 201);
   const accepted = await handleRequest(signed(), env, deps);
   assert.equal(accepted.status, 404);
   assert.equal((await accepted.json()).cached, true);
