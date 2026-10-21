@@ -93,3 +93,12 @@ test("Android Keystore P-256 public key activates with operator code", async () 
   assert.equal(response.status, 201);
   assert.equal(f.registered.get(device_id).public_key, key);
 });
+
+test("forged possession proof cannot consume a valid activation code", async () => {
+  const f = await setup();
+  const attacker = await webcrypto.subtle.generateKey("Ed25519", true, ["sign", "verify"]);
+  const forged = await f.request(undefined, attacker.privateKey);
+  assert.equal((await activateDevice(forged, f.env, f.deps)).status, 403);
+  assert.equal(f.registered.size, 0);
+  assert.equal((await activateDevice(await f.request(), f.env, f.deps)).status, 201);
+});
