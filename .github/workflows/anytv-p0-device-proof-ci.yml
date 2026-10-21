@@ -30,5 +30,16 @@ jobs:
         run: python3 -m unittest discover -s tests -p 'test_device_activation_sql.py' -v
       - name: Cloudflare D1 local migration and activation smoke
         run: bash scripts/d1-local-smoke.sh
+      - name: Validate staging workflow syntax and isolation contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          content = Path("../.github/workflows/anytv-p0-d1-staging-preflight.yml").read_text()
+          required = ["workflow_dispatch:", "ANYTV_STAGING_CF_API_TOKEN", "ANYTV_STAGING_CF_ACCOUNT_ID", "9bab6598-d019-4e88-8b29-a327ff0cfd00", "--remote", "sqlite_master", "device_keys", "device_nonces", "device_activations"]
+          for fragment in required:
+              assert fragment in content, fragment
+          assert "wrangler deploy" not in content
+          assert "migrations apply" not in content
+          PY
       - name: Resolver and device-proof regressions
         run: npm test
