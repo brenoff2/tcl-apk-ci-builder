@@ -386,7 +386,7 @@ internal fun TclStreamingScreens(
                 // Personal-mode live link source takes priority over sparse Wikidata.
                 // It is optional, never baked into the APK and never sent to the TV.
                 val personalLookup = runCatching {
-                    AnyTvPersonalLinks.resolve(title, packageName)
+                    AnyTvPersonalLinks.resolve(context, title, packageName)
                 }
                 when (val direct = personalLookup?.getOrNull()) {
                     is AnyTvPersonalResult.Direct -> {
