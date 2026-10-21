@@ -610,7 +610,7 @@ internal fun TclStreamingScreens(
                             }.padding(7.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                OfficialTvIcon(app, 42.dp)
+                                OfficialTvIcon(app, 48.dp)
                                 Text(app.name, modifier = Modifier.weight(1f), maxLines = 1)
                                 Text("›", fontSize = 22.sp)
                             }
