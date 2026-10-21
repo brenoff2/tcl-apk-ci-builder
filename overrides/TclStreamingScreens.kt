@@ -245,6 +245,23 @@ private object StreamingCatalog {
             mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
         }
 
+    suspend fun trailer(media: String, id: Int): String? = withContext(Dispatchers.IO) {
+        val response = get("backend", "$media/$id/videos?language=pt-BR")
+        val videos = response.optJSONArray("results") ?: JSONArray()
+        (0 until videos.length()).mapNotNull { index ->
+            val video = videos.optJSONObject(index) ?: return@mapNotNull null
+            val key = video.optString("key")
+            if (video.optString("site") == "YouTube" &&
+                video.optString("type") == "Trailer" &&
+                key.matches(Regex("[A-Za-z0-9_-]{11}"))) key else null
+        }.firstOrNull()?.let { "https://www.youtube.com/watch?v=" + it }
+    }
+
+    suspend fun related(media: String, id: Int): List<StreamingTitle> = withContext(Dispatchers.IO) {
+        val response = get("backend", "$media/$id/recommendations?language=pt-BR")
+        mapTitles(response.optJSONArray("results") ?: JSONArray(), media, 0).take(12)
+    }
+
     suspend fun discover(
         token: String, app: String, media: String, page: Int, genre: Int, query: String
     ): StreamingResults = withContext(Dispatchers.IO) {
@@ -352,7 +369,23 @@ internal fun TclStreamingScreens(
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<StreamingTitle?>(null) }
+    var trailerLink by remember { mutableStateOf<String?>(null) }
+    var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    var detailLoading by remember { mutableStateOf(false) }
     val displayed = remember(apps, all) { apps.filter { all || StreamingCatalog.streaming(it) } }
+
+    LaunchedEffect(details?.media, details?.id) {
+        val item = details
+        trailerLink = null
+        relatedTitles = emptyList()
+        if (item != null) {
+            detailLoading = true
+            trailerLink = runCatching { StreamingCatalog.trailer(item.media, item.id) }.getOrNull()
+            relatedTitles = runCatching { StreamingCatalog.related(item.media, item.id) }
+                .getOrDefault(emptyList())
+            detailLoading = false
+        }
+    }
 
     LaunchedEffect(token) {
         discoveryLoading = true
