@@ -45,7 +45,7 @@ jobs:
         run: |
           set -euo pipefail
           # Explicitly create a transient config for a dedicated staging database.
-          CFG="$(mktemp ./wrangler.staging.XXXXXX.toml)"
+          CFG="$(mktemp --suffix=.toml ./wrangler.staging.XXXXXX)"
           trap 'rm -f "$CFG" /tmp/anytv-staging-tables.json' EXIT
           cat > "$CFG" <<EOF
           name = "anytv-p0-staging-preflight"
