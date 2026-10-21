@@ -299,8 +299,10 @@ export async function handleRequest(request, env, deps = {}) {
   const parsed = new URL(request.url);
   if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
   if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
-  if (!env?.ANYTV_CLIENT_TOKEN || !env?.ANYTV_MOVIE_API_KEY ||
-      !env?.DB || !env?.RATE_LIMIT || monthlyCap(env) === null) {
+  if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB || !env?.RATE_LIMIT ||
+      monthlyCap(env) === null ||
+      ((env.ANYTV_RESOLVER_AUTH_MODE || "pilot") === "pilot" &&
+       !env.ANYTV_CLIENT_TOKEN)) {
     return asJson({ status: "not_configured" }, 503);
   }
   // Explicit opt-in for preapproved device proofs. Existing pilot-token
