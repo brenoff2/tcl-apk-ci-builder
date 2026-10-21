@@ -120,7 +120,9 @@ class StreamingScreens(unittest.TestCase):
             "com.apple.atve.androidtv.appletv", "com.wbd.stream",
         ):
             self.assertIn(fragment, resolver)
-        self.assertIn("AnyTvPersonalLinks.resolve(title, packageName)", self.screen)
+        self.assertIn("AnyTvPersonalLinks.resolve(context, title, packageName)", self.screen)
+        self.assertIn("AnyTvDeviceIdentity.attachProof(context, conn, url.toURI().rawPath)", resolver)
+        self.assertIn("overrides/AnyTvDeviceIdentity.kt", preparer)
         self.assertIn("StreamingCatalog.titleDeepLink(token, title, packageName)", self.screen)
         self.assertNotIn("AndroidKeyStore", resolver)
         self.assertNotIn("X-API-Key", resolver)
