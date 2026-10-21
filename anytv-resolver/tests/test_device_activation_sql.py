@@ -39,9 +39,10 @@ class DeviceActivationSql(unittest.TestCase):
                 device, self.public, self.hash, self.now, self.now)).rowcount
             consumed = self.db.execute(CONSUME, (
                 self.now, device, self.hash, self.now, device, self.public)).rowcount
-            # A zero-row insert must not consume an approval code.
-            if inserted != 1 or consumed != 1:
-                raise ValueError("activation denied")
+            # Commit even rejected zero-row operations; do not hide an SQL
+            # inconsistency behind Python rollback in this test.
+        if inserted != 1 or consumed != 1:
+            raise ValueError("activation denied")
 
     def test_single_activation_and_replay(self):
         self.activate("device-a")
