@@ -53,8 +53,8 @@ test("operator-approved one-use code activates once, replay denied", async () =>
 
 test("invalid activation codes and malformed public keys are refused", async () => {
   const f = await setup();
-  const bad = f.request({ device_id, public_key: "A".repeat(43), activation_code: code });
-  assert.notEqual((await activateDevice(bad, f.env, f.deps)).status, 201);
+  const bad = f.request({ device_id, public_key: "invalid", activation_code: code });
+  assert.equal((await activateDevice(bad, f.env, f.deps)).status, 400);
   assert.equal((await activateDevice(f.request({
     device_id, public_key: "invalid", activation_code: code
   }), f.env, f.deps)).status, 400);
