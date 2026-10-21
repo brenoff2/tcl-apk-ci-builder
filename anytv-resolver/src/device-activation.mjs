@@ -1,0 +1,53 @@
+// Operator-issued, single-use 256-bit activation codes. Never include codes
+// in APKs. No self-registration: a code hash must exist in D1 before activation.
+const uuid = /^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/;
+const token = /^[A-Za-z0-9_-]{43}$/;
+const reply = (status, code) => new Response(JSON.stringify({ status: code }), {
+  status, headers: { "content-type": "application/json", "cache-control": "no-store" }
+});
+const decode = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "="),
+  c => c.charCodeAt(0));
+const encode = bytes => btoa(String.fromCharCode(...bytes))
+  .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+
+export async function activateDevice(request, env, deps = {}) {
+  if (request.method !== "POST") return reply(405, "method_not_allowed");
+  // No DB.batch, no enrollment: single-use code and key must commit together.
+  if (!env?.DB?.batch || !env?.RATE_LIMIT) return reply(503, "not_configured");
+  if (Number(request.headers.get("content-length") || 0) > 1024) return reply(400, "invalid_request");
+  try {
+    const ip = request.headers.get("cf-connecting-ip") || "unknown";
+    if (!(await env.RATE_LIMIT.limit({ key: "activate:" + ip })).success) return reply(429, "rate_limited");
+    const raw = await request.text();
+    if (raw.length > 1024) return reply(400, "invalid_request");
+    const item = JSON.parse(raw);
+    if (!item || typeof item !== "object" || Array.isArray(item) ||
+        Object.keys(item).sort().join(",") !== "activation_code,device_id,public_key" ||
+        !uuid.test(item.device_id) || !token.test(item.activation_code) ||
+        !token.test(item.public_key)) return reply(400, "invalid_request");
+    const subtle = deps.subtle || crypto.subtle;
+    await subtle.importKey("raw", decode(item.public_key), { name: "Ed25519" }, false, ["verify"]);
+    const digest = new Uint8Array(await subtle.digest("SHA-256", decode(item.activation_code)));
+    const hash = encode(digest);
+    const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
+    // D1 batch is transactional. INSERT must be conditional on an unused code;
+    // UPDATE consumes that code only if this device/key was inserted.
+    const statements = [
+      env.DB.prepare(`INSERT INTO device_keys(device_id,public_key,enabled,expires_at)
+        SELECT ?,?,1,valid_until FROM device_activations
+        WHERE code_hash=? AND used_at IS NULL AND expires_at>? AND valid_until>?
+        ON CONFLICT(device_id) DO NOTHING`).bind(item.device_id, item.public_key, hash, now, now),
+      env.DB.prepare(`UPDATE device_activations SET used_at=?,device_id=?
+        WHERE code_hash=? AND used_at IS NULL AND expires_at>?
+          AND EXISTS(SELECT 1 FROM device_keys WHERE device_id=? AND public_key=?)`)
+        .bind(now, item.device_id, hash, now, item.device_id, item.public_key)
+    ];
+    const results = await env.DB.batch(statements);
+    if (results?.[0]?.meta?.changes !== 1 || results?.[1]?.meta?.changes !== 1) {
+      return reply(403, "activation_denied");
+    }
+    return reply(201, "activated");
+  } catch {
+    return reply(503, "activation_unavailable");
+  }
+}
