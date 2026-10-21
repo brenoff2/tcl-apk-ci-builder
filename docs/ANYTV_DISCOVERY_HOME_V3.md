@@ -59,3 +59,13 @@ Layouts responsivos no celular: hero com proporção panorâmica e gradiente/ove
 - https://developer.themoviedb.org/docs/popularity-and-trending — trending ≠ popularidade nem visualizações.
 - https://developer.themoviedb.org/reference/discover-movie — avaliação, popularidade, datas, poster.
 - https://developer.themoviedb.org/reference/tv-series-videos — metadados de trailer; vídeos são de terceiros.
+
+## 7. Slides e carrosséis — decisão de UX aprovada em 2026-10-21
+
+- **Hero rotativo** na entrada Descobrir: slides panorâmicos com imagem real do título, nome, sinopse resumida, nota/fonte e ações **Ver trailer**, **Detalhes** e **Onde assistir**. Cada slide representa um título real de uma das seções de destaque; não confundir material ilustrativo de protótipo com ranking verdadeiro.
+- Interação por **swipe horizontal**, setas quando úteis, indicadores de posição e toque no slide para abrir a ficha do título. Não interceptar o gesto vertical de rolagem.
+- **Autoplay conservador**: não reproduzir trailers automaticamente; rotação automática de slides somente se acessível, pausável e respeitando redução de movimento. Preferir avanço manual por padrão.
+- **Carrosséis independentes** por categoria (em alta, estreias, populares, bem avaliados, sugestões, por plataforma), com cartões clicáveis, progressão horizontal e preservação do contexto ao voltar de Detalhes.
+- Seleção do filtro streaming aplica-se aos resultados apresentados sem substituir a página global; a aba Plataformas mantém páginas específicas por provedor.
+- **Critérios de aceite adicionais D03/D04:** usuário navega slides por toque, abre detalhes, assiste a trailer somente sob ação explícita, percorre carrosséis e volta ao mesmo ponto; acessibilidade de foco/descrição e estados de carregamento testados no celular.
+- A aprovação da interação de slides não é autorização para modificar produção ou publicar novo APK sem compilação, testes e homologação.
