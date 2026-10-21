@@ -23,13 +23,20 @@ export async function activateDevice(request, env, deps = {}) {
     if (raw.length > 1024) return reply(400, "invalid_request");
     const item = JSON.parse(raw);
     if (!item || typeof item !== "object" || Array.isArray(item) ||
-        Object.keys(item).sort().join(",") !== "activation_code,device_id,public_key" ||
+        Object.keys(item).sort().join(",") !== "activation_code,device_id,proof,public_key" ||
         !uuid.test(item.device_id) || !token.test(item.activation_code) ||
-        !(token.test(item.public_key) || p256Key.test(item.public_key))) return reply(400, "invalid_request");
+        !(token.test(item.public_key) || p256Key.test(item.public_key)) ||
+        typeof item.proof !== "string" ||
+        !/^[A-Za-z0-9_-]{86}$/.test(item.proof)) return reply(400, "invalid_request");
     const subtle = deps.subtle || crypto.subtle;
     const p256 = item.public_key.startsWith("p256:");
-    await subtle.importKey("raw", decode(p256 ? item.public_key.slice(5) : item.public_key),
+    const publicKey = await subtle.importKey("raw", decode(p256 ? item.public_key.slice(5) : item.public_key),
       p256 ? { name: "ECDSA", namedCurve: "P-256" } : { name: "Ed25519" }, false, ["verify"]);
+    const possession = new TextEncoder().encode(["ANYTV-ACTIVATE1", item.device_id,
+      item.public_key, item.activation_code].join("\\n"));
+    const verified = await subtle.verify(p256 ? { name: "ECDSA", hash: "SHA-256" } : "Ed25519",
+      publicKey, decode(item.proof), possession);
+    if (!verified) return reply(403, "activation_denied");
     const digest = new Uint8Array(await subtle.digest("SHA-256", decode(item.activation_code)));
     const hash = encode(digest);
     const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
