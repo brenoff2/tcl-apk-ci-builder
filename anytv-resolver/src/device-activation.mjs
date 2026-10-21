@@ -6,7 +6,7 @@ const p256Key = /^p256:[A-Za-z0-9_-]{87}$/;
 const reply = (status, code) => new Response(JSON.stringify({ status: code }), {
   status, headers: { "content-type": "application/json", "cache-control": "no-store" }
 });
-const decode = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "="),
+const decode = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "=".repeat((4 - s.length % 4) % 4)),
   c => c.charCodeAt(0));
 const encode = bytes => btoa(String.fromCharCode(...bytes))
   .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
