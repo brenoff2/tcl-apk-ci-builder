@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test src/worker.test.mjs src/device-proof.test.mjs src/device-activation.test.mjs"
+    "test": "node --test src/worker.test.mjs src/device-proof.test.mjs src/device-activation.test.mjs src/issue-activation.test.mjs"
   },
   "engines": {
     "node": ">=20"
