@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -556,10 +558,26 @@ internal fun TclStreamingScreens(
                         AsyncImage(model = "https://image.tmdb.org/t/p/w780" + current.poster,
                             contentDescription = "Destaque: " + current.name,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxWidth().height(150.dp).clickable {
-                                details = current
-                                detailsPackage = null
-                            })
+                            modifier = Modifier.fillMaxWidth().height(150.dp)
+                                .pointerInput(heroTitles.size) {
+                                    var drag = 0f
+                                    detectHorizontalDragGestures(
+                                        onDragStart = { drag = 0f },
+                                        onDragEnd = {
+                                            if (drag > 60f) {
+                                                discoverySlide = (discoverySlide + heroTitles.size - 1) % heroTitles.size
+                                            } else if (drag < -60f) {
+                                                discoverySlide = (discoverySlide + 1) % heroTitles.size
+                                            }
+                                        },
+                                        onHorizontalDrag = { change, amount ->
+                                            change.consume()
+                                            drag += amount
+                                        })
+                                }.clickable {
+                                    details = current
+                                    detailsPackage = null
+                                })
                         Text(current.name, fontWeight = FontWeight.Bold, maxLines = 2)
                         if (current.votes > 0) Text("★ TMDB " + String.format(java.util.Locale.US, "%.1f", current.rating), fontSize = 12.sp)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
