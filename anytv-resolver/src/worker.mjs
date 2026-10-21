@@ -1,3 +1,4 @@
+import { verifyDeviceProof } from "./device-proof.mjs";
 /**
  * AnyTV commercial resolver pilot.
  * Never deploy credentials or a permanent client token in an APK.
@@ -302,7 +303,18 @@ export async function handleRequest(request, env, deps = {}) {
       !env?.DB || !env?.RATE_LIMIT || monthlyCap(env) === null) {
     return asJson({ status: "not_configured" }, 503);
   }
-  if (!safeEqual(request.headers.get("authorization") || "",
+  // Explicit opt-in for preapproved device proofs. Existing pilot-token
+  // deployments stay unchanged until an authenticated enrollment is available.
+  // An unknown mode must fail closed, not silently select the pilot bypass.
+  const authMode = env.ANYTV_RESOLVER_AUTH_MODE || "pilot";
+  if (authMode !== "pilot" && authMode !== "device") {
+    return asJson({ status: "not_configured" }, 503);
+  }
+  if (authMode === "device") {
+    if (!(await verifyDeviceProof(request, env, deps))) {
+      return asJson({ status: "unauthorized" }, 401);
+    }
+  } else if (!safeEqual(request.headers.get("authorization") || "",
       "Bearer " + env.ANYTV_CLIENT_TOKEN)) {
     return asJson({ status: "unauthorized" }, 401);
   }
