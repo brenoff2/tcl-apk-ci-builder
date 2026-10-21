@@ -56,7 +56,7 @@ test("invalid activation codes and malformed public keys are refused", async () 
   const bad = f.request({ device_id, public_key: "A".repeat(43), activation_code: code });
   assert.notEqual((await activateDevice(bad, f.env, f.deps)).status, 201);
   assert.equal((await activateDevice(f.request({
-    device_id, public_key: (await setup()).request ? "invalid" : "", activation_code: code
+    device_id, public_key: "invalid", activation_code: code
   }), f.env, f.deps)).status, 400);
   assert.equal(f.registered.size, 0);
 });
