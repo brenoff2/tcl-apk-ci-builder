@@ -41,5 +41,24 @@ jobs:
           assert "wrangler deploy" not in content
           assert "migrations apply" not in content
           PY
+      - name: Cloudflare connectivity diagnostic, read only
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          if [ -z "$CF_TOKEN" ]; then echo "CLOUDFLARE_TOKEN_MISSING"; exit 0; fi
+          python3 - <<'PY'
+          import os, urllib.request, urllib.error, json
+          root="https://api.cloudflare.com/client/v4/accounts/48172e80b82e7f0a2100e512831c48d2"
+          for label, path in [("worker","/workers/scripts/anytv-link-resolver-pilot/settings"),("d1","/d1/database/9bab6598-d019-4e88-8b29-a327ff0cfd00")]:
+              request=urllib.request.Request(root+path,headers={"Authorization":"Bearer "+os.environ["CF_TOKEN"]})
+              try:
+                  with urllib.request.urlopen(request,timeout=12) as result:
+                      body=json.load(result)
+                      print(label+":accessible" if body.get("success") else label+":api_rejected")
+              except urllib.error.HTTPError as e:
+                  print(label+":http_"+str(e.code))
+              except Exception as e:
+                  print(label+":unreachable_"+type(e).__name__)
+          PY
       - name: Resolver and device-proof regressions
         run: npm test
