@@ -41,9 +41,38 @@ jobs:
         run: |
           set -euo pipefail
           BT="$ANDROID_HOME/build-tools/35.0.0"
-          "$BT/aapt" dump badging signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='16' versionName='2.5-AnyTV'"
-          "$BT/apksigner" verify --min-sdk-version 24 --verbose --print-certs signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk > tv-cert.txt
-          grep -q '^Verifies$' tv-cert.txt
+          echo TV_CHECK_AAPT_NEW\n          "$BT/aapt" dump badging signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='16' versionName='2.5-AnyTV'"
+          echo TV_CHECK_SIGNER\n          "$BT/apksigner" verify --min-sdk-version 24 --verbose --print-certs signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk > tv-cert.txt
+          echo TV_CHECK_VERIFY_RESULT\n          grep -q '^Verifies tv-cert.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' tv-cert.txt
+          grep -qi '0a5427237a2445c42520236469563dabceda6af8ddffc223c' tv-cert.txt
+          echo TV_CHECK_ZIPALIGN\n          "$BT/zipalign" -c 4 signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk
+          echo TV_CHECK_OLD_CODE\n          "$BT/aapt" dump badging updates/tv/cert2026/current.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='15'"
+      - name: Publish ONLY TV cert2026 OTA
+        run: |
+          set -euo pipefail
+          cp signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk updates/tv/cert2026/current.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f updates/tv/cert2026/current.apk
+          git diff --cached --check
+          git diff --cached --quiet && { echo 'Refusing identical TV OTA'; exit 1; }
+          git commit -m 'release(anytv): publish signed Connect 2.5 cert2026 OTA [skip ci]'
+          git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+      - name: Readback published binary from public OTA URL
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/tv/cert2026/current.apk?attempt=$attempt" -o published-tv.apk || true
+            if test -s published-tv.apk && cmp -s published-tv.apk signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk; then
+              echo 'ANYTV_TV25_CERT2026_OTA_PUBLISHED_READBACK_OK'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'TV OTA public readback mismatch' >&2
+          exit 1
+ tv-cert.txt
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' tv-cert.txt
           grep -qi '0a5427237a2445c42520236469563dabceda6af8ddffc223c' tv-cert.txt
           "$BT/zipalign" -c 4 signed/AnyTV_Connect_2_5_SIGNED_CERT2026.apk
