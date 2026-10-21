@@ -247,6 +247,16 @@ private object StreamingCatalog {
             mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
         }
 
+    /** Global search is independent of the installed-streaming provider. */
+    suspend fun searchGlobal(query: String): List<StreamingTitle> = withContext(Dispatchers.IO) {
+        require(query.length in 2..90)
+        val encoded = URLEncoder.encode(query, "UTF-8")
+        listOf("movie", "tv").flatMap { kind ->
+            val response = get("backend", "search/$kind?language=pt-BR&query=$encoded")
+            mapTitles(response.optJSONArray("results") ?: JSONArray(), kind, 0).take(12)
+        }
+    }
+
     suspend fun trailer(media: String, id: Int): String? = withContext(Dispatchers.IO) {
         val response = get("backend", "$media/$id/videos?language=pt-BR")
         val videos = response.optJSONArray("results") ?: JSONArray()
@@ -313,6 +323,11 @@ internal fun TclStreamingScreens(
     var activationFeedback by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     var discoverySlide by remember { mutableStateOf(0) }
+    var globalSearchDraft by remember { mutableStateOf("") }
+    var globalSearchTerm by remember { mutableStateOf("") }
+    var globalSearchResults by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    var globalSearchBusy by remember { mutableStateOf(false) }
+
     var discoveryShelves by remember {
         mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap())
     }
@@ -375,6 +390,17 @@ internal fun TclStreamingScreens(
     var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var detailLoading by remember { mutableStateOf(false) }
     val displayed = remember(apps, all) { apps.filter { all || StreamingCatalog.streaming(it) } }
+
+    LaunchedEffect(globalSearchTerm) {
+        globalSearchResults = emptyList()
+        if (globalSearchTerm.length >= 2) {
+            globalSearchBusy = true
+            globalSearchResults = runCatching {
+                StreamingCatalog.searchGlobal(globalSearchTerm)
+            }.getOrDefault(emptyList())
+            globalSearchBusy = false
+        }
+    }
 
     LaunchedEffect(details?.media, details?.id) {
         val item = details
@@ -547,6 +573,39 @@ internal fun TclStreamingScreens(
                         Text("Streaming", fontSize = 20.sp, fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f))
                         TextButton(onClick = onDismiss) { Text("Fechar") }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = globalSearchDraft,
+                            onValueChange = { globalSearchDraft = it.take(90) },
+                            label = { Text("Buscar filme ou série") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f))
+                        Button(onClick = { globalSearchTerm = globalSearchDraft.trim() },
+                            enabled = globalSearchDraft.trim().length >= 2) { Text("Buscar") }
+                        if (globalSearchTerm.isNotBlank()) TextButton(onClick = {
+                            globalSearchDraft = ""; globalSearchTerm = ""
+                        }) { Text("×") }
+                    }
+                    if (globalSearchBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    if (globalSearchTerm.isNotBlank() && !globalSearchBusy) {
+                        Text("Resultados para: " + globalSearchTerm, fontSize = 12.sp)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            globalSearchResults.forEach { found ->
+                                Column(modifier = Modifier.width(110.dp).clickable {
+                                    details = found; detailsPackage = null
+                                }) {
+                                    AsyncImage(model = "https://image.tmdb.org/t/p/w185" + found.poster,
+                                        contentDescription = found.name,
+                                        modifier = Modifier.fillMaxWidth().height(150.dp),
+                                        contentScale = ContentScale.Crop)
+                                    Text(found.name, fontSize = 11.sp, maxLines = 2)
+                                }
+                            }
+                        }
+                        if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
                     }
                     Text("Descubra filmes e séries em várias plataformas.",
                         fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
