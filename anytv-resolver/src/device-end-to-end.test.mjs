@@ -57,9 +57,13 @@ test("activation -> signed resolver -> replay denial; no upstream on denied traf
   });
   assert.equal((await handleRequest(signed(), env, deps)).status, 401);
   assert.equal(upstream, 0);
+  const activationProof = b64(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" },
+    pair.privateKey, new TextEncoder().encode(
+      ["ANYTV-ACTIVATE1", id, publicKey, code].join("\n"))));
   const activation = () => new Request("https://resolver.test/v1/device/activate", {
     method: "POST", headers: { "content-type": "application/json" },
-    body: JSON.stringify({ activation_code: code, device_id: id, public_key: publicKey })
+    body: JSON.stringify({ activation_code: code, device_id: id,
+      public_key: publicKey, proof: activationProof })
   });
   assert.equal((await handleRequest(activation(), env, deps)).status, 201);
   assert.equal((await handleRequest(activation(), env, deps)).status, 403);
