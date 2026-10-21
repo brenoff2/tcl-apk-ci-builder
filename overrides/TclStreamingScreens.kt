@@ -52,7 +52,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.text.Normalizer
 
-internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String)
+internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0)
 internal data class StreamingGenre(val id: Int, val name: String)
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
 internal data class StreamingResults(val titles: List<StreamingTitle>, val more: Boolean)
@@ -128,7 +128,7 @@ private object StreamingCatalog {
                     (0 until itemGenres.length()).any { itemGenres.optInt(it) == genre })
                 if (movieId > 0 && name.isNotBlank() && matchGenre) {
                     add(StreamingTitle(movieId, name, entry.optString("overview"),
-                        entry.optString("poster_path").takeIf { it.startsWith("/") } ?: "", media))
+                        entry.optString("poster_path").takeIf { it.startsWith("/") } ?: "", media, entry.optDouble("vote_average", 0.0), entry.optInt("vote_count", 0)))
                 }
             }
         }
