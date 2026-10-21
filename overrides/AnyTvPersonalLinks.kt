@@ -85,7 +85,7 @@ internal object AnyTvPersonalLinks {
         require(title.id > 0 && title.media in setOf("movie", "tv")) {
             "Identificador inválido."
         }
-        val url = URL("https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/resolve/" +
+        val url = URL(AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/resolve/" +
             title.media + "/" + title.id + "/" + provider)
         val conn = url.openConnection() as HttpURLConnection
         try {
