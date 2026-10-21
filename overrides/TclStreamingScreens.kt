@@ -258,15 +258,21 @@ private object StreamingCatalog {
     }
 
     suspend fun trailer(media: String, id: Int): String? = withContext(Dispatchers.IO) {
-        val response = get("backend", "$media/$id/videos?language=pt-BR")
-        val videos = response.optJSONArray("results") ?: JSONArray()
-        (0 until videos.length()).mapNotNull { index ->
-            val video = videos.optJSONObject(index) ?: return@mapNotNull null
-            val key = video.optString("key")
-            if (video.optString("site") == "YouTube" &&
-                video.optString("type") == "Trailer" &&
-                key.matches(Regex("[A-Za-z0-9_-]{11}"))) key else null
-        }.firstOrNull()?.let { "https://www.youtube.com/watch?v=" + it }
+        fun findTrailer(videos: JSONArray): String? =
+            (0 until videos.length()).mapNotNull { index ->
+                val video = videos.optJSONObject(index) ?: return@mapNotNull null
+                val key = video.optString("key")
+                if (video.optString("site") == "YouTube" &&
+                    video.optString("type") == "Trailer" &&
+                    key.matches(Regex("[A-Za-z0-9_-]{11}"))) key else null
+            }.firstOrNull()
+        val original = get("backend", "$media/$id/videos?language=pt-BR")
+        val preferred = findTrailer(original.optJSONArray("results") ?: JSONArray())
+        val key = preferred ?: runCatching {
+            val alternative = get("backend", "$media/$id/videos?language=en-US")
+            findTrailer(alternative.optJSONArray("results") ?: JSONArray())
+        }.getOrNull()
+        key?.let { "https://www.youtube.com/watch?v=" + it }
     }
 
     suspend fun related(media: String, id: Int): List<StreamingTitle> = withContext(Dispatchers.IO) {
