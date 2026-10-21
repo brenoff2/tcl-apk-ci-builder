@@ -23,7 +23,7 @@ import java.util.UUID
 internal object AnyTvDeviceIdentity {
     private const val ALIAS = "anytv-resolver-p256-v1"
     private const val PREFS = "anytv_resolver_device"
-    private const val BASE = "https://anytv-link-resolver-pilot.brenoff.workers.dev"
+    internal const val RESOLVER_BASE = "https://anytv-link-resolver-pilot.brenoff.workers.dev"
     private val random = SecureRandom()
 
     private fun keyStore(): KeyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
@@ -83,7 +83,7 @@ internal object AnyTvDeviceIdentity {
             .put("public_key", key)
             .put("activation_code", activationCode)
             .put("proof", proof)
-        val connection = URL("$BASE/v1/device/activate").openConnection() as HttpURLConnection
+        val connection = URL("$RESOLVER_BASE/v1/device/activate").openConnection() as HttpURLConnection
         return try {
             connection.requestMethod = "POST"
             connection.connectTimeout = 5000
