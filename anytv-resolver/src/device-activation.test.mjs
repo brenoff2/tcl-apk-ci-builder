@@ -76,3 +76,14 @@ test("activation endpoint is closed unless explicitly enabled", async () => {
   assert.equal(response.status, 405);
   assert.equal(f.registered.size, 0);
 });
+
+test("Android Keystore P-256 public key activates with operator code", async () => {
+  const f = await setup();
+  const pair = await webcrypto.subtle.generateKey(
+    { name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+  const key = "p256:" + b64(await webcrypto.subtle.exportKey("raw", pair.publicKey));
+  const response = await activateDevice(
+    f.request({ device_id, public_key: key, activation_code: code }), f.env, f.deps);
+  assert.equal(response.status, 201);
+  assert.equal(f.registered.get(device_id).public_key, key);
+});
