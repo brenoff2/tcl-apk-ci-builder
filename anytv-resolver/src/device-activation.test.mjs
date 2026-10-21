@@ -20,7 +20,7 @@ async function setup() {
     ANYTV_DEVICE_ACTIVATION_ENABLED: "true",
     RATE_LIMIT: { limit: async () => ({ success: true }) },
     DB: {
-      prepare(sql) { return { bind(...args) { return { sql, args }; } }; },
+      prepare(sql) { return { bind(...args) { return { sql, args, async first() { if (!sql.includes("FROM device_activations a JOIN device_keys")) throw Error("Unexpected first query"); const entry=registered.get(args[1]); return activation.code_hash===args[0] && activation.used_at!==null && entry?.public_key===args[2] && entry?.enabled===1 && activation.valid_until>args[3] ? {matched:1} : null; } }; } }; },
       async batch(statements) {
         assert.equal(statements.length, 2);
         const [insert, consume] = statements;
@@ -49,11 +49,11 @@ async function setup() {
   return { env, request, registered, activation, deps: { now: () => now, subtle: webcrypto.subtle } };
 }
 
-test("operator-approved one-use code activates once, replay denied", async () => {
+test("operator-approved code is idempotent only for same already activated key", async () => {
   const f = await setup();
   assert.equal((await activateDevice(await f.request(), f.env, f.deps)).status, 201);
   assert.equal(f.registered.size, 1);
-  assert.equal((await activateDevice(await f.request(), f.env, f.deps)).status, 403);
+  assert.equal((await activateDevice(await f.request(), f.env, f.deps)).status, 201);
   assert.equal(f.registered.size, 1);
 });
 
