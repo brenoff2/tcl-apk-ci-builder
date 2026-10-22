@@ -1,0 +1,101 @@
+name: Publish AnyTV 2.9.10 cert2026 OTA (single GitHub Actions pipeline)
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_run_id:
+        description: 'Successful 2.9.10 candidate workflow run id'
+        required: true
+        type: string
+permissions:
+  actions: read
+  contents: write
+concurrency:
+  group: anytv-cert2026-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      KEYSTORE_B64: ${{ secrets.ANYTV_CERT2026_KEYSTORE_B64 }}
+      KEYSTORE_PASS: ${{ secrets.ANYTV_CERT2026_KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.ANYTV_CERT2026_KEY_ALIAS }}
+      KEY_PASS: ${{ secrets.ANYTV_CERT2026_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Enforce secured signing prerequisites
+        shell: bash
+        run: |
+          set -euo pipefail
+          for key in KEYSTORE_B64 KEYSTORE_PASS KEY_ALIAS KEY_PASS; do
+            if [ -z "${!key:-}" ]; then
+              echo "::error::Missing cert2026 signing configuration: $key. Publication stopped before changing OTA."
+              exit 1
+            fi
+          done
+      - name: Verify candidate CI identity and download exact artifact
+        shell: bash
+        env:
+          RUN_ID: ${{ inputs.candidate_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          gh api "repos/brenoff2/tcl-apk-ci-builder/actions/runs/$RUN_ID" --jq '.conclusion + " " + .head_branch + " " + .path' |
+            grep -Fx 'success feat/anytv-p0-device-proof-verifier-20261020 .github/workflows/anytv-2910-candidate.yml'
+          mkdir -p incoming signed
+          gh run download "$RUN_ID" --name anytv-discovery-v3-2910-unsigned-audit --dir incoming
+          test -s incoming/AnyTV_2_9_10_RELEASE_UNSIGNED.apk
+          sha256sum incoming/AnyTV_2_9_10_RELEASE_UNSIGNED.apk
+      - name: Sign exactly once inside runner using permanent identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          trap 'rm -f cert2026.keystore' EXIT
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > cert2026.keystore
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/apksigner" sign --ks cert2026.keystore --ks-key-alias "$KEY_ALIAS" \
+            --ks-pass env:KEYSTORE_PASS --key-pass env:KEY_PASS \
+            --out signed/AnyTV_2_9_10_SIGNED_CERT2026.apk incoming/AnyTV_2_9_10_RELEASE_UNSIGNED.apk
+          "$BT/apksigner" verify --verbose --print-certs signed/AnyTV_2_9_10_SIGNED_CERT2026.apk > signed/certificate-audit.txt
+          grep -q '^Verifies$' signed/certificate-audit.txt
+          grep -qi '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' signed/certificate-audit.txt
+          "$BT/aapt" dump badging signed/AnyTV_2_9_10_SIGNED_CERT2026.apk | grep -q "name='com.tclremote.livre' versionCode='39' versionName='2.9.10-AnyTV'"
+          "$BT/zipalign" -c 4 signed/AnyTV_2_9_10_SIGNED_CERT2026.apk
+          test -s signed/AnyTV_2_9_10_SIGNED_CERT2026.apk
+          sha256sum signed/AnyTV_2_9_10_SIGNED_CERT2026.apk
+      - name: Confirm installed-compatible upgrade and publish phone channel only
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/aapt" dump badging updates/android/cert2026/current.apk | grep -Eq "name='com.tclremote.livre' versionCode='(37|38)'"
+          cp signed/AnyTV_2_9_10_SIGNED_CERT2026.apk updates/android/cert2026/current.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f updates/android/cert2026/current.apk
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m 'release(anytv): publish phone 2.9.10 cert2026 OTA [skip ci]'
+            git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+          fi
+      - name: Verify remote OTA bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/cert2026/current.apk?attempt=$attempt" -o published.apk || true
+            if test -s published.apk && cmp -s published.apk signed/AnyTV_2_9_10_SIGNED_CERT2026.apk; then
+              echo 'ANYTV_2910_CERT2026_OTA_PUBLISHED_READBACK_OK'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'OTA readback mismatch: NOT PUBLISHED' >&2
+          exit 1
