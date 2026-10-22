@@ -1,4 +1,4 @@
-name: Publish AnyTV phone 2.9.8 cert2026 OTA (verified signed APK)
+name: Replay AnyTV phone 2.9.8 cert2026 OTA (idempotent verification)
 on:
   push:
     branches: ['feat/tcl-v22-updates-back-bluetooth']
@@ -41,7 +41,7 @@ jobs:
             .github/anytv-298-patch/signed-reconstruction.json \
             signed/AnyTV_2_9_8_SIGNED_CERT2026.apk
           echo '18a568f5d84f0eab95a25d5ab36ea7a150eb53259158c4d559151463685d4c17  signed/AnyTV_2_9_8_SIGNED_CERT2026.apk' | sha256sum -c -
-      - name: Confirm permanent phone signature and strictly newer version
+      - name: Confirm permanent phone signature and existing version
         run: |
           set -euo pipefail
           BT="$ANDROID_HOME/build-tools/36.0.0"
@@ -51,7 +51,8 @@ jobs:
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-cert.txt
           grep -qi '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' signed-cert.txt
           "$BT/zipalign" -c 4 signed/AnyTV_2_9_8_SIGNED_CERT2026.apk
-          "$BT/aapt" dump badging updates/android/cert2026/current.apk | grep -q "name='com.tclremote.livre' versionCode='36'"
+          "$BT/aapt" dump badging updates/android/cert2026/current.apk | grep -q "name='com.tclremote.livre' versionCode='37'"
+          echo '18a568f5d84f0eab95a25d5ab36ea7a150eb53259158c4d559151463685d4c17  updates/android/cert2026/current.apk' | sha256sum -c -
       - name: Publish phone channel without touching TV or main
         run: |
           set -euo pipefail
@@ -60,9 +61,12 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -f updates/android/cert2026/current.apk
           git diff --cached --check
-          git diff --cached --quiet && { echo 'Unexpected identical OTA'; exit 1; }
-          git commit -m 'release(anytv): publish verified phone 2.9.8 cert2026 OTA [skip ci]'
-          git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+          if git diff --cached --quiet; then
+            echo 'ANYTV_298_REPUBLISH_IDENTICAL_NO_CHANGE_REQUIRED'
+          else
+            git commit -m 'release(anytv): republish verified phone 2.9.8 cert2026 OTA [skip ci]'
+            git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+          fi
       - name: Read back published OTA binary SHA-256
         run: |
           set -euo pipefail
