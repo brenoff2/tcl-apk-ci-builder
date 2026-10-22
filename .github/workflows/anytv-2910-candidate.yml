@@ -59,7 +59,7 @@ jobs:
           grep -q '0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c' source/app/src/main/java/tcl/shared/TclUpdateManager.java
           grep -q 'suffix = "android/cert2026"' source/app/src/main/java/tcl/shared/TclUpdateManager.java
           grep -q 'suffix = "tv/cert2026"' source/app/src/main/java/tcl/shared/TclUpdateManager.java
-      - name: Validar regressao e atualizacao segura (versionCode 39)
+      - name: Validar regressao e atualizacao segura (versionCode 39, legacy v2.1)
         env:
           TCL_APPROVED_UI: '1'
           TCL_RELEASE_SINGLE_APP: '1'
