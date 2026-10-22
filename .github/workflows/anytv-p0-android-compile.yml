@@ -80,6 +80,7 @@ jobs:
           TCL_V30: '1'
           TCL_V33: '1'
           TCL_V34: '1'
+          TCL_V38: '1'
           TCL_V37: '1'
           TCL_V36: '1'
           TCL_V35: '1'
@@ -92,6 +93,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
       - name: Validar telas de streaming reais
         env:
+          TCL_V38: '1'
           TCL_V37: '1'
           TCL_V36: '1'
           TCL_V35: '1'
