@@ -116,6 +116,19 @@
     {
       "date": "2026-10-21",
       "event": "baseline da diretriz mestre; 11 marcos próprios, sem importar percentuais da Fábrica"
+    },
+    {
+      "date": "2026-10-21",
+      "event": "Consolidação GitHub + inventário Google Drive + ADR-0002 + Discovery V3 + registro dos bloqueios de release 2.9.9; sem elevar marcos P0 ou aprovar gates."
     }
-  ]
+  ],
+  "discovery_v3": {
+    "scope": "D01-D07",
+    "design_doc": "docs/ANYTV_DISCOVERY_HOME_V3.md",
+    "decision": "docs/decisions/ADR-0002-DISCOVERY-V3.md",
+    "release_evidence": "docs/operations/RELEASE_299_EVIDENCE_AND_BLOCKERS.md",
+    "state": "IN_DEVELOPMENT_NOT_HOMOLOGATED",
+    "release_299": "NOT_VERIFIED",
+    "note": "APK 2.9.9 localizado no Drive por metadados, mas ainda sem SHA/cert/proveniência validados."
+  }
 }
