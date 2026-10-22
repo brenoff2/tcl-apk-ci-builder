@@ -1,6 +1,9 @@
 name: AnyTV Discovery V3 2.9.10 candidate
 
 on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-2910-candidate.yml']
   workflow_dispatch:
 permissions:
   contents: read
