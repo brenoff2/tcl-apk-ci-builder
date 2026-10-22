@@ -41,3 +41,14 @@ A auditoria documental anterior registrou corretamente a falha do run 3969923246
 
 ## Prova da reconstrução Android 2.9.9 (2026-10-22)
 Teste local sobre o ZIP unsigned da CI 39699948020 e metadados `anytv-299-signed-reconstruction.json`: SHA256 unsigned `f281d46db59042aa52d8c0c233b439bab20889135c952b83b6b9412394102ca2`; reconstrução zstd + reassemblagem ZIP **PASS**; APK reconstruído 28.347.236 bytes, SHA256 `56142e5f3e33d54f1be41c5f702b0d8e1bf00bff206e3c011438a5c2648a2a93`; comparação byte a byte com APK assinado arquivado **PASS**. Isto comprova a reconstrução local, NÃO publicação OTA. Os metadados integrais ainda não constam no repositório: conector GitHub recusou upload; acesso Git direto do container sem DNS. Próximo passo F7: transferir metadados ou APK ao runner por rota autorizada, publicar com workflow cert2026 e confirmar leitura remota SHA. Nenhum gate humano aprovado.
+
+
+## 2026-10-22 — AnyTV 2.9.10 sem Google Drive — evidência CI
+
+- Versão candidata: 2.9.10-AnyTV, versionCode=39, pacote com.tclremote.livre.
+- Código de atualização do aplicativo: overrides/common/TclUpdateManager.java consulta diretamente https://raw.githubusercontent.com/.../updates/android/cert2026/current.apk; nenhum download do Google Drive integra essa rota.
+- Compilação CI SUCESSO: https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/39774708705 ; artefato unsigned `anytv-discovery-v3-2910-unsigned-audit` ID 12423064871.
+- Publicador GitHub Actions: .github/workflows/publish-anytv-cert2026-update-2910.yml, commit f08bb1c9edb330d41af53a1ab3170d2c07115331. Execução https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/39775669333: FAILURE no gate de credenciais, especificamente `ANYTV_CERT2026_KEYSTORE_B64` ausente. Nenhum APK substituído.
+- APK **ASSINADO** 2.9.10: NÃO. OTA current.apk permanece 2.9.8 (28.175.005 bytes; blob SHA 51066c6b97a4828d9e17a04dd5b5779dee18286a).
+- Não assinar com uma nova chave: impediria instalação como atualização sobre o APK cert2026 já instalado. Precisa disponibilizar com autorização a chave privada ORIGINAL e senhas via GitHub Actions secrets, sem divulgar valores em logs. Depois, reexecutar o publicador com candidate_run_id 39774708705, validar certificate SHA-256 2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f e readback OTA.
+- Nenhuma solução é literalmente infalível (rede/armazenamento/instalador Android); garantias possíveis: canal fixo GitHub, verificação da assinatura, versionCode, SHA/byte-readback do publicador e falha segura sem troca de certificado.
