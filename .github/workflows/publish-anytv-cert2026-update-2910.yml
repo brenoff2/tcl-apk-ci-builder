@@ -1,5 +1,8 @@
 name: Publish AnyTV 2.9.10 cert2026 OTA (single GitHub Actions pipeline)
 on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-cert2026-update-2910.yml']
   workflow_dispatch:
     inputs:
       candidate_run_id:
@@ -42,7 +45,7 @@ jobs:
       - name: Verify candidate CI identity and download exact artifact
         shell: bash
         env:
-          RUN_ID: ${{ inputs.candidate_run_id }}
+          RUN_ID: ${{ inputs.candidate_run_id || '39774708705' }}
         run: |
           set -euo pipefail
           [[ "$RUN_ID" =~ ^[0-9]+$ ]] || exit 1
