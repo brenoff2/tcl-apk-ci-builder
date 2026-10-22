@@ -1,11 +1,6 @@
 name: Publish AnyTV phone 2.9.9 cert2026 OTA (verified signed APK)
 on:
   workflow_dispatch:
-    inputs:
-      signed_apk_url:
-        description: "One-time URL for the signed, already verified 2.9.9 APK"
-        required: true
-        type: string
 permissions:
   contents: write
 concurrency:
@@ -29,17 +24,25 @@ jobs:
         run: |
           set -euo pipefail
           gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/39699948020 --jq '.conclusion + " " + .head_branch' | grep -Fx 'success feat/anytv-p0-device-proof-verifier-20261020'
-      - name: Download signed APK and verify original file SHA-256
+      - name: Download audited unsigned Android 2.9.9 from successful CI
         run: |
           set -euo pipefail
-          mkdir -p incoming
-          curl -fL --retry 4 --retry-delay 3 --connect-timeout 20 --max-time 180 -o incoming/AnyTV_2_9_9_SIGNED_CERT2026.apk "$SOURCE_URL"
-          echo '56142e5f3e33d54f1be41c5f702b0d8e1bf00bff206e3c011438a5c2648a2a93  incoming/AnyTV_2_9_9_SIGNED_CERT2026.apk' | sha256sum -c -
+          mkdir -p incoming signed
+          gh run download 39699948020 --name anytv-p0-unsigned-audit --dir incoming
+          echo 'f281d46db59042aa52d8c0c233b439bab20889135c952b83b6b9412394102ca2  incoming/AnyTV_2_9_9_RELEASE_UNSIGNED.apk' | sha256sum -c -
+      - name: Reconstruct audited signed package without private signing keys
+        run: |
+          set -euo pipefail
+          test -s .github/anytv-299-patch/signed-reconstruction.json || { echo 'Missing complete verified signed reconstruction metadata; refuse publication'; exit 1; }
+          sudo apt-get update -qq
+          sudo apt-get install -y zstd
+          python3 scripts/reconstruct_anytv_signed_from_metadata.py incoming/AnyTV_2_9_9_RELEASE_UNSIGNED.apk .github/anytv-299-patch/signed-reconstruction.json signed/AnyTV_2_9_9_SIGNED_CERT2026.apk
+          echo '56142e5f3e33d54f1be41c5f702b0d8e1bf00bff206e3c011438a5c2648a2a93  signed/AnyTV_2_9_9_SIGNED_CERT2026.apk' | sha256sum -c -
       - name: Verify package version signing identity and installed upgrade path
         run: |
           set -euo pipefail
           BT="$ANDROID_HOME/build-tools/36.0.0"
-          FILE=incoming/AnyTV_2_9_9_SIGNED_CERT2026.apk
+          FILE=signed/AnyTV_2_9_9_SIGNED_CERT2026.apk
           "$BT/aapt" dump badging "$FILE" | grep -q "name='com.tclremote.livre' versionCode='38' versionName='2.9.9-AnyTV'"
           "$BT/apksigner" verify --verbose --print-certs "$FILE" > verified.txt
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' verified.txt
@@ -50,7 +53,7 @@ jobs:
       - name: Publish verified signed APK into existing OTA channel
         run: |
           set -euo pipefail
-          cp incoming/AnyTV_2_9_9_SIGNED_CERT2026.apk updates/android/cert2026/current.apk
+          cp signed/AnyTV_2_9_9_SIGNED_CERT2026.apk updates/android/cert2026/current.apk
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -f updates/android/cert2026/current.apk
@@ -63,7 +66,7 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 18); do
             curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/cert2026/current.apk?attempt=$attempt" -o published.apk || true
-            if test -s published.apk && cmp -s published.apk incoming/AnyTV_2_9_9_SIGNED_CERT2026.apk; then
+            if test -s published.apk && cmp -s published.apk signed/AnyTV_2_9_9_SIGNED_CERT2026.apk; then
               echo 'ANYTV_299_CERT2026_OTA_PUBLISHED_READBACK_OK'
               exit 0
             fi
