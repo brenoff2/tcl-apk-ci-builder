@@ -12,11 +12,18 @@ REMOTE = ROOT / "androidLib/AndroidRemoteTv.java"
 VIEW_MODEL = ROOT / "ui/app/TvRemoteViewModel.kt"
 
 
-def replace_exact(path: Path, old: str, new: str) -> None:
+def replace_exact(path: Path, old: str, new: str, before: str = "") -> None:
     content = path.read_text(encoding="utf-8")
-    if content.count(old) != 1:
-        raise RuntimeError(f"Expected exactly one original pairing anchor in {path}")
-    path.write_text(content.replace(old, new), encoding="utf-8")
+    if before:
+        head, marker, tail = content.partition(before)
+        if not marker or head.count(old) != 1:
+            raise RuntimeError(f"Expected exactly one pairing anchor before {before} in {path}")
+        content = head.replace(old, new) + marker + tail
+    else:
+        if content.count(old) != 1:
+            raise RuntimeError(f"Expected exactly one original pairing anchor in {path}")
+        content = content.replace(old, new)
+    path.write_text(content, encoding="utf-8")
 
 
 def main() -> None:
@@ -26,6 +33,7 @@ def main() -> None:
         REMOTE,
         "            public void onSslError() {\n\n            }\n\n            @Override\n            public void onDisconnected() {",
         "            public void onSslError() {\n                notifyOnError(\"Secure pairing handshake failed. Please retry.\");\n            }\n\n            @Override\n            public void onDisconnected() {",
+        before="    public void reconnect(",
     )
     # Reconnect SSL rejection is the missing trigger for the existing
     # ViewModel onSecretRequested() -> connectRemote() -> TV PIN dialog path.
