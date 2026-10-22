@@ -86,7 +86,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -k PhoneUpdatesAndBack -v
       - name: Impedir entrega com tokens manuais no Streaming (gate P0)
         run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
-      - name: Validar telas de streaming reais
+      - name: Validar telas de streaming reais (versionCode 39)
         env:
           TCL_V37: '1'
           TCL_V36: '1'
