@@ -1,0 +1,78 @@
+name: Publish verified AnyTV phone 2.9.11 cert2026 OTA (one-time)
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-cert2026-update-2911-once.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: anytv-cert2026-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SIGNED_SOURCE_URL: "https://sdmntprbrazilsouth.oaiusercontent.com/files/00000000-1854-820e-b509-7cddba5bda0c/raw?se=2026-10-22T14%3A43%3A57Z&sp=r&sv=2026-02-06&sr=b&scid=285b7fe4-3073-5c86-baf2-9dffc983116b&skoid=86ad43b0-1afa-4d46-a6d6-9e67f7cdc5bc&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-22T13%3A58%3A48Z&ske=2026-10-23T13%3A58%3A48Z&sks=b&skv=2026-02-06&sig=bYL3OkLCScshIBEBcGR4zX7d1xXSKxGqs%2ByChx9XqzU%3D"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Retrieve EXACT pre-signed candidate (no signing secrets or Drive access)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p incoming
+          curl -fsSL --retry 3 --connect-timeout 20 --max-time 240 "$SIGNED_SOURCE_URL" -o incoming/AnyTV_2_9_11_CERT2026.apk
+          test "$(stat -c %s incoming/AnyTV_2_9_11_CERT2026.apk)" = '28347236'
+          echo '5dd764f8b074715ecb59e658562186912382b7937b18c2b481806f46f5886e9b  incoming/AnyTV_2_9_11_CERT2026.apk' | sha256sum -c -
+      - name: Verify cert2026 signer, Android package and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          APK=incoming/AnyTV_2_9_11_CERT2026.apk
+          "$BT/aapt" dump badging "$APK" | grep -q "name='com.tclremote.livre' versionCode='40' versionName='2.9.11-AnyTV'"
+          "$BT/apksigner" verify --verbose --print-certs "$APK" > signed-audit.txt
+          grep -q '^Verifies$' signed-audit.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-audit.txt
+          grep -qi '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' signed-audit.txt
+          "$BT/zipalign" -c 4 "$APK"
+          "$BT/aapt" dump badging updates/android/cert2026/current.apk | grep -q "name='com.tclremote.livre' versionCode='37'"
+          "$BT/apksigner" verify --print-certs updates/android/cert2026/current.apk > installed-audit.txt
+          grep -qi '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' installed-audit.txt
+      - name: Publish only Android phone cert2026 OTA
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp incoming/AnyTV_2_9_11_CERT2026.apk updates/android/cert2026/current.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f updates/android/cert2026/current.apk
+          git diff --cached --check
+          if git diff --cached --quiet; then
+            echo 'Identical APK, no new commit needed'
+          else
+            git commit -m 'release(anytv): publish verified phone 2.9.11 cert2026 OTA [skip ci]'
+            git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+          fi
+      - name: Remote readback must match signed 2.9.11 byte for byte
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/cert2026/current.apk?attempt=$attempt" -o published.apk || true
+            if test -s published.apk && cmp -s published.apk incoming/AnyTV_2_9_11_CERT2026.apk; then
+              echo 'ANYTV_2911_CERT2026_OTA_PUBLISHED_READBACK_OK'
+              sha256sum published.apk
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'OTA signed readback mismatch' >&2
+          exit 1
