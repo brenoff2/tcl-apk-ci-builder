@@ -120,6 +120,10 @@
     {
       "date": "2026-10-21",
       "event": "Consolidação GitHub + inventário Google Drive + ADR-0002 + Discovery V3 + registro dos bloqueios de release 2.9.9; sem elevar marcos P0 ou aprovar gates."
+    },
+    {
+      "date": "2026-10-21",
+      "event": "Reconciliada evidencia cronologica da V3: falha CI antiga 39699232465 superada por success 39699948020, APK assinado verificado; OTA e QA fisica pendentes. Sem alterar 7/11 P0."
     }
   ],
   "discovery_v3": {
@@ -128,7 +132,7 @@
     "decision": "docs/decisions/ADR-0002-DISCOVERY-V3.md",
     "release_evidence": "docs/operations/RELEASE_299_EVIDENCE_AND_BLOCKERS.md",
     "state": "IN_DEVELOPMENT_NOT_HOMOLOGATED",
-    "release_299": "NOT_VERIFIED",
-    "note": "APK 2.9.9 localizado no Drive por metadados, mas ainda sem SHA/cert/proveniência validados."
+    "release_299": "SIGNED_VERIFIED_NOT_OTA_PUBLISHED",
+    "note": "CI posterior 39699948020 success (supera falha anterior 39699232465); APK cert2026 assinado versionCode38 sha256 56142e5f3e33d54f1be41c5f702b0d8e1bf00bff206e3c011438a5c2648a2a93, 28347236 bytes; OTA Android current.apk permanece 2.9.8 conforme readback; QA fisica V3 pendente."
   }
 }
