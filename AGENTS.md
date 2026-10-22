@@ -12,3 +12,6 @@
 
 ## Continuidade padronizada pela Fábrica
 Antes de qualquer retomada, aplicar `docs/operations/PROJECT_CONTINUITY_PROTOCOL.md`: verificar HEAD das branches de desenvolvimento e OTA, recuperar cânone, reconciliar progresso F0–F8 e distinguir build/assinatura/publicação/instalação/homologação. Ver `docs/handoffs/CONTINUITY_CHECK.json`; não afirmar prova independente de novo chat enquanto estiver PENDING. A publicação Android 2.9.9 pelo atualizador continua prioridade funcional até readback do APK e prova em dispositivo.
+
+## Documentos de continuidade adicionados
+Ler também `docs/operations/GITHUB_CANONICAL_AND_DRIVE_SYNC.md`, `docs/operations/GOOGLE_DRIVE_RELEASE_INVENTORY_20261021.md`, `docs/operations/RELEASE_299_EVIDENCE_AND_BLOCKERS.md`, `docs/decisions/ADR-0002-DISCOVERY-V3.md` e `docs/ideas/DISCOVERY_PRODUCT_BACKLOG.md`. Canon GitHub para código e decisões; Drive para releases e backups privados segregados. Nenhuma chave secreta deve ser gravada no repositório.

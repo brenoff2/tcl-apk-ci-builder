@@ -13,3 +13,6 @@ Usuário: pessoa usando celular para controlar TV e plataformas já instaladas. 
 **Pronto** = demonstração física de ativação, controle, aplicativo real, abertura de título elegível, atualização Android/TV, tratamento de falhas, rollback seguro e aceite. Publicar APK ou Worker sozinho não é homologar.
 
 Preservar `docs/CONTRATO_FUNCIONAL_TCL.md`, `docs/ANYTV_STREAMING_MATRIX.md`, `docs/ANYTV_STREAMING_SCREENS.md` e `docs/ANYTV_RELEASE_SIGNING_AND_UPDATES.md`.
+
+## Evolução do produto — Discovery Home V3
+O usuário determinou que a seção de Streaming evolua para um **centro de descoberta audiovisual**, com slides de destaques, carrosséis, tendências, lançamentos, títulos populares e bem avaliados, recomendações, trailers e relacionados. **Streaming deixa de ser entrada obrigatória e passa a ser filtro opcional; cada serviço também conserva sua página.** Uma única atualização Android estável é preferível a ciclos fragmentados de versões. A abertura de títulos já funcionava antes dessa frente: preservar. Ver `docs/decisions/ADR-0002-DISCOVERY-V3.md`, `docs/ANYTV_DISCOVERY_HOME_V3.md` e `docs/ideas/DISCOVERY_PRODUCT_BACKLOG.md`.

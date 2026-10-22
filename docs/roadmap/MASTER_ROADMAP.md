@@ -15,3 +15,6 @@ Marcos e estados estão em `PROJECT_PROGRESS.json`. As fases F0–F8 **não subs
 | F8 Operação | monitoramento e aceite (M11) | estabilidade e continuidade comprovadas |
 
 Cada marco exige evidência, pré-requisitos, riscos e reversão. Fases/gates sem aceite explícito seguem `NAO_HOMOLOGADO`. Progresso geral: `floor(100 * marcos comprovados / marcos totais)`. Revisão de escopo exige novo baseline justificado.
+
+## Frente adicional de produto — Discovery V3
+O escopo D01–D07 e os respectivos gates próprios estão descritos em `docs/ANYTV_DISCOVERY_HOME_V3.md`, `docs/decisions/ADR-0002-DISCOVERY-V3.md` e `docs/operations/RELEASE_299_EVIDENCE_AND_BLOCKERS.md`. Não inflar o baseline 7/11 do P0. Novas decisões: home global com slides, trailers, notas, relacionados e filtro opcional por streaming; publicação em lote único depois de validações. Distinguir funcionalidade compilada de experiência validada e lançamento OTA.
