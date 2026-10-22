@@ -12,7 +12,6 @@ jobs:
     timeout-minutes: 20
     env:
       GH_TOKEN: ${{ github.token }}
-      SOURCE_URL: ${{ inputs.signed_apk_url }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,7 +27,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p incoming signed
-          gh run download 39699948020 --name anytv-p0-unsigned-audit --dir incoming
+          gh run download 39699948020 --name anytv-discovery-v3-299-unsigned-audit --dir incoming
           echo 'f281d46db59042aa52d8c0c233b439bab20889135c952b83b6b9412394102ca2  incoming/AnyTV_2_9_9_RELEASE_UNSIGNED.apk' | sha256sum -c -
       - name: Reconstruct audited signed package without private signing keys
         run: |
