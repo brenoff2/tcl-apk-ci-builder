@@ -9,3 +9,6 @@
 7. Diferenciar desenvolvido, testado, publicado, instalado, homologado e operacional. CI de software não demonstra funcionamento de TV física.
 8. Só atualizar percentual com evidência. Não criar arquivos vazios. `factory.yaml`, `factory.lock.yaml` e `ci-policy.yaml` ficam dispensados até existir necessidade operacional comprovada.
 9. Terminar respostas de execução com **Acompanhamento — ANYTV**: progresso marcos; fases F0–F8 com contagens/percentuais e gates; última evidência, trabalho atual, próximo aceite, bloqueios e alternativa. Estado não aferido não deve ser inventado.
+
+## Continuidade padronizada pela Fábrica
+Antes de qualquer retomada, aplicar `docs/operations/PROJECT_CONTINUITY_PROTOCOL.md`: verificar HEAD das branches de desenvolvimento e OTA, recuperar cânone, reconciliar progresso F0–F8 e distinguir build/assinatura/publicação/instalação/homologação. Ver `docs/handoffs/CONTINUITY_CHECK.json`; não afirmar prova independente de novo chat enquanto estiver PENDING. A publicação Android 2.9.9 pelo atualizador continua prioridade funcional até readback do APK e prova em dispositivo.
