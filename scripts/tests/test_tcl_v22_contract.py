@@ -66,7 +66,7 @@ class PhoneUpdatesAndBack(unittest.TestCase):
 
     def test_single_package_higher_version(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.apk)
-        self.assertIn("versionCode = " + ("37" if os.environ.get("TCL_V37") == "1" else "36" if os.environ.get("TCL_V36") == "1" else "35" if os.environ.get("TCL_V35") == "1" else "34"), self.apk)
+        self.assertIn("versionCode = " + ("38" if os.environ.get("TCL_V38") == "1" else "37" if os.environ.get("TCL_V37") == "1" else "36" if os.environ.get("TCL_V36") == "1" else "35" if os.environ.get("TCL_V35") == "1" else "34"), self.apk)
 
 
 class TvUpdateAndBluetooth(unittest.TestCase):
