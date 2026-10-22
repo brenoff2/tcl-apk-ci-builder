@@ -1,0 +1,33 @@
+name: AnyTV ChatGPT context docs validation
+on:
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - 'docs/dev-context/**'
+      - 'scripts/dev_context/**'
+      - 'scripts/tests/test_dev_context_validate.py'
+      - 'scripts/tests/test_cartographer_offline.py'
+      - 'scripts/tests/test_project_bootstrap.py'
+      - 'scripts/tests/test_handoff_contract.py'
+      - '.github/ISSUE_TEMPLATE/ai-development-improvement.md'
+      - '.github/workflows/dev-context-check.yml'
+permissions:
+  contents: read
+jobs:
+  validate-context:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate context contracts
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_dev_context_validate.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_cartographer_offline.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_project_bootstrap.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_handoff_contract.py' -v
+      - name: Verify referenced branch and status evidence
+        run: |
+          python3 scripts/dev_context/validate.py --root . --expected-branch feat/tcl-v22-updates-back-bluetooth

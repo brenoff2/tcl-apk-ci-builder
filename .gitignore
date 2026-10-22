@@ -1,0 +1,4 @@
+# Generated Cartographer local graph artifacts (never publish raw graphs)
+.cartographer/
+# Superpowers transient execution workspace
+.superpowers/sdd/
