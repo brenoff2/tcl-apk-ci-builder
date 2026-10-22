@@ -75,6 +75,7 @@ jobs:
           TCL_V30: '1'
           TCL_V33: '1'
           TCL_V34: '1'
+          TCL_V39: '1'
           TCL_V37: '1'
           TCL_V36: '1'
           TCL_V35: '1'
