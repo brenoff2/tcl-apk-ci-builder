@@ -7,6 +7,7 @@ O AnyTV possui pacote Android com.tclremote.livre e certificado permanente cert2
 ## Decisão vinculante
 - Somente .github/workflows/publish-anytv-phone-github-only.yml publica o APK do TELEFONE em updates/android/cert2026/current.apk na branch feat/tcl-v22-updates-back-bluetooth.
 - Recebe candidato auditado de CI GitHub, assina dentro do Actions com backup cifrado signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin + único segredo privado GitHub Actions ANYTV_RECOVERY_SECRET_2026. Não há segundo método/rota, URL externa ou upload manual na distribuição normal.
+- Acionamento exclusivo por push do pedido versionado `.github/anytv-phone-release-request.json` na branch OTA, após aprovação. A alteração do YAML não publica, e `workflow_dispatch` não é utilizado porque o workflow não está em `main`. O pedido contém run_id e versionCode esperado, nunca material privado.
 - Verifica sucesso do CI, checksum de entrada, pacote com.tclremote.livre, versionCode maior, identidade cert2026, assinatura v2 e igualdade byte a byte do download OTA.
 - Falha segura: segredo ausente, certificado divergente, versão inválida ou checksum divergente bloqueiam a publicação, sem tocar no arquivo remoto. Não armazenar chave, senha ou recuperação em texto público nem coletar pela conversa.
 - O botão Buscar atualizações do celular consulta diretamente GitHub; Android pode exigir confirmação de instalação. O canal do companion TV e certificados próprios não são alterados.
@@ -14,7 +15,7 @@ O AnyTV possui pacote Android com.tclremote.livre e certificado permanente cert2
 - Histórico Git das rotas antigas preservado para auditoria; arquivos antigos removidos das duas branches ativas.
 
 ## Critérios para declarar CONCLUÍDO
-1. GitHub Actions Repository Secret ANYTV_RECOVERY_SECRET_2026 disponível ao runner por método administrativo autorizado, sem exposição do seu valor.
+1. GitHub Actions Repository Secret ANYTV_RECOVERY_SECRET_2026 disponível ao runner por método administrativo autorizado, sem exposição do seu valor; pedido explícito de release aprovado e commitado na branch OTA.
 2. Publicador gera APK cert2026 e conclui run SUCCESS, com readback confirmado do canal.
 3. Instalador do app oferece versão superior via botão e o dispositivo efetivamente atualiza.
 4. Homologação da conexão TLS/controle da TCL é gate funcional SEPARADO; nem CI nem OTA verde provam que funciona.
