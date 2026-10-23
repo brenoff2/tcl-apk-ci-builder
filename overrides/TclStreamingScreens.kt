@@ -697,6 +697,21 @@ internal fun TclStreamingScreens(
         prefs.edit().putString("anytv_tracking_series",
             trackedSeries.sorted().joinToString(",")).apply()
     }
+    // Watched history survives removing a heart: it is independent of favorites.
+    fun restoreTrackedTitle(media: String, id: Int): StreamingTitle? {
+        favorites.firstOrNull { it.title.id == id && it.title.media == media }
+            ?.title?.let { return it }
+        val cached = StreamingDiskCache.previousTitle(media, id) ?: return null
+        val titleName = cached.optString("name")
+        if (titleName.isBlank()) return null
+        val genreArr = cached.optJSONArray("genres")
+        return StreamingTitle(id, titleName, cached.optString("overview"),
+            cached.optString("poster"), media,
+            backdrop = cached.optString("backdrop"), date = cached.optString("date"),
+            genreIds = (0 until (genreArr?.length() ?: 0))
+                .map { genreArr!!.optInt(it) }.filter { it > 0 })
+    }
+
     var showGlobalSearch by remember { mutableStateOf(false) }
     val initialGenreIds = remember(prefs) {
         prefs.getString("anytv_home_genres", null)?.split(",")
@@ -1214,18 +1229,21 @@ internal fun TclStreamingScreens(
                             val series = favorites.filter { it.title.media == "tv" }
                                 .map { it.title }.distinctBy { it.id }
                             val unseen = films.filter { it.id.toString() !in watchedFilms }
-                            val seen = films.filter { it.id.toString() in watchedFilms }
-                            val watching = series.filter {
-                                it.id.toString() in trackedSeries ||
-                                    watchedEpisodes.any { mark -> mark.startsWith("${it.id}:") }
-                            }
+                            val history = watchedFilms.mapNotNull { key ->
+                                key.toIntOrNull()?.let { restoreTrackedTitle("movie", it) }
+                            }.distinctBy { it.id }
+                            val trackedIds = trackedSeries +
+                                watchedEpisodes.mapNotNull { it.substringBefore(":").takeIf(String::isNotBlank) }
+                            val watching = trackedIds.mapNotNull { key ->
+                                key.toIntOrNull()?.let { restoreTrackedTitle("tv", it) }
+                            }.distinctBy { it.id }
                             if (librarySection == "saved") {
                                 if (unseen.isNotEmpty()) put("Filmes para assistir", unseen)
                                 if (series.isNotEmpty()) put("Minhas séries", series)
                             } else if (librarySection == "watching") {
                                 if (watching.isNotEmpty()) put("Séries em andamento", watching)
                             } else if (librarySection == "watched") {
-                                if (seen.isNotEmpty()) put("Filmes já assistidos", seen)
+                                if (history.isNotEmpty()) put("Filmes já assistidos", history)
                             }
                         } else if (!onlyMyStreaming) {
                             if (selectedHomeGenre == 0) {
