@@ -609,7 +609,7 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
                 val movie = previews[index]
                 Row(modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)
+                    Column(modifier = Modifier.weight(0.3f)
                         .padding(start = 12.dp, end = 5.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text("EM DESTAQUE", fontSize = 9.sp,
@@ -625,7 +625,7 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
                         model = "https://image.tmdb.org/t/p/w500" +
                             movie.backdrop.ifBlank { movie.poster },
                         contentDescription = "Destaque: " + movie.name,
-                        modifier = Modifier.fillMaxHeight().fillMaxWidth(0.48f)
+                        modifier = Modifier.fillMaxHeight().weight(0.7f)
                             .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)),
                         contentScale = ContentScale.Crop
                     )
@@ -644,18 +644,14 @@ private fun StreamingOfferIcons(
     expanded: Boolean = false
 ) {
     val key = "${item.media}:${item.id}"
-    var lookupFailed by remember(key) { mutableStateOf(false) }
     LaunchedEffect(key) {
         if (key !in known) {
             runCatching { StreamingCatalog.offersInBrazil(item) }
                 .onSuccess { known[key] = it }
-                .onFailure { lookupFailed = true }
         }
     }
     val offerings = known[key].orEmpty()
-    val officialDisney = item.media == "tv" && item.id == 224505
-    if (item.votes > 0 || offerings.isNotEmpty() || key in known ||
-        lookupFailed || officialDisney) {
+    if (item.votes > 0 || offerings.isNotEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
@@ -689,16 +685,6 @@ private fun StreamingOfferIcons(
             }
             if (offerings.size > visible) {
                 Text("+${offerings.size - visible}", fontSize = 10.sp, maxLines = 1)
-            }
-            if (offerings.isEmpty()) {
-                Text(when {
-                    officialDisney -> "Disney+ · confirmado pela Disney"
-                    lookupFailed -> "Consulta indisponível"
-                    key in known -> "Canal não informado"
-                    else -> "Consultando..."
-                }, fontSize = 9.sp, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -1496,7 +1482,8 @@ internal fun TclStreamingScreens(
                         uniqueShelves.forEach { (heading, shelf) ->
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text(heading, fontWeight = FontWeight.SemiBold)
+                                    Text(heading, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.padding(top = 16.dp, bottom = 9.dp))
                                     LazyRow(
                                         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                                         items(shelf.take(12)) { item ->
