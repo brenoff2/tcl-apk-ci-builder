@@ -1,5 +1,7 @@
 # ADR-0003 — Publicador único GitHub Actions para OTA Android cert2026
-Data: 23/10/2026 | Estado: DECISÃO OPERACIONAL RATIFICADA; AUTOMAÇÃO AINDA BLOQUEADA POR CREDENCIAL ACTIONS
+
+**Regra atual de acesso e assinatura:** `docs/ASSINATURA_E_ATUALIZACAO.md` é a única instrução operacional. Verificar MCP GitHub direto e MCP Business OS Hub v2 antes de diagnosticar bloqueio; erro histórico de Actions não prova indisponibilidade presente do secret. Nunca usar ausência de `gh` no Windows como evidência de acesso GitHub.
+Data: 23/10/2026 | Estado: DECISÃO OPERACIONAL RATIFICADA; DISPONIBILIDADE DO REPOSITORY SECRET AINDA NAO HOMOLOGADA
 
 ## Contexto e evidências
 O AnyTV possui pacote Android com.tclremote.livre e certificado permanente cert2026 SHA256 2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f. A 2.9.8 funcionava na TCL. APKs 2.9.10–2.9.13 foram assinados com a mesma identidade recuperada do backup cifrado do GitHub em sessões privadas. A assinatura bem sucedida em uma sessão NÃO equivale a credencial instalada no GitHub Actions: a execução 39963496459 falhou no gate de secret. Múltiplos publicadores versionados e URLs de sessão criaram rotas inconsistentes, agora aposentadas.
@@ -19,7 +21,7 @@ O AnyTV possui pacote Android com.tclremote.livre e certificado permanente cert2
 2. Publicador gera APK cert2026 e conclui run SUCCESS, com readback confirmado do canal.
 3. Instalador do app oferece versão superior via botão e o dispositivo efetivamente atualiza.
 4. Homologação da conexão TLS/controle da TCL é gate funcional SEPARADO; nem CI nem OTA verde provam que funciona.
-Status atual: item 1 pendente, portanto 2.9.13 não publicada; OTA permanece 2.9.12.
+Status atual: item 1 sem comprovação recente no runner; 2.9.13 não publicada; OTA permanece 2.9.12. O último gate de secret que falhou é evidência histórica.
 
 ## Alternativas rejeitadas
 Workflows por versão; novas chaves e troca de certificado; Drive, arquivos externos ou URLs temporárias para rotina OTA; commit de material secreto; bypass de controle SSL; publicação de unsigned; presumir QA física a partir de CI; reset/desinstalação como solução.
