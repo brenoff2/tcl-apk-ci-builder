@@ -299,6 +299,28 @@ test("catalog proxy keeps TMDB secret on server and caches read-only responses",
   assert.equal(calls, 1);
 });
 
+test("catalog search remains cached after one hour without spending extra monthly calls", async () => {
+  const env = makeEnv(1);
+  env.TMDB_READ_TOKEN = "server-only";
+  let calls = 0;
+  let now = Date.parse("2026-10-15T12:00:00Z");
+  const deps = { now: () => now, fetch: async () => {
+    calls++;
+    return new Response(JSON.stringify({ results: [{ id: 1, title: "Titanic" }] }),
+      { status: 200 });
+  }};
+  const req = new Request("https://anytv.invalid/v1/catalog/search/movie?query=Titanic");
+  assert.equal((await catalogRequest(req, env, deps)).status, 200);
+  now += 2 * 3600 * 1000;
+  assert.equal((await catalogRequest(req, env, deps)).status, 200);
+  assert.equal(calls, 1, "2-hour cache hit must not spend another upstream quota");
+  now += 23 * 3600 * 1000;
+  const expired = await catalogRequest(req, env, deps);
+  assert.equal(expired.status, 429, "expired cache must respect monthly quota");
+  assert.equal((await expired.json()).status, "monthly_quota_exhausted");
+  assert.equal(calls, 1);
+});
+
 test("catalog uncached lookups stop at monthly upstream cap", async () => {
   const env = makeEnv(1);
   env.TMDB_READ_TOKEN = "server-only";
