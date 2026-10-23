@@ -140,6 +140,10 @@
     {
       "date": "2026-10-23",
       "event": "2.9.20/code49 candidata compilada em 40037020490 (etapa Gradle PASS), OTA impedida: Worker catálogo HTTP 429 monthly_quota_exhausted em 40036848750; 2.9.19 permanece publicada, gates sem alteração."
+    },
+    {
+      "date": "2026-10-23",
+      "event": "V2 2.9.20/code49 publicada pelo workflow 40038610382 (SUCCESS, 32 etapas); signed sha256 547463d..., OTA readback PASS; user aceitou limitação conhecida de busca HTTP429 mensal sem alterar Worker/quota; homologação física ainda pendente. Sem promoção de gates."
     }
   ],
   "discovery_v3": {
@@ -183,92 +187,32 @@
   },
   "v2_current": {
     "as_of": "2026-10-23",
-    "version": "2.9.19",
-    "versionCode": 48,
+    "version": "2.9.20",
+    "versionCode": 49,
     "package": "com.tclremote.livre.v2",
     "published": true,
     "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
     "ota_path": "updates/android/v2/current.apk",
-    "workflow_run": 40033251472,
+    "workflow_run": 40038610382,
     "workflow_conclusion": "success",
-    "apk_sha256": "6bf203ce33b88d51b0645bbaba063651d66d1bf5cc4c2f5520c8295fe4a3ef1d",
-    "apk_git_blob": "ccc2d504f5a93050cdc4b88b7603dd18b00afb3c",
+    "apk_sha256": "547463d42acad59f4b3e7a32c58b3bb0519358961c9cb6d9f39a623cd6b6bac3",
+    "apk_git_blob": "5a4114f192635cc2fc1d142ec0d5fc2438a0db3a",
     "apk_bytes": 28396388,
-    "ota_commit": "99d0b19f7b5e7a3922c45a34ff942ac0cb070149",
+    "ota_commit": "2e9359c74a9d6ea56e6fd39ebf7c9151ce5f310e",
     "signer_cert_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9",
     "remote_byte_readback": true,
+    "search_limit": "KNOWN_BROKEN_HTTP_429_MONTHLY_QUOTA_EXHAUSTED_USER_APPROVED_UI_RELEASE",
+    "premiere_reminders": "LOCAL_ANDROID_INEXACT_ALARM_MANIFEST_DECLARED_DEVICE_QA_PENDING",
     "installed_and_physical_tv_qa": "NOT_HOMOLOGATED",
-    "verified_features": [
-      "Material heart in details/list",
-      "full screen background alignment",
-      "right header and installed streaming shortcuts",
-      "compact genre/type and search controls",
-      "empty personal lists",
-      "preselected genre filters and select all each column",
-      "service and genre shelves in catalog/provider",
-      "no public activation prompt",
-      "provider lookup status distinctions",
-      "official Disney+ entry TV 224505 canonical mapping"
-    ],
-    "unverified_features": [
-      "TV opened official Disney title on real device",
-      "device activation status",
-      "general deep links",
-      "physical Bluetooth and paired-TV regression"
+    "changes": [
+      "20-item mixed film and series highlight pager",
+      "two-row horizontal up to 20 titles per rail",
+      "user-triggered show-more for genre pages up to 50 pages",
+      "film E square and series S circle indicator by score",
+      "movie upcoming and additional series shelves",
+      "debounced live typeahead at 650ms and clear-only X",
+      "local Android release notification scheduling with POST_NOTIFICATIONS permission",
+      "previous approved layout corrections"
     ]
-  },
-  "v2_candidate": {
-    "as_of": "2026-10-23",
-    "version": "2.9.20",
-    "versionCode": 49,
-    "package": "com.tclremote.livre.v2",
-    "published": false,
-    "development_branch": "feat/anytv-p0-device-proof-verifier-20261020",
-    "build_request_commit": "9e48fa9c30ca216c24681eed80e4a660ee41f68b",
-    "workflow_run": 40038610382,
-    "release_blocker": "Catalog monthly quota exhausted; remote real search returns HTTP 429 monthly_quota_exhausted; no V2 signing or OTA publication authorized until live search passes",
-    "evidence_run": 40036848750,
-    "server": "anytv-link-resolver-pilot.brenoff.workers.dev",
-    "configured_monthly_cap": 200,
-    "compiled_android_release": true,
-    "ime_and_full_release_verification": "IN_PROGRESS",
-    "ota_branch_untouched": true,
-    "proven_changes": [
-      "home/provider unified streaming layout",
-      "Film and Series filters top-left",
-      "circular header icons shared with home",
-      "home Android system bars theme matched",
-      "auto TV brand",
-      "banner 30 percent copy and 70 percent image",
-      "larger section gaps",
-      "removed Canal nao informado",
-      "global search distinguishing failures and supporting title variant and official Prime page"
-    ],
-    "physical_qa": "NOT_HOMOLOGATED",
-    "android_compile": "SUCCESS run 40037020490 step21",
-    "ime_remote_tests": "SUCCESS run 40037020490 step22",
-    "live_catalog_gate": "FAIL run 40037020490 step23 HTTP429 monthly_quota_exhausted",
-    "signing": "SKIPPED no release",
-    "ota_publication": "SKIPPED no release",
-    "remote_ota_readback": "NOT_EXECUTED",
-    "resolver_caching_commit": "c43f64293c5b2d4c1980ffb3d02048c736c86347",
-    "resolver_cache_policy": "24h search, 12h per-title watch providers, 7d genre/provider lists, 6h trending/now-playing; bounded monthly cap remains enforced",
-    "resolver_offline_contract_run": 40037621092,
-    "resolver_offline_contract_result": "SUCCESS incl node tests, SQLite, syntax, Wrangler dry-run; NO Cloudflare deployment",
-    "worker_production_quota": "EXHAUSTED_NOT_CHANGED",
-    "user_authorized_visual_release_with_known_quota": true,
-    "known_quota_status": "HTTP 429 monthly_quota_exhausted; tolerated ONLY for explicit user-approved UI rollout; not fixed",
-    "new_visual_features": [
-      "mixed movie and series hero up to 20 slides",
-      "two stacked rows scrolling horizontally with first 20 TMDB results",
-      "genre load more by explicit button",
-      "square E movie badge and circular S series badge",
-      "new TV on-the-air and movies upcoming sections",
-      "typeahead global search after 650ms debounce",
-      "X clears input not closes",
-      "local Android release reminder with notification permission and inexact alarm"
-    ],
-    "app_signed_or_ota_published": "PENDING_RUNNING_GITHUB_ACTIONS",
-    "backend_deployed": false
   }
 }
