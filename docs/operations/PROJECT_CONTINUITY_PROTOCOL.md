@@ -25,3 +25,8 @@ A OTA efetiva do telefone é 2.9.12/code41, 28.347.236 bytes, SHA256 28c2881899b
 ## Governança e progresso
 
 F0–F8, M01–M11 e percentual são próprios deste projeto (baseline atual 7/11, 63% marcos históricos, gates humanos 0/9). Nunca usar percentual da Fábrica de Projetos. Manter PR #3 draft; sem merge automático. Github-first, diffs cirúrgicos, logs e provas em hardware. Atualizar canônico após toda mudança e encerrar com Acompanhamento — ANYTV. A prova independente do novo chat deve ser registrada em docs/handoffs/CONTINUITY_CHECK.json SOMENTE se executada e verificada.
+
+
+## Revisão de execução — 23/10/2026
+
+O workflow único de assinatura foi corrigido na branch OTA: `.github/workflows/publish-anytv-phone-github-only.yml` aceita pedidos **apenas** por push de `.github/anytv-phone-release-request.json` com ID de CI aprovado e `versionCode` explícito. Alterar workflow/documentação não dispara publicação. Credencial `ANYTV_RECOVERY_SECRET_2026` injetada apenas no passo de assinatura, nunca no job inteiro. Commits do workflow OTA `bc73a647` e `ae2b438e`; verificação automatizada `ef2eddc4`. Não foi criado pedido de release, o segredo ainda não foi comprovado no runner, a OTA continua 2.9.12/code41 e a 2.9.13/code42 não está publicada nem homologada na TCL. Consultar a execução mais recente do verificador e não elevar gates sem evidência.
