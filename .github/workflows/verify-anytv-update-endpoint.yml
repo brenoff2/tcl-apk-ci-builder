@@ -1,10 +1,9 @@
-name: Verify AnyTV public update endpoint
+name: Verify official AnyTV cert2026 Android updater
 on:
   push:
     branches: [feat/tcl-v22-updates-back-bluetooth]
     paths:
-      - updates/android/current.apk
-      - updates/android/current.json
+      - updates/android/cert2026/current.apk
       - .github/workflows/verify-anytv-update-endpoint.yml
   workflow_dispatch:
 permissions:
@@ -12,43 +11,38 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           ref: feat/tcl-v22-updates-back-bluetooth
-      - name: Validate latest version, signed release and local channel
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          sha='f34510aebb686e88912b56eb6c2a6b655e5365b5d09c4e5ccb6dee97e5941e0d'
-          echo "$sha  updates/android/current.apk" | sha256sum -c -
-          cmp updates/android/current.apk updates/android/AnyTV-v2.9.2.apk
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          j = json.loads(Path('updates/android/current.json').read_text())
-          assert (j['schema'],j['platform'],j['package'],j['available']) == (1,'android','com.tclremote.livre',True)
-          assert (j['version'],j['versionCode'],j['tag']) == ('2.9.2',31,'tcl-phone-v2.9.2')
-          assert len(j['assets']) == 1
-          assert j['assets'][0]['digest'] == 'sha256:f34510aebb686e88912b56eb6c2a6b655e5365b5d09c4e5ccb6dee97e5941e0d'
-          assert j['assets'][0]['size'] == Path('updates/android/current.apk').stat().st_size
-          print('ANYTV_UPDATE_METADATA_CURRENT_VERIFIED')
-          PY
-          mkdir -p verify-release
-          gh release download tcl-phone-v2.9.2 -p Controle_TCL_Livre_v2.9.2.apk -D verify-release
-          echo "$sha  verify-release/Controle_TCL_Livre_v2.9.2.apk" | sha256sum -c -
-      - name: Test public URL used by the installed update button
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Validate official Android package and original signer
         shell: bash
         run: |
           set -euo pipefail
-          sha='f34510aebb686e88912b56eb6c2a6b655e5365b5d09c4e5ccb6dee97e5941e0d'
-          url='https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/current.apk'
-          curl --fail --location --retry 2 --connect-timeout 12 --max-time 180 \
-            --header 'User-Agent: Controle-TCL-Livre-Updater' \
-            --header 'Accept: application/vnd.github+json,application/octet-stream,*/*' \
-            --dump-header public-headers.txt "$url" -o public-current.apk
-          echo "$sha  public-current.apk" | sha256sum -c -
-          cmp public-current.apk updates/android/current.apk
-          echo 'ANYTV_PUBLIC_RAW_URL_MATCHES_LATEST_292'
+          FILE=updates/android/cert2026/current.apk
+          test -s "$FILE"
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/aapt" dump badging "$FILE" | grep -q "package: name='com.tclremote.livre'"
+          "$BT/apksigner" verify --verbose --print-certs "$FILE" > cert-audit.txt
+          grep -qx 'Verifies' cert-audit.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' cert-audit.txt
+          grep -qi '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' cert-audit.txt
+          sha256sum "$FILE"
+      - name: Remote byte-for-byte OTA readback
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE=updates/android/cert2026/current.apk
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/cert2026/current.apk?check=$attempt" -o published.apk || true
+            if test -s published.apk && cmp -s published.apk "$FILE"; then
+              echo 'ANYTV_CANONICAL_OTA_READBACK_OK'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::error::OTA mismatch'
+          exit 1
