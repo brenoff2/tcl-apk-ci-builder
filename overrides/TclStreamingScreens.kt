@@ -757,8 +757,7 @@ private fun StreamingOfferIcons(
     val offerings = known[key].orEmpty()
     // Always reserve a metadata row: label, optional rating and verified offers.
     // No row jumps when a title has no vote or its provider lookup is unavailable.
-    if (true) {
-        Row(verticalAlignment = Alignment.CenterVertically,
+    Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
             Box(modifier = Modifier.size(16.dp)
@@ -805,7 +804,6 @@ private fun StreamingOfferIcons(
                 Text("+${offerings.size - visible}", fontSize = 10.sp, maxLines = 1)
             }
         }
-    }
 }
 
 /** Same one-row navigation across catalogue and individual provider views. */
