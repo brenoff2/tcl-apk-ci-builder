@@ -1,8 +1,10 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 42,
+  "expected_version_code": 43,
   "preserve_legacy_ota": true,
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
-  "new_install_only": true
+  "new_install_only": true,
+  "release_version": "2.9.14-AnyTV",
+  "release_scope": "auto-swiping 3s hero, scrollable details, real BR provider badges and filtered title actions; compatible V2 in-app OTA"
 }
