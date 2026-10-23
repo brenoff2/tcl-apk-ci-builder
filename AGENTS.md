@@ -1,5 +1,7 @@
 # AnyTV — execução e continuidade para a branch OTA
 
+**ACESSO GITHUB/ASSINATURA — REGRA OPERACIONAL MAIS RECENTE (23/10/2026):** antes de afirmar falta de acesso, consultar MCP GitHub direto E MCP Business OS Hub v2 → provider GitHub; nenhum diagnóstico deve se basear no terminal Windows. A decisão vigente e o diagnóstico preciso de Actions Secrets estão SOMENTE em `docs/ASSINATURA_E_ATUALIZACAO.md`. A falha 39963496459 é histórica; secret no runner continua NÃO VERIFICADO. Não executar release sem aprovação.
+
 Esta branch é o canal de distribuição, NÃO branch de desenvolvimento. Não fazer merge em main ou alterar o canal TV automaticamente.
 
 Antes de agir, ler obrigatoriamente:
@@ -11,7 +13,7 @@ Antes de agir, ler obrigatoriamente:
 
 Identidades: telefone com.tclremote.livre/cert2026; TV companion e canal próprio não devem ser alterados pela OTA telefone. OTA telefone atual 2.9.12/code41. Candidata 2.9.13/code42 compilada/assinada mas NÃO publicada, TLS TCL não homologado.
 
-Publicador ÚNICO: .github/workflows/publish-anytv-phone-github-only.yml; verificador de exclusividade/readback: .github/workflows/verify-anytv-update-endpoint.yml. Proibidos fluxos alternativos, exportação de segredo ou chaves em texto claro. O segredo privado ANYTV_RECOVERY_SECRET_2026 está inacessível ao runner GitHub Actions (última falha 39963496459); não declarar isso resolvido sem CI verde. Verificador do canal 39963760834 SUCCESS. Preservar progressos 7/11 sem homologação humana em F0-F8 até prova específica.
+Publicador ÚNICO: .github/workflows/publish-anytv-phone-github-only.yml; verificador de exclusividade/readback: .github/workflows/verify-anytv-update-endpoint.yml. Proibidos fluxos alternativos, exportação de segredo ou chaves em texto claro. Na execução histórica 39963496459 o segredo ANYTV_RECOVERY_SECRET_2026 não chegou ao runner; o estado ATUAL não foi auditado, e não se deve declarar resolução sem prova de descriptografia no Actions. Verificador do canal 39963760834 SUCCESS. Preservar progressos 7/11 sem homologação humana em F0-F8 até prova específica.
 
 
 ## Revisão de execução — 23/10/2026
