@@ -860,6 +860,11 @@ internal fun TclStreamingScreens(
     var globalSearchError by remember { mutableStateOf<String?>(null) }
     var globalSearchResults by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var globalSearchBusy by remember { mutableStateOf(false) }
+    // Debounced autocomplete: one search after the user pauses, not per keystroke.
+    LaunchedEffect(globalSearchDraft) {
+        delay(650)
+        globalSearchTerm = globalSearchDraft.trim().takeIf { it.length >= 3 }.orEmpty()
+    }
 
     var discoveryShelves by remember {
         mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap())
@@ -1355,19 +1360,21 @@ internal fun TclStreamingScreens(
                                 onValueChange = { globalSearchDraft = it.take(90) },
                                 placeholder = { Text("Filme ou série", fontSize = 12.sp) },
                                 singleLine = true,
-                                modifier = Modifier.weight(1f).height(52.dp),
+                                modifier = Modifier.weight(1f).height(42.dp),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
                                     globalSearchTerm = globalSearchDraft.trim()
                                 }))
-                            TextButton(onClick = { globalSearchTerm = globalSearchDraft.trim() },
-                                enabled = globalSearchDraft.trim().length >= 2,
-                                contentPadding = PaddingValues(horizontal = 4.dp)) {
-                                Text("Buscar", fontSize = 12.sp)
+                            IconButton(onClick = {
+                                globalSearchTerm = globalSearchDraft.trim()
+                            }, enabled = globalSearchDraft.trim().length >= 3,
+                                modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Filled.Search, contentDescription = "Executar busca",
+                                    modifier = Modifier.size(19.dp))
                             }
                             IconButton(onClick = {
                                 globalSearchDraft = ""; globalSearchTerm = ""
-                                showGlobalSearch = false
+                                globalSearchResults = emptyList(); globalSearchError = null
                             }, modifier = Modifier.size(32.dp)) { Text("×", fontSize = 18.sp) }
                         }
                         if (globalSearchBusy) {
