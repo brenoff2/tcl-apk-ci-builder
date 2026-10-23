@@ -55,6 +55,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.io.File
+import java.security.MessageDigest
 import java.text.Normalizer
 
 internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "")
@@ -63,8 +65,65 @@ internal data class StreamingOffer(val id: Int, val name: String, val logo: Stri
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
 internal data class StreamingResults(val titles: List<StreamingTitle>, val more: Boolean)
 
+/** Small persistent, bounded catalogue cache. Does not store credentials or viewing progress. */
+private object StreamingDiskCache {
+    private var root: File? = null
+    fun configure(context: Context) {
+        if (root == null) synchronized(this) {
+            if (root == null) root = File(context.applicationContext.filesDir, "anytv_catalog_v1")
+                .apply { mkdirs() }
+        }
+    }
+    private fun file(route: String): File? {
+        val dir = root ?: return null
+        val sha = MessageDigest.getInstance("SHA-256").digest(route.toByteArray())
+            .joinToString("") { "%02x".format(it) }
+        return File(dir, sha + ".json")
+    }
+    @Synchronized fun read(route: String): JSONObject? {
+        val target = file(route) ?: return null
+        return runCatching {
+            if (!target.isFile || target.length() > 480000L) return null
+            val entry = JSONObject(target.readText(Charsets.UTF_8))
+            if (entry.optLong("until", 0) <= System.currentTimeMillis()) {
+                target.delete()
+                return null
+            }
+            target.setLastModified(System.currentTimeMillis())
+            entry.getJSONObject("value")
+        }.getOrNull()
+    }
+    @Synchronized fun write(route: String, value: JSONObject, ttlMillis: Long) {
+        val target = file(route) ?: return
+        runCatching {
+            val entry = JSONObject().put("until", System.currentTimeMillis() + ttlMillis)
+                .put("value", value).toString()
+            if (entry.length > 470000) return
+            target.writeText(entry, Charsets.UTF_8)
+            val files = target.parentFile?.listFiles { it.isFile && it.name.endsWith(".json") }
+                ?.sortedByDescending { it.lastModified() } ?: return
+            var bytes = 0L
+            files.forEachIndexed { index, item ->
+                bytes += item.length()
+                if (index >= 240 || bytes > 8_000_000L) item.delete()
+            }
+        }
+    }
+}
+
 /** Real TMDB/JustWatch availability. This API cannot start playback on a third-party TV app. */
 private object StreamingCatalog {
+    fun configure(context: Context) = StreamingDiskCache.configure(context)
+    private fun ttl(route: String): Long = when {
+        route.startsWith("genre/") -> 30L * 86400000L
+        route.matches(Regex("(movie|tv)/[0-9]+/season/[0-9]+.*")) -> 7L * 86400000L
+        route.matches(Regex("(movie|tv)/[0-9]+(\\?.*)?")) -> 14L * 86400000L
+        route.contains("/watch/providers") -> 12L * 3600000L
+        route.contains("external_ids") -> 30L * 86400000L
+        route.contains("trending") || route.contains("now_playing") -> 6L * 3600000L
+        else -> 12L * 3600000L
+    }
+
     private fun norm(v: String) = Normalizer.normalize(v.lowercase(), Normalizer.Form.NFD)
         .replace(Regex("[^a-z0-9]"), "")
 
@@ -94,6 +153,7 @@ private object StreamingCatalog {
                 .any { it in norm(app.name) || it in norm(app.packageName) }
 
     private fun get(token: String, route: String): JSONObject {
+        StreamingDiskCache.read(route)?.let { return it }
         val connection = URL("https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/$route")
             .openConnection() as HttpURLConnection
         try {
@@ -105,7 +165,9 @@ private object StreamingCatalog {
             if (status !in 200..299) {
                 error("Catálogo temporariamente indisponível (HTTP $status).")
             }
-            return JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            val payload = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+            StreamingDiskCache.write(route, payload, ttl(route))
+            return payload
         } finally {
             connection.disconnect()
         }
@@ -398,6 +460,7 @@ internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String, onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    StreamingCatalog.configure(context)
     val prefs = remember(context) {
         context.getSharedPreferences("anytv_streaming_catalog", Context.MODE_PRIVATE)
     }
