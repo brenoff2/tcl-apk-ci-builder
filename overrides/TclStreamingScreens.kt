@@ -700,7 +700,7 @@ internal fun TclStreamingScreens(
         }
     }
 
-    LaunchedEffect(details?.id, details?.media, selectedSeriesSeason) {
+    LaunchedEffect(details?.id, details?.media, selectedSeriesSeason, seriesSeasons) {
         val show = details
         seasonEpisodes = emptyList()
         if (show?.media == "tv" && seriesSeasons.any { it.number == selectedSeriesSeason }) {
