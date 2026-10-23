@@ -79,12 +79,27 @@ private object StreamingDiskCache {
         }
     }
     fun rememberTitle(media: String, id: Int, payload: JSONObject) {
-        // Cache immutable title metadata independently of changing ranking/shelf pages.
-        if (id > 0 && (media == "movie" || media == "tv")) {
-            write("title:$media:$id", payload, 90L * 86400000L)
+        // User-requested perpetual cache: once seen, title details stay until app data
+        // is intentionally cleared. Editorial/availability responses still use TTL.
+        val dir = root ?: return
+        if (id < 1 || media !in listOf("movie", "tv")) return
+        val target = File(dir, "saved_title_${media}_${id}.json")
+        val prior = runCatching { JSONObject(target.readText()) }.getOrNull()
+        val merged = JSONObject(prior?.toString() ?: "{}")
+        for (field in listOf("name", "overview", "date", "poster", "backdrop", "genres")) {
+            val value = payload.opt(field)
+            if (value != null && value.toString().isNotBlank() && value.toString() != "[]")
+                merged.put(field, value)
         }
+        runCatching { target.writeText(merged.toString()) }
     }
-    fun previousTitle(media: String, id: Int): JSONObject? = read("title:$media:$id")
+    fun previousTitle(media: String, id: Int): JSONObject? {
+        val dir = root ?: return null
+        if (id < 1 || media !in listOf("movie", "tv")) return null
+        return runCatching {
+            JSONObject(File(dir, "saved_title_${media}_${id}.json").readText())
+        }.getOrNull()
+    }
     private fun file(route: String): File? {
         val dir = root ?: return null
         val sha = MessageDigest.getInstance("SHA-256").digest(route.toByteArray())
@@ -227,8 +242,9 @@ private object StreamingCatalog {
                         entry.optDouble("vote_average", 0.0),
                         entry.optInt("vote_count", 0), backdrop, released, genreIds))
                     StreamingDiskCache.rememberTitle(media, movieId, JSONObject()
-                        .put("overview", overview).put("date", released)
-                        .put("poster", poster).put("backdrop", backdrop))
+                        .put("name", name).put("overview", overview)
+                        .put("date", released).put("poster", poster)
+                        .put("backdrop", backdrop).put("genres", JSONArray(genreIds)))
                 }
             }
         }
@@ -546,6 +562,7 @@ internal fun TclStreamingScreens(
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     val mainGenreIds = remember { listOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14) }
     var mainGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
+    var allMovieGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
     var tvGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
     var homeContentType by remember { mutableStateOf("all") }
     var librarySection by remember { mutableStateOf("saved") }
@@ -735,9 +752,9 @@ internal fun TclStreamingScreens(
 
     // Genre identifiers and display names come from the real PT-BR TMDB catalogue.
     LaunchedEffect(token) {
-        mainGenres = runCatching { StreamingCatalog.genres(token, "movie") }
+        allMovieGenres = runCatching { StreamingCatalog.genres(token, "movie") }
             .getOrDefault(emptyList())
-            .filter { it.id in mainGenreIds }
+        mainGenres = allMovieGenres.filter { it.id in mainGenreIds }
             .sortedBy { mainGenreIds.indexOf(it.id) }
         tvGenres = runCatching { StreamingCatalog.genres(token, "tv") }
             .getOrDefault(emptyList())
@@ -1564,7 +1581,7 @@ internal fun TclStreamingScreens(
                     val releasedYear = title.date.take(4).takeIf {
                         it.length == 4 && it.all(Char::isDigit)
                     }
-                    val knownGenreNames = if (title.media == "tv") tvGenres else mainGenres
+                    val knownGenreNames = if (title.media == "tv") tvGenres else allMovieGenres
                     val titleGenres = title.genreIds.mapNotNull { id ->
                         knownGenreNames.firstOrNull { it.id == id }?.name
                     }.take(3)
