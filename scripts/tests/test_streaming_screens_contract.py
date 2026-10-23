@@ -16,7 +16,7 @@ class StreamingScreens(unittest.TestCase):
     def test_real_installed_apps_are_the_source(self):
         self.assertIn('request(host, code, "/apps")', self.apps)
         self.assertIn("TclStreamingScreens(apps = allApps", self.apps)
-        self.assertIn("OfficialTvIcon(app, 32.dp)", self.screen)
+        self.assertIn("OfficialTvIcon(app, 56.dp)", self.screen)
         self.assertNotIn("listOf(TvOfficialApp(", self.screen)
         self.assertIn('"favorites:$deviceKey"', self.apps)
 
@@ -38,7 +38,7 @@ class StreamingScreens(unittest.TestCase):
     def test_search_genres_grid_and_favorites(self):
         for fragment in ("search/$media?", "genre/$media/list", "with_genres=$genre",
                          "offeredInBrazil(", "StreamingFavorite(", "streaming_favorites",
-                         "LazyVerticalGrid(", "titleActionFeedback"):
+                         "LazyRow(", "titleActionFeedback"):
             self.assertIn(fragment, self.screen)
         self.assertIn("searchTitle(", self.apps)
 
@@ -64,10 +64,11 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Confira \'Onde assistir e links disponíveis\'', self.screen)
 
     def test_compact_catalog_layout_regression(self):
-        self.assertIn("BasicTextField(value = searchDraft", self.screen)
-        self.assertIn("Modifier.weight(1f).height(42.dp)", self.screen)
-        self.assertIn("GridCells.Adaptive(94.dp)", self.screen)
-        self.assertIn("GridItemSpan(maxLineSpan)", self.screen)
+        self.assertIn('AnyTvStreamNavBar(', self.screen)
+        self.assertIn('Text(selected?.name ?: "Início"', self.screen)
+        self.assertIn('val app = selected!!', self.screen)
+        self.assertIn('// Home and individual provider use ONE identical catalogue layout.', self.screen)
+        self.assertNotIn('} else {\n                    val app = selected!!', self.screen)
         self.assertIn('Text("ⓘ Fontes: TMDB / JustWatch"', self.screen)
         self.assertNotIn('Text("Catálogo brasileiro"', self.screen)
         self.assertNotIn('Text("Streaming", fontSize = 21.sp', self.screen)
@@ -91,7 +92,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('.optJSONObject("BR")?.optJSONArray("flatrate")', self.screen)
         self.assertIn('offer.optString("logo_path")', self.screen)
         self.assertIn('StreamingOfferIcons(item, offerCache, displayed)', self.screen)
-        self.assertIn('StreamingOfferIcons(title, offerCache, displayed)', self.screen)
+        self.assertIn('StreamingOfferIcons(current, offerCache, displayed', self.screen)
         self.assertIn('StreamingCatalog.appHasOffer(app, it)', self.screen)
         self.assertIn('Nenhuma oferta de assinatura confirmada no Brasil.', self.screen)
         self.assertNotIn('displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->\n                                FilterChip(', self.screen)
@@ -106,7 +107,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_compact_home_search_platforms_and_customizable_genre_lists(self):
         for piece in (
-            'Icon(Icons.Filled.Home, contentDescription = "Início: filmes e séries"',
+            'TclHeaderAction(Icons.Filled.Home, "Início: filmes e séries"',
             'showGlobalSearch = !showGlobalSearch',
             'if (showGlobalSearch)',
             'OfficialTvIcon(app, 56.dp)',
@@ -229,12 +230,12 @@ class StreamingScreens(unittest.TestCase):
 
     def test_navigation_is_compact_and_library_recoverable(self):
         for fragment in (
-            'Icon(Icons.Filled.Home', 'Icon(Icons.Filled.Favorite',
-            'Icon(Icons.Filled.PlayCircleFilled', 'Icon(Icons.Filled.CheckCircle',
-            'Icon(Icons.Filled.FilterList', 'Icon(Icons.Filled.Search',
-            'Icon(Icons.Filled.Close', '"Filmes"', '"Séries"',
+            'TclHeaderAction(Icons.Filled.Home', 'TclHeaderAction(Icons.Filled.Favorite',
+            'TclHeaderAction(Icons.Filled.PlayCircleFilled', 'TclHeaderAction(Icons.Filled.CheckCircle',
+            'TclHeaderAction(Icons.Filled.FilterList', 'Icon(Icons.Filled.Search',
+            'TclHeaderAction(Icons.Filled.Close', '"Filmes"', '"Séries"',
             'librarySection = "watching"', 'librarySection = "watched"',
-            'Modifier.size(35.dp)', 'homeContentType = if (homeContentType == "movie")',
+            'AnyTvCompactChip("Filmes", !library', 'onContentType = { kind ->',
         ):
             self.assertIn(fragment, self.screen)
         self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
@@ -334,12 +335,12 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('color = MaterialTheme.colorScheme.background', self.screen)
         self.assertIn('horizontalArrangement = Arrangement.End', self.screen)
         self.assertIn('Icons.Outlined.FavoriteBorder', self.screen)
-        self.assertIn('Icon(Icons.Filled.FilterList', self.screen)
+        self.assertIn('TclHeaderAction(Icons.Filled.FilterList', self.screen)
         for text in ('Sua lista está vazia.', 'Você ainda não acompanha nenhuma série.',
                      'Nenhum filme marcado como assistido.'):
             self.assertIn(text, self.screen)
-        self.assertIn('AnyTvCompactChip("Filmes"', self.screen)
-        self.assertIn('AnyTvCompactChip("Séries"', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", !library', self.screen)
+        self.assertIn('AnyTvCompactChip("Séries", !library', self.screen)
         self.assertIn('showGlobalSearch = !showGlobalSearch', self.screen)
 
     def test_verified_disney_show_id_with_fallback(self):
@@ -348,8 +349,45 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('packageName == "com.disney.disneyplus"', self.screen)
         self.assertIn('entity-59565a16-d61f-49d1-85d7-1f0f87712748', self.screen)
         self.assertIn('TclTvAppApi.openTitle(host, pairing, packageName,', self.screen)
-        self.assertIn('val noArticle = normalized.replace(', self.screen)
-        self.assertIn('matches.sortedWith(compareByDescending<StreamingTitle>', self.screen)
+        self.assertIn('val withoutArticle = normalized.replace(', self.screen)
+        self.assertIn('collected.distinctBy {', self.screen)
+        self.assertIn('successfulRequests == 0', self.screen)
+
+    def test_same_32dp_icons_and_system_bars_and_banner_ratio(self):
+        home = Path("overrides/TclApprovedHomeScreen.kt").read_text(encoding="utf-8")
+        self.assertIn('internal fun TclHeaderAction(', home)
+        self.assertIn('modifier = Modifier.size(32.dp)', home)
+        self.assertIn('TclHeaderAction(Icons.Filled.FilterList', self.screen)
+        self.assertIn('val deviceBrand = remember(tvName)', home)
+        self.assertIn('Text(deviceBrand', home)
+        self.assertIn('.background(Brush.verticalGradient(listOf(TclSurface, TclBg, TclBg)))\\n            .windowInsetsPadding(WindowInsets.safeDrawing)', home)
+        self.assertIn('window.statusBarColor = systemBg.toArgb()', home)
+        self.assertIn('window.navigationBarColor = systemBg.toArgb()', home)
+        self.assertIn('Modifier.weight(0.3f)', self.screen)
+        self.assertIn('Modifier.fillMaxHeight().weight(0.7f)', self.screen)
+        self.assertNotIn('Canal não informado', self.screen)
+
+    def test_search_retries_global_names_without_false_empty_result(self):
+        self.assertIn('variants += "Love of Your Life"', self.screen)
+        self.assertIn('variants += "O Amor da Sua Vida"', self.screen)
+        self.assertIn('for (kind in listOf("movie", "tv"))', self.screen)
+        self.assertIn('val response = get("backend",', self.screen)
+        self.assertIn('if (successfulRequests == 0)', self.screen)
+        self.assertIn('globalSearchError = "Falha ao consultar o catálogo.', self.screen)
+        self.assertIn('O Amor da Sua Vida (2026) · Prime Video', self.screen)
+        self.assertIn('0HM3DRN79M0E7QOBLMYTS41IG0', self.screen)
+        self.assertIn('TclTvAppApi.searchTitle(host, pairing,', self.screen)
+        self.assertNotIn('}.getOrDefault(emptyList())\\n            globalSearchBusy = false', self.screen)
+
+    def test_provider_and_main_share_actual_slider_and_sections(self):
+        self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
+        self.assertIn('Text(selected?.name ?: "Início"', self.screen)
+        self.assertIn('if (selected != null && !homeLibrary)', self.screen)
+        self.assertIn('LaunchedEffect(selected?.packageName, homeContentType)', self.screen)
+        self.assertIn('myServiceShelves[key] = it.titles.take(12)', self.screen)
+        self.assertIn('HorizontalPager(', self.screen)
+        self.assertIn('Modifier.padding(top = 16.dp, bottom = 9.dp)', self.screen)
+        self.assertNotIn('} else {\\n                    val app = selected!!', self.screen)
 
     def test_tv_apple_playable_id_requires_allowlisted_parameters(self):
         from pathlib import Path
