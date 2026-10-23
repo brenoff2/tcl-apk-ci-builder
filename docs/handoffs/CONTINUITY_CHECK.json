@@ -31,5 +31,14 @@
       "result": "NOT_RUN"
     }
   ],
-  "acceptance": "Only PASS after an independent new conversation recovers each item from repository evidence without previous chat context."
+  "acceptance": "Only PASS after an independent new conversation recovers each item from repository evidence without previous chat context. Preparation in this conversation is not the independent chat test and must not be marked PASS.",
+  "prepared_at": "2026-10-23",
+  "handoff_source": "docs/handoffs/2026-10-23-anytv-full-transition.md",
+  "preparation_evidence": {
+    "handoff_synchronized_between_branches": true,
+    "canonical_workflow_verified_run": 39963760834,
+    "ota_current_version": "2.9.12",
+    "candidate_version": "2.9.13",
+    "blocked_publisher_run": 39963496459
+  }
 }
