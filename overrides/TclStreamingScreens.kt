@@ -702,35 +702,36 @@ private fun AnyTvStreamNavBar(
     onWatching: () -> Unit,
     onWatched: () -> Unit,
     onFilters: () -> Unit,
+    onContentType: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onHome, modifier = Modifier.size(35.dp)) {
-            Icon(Icons.Filled.Home, contentDescription = "Início: filmes e séries",
-                tint = if (!library && contentType == "all") primary else neutral)
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween) {
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            AnyTvCompactChip("Filmes", !library && contentType == "movie") {
+                onContentType(if (contentType == "movie") "all" else "movie")
+            }
+            AnyTvCompactChip("Séries", !library && contentType == "tv") {
+                onContentType(if (contentType == "tv") "all" else "tv")
+            }
         }
-        IconButton(onClick = onList, modifier = Modifier.size(35.dp)) {
-            Icon(Icons.Filled.Favorite, contentDescription = "Minha lista",
-                tint = if (library && section == "saved") primary else neutral)
-        }
-        IconButton(onClick = onWatching, modifier = Modifier.size(35.dp)) {
-            Icon(Icons.Filled.PlayCircleFilled, contentDescription = "Em andamento",
-                tint = if (library && section == "watching") primary else neutral)
-        }
-        IconButton(onClick = onWatched, modifier = Modifier.size(35.dp)) {
-            Icon(Icons.Filled.CheckCircle, contentDescription = "Assistidos",
-                tint = if (library && section == "watched") primary else neutral)
-        }
-        IconButton(onClick = onFilters, modifier = Modifier.size(35.dp)) {
-            Icon(Icons.Filled.FilterList, contentDescription = "Filtrar por streamings e gêneros",
-                tint = if (filtersActive) primary else neutral)
-        }
-        IconButton(onClick = onDismiss, modifier = Modifier.size(35.dp)) {
-            Icon(Icons.Filled.Close, contentDescription = "Fechar streaming",
-                modifier = Modifier.size(23.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(5.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            // Use EXACTLY the home-screen circular header component.
+            TclHeaderAction(Icons.Filled.Home, "Início: filmes e séries",
+                if (!library && contentType == "all") primary else neutral, onHome)
+            TclHeaderAction(Icons.Filled.Favorite, "Minha lista",
+                if (library && section == "saved") primary else neutral, onList)
+            TclHeaderAction(Icons.Filled.PlayCircleFilled, "Em andamento",
+                if (library && section == "watching") primary else neutral, onWatching)
+            TclHeaderAction(Icons.Filled.CheckCircle, "Assistidos",
+                if (library && section == "watched") primary else neutral, onWatched)
+            TclHeaderAction(Icons.Filled.FilterList, "Filtrar streamings e gêneros",
+                if (filtersActive) primary else neutral, onFilters)
+            TclHeaderAction(Icons.Filled.Close, "Fechar streaming", neutral, onDismiss)
         }
     }
 }
@@ -1228,6 +1229,13 @@ internal fun TclStreamingScreens(
                     onFilters = { editingMyServices = myServices
                         editingFilterGenres = filterGenreIds
                         showMyStreamingSettings = true },
+                    onContentType = { kind ->
+                        homeContentType = kind; selectedHomeGenre = 0
+                        if (selected != null && kind != "all") {
+                            media = kind; genre = 0; page = 1; showSaved = false
+                        } else if (kind == "all") selected = null
+                        homeLibrary = false
+                    },
                     onDismiss = onDismiss
                 )
                 if (selected == null) {
@@ -1258,14 +1266,6 @@ internal fun TclStreamingScreens(
                             modifier = Modifier.size(32.dp)) {
                             Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries",
                                 modifier = Modifier.size(20.dp))
-                        }
-                        AnyTvCompactChip("Filmes", homeContentType == "movie") {
-                            homeContentType = if (homeContentType == "movie") "all" else "movie"
-                            selectedHomeGenre = 0; homeLibrary = false
-                        }
-                        AnyTvCompactChip("Séries", homeContentType == "tv") {
-                            homeContentType = if (homeContentType == "tv") "all" else "tv"
-                            selectedHomeGenre = 0; homeLibrary = false
                         }
                         AnyTvCompactChip("Todos", selectedHomeGenre == 0) {
                             selectedHomeGenre = 0; homeLibrary = false
@@ -1578,12 +1578,6 @@ internal fun TclStreamingScreens(
                                 modifier = Modifier.size(32.dp)) {
                                 Icon(Icons.Filled.Search, contentDescription = "Buscar em todos os títulos",
                                     modifier = Modifier.size(20.dp))
-                            }
-                            AnyTvCompactChip("Filmes", media == "movie") {
-                                media = "movie"; genre = 0; page = 1
-                            }
-                            AnyTvCompactChip("Séries", media == "tv") {
-                                media = "tv"; genre = 0; page = 1
                             }
                             AnyTvCompactChip("Todos", genre == 0) {
                                 genre = 0; page = 1
