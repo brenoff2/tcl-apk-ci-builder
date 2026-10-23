@@ -82,6 +82,82 @@ internal data class StreamingOffer(val id: Int, val name: String, val logo: Stri
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
 internal data class StreamingResults(val titles: List<StreamingTitle>, val more: Boolean)
 
+/**
+ * Local premiere reminder, not a paid remote push service. Android delivers the
+ * notification at an approximate time; no background catalog polling is needed.
+ */
+class AnyTvReleaseReminderReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        val name = intent.getStringExtra("title")?.take(100).orEmpty()
+        if (name.isBlank()) return
+        val notifications = context.getSystemService(Context.NOTIFICATION_SERVICE)
+            as android.app.NotificationManager
+        val channelId = "anytv_premiere_reminders"
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
+            notifications.createNotificationChannel(android.app.NotificationChannel(
+                channelId, "Lembretes de estreias", android.app.NotificationManager.IMPORTANCE_DEFAULT))
+        }
+        val openApp = context.packageManager.getLaunchIntentForPackage(context.packageName)
+        val action = openApp?.let {
+            android.app.PendingIntent.getActivity(context, 0, it,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+                    android.app.PendingIntent.FLAG_IMMUTABLE)
+        }
+        val builder = if (android.os.Build.VERSION.SDK_INT >= 26)
+            android.app.Notification.Builder(context, channelId)
+        else android.app.Notification.Builder(context)
+        builder.setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setContentTitle("Estreia no AnyTV")
+            .setContentText(name + " está chegando")
+            .setAutoCancel(true)
+        if (action != null) builder.setContentIntent(action)
+        val id = intent.getIntExtra("id", 0)
+        runCatching { notifications.notify(id, builder.build()) }
+    }
+}
+
+private fun scheduleAnyTvPremiereReminder(context: Context, title: StreamingTitle): Boolean {
+    if (title.media != "movie" || title.id <= 0) return false
+    val release = runCatching {
+        java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .apply { isLenient = false }.parse(title.date)?.time
+    }.getOrNull() ?: return false
+    val calendar = java.util.Calendar.getInstance().apply {
+        timeInMillis = release
+        set(java.util.Calendar.HOUR_OF_DAY, 10)
+        set(java.util.Calendar.MINUTE, 0)
+        set(java.util.Calendar.SECOND, 0)
+    }
+    val remindAt = calendar.timeInMillis - 24L * 3600L * 1000L
+    if (remindAt <= System.currentTimeMillis()) return false
+    val intent = Intent(context, AnyTvReleaseReminderReceiver::class.java)
+        .putExtra("title", title.name).putExtra("id", title.id)
+    val pending = android.app.PendingIntent.getBroadcast(context, title.id, intent,
+        android.app.PendingIntent.FLAG_UPDATE_CURRENT or
+            android.app.PendingIntent.FLAG_IMMUTABLE)
+    val alarms = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+    alarms.setWindow(android.app.AlarmManager.RTC_WAKEUP, remindAt, 10 * 60 * 1000L, pending)
+    if (android.os.Build.VERSION.SDK_INT >= 33 &&
+        context.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED) {
+        (context as? android.app.Activity)?.requestPermissions(
+            arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 2487)
+    }
+    return true
+}
+
+private fun cancelAnyTvPremiereReminder(context: Context, title: StreamingTitle) {
+    val intent = Intent(context, AnyTvReleaseReminderReceiver::class.java)
+    val pending = android.app.PendingIntent.getBroadcast(context, title.id, intent,
+        android.app.PendingIntent.FLAG_NO_CREATE or
+            android.app.PendingIntent.FLAG_IMMUTABLE)
+    if (pending != null) {
+        (context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager)
+            .cancel(pending)
+        pending.cancel()
+    }
+}
+
 /** Small persistent, bounded catalogue cache. Does not store credentials or viewing progress. */
 private object StreamingDiskCache {
     private var root: File? = null
@@ -856,6 +932,7 @@ internal fun TclStreamingScreens(
     val genreMore = remember { mutableStateMapOf<String, Boolean>() }
     val genreLoading = remember { mutableStateMapOf<String, Boolean>() }
     val genreErrors = remember { mutableStateMapOf<String, String>() }
+    val premiereReminders = remember { mutableStateMapOf<String, Boolean>() }
     var globalSearchDraft by remember { mutableStateOf("") }
     var globalSearchTerm by remember { mutableStateOf("") }
     var globalSearchError by remember { mutableStateOf<String?>(null) }
@@ -1672,6 +1749,33 @@ internal fun TclStreamingScreens(
                                                         Text(item.name, maxLines = 2, lineHeight = 14.sp,
                                                             fontSize = 11.sp)
                                                         StreamingOfferIcons(item, offerCache, displayed)
+                                                        if (heading.startsWith("Em breve")) {
+                                                            val reminderId = "movie:" + item.id
+                                                            val enabled = premiereReminders[reminderId]
+                                                                ?: prefs.getBoolean("anytv_reminder_" + reminderId, false)
+                                                            TextButton(onClick = {
+                                                                if (enabled) {
+                                                                    cancelAnyTvPremiereReminder(context, item)
+                                                                    premiereReminders[reminderId] = false
+                                                                    prefs.edit().putBoolean(
+                                                                        "anytv_reminder_" + reminderId, false).apply()
+                                                                } else {
+                                                                    val scheduled = runCatching {
+                                                                        scheduleAnyTvPremiereReminder(context, item)
+                                                                    }.getOrDefault(false)
+                                                                    if (scheduled) {
+                                                                        premiereReminders[reminderId] = true
+                                                                        prefs.edit().putBoolean(
+                                                                            "anytv_reminder_" + reminderId, true).apply()
+                                                                    } else {
+                                                                        message = "A data de estreia deve ser futura para criar o lembrete."
+                                                                    }
+                                                                }
+                                                            }, contentPadding = PaddingValues(0.dp)) {
+                                                                Text(if (enabled) "Lembrar ✓" else "Lembrar",
+                                                                    fontSize = 11.sp)
+                                                            }
+                                                        }
                                                     }
                                                 }
                                             }
