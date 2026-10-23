@@ -1054,6 +1054,22 @@ internal fun TclStreamingScreens(
         }
     }
 
+    // Provider pages reuse the home carousel, loading real provider results.
+    LaunchedEffect(selected?.packageName, homeContentType) {
+        val app = selected ?: return@LaunchedEffect
+        val kinds = listOf("movie", "tv").filter {
+            homeContentType == "all" || it == homeContentType
+        }
+        for (kind in kinds) {
+            val key = app.name + ":" + kind + ":0"
+            if (key !in myServiceShelves) {
+                runCatching {
+                    StreamingCatalog.discover(token, app.name, kind, 1, 0, "")
+                }.onSuccess { myServiceShelves[key] = it.titles.take(12) }
+            }
+        }
+    }
+
     LaunchedEffect(token) {
         discoveryLoading = true
         discoveryError = null
