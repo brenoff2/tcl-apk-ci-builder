@@ -737,10 +737,6 @@ internal fun TclStreamingScreens(
     // The client never requires user-supplied API credentials.
     val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
-    var showDeviceActivation by remember { mutableStateOf(false) }
-    var activationDraft by remember { mutableStateOf("") }
-    var activationBusy by remember { mutableStateOf(false) }
-    var activationFeedback by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     val mainGenreIds = remember { listOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14) }
     var mainGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
@@ -752,7 +748,11 @@ internal fun TclStreamingScreens(
     var showGenreSettings by remember { mutableStateOf(false) }
     var showMyStreamingSettings by remember { mutableStateOf(false) }
     val subscriptionNames = remember { listOf("Netflix", "Prime Video", "Disney+", "Max", "Paramount+", "Apple TV+", "Globoplay", "Crunchyroll", "Mubi", "Telecine", "Looke", "Claro Video") }
-    var filterGenreIds by remember(prefs) { mutableStateOf(prefs.getString("anytv_discovery_genre_filter", "")?.split(",")?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()) }
+    var filterGenreIds by remember(prefs) {
+        mutableStateOf(prefs.getString("anytv_discovery_genre_filter", null)
+            ?.split(",")?.mapNotNull { it.toIntOrNull() }?.toSet()
+            ?: setOf(28, 18, 35, 53, 37))
+    }
     var editingFilterGenres by remember { mutableStateOf(emptySet<Int>()) }
     var onlyMyStreaming by remember { mutableStateOf(false) }
     val storedMyServices = remember(prefs) {
@@ -965,12 +965,12 @@ internal fun TclStreamingScreens(
             .getOrDefault(emptyList())
     }
     // Fetch each genre shelf only once per screen, preserving user-selected order.
-    LaunchedEffect(mainGenres, tvGenres, preferredGenreIds, selectedHomeGenre, homeContentType) {
+    LaunchedEffect(mainGenres, tvGenres, filterGenreIds, selectedHomeGenre, homeContentType) {
         val mediaKind = if (homeContentType == "tv") "tv" else "movie"
         val choices = if (mediaKind == "tv") tvGenres else mainGenres
         val requested = if (selectedHomeGenre == 0) {
-            choices.filter { it.id in preferredGenreIds ||
-                mainGenres.any { movie -> movie.id in preferredGenreIds && movie.name == it.name } }
+            choices.filter { it.id in filterGenreIds ||
+                mainGenres.any { movie -> movie.id in filterGenreIds && movie.name == it.name } }
                 .map { it.id }
         } else listOf(selectedHomeGenre)
         for (id in requested) {
@@ -1285,21 +1285,13 @@ internal fun TclStreamingScreens(
                             } else if (librarySection == "watched") {
                                 if (history.isNotEmpty()) put("Filmes já assistidos", history)
                             }
-                        } else if (!onlyMyStreaming) {
-                            if (selectedHomeGenre == 0) {
+                        } else {
+                            if (selectedHomeGenre == 0 && activeServiceNames.isEmpty()) {
                                 discoveryShelves.forEach { (heading, titles) ->
                                     val selectedTitles = titles.filter { homeContentType == "all" ||
                                         it.media == homeContentType }
                                     if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
                                 }
-                                currentGenreList.filter { it.id in preferredGenreIds ||
-                                    mainGenres.any { m -> m.id in preferredGenreIds && m.name == it.name } }
-                                    .forEach { kind ->
-                                        genreShelves["$selectedGenreKind:${kind.id}"]
-                                            ?.takeIf { it.isNotEmpty() }?.let {
-                                                put("Por gênero: " + kind.name, it)
-                                            }
-                                    }
                             } else {
                                 val kind = currentGenreList.firstOrNull { it.id == selectedHomeGenre }
                                 genreShelves["$selectedGenreKind:$selectedHomeGenre"]
@@ -1307,6 +1299,16 @@ internal fun TclStreamingScreens(
                                         put("Em destaque: " + (kind?.name ?: "Gênero"), it)
                                     }
                             }
+                        }
+                        if (!homeLibrary && selectedHomeGenre == 0) {
+                                currentGenreList.filter { it.id in filterGenreIds ||
+                                    mainGenres.any { m -> m.id in filterGenreIds && m.name == it.name } }
+                                    .forEach { kind ->
+                                        genreShelves["$selectedGenreKind:${kind.id}"]
+                                            ?.takeIf { it.isNotEmpty() }?.let {
+                                                put("Por gênero: " + kind.name, it)
+                                            }
+                                    }
                         }
                         if (!homeLibrary) {
                             activeServiceNames.forEach { name ->
@@ -1328,24 +1330,37 @@ internal fun TclStreamingScreens(
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
-                    val filteredShelves = visibleShelves.mapValues { (_, titles) ->
-                        if (homeLibrary || filterGenreIds.isEmpty()) titles
-                        else titles.filter { title -> title.genreIds.any { it in filterGenreIds } }
-                    }.filterValues { it.isNotEmpty() }
+                    val filteredShelves = visibleShelves
                     val heroTitles = if (homeLibrary) emptyList()
                         else filteredShelves.values.firstOrNull().orEmpty()
                             .filterNot { it.media == "movie" &&
                                 it.id.toString() in watchedFilms }.take(6)
-                    val seenInHome = heroTitles.map { "${it.media}:${it.id}" }.toMutableSet()
                     val uniqueShelves = filteredShelves.mapNotNull { (heading, shelf) ->
                         val unique = shelf.filter {
-                            (homeLibrary || it.media != "movie" ||
-                                it.id.toString() !in watchedFilms) &&
-                                seenInHome.add("${it.media}:${it.id}")
-                        }
+                            homeLibrary || it.media != "movie" ||
+                                it.id.toString() !in watchedFilms
+                        }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty()) null else heading to unique
                     }
                     LazyColumn(modifier = Modifier.weight(1f)) {
+                        if (homeLibrary) {
+                            item {
+                                Text(when (librarySection) {
+                                    "watching" -> "Em andamento"
+                                    "watched" -> "Assistidos"
+                                    else -> "Minha lista"
+                                }, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                                if (visibleShelves.isEmpty()) {
+                                    Spacer(Modifier.height(16.dp))
+                                    Text(when (librarySection) {
+                                        "watching" -> "Você ainda não acompanha nenhuma série."
+                                        "watched" -> "Nenhum filme marcado como assistido."
+                                        else -> "Sua lista está vazia. Salve filmes e séries para vê-los aqui."
+                                    }, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 13.sp)
+                                }
+                            }
+                        }
                         if (heroTitles.isNotEmpty()) {
                             item {
                                 // The slide is PART of the scrolling content, not a fixed header.
@@ -1595,11 +1610,7 @@ internal fun TclStreamingScreens(
                         }
                     }
                 }
-                TextButton(onClick = {
-                    activationDraft = ""
-                    activationFeedback = null
-                    showDeviceActivation = true
-                }) { Text("Ativar links diretos neste dispositivo", fontSize = 12.sp) }
+                // Links oficiais são mostrados quando disponíveis; nenhum código é exigido.
                 Text("ⓘ Fontes: TMDB / JustWatch",
                     modifier = Modifier.clickable { showCredits = true },
                     fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1621,8 +1632,13 @@ internal fun TclStreamingScreens(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Column(modifier = Modifier.weight(1f).heightIn(max = 350.dp)
                             .verticalScroll(rememberScrollState())) {
-                            Text("Streamings", fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp)
+                            Text("Streamings", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            TextButton(onClick = {
+                                editingMyServices = if (subscriptionNames.all {
+                                        it in editingMyServices }) emptySet()
+                                    else subscriptionNames.toSet()
+                            }) { Text(if (subscriptionNames.all { it in editingMyServices })
+                                "Desmarcar todos" else "Marcar todos", fontSize = 10.sp) }
                             subscriptionNames.forEach { name ->
                                 val legacy = displayed.firstOrNull {
                                     it.name.equals(name, ignoreCase = true)
@@ -1642,8 +1658,15 @@ internal fun TclStreamingScreens(
                         }
                         Column(modifier = Modifier.weight(1f).heightIn(max = 350.dp)
                             .verticalScroll(rememberScrollState())) {
-                            Text("Gêneros", fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp)
+                            Text("Gêneros", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                            val allGenreIds = availableGenres.flatMap { it.second }.toSet()
+                            TextButton(onClick = {
+                                editingFilterGenres = if (allGenreIds.isNotEmpty() &&
+                                    allGenreIds.all { it in editingFilterGenres }) emptySet()
+                                    else allGenreIds
+                            }) { Text(if (allGenreIds.isNotEmpty() &&
+                                allGenreIds.all { it in editingFilterGenres })
+                                "Desmarcar todos" else "Marcar todos", fontSize = 10.sp) }
                             availableGenres.forEach { (name, ids) ->
                                 val checked = ids.any { it in editingFilterGenres }
                                 Row(modifier = Modifier.fillMaxWidth().clickable {
@@ -1713,68 +1736,6 @@ internal fun TclStreamingScreens(
             },
             dismissButton = {
                 TextButton(onClick = { showGenreSettings = false }) { Text("Cancelar") }
-            }
-        )
-    }
-    if (showDeviceActivation) {
-        AlertDialog(
-            onDismissRequest = { if (!activationBusy) showDeviceActivation = false },
-            title = { Text("Ativação dos links diretos") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Informe apenas o código de ativação individual fornecido " +
-                        "pelo operador do AnyTV. Não é uma chave de API.",
-                        fontSize = 12.sp)
-                    OutlinedTextField(
-                        value = activationDraft,
-                        onValueChange = {
-                            activationDraft = it.take(43)
-                            activationFeedback = null
-                        },
-                        singleLine = true,
-                        label = { Text("Código de ativação") },
-                        enabled = !activationBusy
-                    )
-                    if (activationFeedback != null) {
-                        Text(activationFeedback.orEmpty(), fontSize = 12.sp)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = !activationBusy &&
-                        activationDraft.matches(Regex("[A-Za-z0-9_-]{43}")),
-                    onClick = {
-                        if (!activationBusy) {
-                            val submitted = activationDraft
-                            activationBusy = true
-                            scope.launch {
-                                val result = withContext(Dispatchers.IO) {
-                                    runCatching {
-                                        AnyTvDeviceIdentity.activate(context, submitted)
-                                    }
-                                }
-                                activationDraft = ""
-                                activationBusy = false
-                                activationFeedback = if (result.getOrDefault(false)) {
-                                    "Dispositivo ativado. Links diretos disponíveis quando " +
-                                        "oferecidos pelo serviço."
-                                } else {
-                                    "Ativação não concluída. Confira o código ou tente novamente."
-                                }
-                            }
-                        }
-                    }
-                ) { Text(if (activationBusy) "Ativando…" else "Ativar") }
-            },
-            dismissButton = {
-                TextButton(
-                    enabled = !activationBusy,
-                    onClick = {
-                        activationDraft = ""
-                        showDeviceActivation = false
-                    }
-                ) { Text("Fechar") }
             }
         )
     }
