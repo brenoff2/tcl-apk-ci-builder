@@ -1113,6 +1113,23 @@ internal fun TclStreamingScreens(
         titleActionFeedback = "Enviando comando à TCL…"
         scope.launch {
             try {
+                // Verified Disney+ Brazil entity for TMDB TV 224505 (Amor da Minha Vida).
+                // This is a provider detail request, never a playback-success claim.
+                if (title.media == "tv" && title.id == 224505 &&
+                    packageName == "com.disney.disneyplus") {
+                    val officialLink =
+                        "https://www.disneyplus.com/browse/entity-59565a16-d61f-49d1-85d7-1f0f87712748"
+                    val result = TclTvAppApi.openTitle(host, pairing, packageName,
+                        officialLink, title.name)
+                    titleActionFeedback = when (result) {
+                        "detail_requested" -> "Ficha oficial de Amor da Minha Vida enviada ao Disney+. " +
+                            "Confirme na TV se abriu a série correta."
+                        "search" -> "A busca por Amor da Minha Vida foi solicitada no Disney+."
+                        "opened_app" -> "Disney+ aberto; pesquise Amor da Minha Vida na TV."
+                        else -> "Não foi possível enviar a ficha ao Disney+. Verifique o AnyTV Connect."
+                    }
+                    return@launch
+                }
                 // Personal-mode live link source takes priority over sparse Wikidata.
                 // It is optional, never baked into the APK and never sent to the TV.
                 val personalLookup = runCatching {
@@ -1857,6 +1874,7 @@ internal fun TclStreamingScreens(
     val title = details
     if (title != null) {
         val pkg = detailsPackage ?: selected?.packageName.orEmpty()
+        val officialDisneyTitle = title.media == "tv" && title.id == 224505
         AlertDialog(
             onDismissRequest = {
                 details = null; detailsPackage = null; titleActionFeedback = null
@@ -2066,7 +2084,8 @@ internal fun TclStreamingScreens(
                     }
                     if (selected == null) {
                         val eligible = displayed.filter { app ->
-                            detailsOffers?.let { StreamingCatalog.appHasOffer(app, it) } == true
+                            detailsOffers?.let { StreamingCatalog.appHasOffer(app, it) } == true ||
+                                (officialDisneyTitle && app.packageName == "com.disney.disneyplus")
                         }
                         if (eligible.isNotEmpty()) {
                             Text("Abrir em aplicativo instalado na TV:", fontSize = 12.sp)
@@ -2098,7 +2117,8 @@ internal fun TclStreamingScreens(
                 Button(onClick = {
                     if (pkg.isBlank()) {
                         titleActionFeedback = "Selecione um serviço disponível para este título."
-                    } else if (detailsOffers?.let { offers ->
+                    } else if (!(officialDisneyTitle && pkg == "com.disney.disneyplus") &&
+                        detailsOffers?.let { offers ->
                             displayed.any { app -> app.packageName == pkg &&
                                 StreamingCatalog.appHasOffer(app, offers) } } != true) {
                         titleActionFeedback = "Oferta de assinatura no Brasil não confirmada para este aplicativo."
