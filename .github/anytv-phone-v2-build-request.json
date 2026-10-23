@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 49,
+  "expected_version_code": 50,
   "preserve_legacy_ota": true,
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
   "new_install_only": false,
-  "release_version": "2.9.20-AnyTV",
-  "release_scope": "2.9.20 code49 user-approved UI-only rollout despite known HTTP429 monthly_quota_exhausted catalog backend. Includes mixed movie and series hero, 20-card two-row scrolling rails and click-to-load-more genre pages; E square movie/S circle series badges before rating; upcoming films and local Android premiere reminder notifications; debounced typeahead search, compact field and X clearing only; previous 2.9.20 visual alignment, unified provider layouts and 30/70 hero banner. Preserve original V2 signer, OTA and all user data. Build, IME, signed APK and remote OTA byte readback mandatory. Only recognized quota exhaustion is nonfatal; unknown catalog failures still gate release. No Cloudflare quota change and no worker production deployment.",
-  "ci_revision": 5
+  "release_version": "2.9.21-AnyTV",
+  "release_scope": "2.9.21 code50 signed OTA update. Fix compact centered media markers: F movie white on blue square, S TV series white on red circle, before rating with same 16dp dimensions and no baseline clipping. Keep 20 cards on two-row horizontal HOME rails, reserve fixed three 14sp title lines (42dp) across ALL cards so row 2 is always aligned even when some titles have 1/2/3 lines; always render metadata row. Genre-filtered page retains top slideshow but BELOW it uses a vertically scrolling list with each 20-item TMDB page, explicit Mostrar mais 20 at end loading page 2 etc; no show-more anywhere on home horizontal rails. Backend Cloudflare Worker e407174c-2bff-4444-ab2c-9cd694b99728 deployed; TMDB search/discovery no longer share 200/month JustWatch link resolver budget. Live search and two genre pages verified in workflow 40041659711, production real. Preserve V2 package and signing identity, legacy OTA; mandatory Gradle compile, IME tests, LIVE search, signer, GitHub remote APK byte readback before declare success.",
+  "ci_revision": 6
 }
