@@ -57,6 +57,7 @@ import androidx.compose.material3.Text
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
@@ -69,6 +70,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
 import kotlin.math.sin
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -83,6 +86,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import com.hari.androidtvremote.androidLib.remote.Remotemessage
 import com.hari.androidtvremote.utils.Constant
 
@@ -213,10 +217,28 @@ fun TclApprovedHomeScreen(
     }
 
 
+    // Draw the theme background under system insets, instead of leaving white bars.
+    val systemView = LocalView.current
+    val systemBg = MaterialTheme.colorScheme.background
+    SideEffect {
+        (systemView.context as? android.app.Activity)?.window?.let { window ->
+            @Suppress("DEPRECATION")
+            window.statusBarColor = systemBg.toArgb()
+            @Suppress("DEPRECATION")
+            window.navigationBarColor = systemBg.toArgb()
+            if (android.os.Build.VERSION.SDK_INT >= 29) {
+                window.isNavigationBarContrastEnforced = false
+            }
+            WindowCompat.getInsetsController(window, systemView)
+                .isAppearanceLightStatusBars = systemBg.luminance() > 0.5f
+            WindowCompat.getInsetsController(window, systemView)
+                .isAppearanceLightNavigationBars = systemBg.luminance() > 0.5f
+        }
+    }
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)
             .background(Brush.verticalGradient(listOf(TclSurface, TclBg, TclBg)))
+            .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
         val compactHeight = maxHeight < 760.dp
         val tightHeight = maxHeight < 650.dp
@@ -455,6 +477,13 @@ private fun TclApprovedHeader(
     onCast: () -> Unit,
     onSettings: () -> Unit
 ) {
+    // Connected TV manufacturer is inferred from the discovered name, never edited.
+    val deviceBrand = remember(tvName) {
+        listOf("TCL", "Sony", "Philips", "Hisense", "Xiaomi", "Google TV",
+            "Android TV", "Samsung", "LG").firstOrNull {
+            tvName.contains(it, ignoreCase = true)
+        } ?: "Android TV"
+    }
     // A slim toolbar, not a second oversized connected-status card.
     Row(
         modifier = Modifier.fillMaxWidth()
@@ -478,6 +507,8 @@ private fun TclApprovedHeader(
                     tint = TclMuted, modifier = Modifier.size(13.dp))
             }
         }
+        Text(deviceBrand, color = TclText, fontSize = 10.sp, maxLines = 1,
+            fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 3.dp))
         TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar",
             Color(0xFFFF4775), onPower)
         TclHeaderAction(Icons.Filled.Cast, "Transmitir", TclBlue, onCast)
@@ -486,7 +517,7 @@ private fun TclApprovedHeader(
 }
 
 @Composable
-private fun TclHeaderAction(
+internal fun TclHeaderAction(
     icon: ImageVector,
     description: String,
     tint: Color,
