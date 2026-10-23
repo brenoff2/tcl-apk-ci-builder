@@ -1178,7 +1178,7 @@ internal fun TclStreamingScreens(
                 AnyTvStreamNavBar(
                     library = homeLibrary && selected == null,
                     section = librarySection,
-                    contentType = homeContentType,
+                    contentType = if (selected == null) homeContentType else media,
                     filtersActive = onlyMyStreaming || filterGenreIds.isNotEmpty() || selectedHomeGenre != 0,
                     onHome = { selected = null; homeLibrary = false
                         homeContentType = "all"; selectedHomeGenre = 0 },
@@ -1188,8 +1188,12 @@ internal fun TclStreamingScreens(
                     onFilters = { editingMyServices = myServices
                         editingFilterGenres = filterGenreIds
                         showMyStreamingSettings = true },
-                    onContentType = { kind -> selected = null; homeLibrary = false
-                        homeContentType = kind; selectedHomeGenre = 0 },
+                    onContentType = { kind ->
+                        homeLibrary = false; homeContentType = kind; selectedHomeGenre = 0
+                        if (selected != null && kind != "all") {
+                            media = kind; genre = 0; page = 1; showSaved = false
+                        } else selected = null
+                    },
                     onSearch = { selected = null; showGlobalSearch = !showGlobalSearch },
                     onDismiss = onDismiss
                 )
@@ -1443,50 +1447,16 @@ internal fun TclStreamingScreens(
                 } else {
                     val app = selected!!
                     Row(modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        Row(modifier = Modifier.weight(1f)
-                            .horizontalScroll(rememberScrollState()),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            IconButton(onClick = { selected = null; details = null },
-                                modifier = Modifier.size(34.dp).semantics {
-                                    contentDescription = "Voltar ao catálogo"
-                                }) { Text("‹", fontSize = 23.sp) }
-                            OfficialTvIcon(app, 32.dp)
-                            Text(app.name, fontSize = 12.sp, maxLines = 1,
-                                fontWeight = FontWeight.SemiBold)
-                            TextButton(onClick = {
-                                selected = null; homeLibrary = true
-                                librarySection = "saved"
-                            }) { Text("♥ Minha lista", fontSize = 11.sp) }
-                            TextButton(onClick = {
-                                selected = null; homeLibrary = true
-                                librarySection = "watching"
-                            }) { Text("Em andamento", fontSize = 11.sp) }
-                            TextButton(onClick = {
-                                selected = null; homeLibrary = true
-                                librarySection = "watched"
-                            }) { Text("✓ Assistidos", fontSize = 11.sp) }
-                            TextButton(onClick = {
-                                selected = null
-                                editingMyServices = myServices
-                                showMyStreamingSettings = true
-                            }) { Text("Meus streamings", fontSize = 11.sp) }
-                        }
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(34.dp)
-                            .semantics { contentDescription = "Fechar streaming" }) {
-                            Text("×", fontSize = 24.sp)
-                        }
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        OfficialTvIcon(app, 32.dp)
+                        Text(app.name, fontSize = 12.sp, maxLines = 1,
+                            fontWeight = FontWeight.SemiBold)
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        FilterChip(selected = media == "movie" && !showSaved,
-                            onClick = { media = "movie"; genre = 0; page = 1; showSaved = false },
-                            label = { Text("Filmes", fontSize = 12.sp) })
-                        FilterChip(selected = media == "tv" && !showSaved,
-                            onClick = { media = "tv"; genre = 0; page = 1; showSaved = false },
-                            label = { Text("Séries", fontSize = 12.sp) })
+                        // The Filme/Série selector now lives only in AnyTvStreamNavBar.
                         Spacer(Modifier.weight(1f))
                         IconButton(onClick = { showSaved = !showSaved; page = 1 },
                             modifier = Modifier.size(40.dp).semantics {
