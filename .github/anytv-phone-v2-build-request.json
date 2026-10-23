@@ -6,5 +6,6 @@
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
   "new_install_only": false,
   "release_version": "2.9.16-AnyTV",
-  "release_scope": "local disk cache for titles and catalogue, my streaming subscriptions, persistent library and episode progress, home-shelf dedup, consistent icons and title-year; no API credentials in APK, same V2 signer"
+  "release_scope": "local disk cache for titles and catalogue, my streaming subscriptions, persistent library and episode progress, home-shelf dedup, consistent icons and title-year; no API credentials in APK, same V2 signer",
+  "ci_revision": 2
 }
