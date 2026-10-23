@@ -1,10 +1,10 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 44,
+  "expected_version_code": 45,
   "preserve_legacy_ota": true,
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
   "new_install_only": false,
-  "release_version": "2.9.15-AnyTV",
-  "release_scope": "compact Discovery page, localized genre shelves/preferences, deduplicated BR subscription logos, compact search and platform shortcuts; V2 same-signer in-app update"
+  "release_version": "2.9.16-AnyTV",
+  "release_scope": "local disk cache for titles and catalogue, my streaming subscriptions, persistent library and episode progress, home-shelf dedup, consistent icons and title-year; no API credentials in APK, same V2 signer"
 }
