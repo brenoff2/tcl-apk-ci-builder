@@ -90,8 +90,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('suspend fun offersInBrazil(item: StreamingTitle)', self.screen)
         self.assertIn('.optJSONObject("BR")?.optJSONArray("flatrate")', self.screen)
         self.assertIn('offer.optString("logo_path")', self.screen)
-        self.assertIn('StreamingOfferIcons(item, offerCache)', self.screen)
-        self.assertIn('StreamingOfferIcons(title, offerCache)', self.screen)
+        self.assertIn('StreamingOfferIcons(item, offerCache, displayed)', self.screen)
+        self.assertIn('StreamingOfferIcons(title, offerCache, displayed)', self.screen)
         self.assertIn('StreamingCatalog.appHasOffer(app, it)', self.screen)
         self.assertIn('Nenhuma oferta de assinatura confirmada no Brasil.', self.screen)
         self.assertNotIn('displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->\n                                FilterChip(', self.screen)
@@ -124,7 +124,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("Explorar por plataforma"', self.screen)
         self.assertNotIn('Text("Streaming", fontSize = 20.sp', self.screen)
         self.assertNotIn('Text("Filtrar destaques por plataforma instalada na TV"', self.screen)
-        self.assertIn('val heroTitles = visibleShelves.values.firstOrNull()', self.screen)
+        self.assertIn('val heroTitles = if (homeLibrary) emptyList()', self.screen)
 
     def test_bounded_persistent_quota_saving_metadata_cache(self):
         for fragment in (
