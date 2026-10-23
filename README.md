@@ -5,9 +5,10 @@ O código, os APKs compilados e a publicação do canal Android são gerenciados
 ## Fluxo único de publicação (Android cert2026)
 
 1. A compilação gera o APK não assinado em **GitHub Actions Artifacts**.
-2. O publicador `.github/workflows/publish-anytv-phone-github-only.yml` autentica o artefato do build no GitHub, recupera a identidade de assinatura **dentro do runner** a partir de `signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin` e do GitHub Actions Secret `ANYTV_RECOVERY_SECRET_2026`.
-3. O publicador valida SHA-256, `com.tclremote.livre`, `versionCode`, assinatura v2 e certificado cert2026, grava apenas `updates/android/cert2026/current.apk` e confirma o hash remoto.
-4. Teste funcional na TCL permanece gate separado: CI/apksigner não demonstram pareamento real.
+2. Com a credencial original acessível e a release aprovada, registra-se `.github/anytv-phone-release-request.json` na branch OTA com `candidate_run_id`, `expected_version_code` e `intent=publish-cert2026-phone`. Apenas o push desse arquivo aciona o publicador. Mudanças no workflow não publicam; não se usa `workflow_dispatch` fora da branch padrão.
+3. O publicador `.github/workflows/publish-anytv-phone-github-only.yml` autentica o artefato do build no GitHub, recupera a identidade de assinatura **dentro do runner** a partir de `signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin` e do GitHub Actions Secret `ANYTV_RECOVERY_SECRET_2026`.
+4. O publicador valida SHA-256, `com.tclremote.livre`, `versionCode`, assinatura v2 e certificado cert2026, grava apenas `updates/android/cert2026/current.apk` e confirma o hash remoto.
+5. Teste funcional na TCL permanece gate separado: CI/apksigner não demonstram pareamento real.
 
 Se o segredo não estiver acessível ao runner, o workflow falha **antes de substituir a OTA**. Jamais gravar a credencial privada em arquivos versionados, logs, configurações públicas ou APK.
 
