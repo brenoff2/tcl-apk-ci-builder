@@ -387,12 +387,17 @@ private object StreamingCatalog {
         }
 
     /** Discovery lists for real movie genres, localized using the upstream genre catalogue. */
-    suspend fun discoveryGenre(id: Int): List<StreamingTitle> = withContext(Dispatchers.IO) {
-        require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14))
-        val route = "discover/movie?language=pt-BR&include_adult=false" +
+    suspend fun discoveryGenre(id: Int): List<StreamingTitle> =
+        discoveryGenre(id, "movie")
+    suspend fun discoveryGenre(id: Int, media: String): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+        require(media == "movie" || media == "tv")
+        require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14,
+            10759, 80, 10765, 10766, 10768, 10762))
+        val route = "discover/$media?language=pt-BR&include_adult=false" +
             "&sort_by=popularity.desc&with_genres=$id&page=1"
         val payload = get("backend", route)
-        mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", id).take(12)
+        mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id).take(12)
     }
 
     /** Real TMDB seasons and episodes; cached locally so opening the same series costs nothing. */
@@ -597,7 +602,7 @@ internal fun TclStreamingScreens(
     }
     var preferredGenreIds by remember { mutableStateOf(initialGenreIds) }
     var editingGenreIds by remember { mutableStateOf(initialGenreIds) }
-    val genreShelves = remember { mutableStateMapOf<Int, List<StreamingTitle>>() }
+    val genreShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var globalSearchDraft by remember { mutableStateOf("") }
     var globalSearchTerm by remember { mutableStateOf("") }
     var globalSearchResults by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
@@ -761,14 +766,19 @@ internal fun TclStreamingScreens(
             .getOrDefault(emptyList())
     }
     // Fetch each genre shelf only once per screen, preserving user-selected order.
-    LaunchedEffect(mainGenres, preferredGenreIds, selectedHomeGenre) {
-        val requested = if (selectedHomeGenre == 0)
-            mainGenres.filter { it.id in preferredGenreIds }.map { it.id }
-            else listOf(selectedHomeGenre)
+    LaunchedEffect(mainGenres, tvGenres, preferredGenreIds, selectedHomeGenre, homeContentType) {
+        val mediaKind = if (homeContentType == "tv") "tv" else "movie"
+        val choices = if (mediaKind == "tv") tvGenres else mainGenres
+        val requested = if (selectedHomeGenre == 0) {
+            choices.filter { it.id in preferredGenreIds ||
+                mainGenres.any { movie -> movie.id in preferredGenreIds && movie.name == it.name } }
+                .map { it.id }
+        } else listOf(selectedHomeGenre)
         for (id in requested) {
-            if (id !in genreShelves) {
-                runCatching { StreamingCatalog.discoveryGenre(id) }
-                    .onSuccess { genreShelves[id] = it }
+            val key = "$mediaKind:$id"
+            if (key !in genreShelves) {
+                runCatching { StreamingCatalog.discoveryGenre(id, mediaKind) }
+                    .onSuccess { genreShelves[key] = it }
             }
         }
     }
@@ -1056,28 +1066,39 @@ internal fun TclStreamingScreens(
                             if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
                         }
                     }
-                    // Genre selector changes the highlights; chosen genres define home lists.
+                    // One compact horizontal line: content type FIRST, then genres.
+                    val selectedGenreKind = if (homeContentType == "tv") "tv" else "movie"
+                    val currentGenreList = if (selectedGenreKind == "tv") tvGenres else mainGenres
                     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         verticalAlignment = Alignment.CenterVertically) {
+                        listOf("all" to "Tudo", "movie" to "Filmes", "tv" to "Séries")
+                            .forEach { (kind, label) ->
+                                FilterChip(selected = homeContentType == kind,
+                                    onClick = {
+                                        homeContentType = kind; selectedHomeGenre = 0
+                                        homeLibrary = false
+                                    }, label = { Text(label, fontSize = 11.sp,
+                                        fontWeight = FontWeight.SemiBold) })
+                            }
+                        Text("│", color = MaterialTheme.colorScheme.outline)
                         FilterChip(selected = selectedHomeGenre == 0,
-                            onClick = { selectedHomeGenre = 0 },
+                            onClick = { selectedHomeGenre = 0; homeLibrary = false },
                             label = { Text("Todos", fontSize = 11.sp) })
-                        mainGenres.forEach { item ->
-                            FilterChip(selected = selectedHomeGenre == item.id,
-                                onClick = { selectedHomeGenre = item.id },
-                                label = { Text(item.name, fontSize = 11.sp, maxLines = 1) })
+                        currentGenreList.forEach { kind ->
+                            FilterChip(selected = selectedHomeGenre == kind.id,
+                                onClick = {
+                                    selectedHomeGenre = kind.id; homeLibrary = false
+                                }, label = { Text(kind.name, fontSize = 11.sp) })
                         }
                         TextButton(onClick = {
-                            editingGenreIds = preferredGenreIds
-                            showGenreSettings = true
-                        }, modifier = Modifier.height(38.dp),
-                            contentPadding = PaddingValues(horizontal = 8.dp)) {
-                            Text("Editar listas", fontSize = 11.sp)
+                            editingGenreIds = preferredGenreIds; showGenreSettings = true
+                        }, contentPadding = PaddingValues(horizontal = 5.dp)) {
+                            Text("⚙ Listas", fontSize = 11.sp)
                         }
                     }
                     if (discoveryLoading || (selectedHomeGenre != 0 &&
-                            selectedHomeGenre !in genreShelves)) {
+                            "$selectedGenreKind:$selectedHomeGenre" !in genreShelves)) {
                         CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     }
                     if (discoveryError != null && selectedHomeGenre == 0) {
@@ -1105,24 +1126,34 @@ internal fun TclStreamingScreens(
                             }
                         } else if (!onlyMyStreaming) {
                             if (selectedHomeGenre == 0) {
-                                putAll(discoveryShelves)
-                                mainGenres.filter { it.id in preferredGenreIds }.forEach { kind ->
-                                    genreShelves[kind.id]?.takeIf { it.isNotEmpty() }?.let {
-                                        put("Por gênero: " + kind.name, it)
+                                discoveryShelves.forEach { (heading, titles) ->
+                                    val selectedTitles = titles.filter { homeContentType == "all" ||
+                                        it.media == homeContentType }
+                                    if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
+                                }
+                                currentGenreList.filter { it.id in preferredGenreIds ||
+                                    mainGenres.any { m -> m.id in preferredGenreIds && m.name == it.name } }
+                                    .forEach { kind ->
+                                        genreShelves["$selectedGenreKind:${kind.id}"]
+                                            ?.takeIf { it.isNotEmpty() }?.let {
+                                                put("Por gênero: " + kind.name, it)
+                                            }
                                     }
-                                }
                             } else {
-                                val kind = mainGenres.firstOrNull { it.id == selectedHomeGenre }
-                                genreShelves[selectedHomeGenre]?.takeIf { it.isNotEmpty() }?.let {
-                                    put("Em destaque: " + (kind?.name ?: "Gênero"), it)
-                                }
+                                val kind = currentGenreList.firstOrNull { it.id == selectedHomeGenre }
+                                genreShelves["$selectedGenreKind:$selectedHomeGenre"]
+                                    ?.takeIf { it.isNotEmpty() }?.let {
+                                        put("Em destaque: " + (kind?.name ?: "Gênero"), it)
+                                    }
                             }
                         }
                         if (!homeLibrary) {
                             displayed.filter { it.packageName in myServices &&
                                 StreamingCatalog.streaming(it) }.take(6).forEach { app ->
-                                val kinds = if (selectedHomeGenre == 0) listOf("movie", "tv")
-                                    else listOf("movie")
+                                val kinds = if (selectedHomeGenre == 0)
+                                    listOf("movie", "tv").filter {
+                                        homeContentType == "all" || it == homeContentType
+                                    } else listOf(selectedGenreKind)
                                 kinds.forEach { kind ->
                                     val key = app.packageName + ":" + kind + ":" + selectedHomeGenre
                                     myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
@@ -1133,15 +1164,21 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
-                    if (selectedHomeGenre != 0 && selectedHomeGenre in genreShelves &&
+                    if (selectedHomeGenre != 0 && "$selectedGenreKind:$selectedHomeGenre" in genreShelves &&
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
                     val heroTitles = if (homeLibrary) emptyList()
-                        else visibleShelves.values.firstOrNull().orEmpty().take(6)
+                        else visibleShelves.values.firstOrNull().orEmpty()
+                            .filterNot { it.media == "movie" &&
+                                it.id.toString() in watchedFilms }.take(6)
                     val seenInHome = heroTitles.map { "${it.media}:${it.id}" }.toMutableSet()
                     val uniqueShelves = visibleShelves.mapNotNull { (heading, shelf) ->
-                        val unique = shelf.filter { seenInHome.add("${it.media}:${it.id}") }
+                        val unique = shelf.filter {
+                            (homeLibrary || it.media != "movie" ||
+                                it.id.toString() !in watchedFilms) &&
+                                seenInHome.add("${it.media}:${it.id}")
+                        }
                         if (unique.isEmpty()) null else heading to unique
                     }
                     LazyColumn(modifier = Modifier.weight(1f)) {
