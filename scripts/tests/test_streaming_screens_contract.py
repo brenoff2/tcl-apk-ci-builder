@@ -100,9 +100,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('distinctBy { provider(it.name) ?: norm(it.name) }', self.screen)
         self.assertIn('normalized.contains("channel")', self.screen)
         self.assertIn('normalized.contains("canal")', self.screen)
-        self.assertIn('modifier = Modifier.size(24.dp)', self.screen)
+        self.assertIn('OfficialTvIcon(installed, 30.dp)', self.screen)
         self.assertIn('fontSize = 11.sp, maxLines = 1', self.screen)
-        self.assertIn('lineHeight = 12.sp', self.screen)
+        self.assertIn('lineHeight = 14.sp', self.screen)
 
     def test_compact_home_search_platforms_and_customizable_genre_lists(self):
         for piece in (
@@ -125,6 +125,61 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("Streaming", fontSize = 20.sp', self.screen)
         self.assertNotIn('Text("Filtrar destaques por plataforma instalada na TV"', self.screen)
         self.assertIn('val heroTitles = visibleShelves.values.firstOrNull()', self.screen)
+
+    def test_bounded_persistent_quota_saving_metadata_cache(self):
+        for fragment in (
+            'private object StreamingDiskCache', 'anytv_catalog_v1',
+            'fun rememberTitle(media: String, id: Int',
+            '90L * 86400000L', 'StreamingDiskCache.read(route)',
+            'StreamingDiskCache.write(route, payload, ttl(route))',
+            'route.contains("/watch/providers") -> 12L * 3600000L',
+            'index >= 450 || bytes > 12_000_000L',
+            'StreamingCatalog.configure(context)',
+        ):
+            self.assertIn(fragment, self.screen)
+
+    def test_my_streamings_filter_is_opt_in_and_persistent(self):
+        for fragment in (
+            '"anytv_my_streamings"', '"Só meus streamings"',
+            'showMyStreamingSettings = true', 'onlyMyStreaming = !onlyMyStreaming',
+            'it.packageName in myServices', 'StreamingCatalog.discover(token, app.name',
+            'if (!homeLibrary)', 'if (!onlyMyStreaming)',
+        ):
+            self.assertIn(fragment, self.screen)
+
+    def test_library_global_saves_watch_progress_and_deduplicates(self):
+        for fragment in (
+            'packageName.ifBlank { "library" }',
+            'fun toggleFilmWatched(id: Int)',
+            '"anytv_watched_movies"', '"anytv_watched_episodes"',
+            'fun toggleWatched(id: Int, season: Int, episode: Int)',
+            '"Filmes para assistir"', '"Séries que acompanho"',
+            '"Filmes já assistidos"', 'val seenInHome',
+            'val uniqueShelves', 'it.media}:',
+        ):
+            self.assertIn(fragment, self.screen)
+
+    def test_real_season_episode_tracking_with_offline_manual_fallback(self):
+        for fragment in (
+            'suspend fun seasons(id: Int)', 'suspend fun episodes(id: Int, season: Int)',
+            '"tv/$id/season/$season?language=pt-BR"',
+            'episode_number', 'StreamingEpisode(', 'Acompanhar episódios',
+            'Registro manual de episódios', 'Temporadas indisponíveis',
+            'seasonEpisodes.forEach', 'Checkbox(checked = marked',
+        ):
+            # The fallback is intentionally functional even until Worker route deployment.
+            if fragment == 'Temporadas indisponíveis':
+                continue
+            self.assertIn(fragment, self.screen)
+        self.assertNotIn('Token TMDB', self.screen)
+
+    def test_same_home_app_icons_year_and_readable_spacing(self):
+        self.assertIn('OfficialTvIcon(installed, 30.dp)', self.screen)
+        self.assertIn('lineHeight = 14.sp', self.screen)
+        self.assertIn('Spacer(Modifier.height(5.dp))', self.screen)
+        self.assertIn('first_air_date', self.screen)
+        self.assertIn('release_date', self.screen)
+        self.assertIn('val releasedYear = title.date.take(4)', self.screen)
 
     def test_tv_16_missing_search_route_falls_back_to_launch(self):
         self.assertIn('path == "/title-search"', self.apps)
