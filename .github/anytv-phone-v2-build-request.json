@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 46,
+  "expected_version_code": 47,
   "preserve_legacy_ota": true,
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
   "new_install_only": false,
-  "release_version": "2.9.17-AnyTV",
-  "release_scope": "2.9.17 code46: corrected main film poster banner, restored saved-TV auto-reconnect after involuntary network loss, same home streaming icons, compact tabs & type filters, pinned poster/metadata, genres, TV-neutral action, separate favorite/tracking/watched history",
-  "ci_revision": 3
+  "release_version": "2.9.18-AnyTV",
+  "release_scope": "2.9.18 code47: shared icon navigation connected in streaming catalogue and provider view; persisted two-column subscriptions and genre filtering; approved 75dp home banner, connected TV header, cache, favorites, series progress and same V2 signer preserved",
+  "ci_revision": 4
 }
