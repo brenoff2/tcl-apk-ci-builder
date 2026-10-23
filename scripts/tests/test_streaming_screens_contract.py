@@ -73,6 +73,29 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("Streaming", fontSize = 21.sp', self.screen)
         self.assertNotIn('Button(onClick = { openOnTv(app) }, modifier = Modifier.fillMaxWidth())', self.screen)
 
+    def test_auto_advance_swipe_no_navigation_buttons_and_vertical_scrolling(self):
+        self.assertIn("HorizontalPager(", self.screen)
+        self.assertIn("rememberPagerState(", self.screen)
+        self.assertIn("delay(3000)", self.screen)
+        self.assertIn("animateScrollToPage(", self.screen)
+        self.assertNotIn('Text("‹ Anterior")', self.screen)
+        self.assertNotIn('Text("Próximo ›")', self.screen)
+        self.assertLess(
+            self.screen.index("LazyColumn(modifier = Modifier.weight(1f))"),
+            self.screen.index("HorizontalPager("))
+        self.assertIn(".heightIn(max = 460.dp)", self.screen)
+        self.assertIn(".verticalScroll(rememberScrollState())", self.screen)
+
+    def test_brazil_subscription_offers_are_title_specific_not_every_installed_app(self):
+        self.assertIn('suspend fun offersInBrazil(item: StreamingTitle)', self.screen)
+        self.assertIn('.optJSONObject("BR")?.optJSONArray("flatrate")', self.screen)
+        self.assertIn('offer.optString("logo_path")', self.screen)
+        self.assertIn('StreamingOfferIcons(item, offerCache)', self.screen)
+        self.assertIn('StreamingOfferIcons(title, offerCache)', self.screen)
+        self.assertIn('StreamingCatalog.appHasOffer(app, it)', self.screen)
+        self.assertIn('Nenhuma oferta de assinatura confirmada no Brasil.', self.screen)
+        self.assertNotIn('displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->\n                                FilterChip(', self.screen)
+
     def test_tv_16_missing_search_route_falls_back_to_launch(self):
         self.assertIn('path == "/title-search"', self.apps)
         self.assertIn('status == 404 || status == 405', self.apps)
