@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -1614,7 +1615,44 @@ internal fun TclStreamingScreens(
             onDismissRequest = {
                 details = null; detailsPackage = null; titleActionFeedback = null
             },
-            title = { Text(title.name) },
+            title = {
+                Row(modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(title.name, modifier = Modifier.weight(1f),
+                        fontWeight = FontWeight.SemiBold, fontSize = 17.sp,
+                        maxLines = 2, lineHeight = 20.sp)
+                    IconButton(onClick = {
+                        toggleFavorite(title, pkg)
+                    }, modifier = Modifier.size(36.dp).semantics {
+                        contentDescription = if (isFavorite(title, pkg))
+                            "Remover da minha lista" else "Adicionar à minha lista"
+                    }) {
+                        Text(if (isFavorite(title, pkg)) "♥" else "♡",
+                            color = MaterialTheme.colorScheme.primary, fontSize = 26.sp)
+                    }
+                    IconButton(onClick = {
+                        if (title.media == "movie") {
+                            if (!isFavorite(title, pkg)) toggleFavorite(title, pkg)
+                            toggleFilmWatched(title.id)
+                        } else {
+                            if (!isFavorite(title, pkg)) toggleFavorite(title, pkg)
+                            toggleSeriesTracking(title.id)
+                        }
+                    }, modifier = Modifier.size(36.dp).semantics {
+                        contentDescription = if (title.media == "movie")
+                            "Marcar como assistido" else "Acompanhar série"
+                    }) {
+                        val marked = if (title.media == "movie")
+                            title.id.toString() in watchedFilms
+                        else title.id.toString() in trackedSeries
+                        Text(if (marked) "✓" else "○",
+                            color = if (marked) Color(0xFF1CB96B)
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
             text = {
                 Column(modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
                     .verticalScroll(rememberScrollState()),
@@ -1648,17 +1686,6 @@ internal fun TclStreamingScreens(
                         }) { Text("▶ Ver trailer") }
                     } else if (!detailLoading) {
                         Text("Trailer não disponível.", fontSize = 12.sp)
-                    }
-                    if (title.media == "movie") {
-                        val seenFilm = title.id.toString() in watchedFilms
-                        Row(modifier = Modifier.fillMaxWidth().clickable {
-                            toggleFilmWatched(title.id)
-                        }, verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = seenFilm, onCheckedChange = {
-                                toggleFilmWatched(title.id)
-                            })
-                            Text("Já assisti a este filme", fontSize = 12.sp)
-                        }
                     }
                     if (title.media == "tv") {
                         Text("Acompanhar episódios", fontWeight = FontWeight.SemiBold,
@@ -1792,7 +1819,7 @@ internal fun TclStreamingScreens(
                             detailsOffers?.let { StreamingCatalog.appHasOffer(app, it) } == true
                         }
                         if (eligible.isNotEmpty()) {
-                            Text("Abrir em aplicativo instalado na TCL:", fontSize = 12.sp)
+                            Text("Abrir em aplicativo instalado na TV:", fontSize = 12.sp)
                             Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 eligible.forEach { app ->
@@ -1810,19 +1837,15 @@ internal fun TclStreamingScreens(
                     Text("A TV poderá abrir a busca do título se este serviço aceitar " +
                         "pesquisa externa. Não existe deep link universal de reprodução.",
                         fontSize = 12.sp)
-                    TextButton(onClick = { toggleFavorite(title, pkg) }) {
-                        Text(if (isFavorite(title, pkg)) "♥ Remover dos favoritos"
-                            else "♡ Adicionar aos favoritos")
-                    }
-                    TextButton(onClick = {
-                        context.startActivity(Intent(Intent.ACTION_VIEW,
-                            Uri.parse("https://www.themoviedb.org/" +
-                                title.media + "/" + title.id + "/watch?locale=BR")))
-                    }) { Text("Onde assistir e links disponíveis") }
+                    // Availability is already displayed above; avoid a confusing
+                    // external website link claiming direct playback.
+                    Text("Ofertas informadas pelo TMDB/JustWatch; confirme no streaming.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(onClick = {
                     if (pkg.isBlank()) {
                         titleActionFeedback = "Selecione um serviço disponível para este título."
                     } else if (detailsOffers?.let { offers ->
@@ -1833,11 +1856,12 @@ internal fun TclStreamingScreens(
                         searchOnTv(title, pkg)
                     }
                 }, enabled = !titleActionPending) {
-                    Text(if (titleActionPending) "Abrindo…" else "Abrir na TCL")
+                    Text(if (titleActionPending) "Abrindo…" else
+                        "Abrir na " + tvName.ifBlank { "TV conectada" })
                 }
             },
             dismissButton = {
-                TextButton(onClick = {
+                OutlinedButton(onClick = {
                     details = null; detailsPackage = null; titleActionFeedback = null
                 }) {
                     Text("Voltar")
