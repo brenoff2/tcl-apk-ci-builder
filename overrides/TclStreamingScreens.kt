@@ -755,7 +755,9 @@ private fun StreamingOfferIcons(
         }
     }
     val offerings = known[key].orEmpty()
-    if (item.votes > 0 || offerings.isNotEmpty()) {
+    // Always reserve a metadata row: label, optional rating and verified offers.
+    // No row jumps when a title has no vote or its provider lookup is unavailable.
+    if (true) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
@@ -1829,7 +1831,11 @@ internal fun TclStreamingScreens(
                                                             modifier = Modifier.fillMaxWidth().height(158.dp),
                                                             contentScale = ContentScale.Crop)
                                                         Spacer(Modifier.height(5.dp))
-                                                        Text(item.name, maxLines = 2, lineHeight = 14.sp,
+                                                        // Three full title lines are reserved for EVERY tile,
+                                                        // including single-line names, so row 2 never shifts.
+                                                        Text(item.name, maxLines = 3, lineHeight = 14.sp,
+                                                            modifier = Modifier.fillMaxWidth().height(42.dp),
+                                                            overflow = TextOverflow.Ellipsis,
                                                             fontSize = 11.sp)
                                                         StreamingOfferIcons(item, offerCache, displayed)
                                                         if (heading.startsWith("Em breve")) {
