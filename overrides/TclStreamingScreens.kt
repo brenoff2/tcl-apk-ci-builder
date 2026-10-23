@@ -184,6 +184,8 @@ private object StreamingCatalog {
         }
     }
 
+    fun supportsSubscription(name: String): Boolean = provider(name) != null
+
     fun streaming(app: TvOfficialApp): Boolean =
         provider(app.name) != null ||
             listOf("youtube", "spotify", "plex", "twitch", "vimeo", "dazn")
@@ -772,14 +774,22 @@ internal fun TclStreamingScreens(
     var selectedHomeGenre by remember { mutableIntStateOf(0) }
     var showGenreSettings by remember { mutableStateOf(false) }
     var showMyStreamingSettings by remember { mutableStateOf(false) }
+    val subscriptionNames = remember { listOf("Netflix", "Prime Video", "Disney+", "Max", "Paramount+", "Apple TV+", "Globoplay", "Crunchyroll", "Mubi", "Telecine", "Looke", "Claro Video") }
+    var filterGenreIds by remember(prefs) { mutableStateOf(prefs.getString("anytv_discovery_genre_filter", "")?.split(",")?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()) }
+    var editingFilterGenres by remember { mutableStateOf(emptySet<Int>()) }
     var onlyMyStreaming by remember { mutableStateOf(false) }
     val storedMyServices = remember(prefs) {
         prefs.getString("anytv_my_streamings", "")?.split(",")
             ?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
     }
     var myServices by remember { mutableStateOf(storedMyServices) }
+    LaunchedEffect(myServices) { onlyMyStreaming = myServices.isNotEmpty() }
     var editingMyServices by remember { mutableStateOf(storedMyServices) }
     val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val activeServiceNames = remember(myServices, apps) {
+        myServices.map { name -> apps.firstOrNull { it.packageName == name }?.name ?: name }
+            .filter { StreamingCatalog.supportsSubscription(it) }.distinct().take(12)
+    }
     var homeLibrary by remember { mutableStateOf(false) }
     var trackedSeries by remember {
         mutableStateOf(prefs.getString("anytv_tracking_series", "")
@@ -995,21 +1005,18 @@ internal fun TclStreamingScreens(
         }
     }
 
-    LaunchedEffect(myServices, onlyMyStreaming, selectedHomeGenre, apps) {
-        val selection = displayed.filter { it.packageName in myServices &&
-            StreamingCatalog.streaming(it) }.take(6)
-        if (selection.isNotEmpty()) {
-            for (app in selection) {
-                val kinds = if (selectedHomeGenre > 0) listOf("movie")
-                    else listOf("movie", "tv")
-                for (kind in kinds) {
-                    val key = app.packageName + ":" + kind + ":" + selectedHomeGenre
-                    if (key !in myServiceShelves) {
-                        runCatching {
-                            StreamingCatalog.discover(token, app.name, kind, 1,
-                                if (kind == "movie") selectedHomeGenre else 0, "")
-                        }.onSuccess { myServiceShelves[key] = it.titles.take(12) }
-                    }
+    LaunchedEffect(activeServiceNames, selectedHomeGenre, homeContentType) {
+        for (name in activeServiceNames) {
+            val kinds = listOf("movie", "tv").filter {
+                homeContentType == "all" || it == homeContentType
+            }
+            for (kind in kinds) {
+                val chosenGenre = if (kind == "movie") selectedHomeGenre else 0
+                val key = name + ":" + kind + ":" + chosenGenre
+                if (key !in myServiceShelves) {
+                    runCatching {
+                        StreamingCatalog.discover(token, name, kind, 1, chosenGenre, "")
+                    }.onSuccess { myServiceShelves[key] = it.titles.take(12) }
                 }
             }
         }
@@ -1172,13 +1179,14 @@ internal fun TclStreamingScreens(
                     library = homeLibrary && selected == null,
                     section = librarySection,
                     contentType = homeContentType,
-                    filtersActive = onlyMyStreaming || selectedHomeGenre != 0,
+                    filtersActive = onlyMyStreaming || filterGenreIds.isNotEmpty() || selectedHomeGenre != 0,
                     onHome = { selected = null; homeLibrary = false
                         homeContentType = "all"; selectedHomeGenre = 0 },
                     onList = { selected = null; homeLibrary = true; librarySection = "saved" },
                     onWatching = { selected = null; homeLibrary = true; librarySection = "watching" },
                     onWatched = { selected = null; homeLibrary = true; librarySection = "watched" },
                     onFilters = { editingMyServices = myServices
+                        editingFilterGenres = filterGenreIds
                         showMyStreamingSettings = true },
                     onContentType = { kind -> selected = null; homeLibrary = false
                         homeContentType = kind; selectedHomeGenre = 0 },
@@ -1326,16 +1334,15 @@ internal fun TclStreamingScreens(
                             }
                         }
                         if (!homeLibrary) {
-                            displayed.filter { it.packageName in myServices &&
-                                StreamingCatalog.streaming(it) }.take(6).forEach { app ->
-                                val kinds = if (selectedHomeGenre == 0)
-                                    listOf("movie", "tv").filter {
-                                        homeContentType == "all" || it == homeContentType
-                                    } else listOf(selectedGenreKind)
+                            activeServiceNames.forEach { name ->
+                                val kinds = listOf("movie", "tv").filter {
+                                    homeContentType == "all" || it == homeContentType
+                                }
                                 kinds.forEach { kind ->
-                                    val key = app.packageName + ":" + kind + ":" + selectedHomeGenre
+                                    val chosenGenre = if (kind == "movie") selectedHomeGenre else 0
+                                    val key = name + ":" + kind + ":" + chosenGenre
                                     myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
-                                        put("Destaques " + app.name +
+                                        put("Destaques " + name +
                                             if (kind == "tv") " · Séries" else " · Filmes", it)
                                     }
                                 }
@@ -1346,12 +1353,16 @@ internal fun TclStreamingScreens(
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
+                    val filteredShelves = visibleShelves.mapValues { (_, titles) ->
+                        if (homeLibrary || filterGenreIds.isEmpty()) titles
+                        else titles.filter { title -> title.genreIds.any { it in filterGenreIds } }
+                    }.filterValues { it.isNotEmpty() }
                     val heroTitles = if (homeLibrary) emptyList()
-                        else visibleShelves.values.firstOrNull().orEmpty()
+                        else filteredShelves.values.firstOrNull().orEmpty()
                             .filterNot { it.media == "movie" &&
                                 it.id.toString() in watchedFilms }.take(6)
                     val seenInHome = heroTitles.map { "${it.media}:${it.id}" }.toMutableSet()
-                    val uniqueShelves = visibleShelves.mapNotNull { (heading, shelf) ->
+                    val uniqueShelves = filteredShelves.mapNotNull { (heading, shelf) ->
                         val unique = shelf.filter {
                             (homeLibrary || it.media != "movie" ||
                                 it.id.toString() !in watchedFilms) &&
@@ -1651,25 +1662,53 @@ internal fun TclStreamingScreens(
         }
     }
     if (showMyStreamingSettings) {
+        val availableGenres = (allMovieGenres + tvGenres).groupBy { it.name }
+            .map { (name, items) -> name to items.map { it.id }.toSet() }
         AlertDialog(
             onDismissRequest = { showMyStreamingSettings = false },
-            title = { Text("Meus streamings") },
+            title = { Text("Filtros de descoberta") },
             text = {
-                Column(modifier = Modifier.heightIn(max = 420.dp)
-                    .verticalScroll(rememberScrollState())) {
-                    Text("Selecione os serviços que você assina. Ter o aplicativo na TCL não significa ter assinatura.",
-                        fontSize = 12.sp)
-                    displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
-                        val selectedHere = app.packageName in editingMyServices
-                        Row(modifier = Modifier.fillMaxWidth().clickable {
-                            editingMyServices = if (selectedHere)
-                                editingMyServices - app.packageName
-                            else editingMyServices + app.packageName
-                        }, verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = selectedHere, onCheckedChange = null)
-                            OfficialTvIcon(app, 32.dp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(app.name, fontSize = 13.sp, maxLines = 1)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Escolha suas assinaturas e os gêneros para descobrir títulos.",
+                        fontSize = 11.sp)
+                    Row(modifier = Modifier.fillMaxWidth().heightIn(max = 370.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Column(modifier = Modifier.weight(1f).heightIn(max = 350.dp)
+                            .verticalScroll(rememberScrollState())) {
+                            Text("Streamings", fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp)
+                            subscriptionNames.forEach { name ->
+                                val legacy = displayed.firstOrNull {
+                                    it.name.equals(name, ignoreCase = true)
+                                }?.packageName
+                                val checked = name in editingMyServices ||
+                                    (legacy != null && legacy in editingMyServices)
+                                Row(modifier = Modifier.fillMaxWidth().clickable {
+                                    editingMyServices = if (checked)
+                                        editingMyServices - name - listOfNotNull(legacy).toSet()
+                                    else editingMyServices + name
+                                }, verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = checked, onCheckedChange = null,
+                                        modifier = Modifier.size(32.dp))
+                                    Text(name, fontSize = 11.sp, maxLines = 2)
+                                }
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f).heightIn(max = 350.dp)
+                            .verticalScroll(rememberScrollState())) {
+                            Text("Gêneros", fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp)
+                            availableGenres.forEach { (name, ids) ->
+                                val checked = ids.any { it in editingFilterGenres }
+                                Row(modifier = Modifier.fillMaxWidth().clickable {
+                                    editingFilterGenres = if (checked)
+                                        editingFilterGenres - ids else editingFilterGenres + ids
+                                }, verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = checked, onCheckedChange = null,
+                                        modifier = Modifier.size(32.dp))
+                                    Text(name, fontSize = 11.sp, maxLines = 2)
+                                }
+                            }
                         }
                     }
                 }
@@ -1677,12 +1716,16 @@ internal fun TclStreamingScreens(
             confirmButton = {
                 TextButton(onClick = {
                     myServices = editingMyServices
+                    filterGenreIds = editingFilterGenres
                     prefs.edit().putString("anytv_my_streamings",
-                        editingMyServices.sorted().joinToString(",")).apply()
+                        myServices.sorted().joinToString(","))
+                        .putString("anytv_discovery_genre_filter",
+                            filterGenreIds.sorted().joinToString(",")).apply()
                     onlyMyStreaming = myServices.isNotEmpty()
+                    selectedHomeGenre = 0
                     homeLibrary = false
                     showMyStreamingSettings = false
-                }) { Text("Aplicar") }
+                }) { Text("Aplicar filtros") }
             },
             dismissButton = {
                 TextButton(onClick = { showMyStreamingSettings = false }) { Text("Cancelar") }
