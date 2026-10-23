@@ -1,287 +1,44 @@
-> **ESTADO OPERACIONAL (2026-10-23):** O canal do telefone `updates/android/cert2026/current.apk` ainda contém 2.9.12 (versionCode 41). O candidato 2.9.13 (versionCode 42) passou no CI `39891891049`, mas a publicação está bloqueada porque a execução `39955533005` não recebeu o segredo de recuperação da assinatura. O único publicador atual é `.github/workflows/publish-anytv-phone-github-only.yml`. Nunca distribuir APK com outro certificado nem expor chaves em arquivos comuns.
+# AnyTV — distribuicao Android cert2026
 
-# AnyTV — releases, assinaturas e atualizações
+**Procedimento vigente e exclusivo.** Registros operacionais historicos anteriores a 23/10/2026 permanecem no historico Git; nenhum metodo de publicacao ou assinatura de APK por versao deve ser recuperado sem nova decisao explicita.
 
-## Situação atual verificada — 15/10/2026 (sem alteração de canais)
+## Fonte da verdade
 
-**Fluxo operacional atual:** o GitHub é a fonte de verdade para código, artefatos de compilação, assinatura no runner e publicação OTA. O aplicativo consulta diretamente `updates/android/cert2026/current.apk`. A assinatura é a identidade cert2026 e o APK não utiliza serviço intermediário.
+- Repositorio: `brenoff2/tcl-apk-ci-builder`.
+- Branch de CI: `feat/anytv-p0-device-proof-verifier-20261020`.
+- Branch OTA Android: `feat/tcl-v22-updates-back-bluetooth`.
+- Pacote: `com.tclremote.livre`.
+- APK consumido pelo botao de atualizacao: `updates/android/cert2026/current.apk` via GitHub HTTPS.
+- Certificado permanente do telefone, SHA256: `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`.
 
-**Canal Android cert2026:** os APKs publicados são versionados pela pasta `updates/android/cert2026/`. Para cada release, validar `versionCode`, certificado e readback. Não considerar um workflow aprovado como publicação sem `current.apk` atualizado.
+## Assinatura: uma identidade e uma credencial
 
-**Próxima atualização em preparação:** compilação CI das fontes **Android 2.9.5 (versionCode 34)** e **TV 2.2 (versionCode 13)** aprovada ([build](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/38791483823)), entregando **APKs não assinados**. O fluxo [publicar 2.9.5 + 2.2](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/38794562320) terminou em estado de espera `STAGING_WAITING_FOR_SIGNED_ZIP_NO_OTA_CHANGE`: não recebeu o ZIP com os três APKs assinados e, portanto, **NÃO publicou a OTA 2.9.5/2.2**. Um workflow verde com esse estado **não significa publicação**. Não tentar instalar APKs de CI não assinados sobre os já instalados. Não publicar os ZIPs de chaves privadas nem senhas.
+- Backup da identidade original criptografada AES-GCM: `signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin`.
+- Desbloqueio apenas via GitHub Actions Repository Secret `ANYTV_RECOVERY_SECRET_2026`.
+- A chave privada nunca deve ser gravada em commit, registrada em log, incluida em APK, nem transmitida como argumento visivel de workflow.
+- A recuperacao e assinatura ocorrem somente no runner do GitHub Actions, com material temporario eliminado apos assinar.
+- O backup cifrado estar no repositorio **nao** comprova que o Secret esteja provisionado.
 
-**Sequência:** baixar artefato auditado do GitHub Actions; assinar no GitHub Actions com identidade original; verificar pacote, versão, certificado, alinhamento e SHA-256; publicar somente APK assinado; fazer readback remoto e validar no celular.
+## Unico publicador Android
 
-**Decisão de arquitetura:** GitHub = código, builds, assinatura no Actions, atualização OTA e leitura de confirmação. Não empregar intermediários externos no fluxo de entrega.
+`.github/workflows/publish-anytv-phone-github-only.yml`
 
----
+Entrada: `candidate_run_id` do GitHub Actions CI aprovado, contendo exatamente um APK nao assinado e checksum SHA256. O publicador valida origem, recupera a chave original, assina com `apksigner`, valida pacote e certificado, exige `versionCode` superior ao publicado, substitui apenas o APK do telefone e confere o arquivo remoto byte por byte.
 
-## Android 2.7 — correção de protocolo de digitação (15/10/2026 UTC)
+**Falha segura:** se qualquer condicao nao for cumprida, nao atualizar `current.apk`. A homologacao de conexao real com a TCL e uma verificacao distinta da assinatura de APK.
 
-- [Investigação e implementação](https://github.com/brenoff2/tcl-apk-ci-builder/commit/e673f75acceb941cf4ae2e85156c29941fee62dc): baseada no [PR #25 do tronikos/androidtvremote2](https://github.com/tronikos/androidtvremote2/pull/25), no [código oficial send_text](https://github.com/tronikos/androidtvremote2/blob/main/src/androidtvremote2/remote.py) e nas [limitações documentadas no issue #32](https://github.com/tronikos/androidtvremote2/issues/32).
-- O editor passa a transmitir **o texto completo como um único RemoteImeBatchEdit**, não diferenças por caractere, que são substituídas em alguns apps. A UI não afirma que o texto apareceu na TV: apenas que o comando foi enviado à conexão.
-- O código de transporte obtém `ime_counter` e `field_counter` enviados pelo serviço remoto; antes de recebê-los usa 0/0 como a referência oficial, **não contadores inventados**. Também reseta os contadores quando a conexão é finalizada. O cursor IME usa `max(0, len(texto)-1)`.
-- O envio deve ocorrer quando um campo de pesquisa/texto está focado na TV. Algumas interfaces não aceitam edição enquanto o teclado virtual da TV está visível; nem todo aplicativo segue a mesma política de adicionar/substituir texto. Nenhum teste de integração real em uma TV TCL foi executado.
-- Aplicativo `com.tclremote.livre`, `versionName=2.7-AnyTV`, `versionCode=27`; certificado SHA256 original `df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8`.
-- APK [AnyTV 2.7](https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tcl-phone-v2.7/Controle_TCL_Livre_v2.7.apk), SHA-256 `66f76ba5f486c9d91d954c75b7d27358399e7a18e775ef9e3546e07286d888cc`.
+## Verificador automatico
 
-- **Próxima validação necessária:** abrir um campo de busca na TV, mantê-lo selecionado, enviar "Teste AnyTV 27" pelo editor e observar a inserção. Repetir com o teclado virtual da TV oculto, se houver falha.
+`.github/workflows/verify-anytv-update-endpoint.yml`
 
----
+Verifica exclusivamente o canal cert2026, a assinatura e a igualdade binaria entre GitHub remoto e o checkout. Tambem impede reintroducao de publicadores antigos do telefone. Run `39963760834`: sucesso em 23/10/2026.
 
-## Android 2.6 — correções reais de interface e texto (15/10/2026 UTC)
+## Estado em 23/10/2026
 
-- Código fonte: commit `fa9e15db78c589dde421e5caa26a51ecb155df94` (mais correções de CI), exclusivamente no branch `feat/tcl-v22-updates-back-bluetooth`. O branch `main` não foi alterado.
-- Pacote `com.tclremote.livre`, `versionName=2.6-AnyTV`, `versionCode=26`. Certificado original `df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8`.
-- APK assinado: [Controle_TCL_Livre_v2.6.apk](https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tcl-phone-v2.6/Controle_TCL_Livre_v2.6.apk), SHA-256 `a3c8ec9dfad9b4ada80d81c49fdcda32f146b0b9a7720204d4048a70a4ce529e`.
+- Publicado para botao do aplicativo: 2.9.12 (`versionCode 41`).
+- Candidato 2.9.13 (`versionCode 42`): compilacao `39891891049` aprovada, APK assinado localmente com cert2026 para teste.
+- Publicacao automatica 2.9.13: nao concluida. GitHub Actions `39963496459` falhou em verificar o segredo `ANYTV_RECOVERY_SECRET_2026`. A integracao atual nao permite provisionar esse segredo.
+- Teste fisico da conexao TLS com a TCL: pendente / falhas anteriores; nao declarar corrigido com base no sucesso do CI.
+- Publicadores antigos do telefone, scripts de assinatura avulsa e reconstrucao binaria foram removidos das branches de trabalho; permanecem somente em commits antigos. Rota da TV nao foi alterada.
 
-- Tela de abertura `SplashScreen.kt`: logo/ícone oficiais AnyTV e versão lida do APK, sem o texto herdado "Android TV Remote". Removida a imagem do cabeçalho do controle e o indicador de versão fora da abertura.
-- `TclResponsivePad.kt`: diâmetro do botão OK reduzido de `0.38 * size` para `0.19 * size`.
-- `apply_tcl_sticky_controls.py`: conjunto Volume + D-pad + Canal centralizado em `BoxWithConstraints` com `Modifier.weight(1f)`; espaço superior e inferior dividido igualmente e barra de ações mantida no rodapé.
-- Editor `TclTextInputDialog`: digitação ao vivo desligada por padrão; botão **Enviar** aciona `onSendText(draft)` no modo normal, sem fechar silenciosamente a janela. Requer campo de texto selecionado na TV e homologação física.
-- A compilação e assinatura foram verificadas. A atualização e o texto enviado em aparelho real **não foram homologados neste ambiente**.
-- **Pendente fora deste escopo:** estudo e revisão dos controles contextuais/visualização de aplicativos de streaming.
-
----
-
-## Estado validado em 14/10/2026
-
-O GitHub Actions [38588338021](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/38588338021) concluiu com sucesso a verificação de pacotes, versionCode, assinatura, alinhamento e igualdade binária com os assets do GitHub Releases.
-
-| Aplicativo | Pacote | Versão | versionCode | Assinatura |
-|---|---|---|---|---|
-| AnyTV Android | `com.tclremote.livre` | 2.5-AnyTV | 25 | `df72977485e8e5243048a7f1e8dff9fedcf2295161c4daae3834b6a16cd4e4c8` |
-| AnyTV Connect TV — instalação do usuário | `com.tclremote.tvcompanion` | 1.6-AnyTV | 7 | `8b2b0c6f2a7a668f9aae829be811241dc70c3697af2b3e6c71e1a1767a5d83da` |
-| AnyTV Connect TV — instalações alternativas | `com.tclremote.tvcompanion` | 1.6-AnyTV | 7 | `3382dfb12a0f16eb9167e056f947ea9740448fe07b8ef9d0ace0c889bf591add` |
-
-**Não confundir:** a TV 1.6 possui APKs distintos para os certificados 8b2b e 3382. Não misturar as assinaturas. Ambas as versões 1.6 já estão publicadas.
-
-Ambos os apps atualizados exibem a versão discretamente na própria interface; os nomes do lançador continuam **AnyTV** e **AnyTV Connect**. Ícone e logomarca aprovados estão nos projetos de build de ambas as versões.
-
-## Arquivos permanentes no GitHub
-
-- Celular: `updates/android/current.apk`, histórico `updates/android/AnyTV-v2.5.apk`.
-- TV 8b2b: `updates/tv/cert8b2b/current.apk`, histórico `updates/tv/cert8b2b/AnyTV-Connect-v1.6.apk`.
-- TV 3382: `updates/tv/cert3382/current.apk`, histórico `updates/tv/cert3382/AnyTV-Connect-v1.6.apk`.
-
-Releases oficiais para clientes e atualizadores antigos:
-- [tcl-phone-v2.5](https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tcl-phone-v2.5/Controle_TCL_Livre_v2.5.apk), SHA-256 `98a8628e7df3210a9a33ac5533630099c3a0c16d179655e548c2ed58e691c9da`.
-- [tv-complemento-v1.6 (8b2b)](https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.6/Controle_TCL_TV_v1.6_cert8b2b.apk), SHA-256 `fbb216082f23278cdccbe0625416376b69143a080010c097d4601cd9322fe86b`.
-
-- [TV 1.6 variante 3382](https://github.com/brenoff2/tcl-apk-ci-builder/releases/download/tv-complemento-v1.6/Controle_TCL_TV_v1.6_cert3382.apk): SHA-256 `62dc534c243059fc5ede6ffa2576700fb69dc852e686ffc49a92258e562d9378`.
-
-## Botão Buscar atualizações
-
-Implementação: `overrides/common/TclUpdateManager.java`. Ela seleciona o canal binário `current.apk` pelo pacote e, no caso da TV, pelo certificado instalado; baixa o APK; recusa package/certificado incompatível e `versionCode` não superior; em seguida, abre o PackageInstaller do Android. **A instalação ainda precisa da confirmação de segurança do usuário no dispositivo**, e um teste físico no celular/TV não ocorreu neste ambiente.
-
-## Segurança e processo para próximas atualizações
-
-1. Incrementar os códigos/nomes de versão apenas nos aplicativos modificados; não acrescentar versões ao nome do lançador.
-2. Aplicar os recursos aprovados de marca e preservar callbacks/funcionalidades; rodar testes e builds Android e TV.
-3. Assinar em ambiente privado com a chave original de cada pacote/certificado; **não publicar senhas, keystores ou backups descriptografados no GitHub ou nos logs**.
-4. Verificar `aapt dump badging`, `apksigner verify --verbose --print-certs`, SHA-256 e `zipalign` antes de qualquer mudança em `current.apk`.
-5. Publicar histórico e assets do GitHub Releases com os nomes esperados; trocar cada `current.apk` somente pelo mesmo APK auditado.
-6. Comparar hash de origem, release e `current.apk` após a publicação. O workflow `.github/workflows/publish-anytv-25-16.yml` foi convertido em **verificação somente leitura** para que um rerun nunca rebaixe a versão publicada.
-
-8. Afirmar instalação/atualização completa no dispositivo apenas após homologação real; CI e acesso ao download não substituem esse teste.
----
-
-## Auditoria adicional IME 2.7 — 14/10/2026 (horário de Salvador)
-
-- **Estado preservado:** Android 2.7 e TV 1.6 continuam os APKs distribuídos. Nenhuma nova versão foi publicada por causa desta auditoria; a homologação física ainda é obrigatória.
-- **Comparação de implementação:** `scripts/apply_tcl_v21.py` substitui a dupla injeção por **um** `RemoteImeBatchEdit`, utiliza contadores provenientes de `RemoteSession`, inicia em 0/0 até a TV informá-los e define o cursor de acordo com `tronikos/androidtvremote2`. O PR upstream #25 está merged. O issue #32 registra comportamentos diferentes de foco, teclado virtual e substituição/anexação por aplicativo.
-- **Ampliação de CI:** `overrides/tests/RemoteImeWireTest.java` é copiado para a árvore gerada na compilação; executa três testes JVM de frames binários, contemplando texto ASCII, UTF-8/contadores diferentes de zero e framing Protobuf de mensagens longas. Rodar `testDebugUnitTest` em GitHub Actions **não** homologa a transmissão na TCL.
-- **Ponto de atenção de UX, sem alterar o release 2.7:** o editor exibe "Comando transmitido" após chamar um callback Unit, embora a função ainda possa retornar por falta de conexão ou falha na fila/socket. Em uma próxima correção, distinguir solicitação, gravação no socket e confirmação visual na TV.
-- **Homologação necessária:** no telefone instalado com 2.7, manter o campo de pesquisa da TCL selecionado; digitar `Teste AnyTV 27`, pressionar **Enviar** e observar o conteúdo na TV. Repetir com o teclado virtual oculto apenas se o campo conservar o foco. Registrar aplicativo/versão da TV, resultado com teclado visível/oculto, sintomas de conexão e, se falhar, logs temporários de `RemoteSession`, `ImeBatchEdit`, `RemoteInput` e `Keyboard`, ocultando valores sensíveis do texto digitado.
-- **Critério de aceite:** a CI pode verificar a codificação, mas sucesso end-to-end depende de inserção real, ausência de duplicação/perda e validação em mais de um campo de texto. Não publicar uma correção especulativa de contadores.
-
----
-
-## Continuidade AnyTV — 15/10/2026 — reinstalação, streaming e Cloudflare (reconciliação)
-
-### Fato novo informado pelo usuário
-
-- O usuário declarou que **já instalou** os APKs de migração no celular e na TCL após a troca das assinaturas. **Não há aqui verificação física independente** da identidade instalada, pareamento, versão mostrada em ambos ou funcionamento do atalho; registrar como *instalação relatada pelo usuário*, não homologação end-to-end.
-
-- Identidades novas documentadas em `signing-recovery/README.md`: telefone `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`; TV `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c`. Verificações complementares no dispositivo ainda pendentes.
-
-### Pesquisa já realizada — NÃO REPETIR
-
-- API **Movie of the Night / Streaming Availability**: pesquisa e chamadas reais concluídas em 15/10/2026 para **Netflix, Disney+, Prime Video, Apple TV+ e HBO Max** no Brasil. Evidências: `scripts/audit_movieofthenight.py`, CI `38776166751`, teste de contrato ao vivo `38778069911` (sucesso), e `anytv-resolver/README.md`. Os retornos são **URLs candidatas para a ficha de um título**, não prova de abertura ou reprodução na TCL.
-- O repositório já contém `anytv-resolver/src/worker.mjs`, `anytv-resolver/migrations/0001_create_tables.sql`, `anytv-resolver/wrangler.jsonc` e testes. CI offline passou em `38780901151`; `wrangler deploy --dry-run` **não significa implantação real**. Não reimplementar módulo do zero.
-- Na API, a credencial `ANYTV_MOVIE_API_KEY` já foi utilizada nos testes GitHub Actions, conforme sucesso do teste ao vivo, mas **não é automaticamente compartilhada com Cloudflare**. Não pedir uma nova chave sem verificar autorização e configuração já existentes. Para o Worker, colocar a MESMA credencial como **Cloudflare Secret**, jamais em `vars`, código, APK ou repositório. Não expor o valor ao usuário ou logs. Confirmar franquia, licença e atribuição antes de uso comercial.
-- O catálogo usa TMDB ID; endpoint proposto do Worker `GET /v1/resolve/movie/<TMDB-ID>/<provider>` ou `/tv/`, com `country=br`. O Worker valida domínios e rotas, restringe assinatura/grátis, aplica cache D1 e cota global padrão conservadora (200 chamadas/mês) e devolve `link_candidate` com `verified_on_tv:false`.
-- A estratégia de **abrir a ficha** deve usar os IDs/URLs oficiais de cada provedor e intent do pacote correto na TV, com fallback de busca quando o streaming não suportar deep link. Não prometer que qualquer link abre diretamente o filme, sem teste TCL físico. Preservar pareamento, funções do controle e interface aprovadas.
-
-### Cloudflare — separar problema de MCP de trabalho pendente no AnyTV
-
-- O usuário informou que o antigo problema de **conexão MCP ao Cloudflare foi resolvido**. Isso **não prova** que o Worker do AnyTV tenha sido implantado. O canônico do resolvedor marca expressamente `NÃO implantado, não conectado aos APKs`, e `wrangler.jsonc` ainda traz `REPLACE_WITH_D1_DATABASE_UUID` e `workers_dev:false`.
-- Próxima ação de engenharia: validar conexão e permissões Cloudflare; criar ambiente **dedicado ao AnyTV**, separado da infraestrutura CLFCJ; criar/bindar D1 e aplicar migrações; definir credenciais via **Secrets** (`ANYTV_MOVIE_API_KEY` e autenticação de cliente apropriada); estabelecer domínio/rota e monitoramento de consumo; implantar o Worker e testar `/health` e resolução real sem revelar credenciais. **Não implantar no Cloudflare/Business OS da CLFCJ** por conveniência.
-- O código piloto aceita `ANYTV_CLIENT_TOKEN` estático para testes servidor-servidor, porém documenta que **não pode ser embutido no APK**. Antes de conectar app a endpoint público, implementar autenticação por identidade/dispositivo, token curto/revogável e cotas; validar segurança/custos.
-- Só então ligar o app à URL HTTPS autorizada do resolver; preservar fallback para busca no provedor. Homologação física por provedor: Netflix, Disney+, Prime, Apple TV+, Max; conferir que foi aberta a **ficha correta** no aplicativo e não somente a home ou a pesquisa.
-
-### Sequência sem retrabalho (prioridades)
-
-2. Corrigir a trilha permanente de **novas assinaturas** e updater para permitir a próxima versão sem nova reinstalação, mantendo canais legados intactos.
-3. Verificar disponibilidade efetiva de Cloudflare e autorização para ambiente próprio AnyTV, secret Movie of the Night, domínio e D1; usar código piloto existente, sem reescrever.
-4. Integrar app ↔ Worker ↔ Connect, testes controlados e fallback seguro.
-5. Homologar por título/serviço diretamente na TCL, registrar problemas por plataforma, corrigir apenas falhas comprovadas.
-6. Atualizar ESTE canônico em cada marco com link para commit, build, APK, hash, status de implantação e resultado físico. Não tratar tarefa planejada como concluída.
-
-**Escopo desta reconciliação:** atualização documental somente; **não** implanta Worker, altera APK, libera distribuição OTA nova nem testa a TCL remotamente.
-
-### Implementação iniciada — canais de atualização com novas assinaturas (15/10/2026)
-
-- Commit `2858e3951df4214f3a072dbb73680af8fbf2d63e`: `overrides/common/TclUpdateManager.java` passou a reconhecer as novas identidades **por SHA-256 de certificado**: telefone `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`, TV `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c`.
-- Seleção determinística: telefone antigo → `updates/android/current.apk`; telefone novo → `updates/android/cert2026/current.apk`; TV 3382 → `updates/tv/cert3382/current.apk`; TV 8b2b → `updates/tv/cert8b2b/current.apk`; TV nova → `updates/tv/cert2026/current.apk`. Assinatura desconhecida é bloqueada. Permanece a exigência de pacote e certificado idênticos, `versionCode` maior e confirmação pelo PackageInstaller.
-- **ATENÇÃO: implementação de código, ainda NÃO disponível nos APKs já instalados e ainda NÃO publicada como novo binário assinado.** Os dois arquivos `cert2026/current.apk` não foram distribuídos por esse commit, e a publicação da próxima versão deverá criá-los após assinatura nova, verificação de pacote, versão, certificado, hash e instalação. Não preencher canais `cert2026` com os APKs 2.9.5/2.2 já instalados como se fossem atualização (códigos iguais).
-- Os canais antigos permanecem intactos. No primeiro novo release, conferir que a compilação realmente inclui esse `TclUpdateManager.java` e homologar o botão Buscar atualizações no celular e na TV. Nunca declarar OTA funcional sem teste end-to-end.
-
-- Commit `49fc28efe5a761d8fad76af14b70cd12ef7b689d`: CI de telefone e TV agora compara byte a byte o `TclUpdateManager.java` copiado para as fontes compiladas com `overrides/common/TclUpdateManager.java` e exige a presença de ambas as novas impressões digitais e seletores `cert2026`. Isso previne builds que ignorem silenciosamente a atualização do gerenciador. **O gate CI não substitui teste de instalação com versão superior assinada**, nem publica as novas rotas.
-
-### Decisão vinculante do usuário — APIs sem configuração no aplicativo (15/10/2026)
-
-- **Não exibir nem exigir inserção manual de nenhuma chave de API no aplicativo AnyTV ou no AnyTV Connect.** O usuário declarou que já forneceu uma credencial ao GitHub e autoriza solicitar novas credenciais somente quando indispensáveis. A interface poderá escolher título/provedor, mas não deverá mostrar campos de chaves, segredos, endpoints de administração nem exigir etapas técnicas do usuário.
-- **Não confundir ausência de campo com embutir segredos dentro do APK:** nunca incluir `ANYTV_MOVIE_API_KEY`, credenciais TMDB privilegiadas, `ANYTV_CLIENT_TOKEN` fixo ou senhas em `BuildConfig`, strings Android, código-fonte ou recursos. O app deverá comunicar-se com **URL HTTPS fixa de resolvedor AnyTV** e autenticação de cliente não baseada em segredo compartilhado permanente no APK; o Worker armazena chaves do provedor em Cloudflare Secrets. Uma credencial do GitHub Actions não é transferida automaticamente ao Cloudflare.
-- A credencial `ANYTV_MOVIE_API_KEY` foi utilizada com êxito em execuções anteriores de teste ao vivo (evidência: workflow `anytv-resolver-live-contracts.yml`, run `38778069911`), sem revelar seu valor. **Não solicitar repetição da credencial** antes de confirmar configuração secreta adequada no Worker.
-- Em 15/10/2026 a conexão Cloudflare MCP foi verificada pelo método `whoami`; a conta autenticada é `Brenoff@gmail.com's Account`. **Isto comprova apenas acesso MCP**, não ambiente AnyTV implantado nem autorização para usar recursos compartilhados com CLFCJ. Exigir isolamento de recursos e confirmação da conta/ambiente adequado antes de provisionamento persistente.
-- Próximo contrato de UX: escolher filme → selecionar streaming → consultar automaticamente o resolvedor → enviar URL candidata segura para o Connect → tentar abrir ficha no aplicativo oficial, com fallback de busca. Sem formulários de configuração de API e sem afirmar sucesso até teste físico na TCL.
-- Separar fases: (1) canal de atualização seguro com novas assinaturas; (2) implantação do backend AnyTV isolado; (3) autenticação e ligação dos clientes sem segredo embutido; (4) homologação dos deep links nos cinco serviços. Toda mudança de código/APK/Worker deve atualizar este documento com commit, status e teste efetivo.
-
-### Inventário Cloudflare MCP verificado — 15/10/2026
-
-- Leitura via conexão oficial Cloudflare MCP (`whoami`, `GET /accounts/{account_id}/workers/scripts`, `GET /accounts/{account_id}/d1/database`) retornou HTTP 200 em ambas as listagens, conta **Brenoff@gmail.com's Account**.
-- Workers existentes: `clfcj-extension-updates`, `clfcj-mcp-gateway`, `clfcj-pjecalc-egress-relay`. **Nenhum Worker `anytv-*` foi encontrado**.
-- Bancos D1 na conta consultada: **lista vazia**. O Worker `anytv-link-resolver-pilot` continua sendo código piloto, NÃO deploy realizado. Este inventário vale exclusivamente para a conta MCP consultada, não para outras contas Cloudflare não conectadas.
-- Decisão de isolamento: **não modificar Worker CLFCJ nem compartilhar seus bindings/segredos**. Para provisionamento persistente do AnyTV, primeiro confirmar conta/ambiente segregado; depois configurar D1, segredos e autenticação sem chave embutida no APK.
-- CI de integração do app no GitHub estava em execução, **não homologada como sucesso** nesta consulta; não publicar OTA nova até sinal verde, assinatura nova verificável e teste físico.
-
-### Execução Cloudflare — D1 real criado e migrado (15/10/2026)
-
-- Cloudflare MCP `execute` criou D1 **`anytv-link-resolver`** na conta autenticada, UUID `9bab6598-d019-4e88-8b29-a327ff0cfd00`, sem replicação de leitura; resposta HTTP 200 / `success: true`.
-- Commit `f14437fc2e83b51bb57e561f97b4aefbd27f3c9f` substituiu o UUID placeholder em `anytv-resolver/wrangler.jsonc`. Não inseriu chaves ou tokens.
-- Migração SQL baseada em `anytv-resolver/migrations/0001_create_tables.sql` aplicada via API de D1: `monthly_quota`, `link_cache`, `idx_anytv_cache_expiry`. As três operações retornaram `success: true`.
-- **Readback remoto comprovado** por `SELECT name FROM sqlite_master WHERE type IN ('table','index') ORDER BY name`: ambos os nomes de tabelas e índice presentes. D1 foi criado como recurso **novo do AnyTV**, sem alteração dos três Workers CLFCJ existentes.
-- **Ainda não feito:** Worker implantado com bindings, secret `ANYTV_MOVIE_API_KEY` no Cloudflare, autenticação segura de APK, domínio público e integração/testes físicos. GitHub secret não migra automaticamente ao Cloudflare; não copiar credencial para código, CI ou logs. Sem exposição de endpoint público até validação de segredos e autenticação.
-
-### Worker piloto implantado sem exposição pública — 15/10/2026
-
-- Publicado **código fonte existente** `anytv-resolver/src/worker.mjs` na conta Cloudflare como Worker `anytv-link-resolver-pilot` (API `PUT /accounts/{account_id}/workers/scripts/anytv-link-resolver-pilot` retornou HTTP 200, sucesso; etag `b5d2ad4fc85376c5a2343784978ef7bb5720bd9059b5fab67f184dfc40107aee`).
-- Bindings no Worker, com readback da API: `DB` (D1 dedicado `anytv-link-resolver`) e `MAX_UPSTREAM_CALLS_MONTH=200` (texto). A publicação não inclui nem transfere `ANYTV_MOVIE_API_KEY`, `ANYTV_CLIENT_TOKEN`, nem `RATE_LIMIT` de produção; esses parâmetros seguem **pendentes**. O código retorna `not_configured` quando algum deles falta, impedindo consulta upstream.
-- Endpoint `workers.dev` **DESABILITADO**, conforme GET `/subdomain` = `{enabled:false,previews_enabled:false}`; **nenhum hostname público configurado**. Não anunciar como API funcional até segredos e autenticação apropriados estarem presentes, uma rota segura estar definida e testes ao vivo aprovados.
-- Cloudflare MCP comprovou D1 criado e tabelas `monthly_quota`, `link_cache`, índice `idx_anytv_cache_expiry`; configurações vinculadas no arquivo versionado `anytv-resolver/wrangler.jsonc`. Não reutilizar credenciais nem recursos CLFCJ.
-- **Próxima etapa obrigatória:** configurar segredo comercial no Cloudflare por canal seguro sem expor seu valor; vincular RATE_LIMIT apropriado; substituir autenticação piloto por solução de identidade/dispositivo não compartilhada no APK, respeitar licenças; somente depois habilitar rota pública e integrar cliente/Connect. Não modificar aplicativos já instalados enquanto assinatura e distribuição nova não estiverem verificadas.
-
-### Worker Cloudflare — rate limit implantado e conferido (15/10/2026)
-
-- Reenvio do mesmo código `anytv-resolver/src/worker.mjs` com três bindings no Worker `anytv-link-resolver-pilot`: `DB` (D1 `anytv-link-resolver`), `MAX_UPSTREAM_CALLS_MONTH` (texto `200`) e `RATE_LIMIT` (`ratelimit`, namespace `275913`, limite nominal `20` por 60 segundos). API de upload retornou HTTP 200 / `success:true`.
-- Readback remoto `GET /workers/scripts/anytv-link-resolver-pilot/settings` confirmou exatamente os tipos `DB:d1`, `MAX_UPSTREAM_CALLS_MONTH:plain_text`, `RATE_LIMIT:ratelimit`. `GET /subdomain` confirmou `enabled:false`. Não foram alterados os Workers CLFCJ.
-- O rate limit é aproximação de tráfego e **não substitui** quota mensal atômica do D1, autenticação e checagem da franquia contratada. Segredos `ANYTV_MOVIE_API_KEY` e autenticação de cliente permanecem sem configuração comprovada neste Worker. Não habilitar rota pública nem declarar funcionamento end-to-end.
-
-### Auditoria de segredos Cloudflare e CI — 15/10/2026
-
-- Consulta somente leitura ao endpoint oficial `GET /accounts/{account_id}/workers/scripts/anytv-link-resolver-pilot/secrets` retornou HTTP 200, `success:true`, lista **vazia**. A API Movie of the Night funcionou em testes GitHub Actions anteriores, mas **não existe segredo configurado neste Worker**. GitHub Actions Secrets não permitem recuperar o valor em texto e não são transferidos automaticamente ao Cloudflare. Não inventar, copiar de logs nem embutir chave no APK.
-- Commit `ba173b427cc3da481458e8cf2e61e95ac8f4bc18`: workflow `.github/workflows/tcl-v22-phone-tv-integration.yml` agora ignora pushes que alterem somente `docs/**`, `signing-recovery/**` ou `anytv-resolver/**`. Isso impede cancelamentos e recompilações repetidos em mudanças de documentação e backend sem efeitos no Android. Alterações nas fontes, scripts, overrides e no workflow continuam acionando a compilação.
-- Resolvedor: D1 + rate limit presentes, hostname público desabilitado; comercial `ANYTV_MOVIE_API_KEY` e autenticação de cliente seguem pendentes. Não anunciar API funcional, nem conectar o APK sem mecanismo de autorização e validação na TCL.
-
-### Preparação para homologação APK incremental — 15/10/2026
-
-- APKs instalados de migração revalidados localmente por `apksigner`: telefone 2.9.5 SHA-256 do certificado `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`; TV 2.2 SHA-256 `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c`. APKs assinados anteriores permanecem intactos.
-- Commit `b34ccc6ef2391c550e80b03e0f62f4d5ac32deb3`: CI agora prepara **novas versões incrementais 2.9.6 (versionCode 35) e Connect 2.3 (versionCode 14)** após as transformações existentes, antes de compilar. Mantém o código e acrescenta seletor de canal `cert2026` para cada identidade. Build exigirá testes; as saídas da CI são **NÃO ASSINADAS** e não devem ser instaladas.
-- Gate de conclusão obrigatório: build verde com verificação dos dois gerenciadores, assinatura dos APKs com as **mesmas chaves novas** recuperadas de backup privado, verificação de `versionCode`, nome de pacote, hash, v2/v3, publicação em `updates/android/cert2026/current.apk` e `updates/tv/cert2026/current.apk`, readback dos dois binários e teste manual no Android e na TCL. **Não marcar homologado antes de todas essas etapas.**
-- Integração do resolvedor de streaming não foi incluída neste incremento por ausência de segredo Cloudflare e autenticação de produção; não alegar que o patch 2.9.6/2.3 já abre fichas diretamente na TCL.
-
-### Correção da falha real da CI dos patches — 15/10/2026
-
-- Run GitHub Actions `38806052049` **falhou** nas duas suítes de contratos ANTES da compilação: testes exigiam explicitamente telefone `2.9.5-AnyTV`/`versionCode 34` e TV `2.2-AnyTV`/`versionCode 13`, enquanto o novo build passou a produzir telefone `2.9.6-AnyTV`/`35` e TV `2.3-AnyTV`/`14`. Não era prova de defeito no app nem sucesso de build.
-- Corrigidas condicionalmente as suítes `scripts/tests/test_rescue_contract.py` (`TCL_V35`) e `scripts/tests/test_safe_tv_companion.py` (`TCL_TV_V23`), preservando todas as alternativas dos releases anteriores. Atualizada `.github/workflows/tcl-v22-phone-tv-integration.yml` para ativar os dois flags nos respectivos jobs. Commits: `d7fe8de7185fc41b7d3c5482f7035d864c0ab254`, `969dcd7144cb8000ae3974862d84222825b8a68c`, `2d23131a1533c497e73b36e332178a08a9a3c4c3`.
-- Novo run `38806837750` disparado automaticamente, **PENDENTE** na última leitura. Somente após `success` de ambos os jobs, download dos artefatos e assinatura com as identidades 2026 será possível publicar e homologar novos APKs. NÃO usar artefato do run falho, NÃO publicar canônico como APK validado.
-
-### Segunda rodada de testes — execução em andamento 15/10/2026
-
-- Run `38806837750` falhou novamente antes do build, agora devido a asserts de `versionCode 34` em `test_approved_visual_contract.py`, `test_tcl_v22_contract.py`, `test_streaming_screens_contract.py` e `versionCode 13` no teste TV do último. Eram contratos fixados à versão antiga apesar de a CI preparar `2.9.6` / `2.3`.
-- Commits de correção de contratos sem desabilitá-los: `566a266f687874607f12796d3fb08d60ed216748` (visual do celular); `3aa380195fea83d92103b191768e00a46d559bcc` e `06d8fbba00f8af52b169e6a44b31dbca1d99277e` (TV/import); `fb30cb74f1cabb4d1d3cc6e94181b849661e08ed` (teste de update celular); `137f3ef37cf3d1118f4aef74768d1b16db1b2c04` (streaming). Os testes continuam verificando a versão exata, selecionada pelos flags `TCL_V35` e `TCL_TV_V23`; releases legados preservados.
-- Run `38807133701` iniciado para validar o conjunto; último readback: `in_progress`. Não marcar compilação, assinatura, OTA nem homologação como concluídas até readback positivo dos jobs/artifacts e teste físico.
-
-### Nova rodada de CI de homologação — correções adicionais de contratos (15/10/2026)
-
-- Run `38807133701`: TV iniciou compilação, celular falhou em teste `test_tcl_v21_contract.py` porque esse teste legado ainda impunha `versionCode 34` em lugar do código 35. Identificada e corrigida também sua expectativa `versionName 2.9.5` para a versão 2.9.6 quando `TCL_V35=1`, preservando as expectativas antigas. Commits `fd26cae73b53f3d2645dcea68516a438e82f3f28` e `0fcb980ff6a7f4734b323c73c68ef3e8df326e21`.
-- Uma nova execução de build foi acionada pelo último commit. **Não existe ainda homologação comprovada** de binário 2.9.6/2.3; nenhuma publicação de APK incremental foi realizada. Os arquivos antigos instalados permanecem como estavam.
-
-### Terceira rodada — streaming CI corrigido (15/10/2026)
-
-- Run `38807438687` passou pelos testes gerais no celular, mas falhou em `Validar telas de streaming reais`: a etapa específica rodava em outro processo sem `TCL_V35`, então seu contrato calculava erroneamente o `versionCode` antigo 34 apesar do código do aplicativo ser 35. Corrigido **na própria etapa** ao declarar `env: TCL_V35: '1'` (commit `acea60cdfda36a58fb8c18a7aec495fbafbec43e`).
-- Build não é homologado até o sucesso integral dos jobs, assinatura 2026, auditoria e verificação física. Não confundir testes de tela verde com abertura real de título no streaming.
-
-### Resultado parcial de build e assinatura — 15/10/2026
-
-- Run de build `38807767381`: job **TV success**, artefato GitHub Actions `12006569557` baixado, contém `AnyTV_TV_2_3_RELEASE_UNSIGNED.apk`. Manifesto declara `com.tclremote.tvcompanion`, `versionCode=14`, `versionName=2.3-AnyTV`.
-- TV assinada em ambiente privado usando **chave permanente original da migração 2026**, sem troca de identidade. Saída `AnyTV-Connect-v2.3-ASSINADO.apk`, SHA-256 `dbc3a497687aa8c9226375bfbf31cce2b6d2c1eb608db993bd06acfc814f9700`. `apksigner verify`: **Verifies**, APK v1/v2/v3 válidos, cert SHA-256 `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c` idêntico ao Connect 2.2 instalado por migração.
-
-- Job **phone** permaneceu em compilação Android na última verificação, ainda sem artefato assinado. Não divulgar conjunto 2.9.6/2.3 como homologado até confirmar phone + teste físico dos dois.
-
-### Build integral aprovado e dois APKs assinados — 15/10/2026
-
-- Workflow GitHub Actions `38807767381` completou **phone: success, tv: success, contracts: success**. Os arquivos de build saem **não assinados** dos artefatos `12007242473` (telefone) e `12006569557` (TV). Foram assinados depois, em ambiente privado, com as chaves permanentes certificadas da migração 2026.
-
-- **Homologação criptográfica / CI: concluída. Homologação em aparelhos TCL/telefone: PENDENTE**; não foi possível acessar fisicamente os dispositivos a partir destas ferramentas. O usuário poderá instalar os APKs **por cima** das versões instaladas 2.9.5/2.2 com as mesmas chaves de 2026; não desinstalar nem mudar de assinatura. Verificar interface, pareamento, botões, versões e as ações de streaming no aparelho.
-
-- **Streaming Movie of the Night:** Worker está implantado sem rota pública e sem os segredos comerciais; novas versões 2.9.6/2.3 NÃO resolvem automaticamente títulos via API. Não dizer ao usuário que a abertura direta por provedor foi homologada.
-
-### INCIDENTE CONFIRMADO — botão Atualizar não funciona nas instalações 2.9.5/2.2 (15/10/2026)
-
-- O botão instalado no Connect 2.2 é anterior à implementação dos certificados novos: o `TclUpdateManager` dessa compilação **não reconhece** a identidade TV `0a5427...` e lança `Assinatura da TV desconhecida` antes de chegar à rede. Portanto **não é corrigível apenas criando um arquivo no servidor**; será necessária **uma única instalação por cima** do Connect 2.3 assinado com a MESMA chave, sem desinstalar.
-- O celular 2.9.5 da migração também foi produzido antes da seleção `android/cert2026`; tenta consultar o canal antigo `updates/android/current.apk`, que guarda certificado legado. Mesmo publicar a nova rota não altera o código já instalado. Portanto instalar **por cima** o AnyTV 2.9.6, mantendo dados, sem desinstalar.
-
-- **Mesmo após instalar 2.9.6/2.3, o botão não funcionará enquanto faltarem os binários assinados nos destinos** `updates/android/cert2026/current.apk` e `updates/tv/cert2026/current.apk`, com versionCode SUPERIOR ao instalado para futuras versões (>=36/15). Não prometer funcionalidade OTA antes de publicar e testar URL raw 200 e hash de APK, validar assinatura e testar em dispositivo real.
-
-### BLOQUEIO P0 — aplicativo exige tokens apesar de proibição expressa (15/10/2026)
-
-- Auditoria direta no branch encontrou em `overrides/TclStreamingScreens.kt` token TMDB obrigatório: `get(token, ...)` falha com `Informe seu token de leitura TMDB`, `token` é carregado de `prefs.getString("tmdb_token", "")`, `LaunchedEffect` interrompe descoberta com `token.isBlank()`, interface exibe `Token TMDB`, `Obter token`, `Configurar catálogo` e instruções para cadastrá-lo.
-- `overrides/AnyTvPersonalLinks.kt` exige `apiKey` com `Configure sua chave da API de streaming` e repassa `X-API-Key` diretamente do dispositivo à API Movie of the Night. Essa implementação contradiz a decisão vinculante do usuário de **zero campos para inserir chaves**, registrada anteriormente neste documento.
-- **Reprovação explícita de homologação funcional do streaming**: compilação/assinatura criptograficamente válidas não corrigem o requisito de entrada de tokens. Não publicar outro APK com esses campos ou alegar streaming pronto.
-- Correção de engenharia: catálogo TMDB deve ser servido por um backend/proxy dedicado com credencial em Secrets; resolução Movie of the Night deve ser feita exclusivamente pelo Worker backend (sem chave dentro do APK ou SharedPreferences); app cliente não apresenta edição de tokens; executar testes de contrato que rejeitam UI de token e requisições de terceiros com segredo do aparelho. Publicar apenas quando as rotas, Secrets e autenticação estiverem operacionais e validadas, preservando assinatura permanente e OTA.
-- **Não remover simplesmente a tela de token com catálogo ainda dependente dela**, pois isso deixaria filmes e séries vazios. Resolver backend e conexão primeiro. O APK instalado não pode ser alterado retroativamente.
-
-### CORREÇÃO EXECUTADA — OTA cert2026 publicada e verificada (15/10/2026)
-
-- **Primeiro:** workflow `publish-anytv-cert2026-baseline.yml` run GitHub Actions `38812794047` = **success**, reconstituiu o APK telefone 2.9.6 assinado com patch binário compacto sobre unsigned de build aprovado e publicou/validou por readback HTTPS os arquivos base telefone 2.9.6 e TV Connect 2.3 no GitHub. Não tocou os canais legados.
-- **Atualização testável, superior às versões já instaladas:** run de build `38813235585` = **phone success + tv success + contracts success**, entregou unsigned `AnyTV_2_9_7_RELEASE_UNSIGNED.apk` e `AnyTV_TV_2_4_RELEASE_UNSIGNED.apk`. Ambos assinados offline com os MESMOS certificados permanentes 2026, sem exportar keystores ou segredos ao GitHub:
-  - **Telefone AnyTV 2.9.7**, `com.tclremote.livre`, `versionCode=36`, cert `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`, SHA-256 APK `62efa9f9bef57fdeedba2276b2e934e751877e94ceb5f8ef9f98913dd2a72c2b`.
-  - **TV Connect 2.4**, `com.tclremote.tvcompanion`, `versionCode=15`, cert `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c`, SHA-256 APK `ab528b640e4c60ba68ecffe70f027003d4103bf288db9184610539d2d8c365dc`.
-- **Distribuição REAL:** workflow `.github/workflows/publish-anytv-cert2026-update-297.yml` run `38814301297` = **success**, executou a reconstrução dos binários assinados, verificação de SHA-256, `aapt`/certificados via `apksigner`, commit dos dois canais e **readback público HTTPS** comprovando equivalência byte a byte dos `current.apk` baixados do GitHub com os binários locais assinados. A publicação também foi confirmada via árvore GitHub:
-  - `updates/android/cert2026/current.apk` 28.314.468 bytes, Git blob SHA `14a16181212f4ef76f19503e32b3104cd8406964`;
-  - `updates/tv/cert2026/current.apk` 320.191 bytes, Git blob SHA `e0a56f82556428b34301d21ba072a98b7316432f`.
-- **Agora existe uma versão SUPERIOR em cada canal** para o botão dos aplicativos instalados 2.9.6/2.3 encontrar e baixar. Não é necessário baixar APK manualmente ou trocar de certificado. O Android pode exigir permissão para instalar aplicativos desconhecidos e confirmação de instalação. **Não afirmar homologação física** antes do usuário tocar Atualizar no celular/TV e relatar versões 2.9.7/2.4 efetivamente instaladas.
-- **Pendência SEPARADA P0:** a tela de streaming de 2.9.7 ainda contém pedido de token TMDB/Movie of the Night, porque a implantação do backend credenciado e a remoção da configuração manual não ocorreram neste patch. Isso NÃO foi resolvido pela correção do OTA e exige próximo release via os canais que agora estão operacionais; jamais declarar o contrário.
-
-### Remediação P0 de tokens — implementação em andamento (15/10/2026)
-
-- A causa real era **código que exigia tokens no celular**: `overrides/TclStreamingScreens.kt` (token TMDB + caixa de chave de streaming) e `overrides/AnyTvPersonalLinks.kt` (chave Movie of the Night local e header `X-API-Key`). Não afirmar que o aplicativo antigo 2.9.7 foi corrigido retroativamente.
-- Commits `06339caa796140dc0928599b34f201c8ff935862`, `dfa7d3c8b9de6d95d5ccd6619e7e2b16cd580869`: adicionada ao Worker `/v1/catalog/*`, rota estritamente permitida de TMDB (BR, pt-BR, limites de parâmetros e páginas, rate limit, cache D1) com `TMDB_READ_TOKEN` **somente como Secret do Cloudflare**. Testes unitários e CI offline `38816388511` = **success**. Worker privado foi atualizado com o novo código, mas `TMDB_READ_TOKEN` e `ANYTV_MOVIE_API_KEY` **não estão configurados** na conta Cloudflare. Publicação externa permanece desabilitada.
-- Commits `8ca832fd2a47b817c164a1c4563c2c5d63b25b2b`, `708243a6c4c13a9a812fb5e699ad44eb9d744281`: gate de regressão P0 em CI bloqueia novos APKs que solicitem tokens/chaves manualmente ou enviem segredo a TMDB/Movie of the Night diretamente do celular.
-- Commits `f015e3f16667a1b86849041092899e7dedf3b074`, `5412c60ab54dd19dcbd1b80ff5100de1eb493920`, `e72513492968d9e28fa0c016c7e49bbb08b421ca`: fontes do aplicativo em desenvolvimento deixam de exibir entrada de tokens e apontam catálogo/resolução para o Worker exclusivo, sem credenciais locais; testes de contrato alterados para verificar esse caminho e preservar validações de links. O endereço do Worker é `anytv-link-resolver-pilot.brenoff.workers.dev`, **ainda desabilitado no Cloudflare**. Não publicar esses APKs como funcionais enquanto endpoint/segredos/autenticação não estiverem configurados e comprovados.
-- **Bloqueios verdadeiros:** GitHub Actions Secret Movie of the Night não é transferível automaticamente ao Cloudflare; falta criar Cloudflare Secrets `ANYTV_MOVIE_API_KEY` e `TMDB_READ_TOKEN`, revisar autorização de cliente, habilitar rota segura, testar JSON/links ao vivo e somente então publicar nova versão pelo OTA `cert2026` (já existente). **Não pedir outra reinstalação manual**; atualizar com o botão depois do release validado. O OTA 2.9.7/Connect 2.4 permanece inalterado.
-
-### Recuperação da integração de tokens no backend — 15/10/2026
-
-- Último readback workflow integração Android `38819572485`: **phone success, tv success, contracts success**. Isso prova compilação/testes do código sem campos, NÃO operação do catálogo em produção.
-- Último readback Cloudflare Worker: `secrets=[]`, `subdomain.enabled=false`; **não há TMDB nem Movie key configurados no Worker**. Ele permanece privado. Publicação da versão cliente sem chaves ainda bloquearia catálogo.
-- Verificação de presença do GitHub Actions Secret `38819572673`: `ANYTV_MOVIE_API_KEY` presente; `ANYTV_TMDB_READ_TOKEN` e `CLOUDFLARE_API_TOKEN` ausentes. Nenhum valor foi exibido.
-- Adicionado `.github/workflows/anytv-private-secrets-provision.yml`, commit `bfef26b1902a99404b1a499e786798ffdc8ca8e6`: execução **manual** e fail-closed, exige todos os três secrets já configurados no GitHub; transfere Movie of the Night e TMDB para o Worker por API Cloudflare sem imprimir valores, verifica somente nomes e exige Worker privado. Não altera as chaves de assinatura Android, não disponibiliza Worker publicamente nem publica APK.
-- **Estado exato**: fluxo de transferência preparado, **não executado**, pois os dois pré-requisitos continuam faltando. Não declarar implantação completa nem pedir inserção de tokens no APK. Depois da provisão é necessário decidir autenticação de dispositivo/abuso, validar catálogo e resolução em produção com segurança e distribuir via OTA (não reinstalação manual).
-
-### Proteção do catálogo contra consumo ilimitado — 15/10/2026
-
-- Auditoria P0 mostrou que `catalogRequest()` possuía rate limit por IP e cache, mas não reservava quota mensal antes de acessar TMDB. Uma rota pública poderia gerar chamadas sem o teto do resolvedor. Corrigido para chamar `reserveQuota()` após cache miss e antes de cada request upstream, reutilizando teto `MAX_UPSTREAM_CALLS_MONTH` existente. Commits `5c3241f7996d83adefd53f3a74315655cede7878` e teste de limite `0d3d6e81b1480d6a71a4942d47cbb00fd84ae117`.
-- Teste GitHub Actions offline `38822990768`: **success**, incluindo teste de bloqueio HTTP 429 ao atingir quota, sintaxe Node, testes de segurança e bundle dry-run Wrangler.
-- Mesmo código validado atualizado no Worker **privado** `anytv-link-resolver-pilot`; API Cloudflare respondeu HTTP 200/success=true; readback `subdomain.enabled=false`. Não exposto em domínio público e não publicado APK novo.
-- Continuidade condicionada a secrets seguros TMDB/MovieOfTheNight + autorização real para acesso de clientes, teste end-to-end do catálogo/provedores e somente então novo OTA. Não trocar as assinaturas Android, não pedir reinstalação manual e não confundir CI verde com streaming funcional.
-
-### INCIDENTE CLOUDFLARE 403 RESOLVIDO — validação pública 16/10/2026
-
-- HTTP 403 original identificado por GitHub Actions `38843657375` como **Cloudflare Error 1010 / browser_signature_banned**. A automação utilizava assinatura padrão Python urllib. Cabeçalho `User-Agent: AnyTV/2.9.8 (Android; streaming catalog client)` resolveu essa camada, removendo 403; o App também passou a enviar identificação de cliente nas duas chamadas (commits `cd7672fbfbf5dad317654071c0c807d475214a38`, `37a915ced80dda2f65a21e605627edc77f905415`). Não desabilitou proteções globais Cloudflare.
-- HTTP 503 posterior `catalog_not_configured` era versão ativa desatualizada. Cloudflare Worker versão 4 não tinha Secrets; versão 6 tinha ambos `TMDB_READ_TOKEN` e `ANYTV_MOVIE_API_KEY`. A versão 6 foi promovida por API e readback. Não houve exposição de valores.
-- Depois, 503 `catalog_unavailable` foi diagnosticado como `TypeError` na etapa de `fetch` do Worker. A causa precisa foi `redirect: "error"`, não suportado pelo runtime Cloudflare Workers. Substituído por `redirect: "manual"` nas duas requisições upstream, preservando bloqueio de follow automático de 3xx; commit `44f653fe5abe4b7bc59c081736e2c445ae923b7f`; teste correspondente alterado no commit `54bc41cb219edd547da266e03cab502119f36819`.
-- Cloudflare Worker redeploy concluído preservando Secrets com metadata `keep_bindings: ["secret_text", "secret_key"]`. CI offline `38844971107`: **success**. Teste externo real GitHub Actions `38845048460`: **success**, com logs `PASS /v1/catalog/genre/movie/list`, `PASS /v1/catalog/watch/providers/movie` e `ANYTV_CATALOG_LIVE_READINESS_OK`. Catálogo TMDB em produção funcional.
-- **Limitações independentes:** o endpoint Movie of the Night `/v1/resolve` ainda exige `ANYTV_CLIENT_TOKEN` no Worker; tal Secret não existe e não pode ser embutido no APK. A resolução direta específica de título **não foi homologada**. Código da tela sem tokens compilou (`38819572485` e `38824636775`), mas não existe novo APK assinado/publicado para instalar essa mudança; OTA atual permanece AnyTV 2.9.7 e Connect 2.4. Não solicitar reinstalação manual. Para novo release, precisa confirmar teste de ponta a ponta, preservar assinatura permanente e publicar update superior nos mesmos canais.
+**Para habilitar uma vez o publicador autonomo:** um administrador autorizado deve verificar a presenca do Secret `ANYTV_RECOVERY_SECRET_2026` em GitHub Settings > Secrets and variables > Actions > Repository secrets e garantir que tenha exatamente o valor da credencial de recuperacao original. Nunca compartilhar o valor em conversa ou commit. Depois executar o publicador com `candidate_run_id=39891891049` e exigir readback SUCCESS.
