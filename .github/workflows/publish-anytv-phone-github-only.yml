@@ -34,20 +34,6 @@ jobs:
           ref: feat/tcl-v22-updates-back-bluetooth
           fetch-depth: 0
 
-      - name: Audit available signing secret names only
-        shell: bash
-        env:
-          SECRET_CONTEXT_JSON: ${{ toJSON(secrets) }}
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          import json,os,re
-          names=sorted(json.loads(os.environ['SECRET_CONTEXT_JSON']).keys())
-          matches=[n for n in names if re.search(r'ANYTV|TCL|SIGN|RECOV|CERT|KEYSTORE|STORE_PASS',n,re.I)]
-          print('SIGNING_SECRET_NAMES=' + (','.join(matches) if matches else '(none)'))
-          print('Secret values are not printed, exported or persisted')
-          PY
-
       - name: Confirm official signer and private Actions secret
         shell: bash
         run: |
