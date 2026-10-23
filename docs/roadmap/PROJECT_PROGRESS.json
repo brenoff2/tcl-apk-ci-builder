@@ -132,6 +132,10 @@
     {
       "date": "2026-10-23",
       "event": "V2 2.9.18/code47 publicada com assinatura original pelo run 40029572648 SUCCESS; APK SHA256 0cf42a76..., OTA GitHub bytes readback PASS; TV real NAO HOMOLOGADA; progresso P0 7/11 e gates inalterados."
+    },
+    {
+      "date": "2026-10-23",
+      "event": "V2 2.9.19/code48 OTA publicada; 40033251472 SUCCESS; sha256 6bf203ce..., readback bytes PASS; QA física NO; marcos 7/11 e gates sem promoção."
     }
   ],
   "discovery_v3": {
@@ -175,31 +179,38 @@
   },
   "v2_current": {
     "as_of": "2026-10-23",
-    "version": "2.9.18",
-    "versionCode": 47,
+    "version": "2.9.19",
+    "versionCode": 48,
     "package": "com.tclremote.livre.v2",
     "published": true,
     "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
     "ota_path": "updates/android/v2/current.apk",
-    "workflow_run": 40029572648,
+    "workflow_run": 40033251472,
     "workflow_conclusion": "success",
-    "apk_sha256": "0cf42a76e9380efaac7b3b7fc55224451a492dbfeb264e85bfaeb9a936ed7737",
-    "apk_git_blob": "b1bcc0ce0c3fa16f9853c78e3dd5ed68c80dc31f",
+    "apk_sha256": "6bf203ce33b88d51b0645bbaba063651d66d1bf5cc4c2f5520c8295fe4a3ef1d",
+    "apk_git_blob": "ccc2d504f5a93050cdc4b88b7603dd18b00afb3c",
     "apk_bytes": 28396388,
-    "ota_commit": "419d0d4814953b3ba71ae08a7d85c8ee7103d72f",
+    "ota_commit": "99d0b19f7b5e7a3922c45a34ff942ac0cb070149",
     "signer_cert_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9",
     "remote_byte_readback": true,
     "installed_and_physical_tv_qa": "NOT_HOMOLOGATED",
     "verified_features": [
-      "compact streaming nav integrated",
-      "two-column persistent subscription and genre filtering",
-      "75dp home banner",
-      "connected television header"
+      "Material heart in details/list",
+      "full screen background alignment",
+      "right header and installed streaming shortcuts",
+      "compact genre/type and search controls",
+      "empty personal lists",
+      "preselected genre filters and select all each column",
+      "service and genre shelves in catalog/provider",
+      "no public activation prompt",
+      "provider lookup status distinctions",
+      "official Disney+ entry TV 224505 canonical mapping"
     ],
     "unverified_features": [
-      "live direct title links",
+      "TV opened official Disney title on real device",
       "device activation status",
-      "physical reconnection after installation"
+      "general deep links",
+      "physical Bluetooth and paired-TV regression"
     ]
   }
 }
