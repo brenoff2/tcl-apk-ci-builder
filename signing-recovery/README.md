@@ -18,3 +18,8 @@ Signing identities: phone SHA-256 `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde2
 - Identidade assinante: backup AES-256-GCM acima, desbloqueado SOMENTE por `secrets.ANYTV_RECOVERY_SECRET_2026`; o segredo e senha nao devem aparecer em arquivos ou logs. Nenhum outro segredo, chave, metodo local ou URL temporaria e rota oficial.
 - Diagnostico 2026-10-23: build 2.9.13 `39891891049` OK, mas runs de publicacao `39960928074` e `39963496459` BLOQUEADAS antes de assinar porque a expressao do segredo resultou vazia. Isso significa configuracao de acesso ainda pendente, NAO falta da chave original ou novo certificado.
 - Registro administrativo seguro: GitHub Settings > Secrets and variables > Actions > Repository secrets > `ANYTV_RECOVERY_SECRET_2026`; sem secreta no repo e sem exposicao do valor.
+
+
+## Revisão de execução — 23/10/2026
+
+O workflow único de assinatura foi corrigido: `.github/workflows/publish-anytv-phone-github-only.yml` recebe pedidos **apenas** via push de `.github/anytv-phone-release-request.json` na branch OTA, com ID de build CI e `versionCode` explícitos. Commit de workflow/documentação não publica. A credencial `ANYTV_RECOVERY_SECRET_2026` agora existe no ambiente **somente** do passo de assinatura, e o passo recusa valor ausente ou inválido. Código atualizado nos commits `bc73a647` e `ae2b438e`; verificador ajustado em `cf0e0f56` e `ef2eddc4`. Nenhum pedido de release JSON foi criado; nenhuma nova OTA autorizada/publicada. O segredo continua indisponível ao runner nas últimas execuções de publicação observadas. CI da revisão deve ser checada antes de considerar concluído.
