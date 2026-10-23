@@ -1,4 +1,4 @@
-# AnyTV — GitHub CI, assinatura e OTA
+> **TRANSIÇÃO VIGENTE 23/10/2026:** Ler [Handoff integral](docs/handoffs/2026-10-23-anytv-full-transition.md), [Ponto atual](docs/handoffs/CURRENT_HANDOFF.md) e [ADR-0003 assinatura única](docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md). OTA Android 2.9.12; 2.9.13 build/signed mas NÃO publicada; segredo GitHub Actions indisponível ao runner; TLS TCL NÃO homologado.\n\n# AnyTV — GitHub CI, assinatura e OTA
 
 O código, os APKs compilados e a publicação do canal Android são gerenciados no GitHub. A atualização do aplicativo lê diretamente `updates/android/cert2026/current.apk` pela rota HTTPS do GitHub.
 
