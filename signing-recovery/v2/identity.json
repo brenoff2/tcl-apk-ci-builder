@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "role": "Android phone V2 independent signer",
+  "package_policy": "new install only; never overwrite cert2026 OTA",
+  "certificate_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9",
+  "ciphertext_sha256": "be7ac4686ca6dd6817ba4a662095f71313470663c802f0b0ba22cd6a023b9f5b",
+  "key_algorithm": "RSA-3072",
+  "envelope": "ANYTVV2G1 + 12B nonce + AES-256-GCM ciphertext/tag",
+  "pkcs12_password_derivation": "HMAC-SHA256(recovery, AnyTV-Phone-V2-PKCS12-Pass-v1), base64url",
+  "github_actions_recovery_secret": "ANYTV_SIGNER_V2_RECOVERY_HEX",
+  "created_at": "2026-10-23T17:50:55.774865+00:00",
+  "verification": "AES-GCM authenticated roundtrip + PKCS12 signer public-key challenge OK"
+}
