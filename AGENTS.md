@@ -10,8 +10,15 @@
 8. Só atualizar percentual com evidência. Não criar arquivos vazios. `factory.yaml`, `factory.lock.yaml` e `ci-policy.yaml` ficam dispensados até existir necessidade operacional comprovada.
 9. Terminar respostas de execução com **Acompanhamento — ANYTV**: progresso marcos; fases F0–F8 com contagens/percentuais e gates; última evidência, trabalho atual, próximo aceite, bloqueios e alternativa. Estado não aferido não deve ser inventado.
 
-## Continuidade padronizada pela Fábrica
-Antes de qualquer retomada, aplicar `docs/operations/PROJECT_CONTINUITY_PROTOCOL.md`: verificar HEAD das branches de desenvolvimento e OTA, recuperar cânone, reconciliar progresso F0–F8 e distinguir build/assinatura/publicação/instalação/homologação. Ver `docs/handoffs/CONTINUITY_CHECK.json`; não afirmar prova independente de novo chat enquanto estiver PENDING. A publicação Android 2.9.9 pelo atualizador continua prioridade funcional até readback do APK e prova em dispositivo.
+## Continuidade padronizada e ponto atual (23/10/2026)
 
-## Documentos de continuidade adicionados
-Ler também `docs/operations/GITHUB_CANONICAL_AND_DRIVE_SYNC.md`, `docs/operations/GOOGLE_DRIVE_RELEASE_INVENTORY_20261021.md`, `docs/operations/RELEASE_299_EVIDENCE_AND_BLOCKERS.md`, `docs/decisions/ADR-0002-DISCOVERY-V3.md` e `docs/ideas/DISCOVERY_PRODUCT_BACKLOG.md`. Canon GitHub para código e decisões; Drive para releases e backups privados segregados. Nenhuma chave secreta deve ser gravada no repositório.
+Antes de toda nova conversa, ler **docs/handoffs/CURRENT_HANDOFF.md** e, prioritariamente, **docs/handoffs/2026-10-23-anytv-full-transition.md**. O antigo plano de 2.9.9 como próxima OTA é HISTÓRICO. A OTA do telefone em produção é **2.9.12 (code41)**; a 2.9.13 (code42) está compilada e assinada, mas ainda não publicada nem aprovada na TCL.
+
+**Decisão ADR-0003**: só o workflow `.github/workflows/publish-anytv-phone-github-only.yml` pode publicar `updates/android/cert2026/current.apk`; verifica artefato CI, certificado cert2026, versionCode e readback. Não criar métodos concorrentes, URLs temporárias, arquivos de chave privados no GitHub ou releases sem OTA validada. Os publicadores antigos do telefone foram removidos das branches ativas, e os da TV preservados. CI de exclusividade e leitura remota `39963760834` PASS.
+
+**Bloqueio verificado**: no GitHub Actions `39963496459`, o segredo privado `ANYTV_RECOVERY_SECRET_2026` não estava acessível ao runner. O backup criptografado no GitHub existe, e assinatura local com cert2026 já funcionou; não significa que chave privada esteja perdida. Configuração do segredo só por ação administrativa autorizada, sem copiar valor em conversa/commits. Usuário determinou UMA única rota permanente, sem Drive no updater ou publicador.
+
+**Regressão física não resolvida**: AnyTV 2.9.8 controlava a TCL; 2.9.10–2.9.12 mostraram erros TLS/SSL; 2.9.11 alterou marcadores HOST/PIN. 2.9.13 restringe mTLS da TV à RSA local em vez de EC Cloudflare, mas é HIPÓTESE, não reparo comprovado; exigir observação do aparelho. Preservar dados e certificados.
+
+## Fontes operacionais obrigatórias
+docs/handoffs/2026-10-23-anytv-full-transition.md; docs/handoffs/CURRENT_HANDOFF.md; docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md; docs/ASSINATURA_E_ATUALIZACAO.md; docs/roadmap/PROJECT_PROGRESS.json; docs/operations/PROJECT_CONTINUITY_PROTOCOL.md. A investigação e inventário de releases históricos permanecem em docs/operations/ apenas para auditoria, não como rota de entrega.
