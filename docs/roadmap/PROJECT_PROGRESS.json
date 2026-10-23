@@ -244,6 +244,17 @@
       "removed Canal nao informado",
       "global search distinguishing failures and supporting title variant and official Prime page"
     ],
-    "physical_qa": "NOT_HOMOLOGATED"
+    "physical_qa": "NOT_HOMOLOGATED",
+    "android_compile": "SUCCESS run 40037020490 step21",
+    "ime_remote_tests": "SUCCESS run 40037020490 step22",
+    "live_catalog_gate": "FAIL run 40037020490 step23 HTTP429 monthly_quota_exhausted",
+    "signing": "SKIPPED no release",
+    "ota_publication": "SKIPPED no release",
+    "remote_ota_readback": "NOT_EXECUTED",
+    "resolver_caching_commit": "c43f64293c5b2d4c1980ffb3d02048c736c86347",
+    "resolver_cache_policy": "24h search, 12h per-title watch providers, 7d genre/provider lists, 6h trending/now-playing; bounded monthly cap remains enforced",
+    "resolver_offline_contract_run": 40037621092,
+    "resolver_offline_contract_result": "SUCCESS incl node tests, SQLite, syntax, Wrangler dry-run; NO Cloudflare deployment",
+    "worker_production_quota": "EXHAUSTED_NOT_CHANGED"
   }
 }
