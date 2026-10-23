@@ -45,8 +45,8 @@ A identidade **cert2026** é outra assinatura SHA256 `2f14e43f7653a75f878c4d59a4
 
 ## Evidências e fontes
 
-- [ADR assinatura V2](../decisions/ADR-0004-NEW-ANDROID-SIGNER-V2-GITHUB-CUSTODY.md) (DEV).
-- [Manifesto e certificado público](../../signing-recovery/v2/identity.json).
-- [Workflow de assinatura e publicação](../../.github/workflows/release-anytv-phone-v2-new-package.yml).
-- [Bootstrap de auditoria, só histórico](../../.github/workflows/bootstrap-anytv-phone-v2-identity.yml).
+- [ADR assinatura V2](https://github.com/brenoff2/tcl-apk-ci-builder/blob/feat/anytv-p0-device-proof-verifier-20261020/docs/decisions/ADR-0004-NEW-ANDROID-SIGNER-V2-GITHUB-CUSTODY.md) (DEV).
+- [Manifesto da identidade V2](https://github.com/brenoff2/tcl-apk-ci-builder/blob/feat/anytv-p0-device-proof-verifier-20261020/signing-recovery/v2/identity.json).
+- [Workflow de assinatura e publicação V2](https://github.com/brenoff2/tcl-apk-ci-builder/blob/feat/anytv-p0-device-proof-verifier-20261020/.github/workflows/release-anytv-phone-v2-new-package.yml).
+- [Bootstrap de auditoria, só histórico](https://github.com/brenoff2/tcl-apk-ci-builder/blob/feat/anytv-p0-device-proof-verifier-20261020/.github/workflows/bootstrap-anytv-phone-v2-identity.yml).
 - [Handoff integral atual](../handovers/2026-10-23-ANYTV-V2-2917-2918-CONTINUIDADE-CANONICA.md).
