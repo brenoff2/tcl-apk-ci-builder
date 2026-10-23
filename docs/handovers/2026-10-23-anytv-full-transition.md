@@ -1,3 +1,5 @@
+> **ARQUIVO HISTÓRICO anterior à V2.** As afirmações abaixo sobre 'OTA atual 2.9.12', proibição de nova identidade e assinatura cert2026 como rota ativa foram superadas pela decisão do usuário e pela V2 instalada. Use [HANDOFF ATUAL](2026-10-23-ANYTV-V2-2917-2918-CONTINUIDADE-CANONICA.md) e [RUNBOOK V2](../operations/ANYTV_V2_SIGNER_RECOVERY_AND_RELEASE_RUNBOOK.md).
+
 # ANYTV — HANDOFF INTEGRAL E CONTINUIDADE — 23/10/2026
 
 > **PRIMEIRA LEITURA OBRIGATÓRIA NO PRÓXIMO CHAT.** Este documento registra decisões e evidências deste ciclo; o estado operacional deve ser confirmado no GitHub antes de qualquer novo commit, build ou publicação. **Não repetir perguntas respondidas, nem inventar finalização.** Horário de referência: 23/10/2026 (America/Bahia).
