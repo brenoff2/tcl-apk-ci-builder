@@ -106,6 +106,25 @@ jobs:
           TCL_V36: '1'
           TCL_V35: '1'
         run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
+      - name: Verificar busca global real TMDB filme e serie (sem falsos vazios)
+        run: |
+          python3 - <<'PY'
+          import json
+          import urllib.parse
+          import urllib.request
+          base = "https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/"
+          for kind, title in (("movie", "Titanic"), ("tv", "Breaking Bad")):
+              query = urllib.parse.urlencode({"language": "pt-BR", "query": title})
+              request = urllib.request.Request(
+                  base + "search/" + kind + "?" + query,
+                  headers={"Accept": "application/json", "User-Agent": "AnyTV/2.9.20 QA"})
+              with urllib.request.urlopen(request, timeout=15) as response:
+                  assert response.status == 200, (kind, response.status)
+                  body = json.load(response)
+              results = body.get("results", [])
+              assert isinstance(results, list) and len(results) > 0, (kind, title)
+              print("ANYTV_LIVE_GLOBAL_SEARCH_SUCCESS", kind, title, len(results))
+          PY
       - name: Validar troca opt-in de endpoint somente em staging
         run: python3 -m unittest discover -s scripts/tests -p 'test_anytv_staging_endpoint.py' -v
       - name: Versionar nova atualização como AnyTV V2 2.9.19 (code 48)
