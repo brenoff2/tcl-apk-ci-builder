@@ -7,5 +7,5 @@
   "new_install_only": false,
   "release_version": "2.9.17-AnyTV",
   "release_scope": "2.9.17 code46: corrected main film poster banner, restored saved-TV auto-reconnect after involuntary network loss, same home streaming icons, compact tabs & type filters, pinned poster/metadata, genres, TV-neutral action, separate favorite/tracking/watched history",
-  "ci_revision": 2
+  "ci_revision": 3
 }
