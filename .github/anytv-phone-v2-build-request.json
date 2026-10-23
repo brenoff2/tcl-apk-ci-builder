@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "intent": "release-independent-phone-v2",
+  "expected_version_code": 42,
+  "preserve_legacy_ota": true,
+  "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
+  "new_install_only": true
+}
