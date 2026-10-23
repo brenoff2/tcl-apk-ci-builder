@@ -14,8 +14,8 @@ p = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclApprovedHo
 source = p.read_text(encoding="utf-8")
 top = """    BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
-            .windowInsetsPadding(WindowInsets.safeDrawing)
             .background(Brush.verticalGradient(listOf(TclSurface, TclBg, TclBg)))
+            .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
 """
 head_marker = "                    TclApprovedHeader("
