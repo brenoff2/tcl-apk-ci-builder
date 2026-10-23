@@ -207,7 +207,7 @@ test("remote errors return generic status and consume at most reserved credits",
   const body = await r.json();
   assert.equal(r.status, 503);
   assert.equal(JSON.stringify(body).includes("provider contains secret"), false);
-  assert.equal(env._months.get(new Date().toISOString().slice(0, 7)), 1);
+  assert.equal(env._months.get(new Date().toISOString().slice(0, 7) + ":links"), 1);
 });
 
 test("non-subscription title is a safe, cacheable non-availability response", async () => {
@@ -243,7 +243,7 @@ test("short lived cache expires and makes another explicitly budgeted lookup", a
   const b = await handleRequest(request("/v1/resolve/movie/329/prime"), env, deps);
   assert.equal(b.status, 200);
   assert.equal(calls, 2);
-  assert.equal(env._months.get("2026-10"), 2);
+  assert.equal(env._months.get("2026-10:links"), 2);
   const c = await handleRequest(request("/v1/resolve/movie/398978/netflix"), env, deps);
   assert.equal(c.status, 429);
 });
