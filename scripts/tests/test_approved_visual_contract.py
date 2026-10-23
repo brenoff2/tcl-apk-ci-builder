@@ -64,7 +64,7 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('"favorites:$deviceKey"', catalog)
         self.assertIn('TvOfficialApp(', catalog)
         self.assertIn('OfficialTvIcon(', catalog)
-        self.assertIn('Text("Ver todos  ›")', catalog)
+        self.assertIn('AnyTvHomeFilmBanner(onOpenStreaming = { showStreaming = true })', catalog)
         self.assertIn("TclApprovedHomeScreen(", self.nav)
 
     def test_no_fixed_bottom_bar_or_forced_dark_theme(self):
