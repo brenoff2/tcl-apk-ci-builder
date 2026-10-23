@@ -94,6 +94,7 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_rescue_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_auto_tv_resume.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_tcl_v21_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -k PhoneUpdatesAndBack -v
       - name: Impedir entrega com tokens manuais no Streaming (gate P0)
