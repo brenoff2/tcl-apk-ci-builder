@@ -1,3 +1,5 @@
+> **ATENÇÃO: HISTÓRICO CERT2026; NÃO É A ROTA ATIVA V2.** O V2 instalado usa pacote `com.tclremote.livre.v2`, secret GitHub Actions `ANYTV_SIGNER_V2_RECOVERY_HEX`, signer cifrado na DEV `signing-recovery/v2/phone-signer.aesgcm` e workflow de release V2. Leia [RUNBOOK V2](operations/ANYTV_V2_SIGNER_RECOVERY_AND_RELEASE_RUNBOOK.md) e [HANDOFF ATUAL](handovers/2026-10-23-ANYTV-V2-2917-2918-CONTINUIDADE-CANONICA.md). Última V2 publicada 2.9.17/code46; NÃO recuperar chave antiga do Drive.
+
 # AnyTV — assinatura Android cert2026 e acesso GitHub (procedimento operacional único)
 
 **Vigência:** 23/10/2026. **Autoridade:** este arquivo define o procedimento OPERACIONAL atual para assinatura, acesso MCP e diagnóstico de credenciais. Logs, handoffs e textos de versões anteriores são históricos e não substituem verificações ao vivo. O código real e o estado do GitHub Actions prevalecem.
