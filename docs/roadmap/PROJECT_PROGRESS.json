@@ -136,6 +136,10 @@
     {
       "date": "2026-10-23",
       "event": "V2 2.9.19/code48 OTA publicada; 40033251472 SUCCESS; sha256 6bf203ce..., readback bytes PASS; QA física NO; marcos 7/11 e gates sem promoção."
+    },
+    {
+      "date": "2026-10-23",
+      "event": "2.9.20/code49 candidata compilada em 40037020490 (etapa Gradle PASS), OTA impedida: Worker catálogo HTTP 429 monthly_quota_exhausted em 40036848750; 2.9.19 permanece publicada, gates sem alteração."
     }
   ],
   "discovery_v3": {
@@ -212,5 +216,34 @@
       "general deep links",
       "physical Bluetooth and paired-TV regression"
     ]
+  },
+  "v2_candidate": {
+    "as_of": "2026-10-23",
+    "version": "2.9.20",
+    "versionCode": 49,
+    "package": "com.tclremote.livre.v2",
+    "published": false,
+    "development_branch": "feat/anytv-p0-device-proof-verifier-20261020",
+    "build_request_commit": "9e48fa9c30ca216c24681eed80e4a660ee41f68b",
+    "workflow_run": 40037020490,
+    "release_blocker": "Catalog monthly quota exhausted; remote real search returns HTTP 429 monthly_quota_exhausted; no V2 signing or OTA publication authorized until live search passes",
+    "evidence_run": 40036848750,
+    "server": "anytv-link-resolver-pilot.brenoff.workers.dev",
+    "configured_monthly_cap": 200,
+    "compiled_android_release": true,
+    "ime_and_full_release_verification": "IN_PROGRESS",
+    "ota_branch_untouched": true,
+    "proven_changes": [
+      "home/provider unified streaming layout",
+      "Film and Series filters top-left",
+      "circular header icons shared with home",
+      "home Android system bars theme matched",
+      "auto TV brand",
+      "banner 30 percent copy and 70 percent image",
+      "larger section gaps",
+      "removed Canal nao informado",
+      "global search distinguishing failures and supporting title variant and official Prime page"
+    ],
+    "physical_qa": "NOT_HOMOLOGATED"
   }
 }
