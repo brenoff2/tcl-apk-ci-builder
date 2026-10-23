@@ -1,12 +1,14 @@
 # ANYTV — PROTOCOLO CANÔNICO DE CONTINUIDADE | 23/10/2026
 
+**ACESSO GITHUB/ASSINATURA — REGRA OPERACIONAL MAIS RECENTE (23/10/2026):** antes de afirmar falta de acesso, consultar MCP GitHub direto E MCP Business OS Hub v2 → provider GitHub; nenhum diagnóstico deve se basear no terminal Windows. A decisão vigente e o diagnóstico preciso de Actions Secrets estão SOMENTE em `docs/ASSINATURA_E_ATUALIZACAO.md`. A falha 39963496459 é histórica; secret no runner continua NÃO VERIFICADO. Não executar release sem aprovação.
+
 Este documento substitui as instruções operacionais obsoletas de 21/10. A prova independente de transição entre chats continua PENDENTE até ser efetivamente executada em outro chat; jamais marcar PASS por editar documentação.
 
 ## Rota obrigatória ao iniciar cada conversa
 
 1. Acessar repositório canônico https://github.com/brenoff2/tcl-apk-ci-builder e consultar HEAD da branch dev feat/anytv-p0-device-proof-verifier-20261020 (PR #3 draft) e da branch OTA feat/tcl-v22-updates-back-bluetooth. Não usar main como se fosse a OTA.
 2. Ler AGENTS.md, docs/handoffs/CURRENT_HANDOFF.md, **docs/handoffs/2026-10-23-anytv-full-transition.md**, docs/VISION.md, docs/roadmap/MASTER_ROADMAP.md, docs/roadmap/PROJECT_PROGRESS.json, docs/STATUS.md, docs/decisions/ADR-0001.md, ADR-0002-DISCOVERY-V3.md e **ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md**.
-3. Ler docs/ASSINATURA_E_ATUALIZACAO.md, signing-recovery/README.md e os DOIS workflows ativos do Android na branch OTA: .github/workflows/publish-anytv-phone-github-only.yml e .github/workflows/verify-anytv-update-endpoint.yml.
+3. Tratar docs/ASSINATURA_E_ATUALIZACAO.md como única instrução operacional para GitHub/MCP/Secrets (consultar MCP direto e Hub, nunca inferir indisponibilidade pelo terminal Windows); ler signing-recovery/README.md e os DOIS workflows ativos do Android na branch OTA: .github/workflows/publish-anytv-phone-github-only.yml e .github/workflows/verify-anytv-update-endpoint.yml.
 4. Fazer readback OTA real, versão, SHA/certificado e últimos GitHub Actions: build 2.9.13 run 39891891049 SUCCESS; publisher run 39963496459 FAILURE no gate de segredo; verificador da OTA/rota única 39963760834 SUCCESS. Esses IDs são marcos históricos, conferir jobs mais recentes.
 5. Informar estado factual e executar o primeiro passo real disponível, sem rodar pesquisa/assinatura/build já concluídos e sem fazer o usuário repetir histórico.
 
