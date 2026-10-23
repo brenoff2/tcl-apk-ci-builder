@@ -1,0 +1,156 @@
+name: AnyTV 2.9.13 RSA TV TLS identity isolation candidate
+
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-2913-rsa-tls-candidate.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+
+concurrency:
+  group: anytv-discovery-v3-candidate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  phone-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Clonar fonte Android TV Remote 2 Apache-2.0 fixada
+        run: |
+          git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+      - name: Preparar app e aplicar versoes v2.0 -> v2.1 -> v2.2
+        run: |
+          TCL_RESCUE_STABLE=1 TCL_APPROVED_UI=1 TCL_RELEASE_SINGLE_APP=1 python3 scripts/prepare_tcl.py
+          python3 scripts/apply_tcl_v21.py
+          python3 scripts/apply_tcl_v22.py
+          python3 scripts/apply_tcl_ptbr_cleanup.py
+          python3 scripts/apply_tcl_i18n.py
+          python3 scripts/apply_tcl_tv_brand.py
+          python3 scripts/apply_tcl_sticky_controls.py
+          python3 scripts/apply_anytv_brand.py
+          python3 scripts/apply_anytv_tv_tls_alias_isolation.py
+          python3 -c 'import pathlib, xml.etree.ElementTree as ET; files=list(pathlib.Path("source/app/src/main/res").glob("values*/tcl_localization.xml")); assert len(files)==16, len(files); [ET.parse(p) for p in files]; print("TCL_I18N_XML_VALID",len(files))'
+      - name: Bump migration patch version (preserve same signing identity)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('source/app/build.gradle.kts')
+          s=p.read_text()
+          assert s.count('versionCode = 34') == 1
+          assert s.count('versionName = "2.9.5-AnyTV"') == 1
+          p.write_text(s.replace('versionCode = 34','versionCode = 39').replace('versionName = "2.9.5-AnyTV"','versionName = "2.9.10-AnyTV"'))
+          PY
+      - name: Validate replacement signer updater routing (phone)
+        run: |
+          set -euo pipefail
+          cmp overrides/common/TclUpdateManager.java source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q '2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f' source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q '0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c' source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q 'suffix = "android/cert2026"' source/app/src/main/java/tcl/shared/TclUpdateManager.java
+          grep -q 'suffix = "tv/cert2026"' source/app/src/main/java/tcl/shared/TclUpdateManager.java
+      - name: Validar regressao e atualizacao segura (versionCode 39, updater v2.2)
+        env:
+          TCL_APPROVED_UI: '1'
+          TCL_RELEASE_SINGLE_APP: '1'
+          TCL_V21: '1'
+          TCL_V22: '1'
+          TCL_V23: '1'
+          TCL_V24: '1'
+          TCL_V25: '1'
+          TCL_V26: '1'
+          TCL_V27: '1'
+          TCL_V28: '1'
+          TCL_V29: '1'
+          TCL_V30: '1'
+          TCL_V33: '1'
+          TCL_V34: '1'
+          TCL_V39: '1'
+          TCL_V37: '1'
+          TCL_V36: '1'
+          TCL_V35: '1'
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_rescue_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_tcl_v21_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -k PhoneUpdatesAndBack -v
+      - name: Impedir entrega com tokens manuais no Streaming (gate P0)
+        run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
+      - name: Validar telas de streaming reais (versionCode 39)
+        env:
+          TCL_V39: '1'
+          TCL_V37: '1'
+          TCL_V36: '1'
+          TCL_V35: '1'
+        run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
+      - name: Validar troca opt-in de endpoint somente em staging
+        run: python3 -m unittest discover -s scripts/tests -p 'test_anytv_staging_endpoint.py' -v
+      - name: Versionar restauracao como AnyTV 2.9.12 (code 41)
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('source/app/build.gradle.kts')
+          s=p.read_text()
+          assert s.count('versionCode = 39') == 1
+          assert s.count('versionName = "2.9.10-AnyTV"') == 1
+          p.write_text(s.replace('versionCode = 39','versionCode = 42').replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.13-AnyTV"'))
+          PY
+      - name: Gate - restaurar literalmente codigo de conexao validado na 2.9.8
+        run: |
+          set -euo pipefail
+          test ! -e source/app/src/main/java/com/hari/androidtvremote/androidLib/TlsRepair.java
+          ! grep -q 'A TV precisa de novo pareamento' source/app/src/main/java/com/hari/androidtvremote/ui/app/TvRemoteViewModel.kt
+          grep -q 'SSL certificate error. Re-pair the device.' source/app/src/main/java/com/hari/androidtvremote/androidLib/AndroidRemoteTv.java
+          grep -q 'mPairingSession.pair(host, 6467' source/app/src/main/java/com/hari/androidtvremote/androidLib/AndroidRemoteTv.java
+          grep -q 'mRemoteSession = new RemoteSession(host, 6466' source/app/src/main/java/com/hari/androidtvremote/androidLib/AndroidRemoteTv.java
+          grep -q 'RESOLVER_BASE = "https://anytv-link-resolver-pilot.brenoff.workers.dev"' source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvDeviceIdentity.kt
+          echo 'ANYTV_298_CONNECTION_CODE_RESTORED_NO_SSL_PATCH'
+      - name: Testar identidade RSA isolada e ausencia de mutacao de chaves
+        run: python3 -m unittest discover -s scripts/tests -p 'test_anytv_tv_tls_identity_isolation.py' -v
+      - name: Compilar release sem R8 agressivo
+        run: |
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Testar serializacao IME Remote v2 contra mensagens de referencia
+        run: |
+          cd source
+          ./gradlew :app:testDebugUnitTest --tests 'com.hari.androidtvremote.androidLib.remote.RemoteImeWireTest' --no-daemon --stacktrace
+      - name: Auditar APK e guardar release nao assinado
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$BT/aapt" dump badging "$APK" > output/identidade.txt
+          "$BT/aapt" dump xmltree "$APK" AndroidManifest.xml > output/manifesto.txt
+          grep -q "name='com.tclremote.livre' versionCode='42'" output/identidade.txt
+          ! grep -q 'com.tclremote.livre.preview' output/identidade.txt
+          "$BT/zipalign" -f 4 "$APK" output/AnyTV_2_9_13_RELEASE_UNSIGNED.apk
+          "$BT/zipalign" -c 4 output/AnyTV_2_9_13_RELEASE_UNSIGNED.apk
+          sha256sum output/AnyTV_2_9_13_RELEASE_UNSIGNED.apk > output/SHA256.txt
+          echo 'NAO INSTALAR. Assinar somente com a identidade cert2026 do APK 2.9.8 instalado' > output/LEIA.txt
+      - name: Publicar artefato de auditoria nao assinado (sem OTA)
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-rsa-tls-2913-unsigned-audit
+          path: |
+            output/AnyTV_2_9_13_RELEASE_UNSIGNED.apk
+            output/SHA256.txt
+            output/identidade.txt
+            output/manifesto.txt
+            output/LEIA.txt
+          if-no-files-found: error
+          retention-days: 7
