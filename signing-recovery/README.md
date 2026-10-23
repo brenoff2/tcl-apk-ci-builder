@@ -8,7 +8,7 @@ File structure: 9-byte ASCII `ANYTVAES1`, 12-byte nonce, AES-GCM ciphertext + 16
 
 Signing identities: phone SHA-256 `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`; TV SHA-256 `0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c`.
 
-**Critical:** These are NEW certificate identities, requiring a one-time uninstall/reinstall from the previous phone/TV certificates. Preserve user app data before removing the old installations. Future releases must use the same keys, verify the certificate fingerprints, package names, versionCode and APK v2 signing, and must not rotate keys again. The old branch's `current.apk` paths belong to the old installed identities and must NOT be silently overwritten with these new-cert APKs.
+**Current operational rule (2026-10-23):** `cert2026` is already the installed/published phone channel identity. Do **not** uninstall, clear app data, or rotate signers during routine updates. The historic migration from earlier certificate identities is not an instruction for present-day recovery. Preserve matching signatures, package names, monotonic versionCode and APK v2 signing; keep TV and legacy certificate channels separate.
 
 ## Processo canonico unico do celular
 
@@ -16,5 +16,5 @@ Signing identities: phone SHA-256 `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde2
 - Entrada: ID de execucao de compilacao Android bem-sucedida no GitHub Actions (branch `feat/anytv-p0-device-proof-verifier-20261020`).
 - Fonte: artefato unsigned auditado e checksum fornecidos pelo proprio GitHub Actions. O publicador assina no runner, compara SHA/certificado e grava apenas `updates/android/cert2026/current.apk` apos garantir versionCode superior. O readback remoto deve bater byte a byte.
 - Identidade assinante: backup AES-256-GCM acima, desbloqueado SOMENTE por `secrets.ANYTV_RECOVERY_SECRET_2026`; o segredo e senha nao devem aparecer em arquivos ou logs. Nenhum outro segredo, chave, metodo local ou URL temporaria e rota oficial.
-- Diagnostico 2026-10-23: build 2.9.13 `39891891049` OK, mas run de publicacao `39960928074` BLOQUEADO antes de assinar porque a expressao do segredo resultou vazia. Isso significa configuracao de acesso ainda pendente, NAO falta da chave original ou novo certificado.
+- Diagnostico 2026-10-23: build 2.9.13 `39891891049` OK, mas runs de publicacao `39960928074` e `39963496459` BLOQUEADAS antes de assinar porque a expressao do segredo resultou vazia. Isso significa configuracao de acesso ainda pendente, NAO falta da chave original ou novo certificado.
 - Registro administrativo seguro: GitHub Settings > Secrets and variables > Actions > Repository secrets > `ANYTV_RECOVERY_SECRET_2026`; sem secreta no repo e sem exposicao do valor.
