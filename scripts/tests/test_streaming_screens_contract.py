@@ -180,7 +180,7 @@ class StreamingScreens(unittest.TestCase):
             '"anytv_watched_movies"', '"anytv_watched_episodes"',
             'fun toggleWatched(id: Int, season: Int, episode: Int)',
             '"Filmes para assistir"', '"Séries em andamento"',
-            '"Filmes já assistidos"', 'val seenInHome',
+            '"Filmes já assistidos"', 'val filteredShelves',
             'val uniqueShelves', 'it.media}:',
         ):
             self.assertIn(fragment, self.screen)
