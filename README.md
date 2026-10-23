@@ -1,8 +1,12 @@
-> **TRANSIÇÃO VIGENTE 23/10/2026:** Ler [Handoff integral](docs/handoffs/2026-10-23-anytv-full-transition.md), [Ponto atual](docs/handoffs/CURRENT_HANDOFF.md) e [ADR-0003 assinatura única](docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md). OTA Android 2.9.12; 2.9.13 build/signed mas NÃO publicada; segredo GitHub Actions indisponível ao runner; TLS TCL NÃO homologado.\n\n# AnyTV — GitHub CI, assinatura e OTA
+> **TRANSIÇÃO VIGENTE 23/10/2026:** Ler [Handoff integral](docs/handoffs/2026-10-23-anytv-full-transition.md), [Ponto atual](docs/handoffs/CURRENT_HANDOFF.md) e [ADR-0003 assinatura única](docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md). OTA Android 2.9.12; 2.9.13 build/signed mas NÃO publicada; secret GitHub Actions não comprovado no runner atual (falha histórica 39963496459); TLS TCL NÃO homologado.\n\n# AnyTV — GitHub CI, assinatura e OTA
+
+**Regra atual de acesso e assinatura:** `docs/ASSINATURA_E_ATUALIZACAO.md` é a única instrução operacional. Verificar MCP GitHub direto e MCP Business OS Hub v2 antes de diagnosticar bloqueio; erro histórico de Actions não prova indisponibilidade presente do secret. Nunca usar ausência de `gh` no Windows como evidência de acesso GitHub.
 
 O código, os APKs compilados e a publicação do canal Android são gerenciados no GitHub. A atualização do aplicativo lê diretamente `updates/android/cert2026/current.apk` pela rota HTTPS do GitHub.
 
 ## Fluxo único de publicação (Android cert2026)
+
+Referência operacional de MCP/Secret: `docs/ASSINATURA_E_ATUALIZACAO.md`.
 
 1. A compilação gera o APK não assinado em **GitHub Actions Artifacts**.
 2. Com a credencial original acessível e a release aprovada, registra-se `.github/anytv-phone-release-request.json` na branch OTA com `candidate_run_id`, `expected_version_code` e `intent=publish-cert2026-phone`. Apenas o push desse arquivo aciona o publicador. Mudanças no workflow não publicam; não se usa `workflow_dispatch` fora da branch padrão.
