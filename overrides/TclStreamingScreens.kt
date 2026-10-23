@@ -674,7 +674,6 @@ private fun StreamingOfferIcons(
     }
 }
 
-@Composable
 /** Same one-row navigation across catalogue and individual provider views. */
 @Composable
 private fun AnyTvStreamNavBar(
@@ -745,6 +744,7 @@ private fun AnyTvStreamNavBar(
     }
 }
 
+@Composable
 internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String,
     tvName: String, onDismiss: () -> Unit
@@ -1168,52 +1168,24 @@ internal fun TclStreamingScreens(
             color = MaterialTheme.colorScheme.surface) {
             Column(modifier = Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                AnyTvStreamNavBar(
+                    library = homeLibrary && selected == null,
+                    section = librarySection,
+                    contentType = homeContentType,
+                    filtersActive = onlyMyStreaming || selectedHomeGenre != 0,
+                    onHome = { selected = null; homeLibrary = false
+                        homeContentType = "all"; selectedHomeGenre = 0 },
+                    onList = { selected = null; homeLibrary = true; librarySection = "saved" },
+                    onWatching = { selected = null; homeLibrary = true; librarySection = "watching" },
+                    onWatched = { selected = null; homeLibrary = true; librarySection = "watched" },
+                    onFilters = { editingMyServices = myServices
+                        showMyStreamingSettings = true },
+                    onContentType = { kind -> selected = null; homeLibrary = false
+                        homeContentType = kind; selectedHomeGenre = 0 },
+                    onSearch = { selected = null; showGlobalSearch = !showGlobalSearch },
+                    onDismiss = onDismiss
+                )
                 if (selected == null) {
-                    Row(verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()) {
-                        Row(modifier = Modifier.weight(1f)
-                            .horizontalScroll(rememberScrollState()),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            FilterChip(selected = !homeLibrary,
-                                onClick = { homeLibrary = false },
-                                label = { Text("Início", fontSize = 11.sp) })
-                            FilterChip(selected = homeLibrary && librarySection == "saved",
-                                onClick = { homeLibrary = true; librarySection = "saved" },
-                                label = { Text("♥ Minha lista", fontSize = 11.sp) })
-                            FilterChip(selected = homeLibrary && librarySection == "watching",
-                                onClick = { homeLibrary = true; librarySection = "watching" },
-                                label = { Text("Em andamento", fontSize = 11.sp) })
-                            FilterChip(selected = homeLibrary && librarySection == "watched",
-                                onClick = { homeLibrary = true; librarySection = "watched" },
-                                label = { Text("✓ Assistidos", fontSize = 11.sp) })
-                            FilterChip(selected = onlyMyStreaming,
-                                onClick = {
-                                    if (myServices.isEmpty()) {
-                                        editingMyServices = myServices
-                                        showMyStreamingSettings = true
-                                    } else {
-                                        onlyMyStreaming = !onlyMyStreaming
-                                        homeLibrary = false
-                                    }
-                                },
-                                label = { Text("Meus streamings", fontSize = 11.sp) })
-                        }
-                        IconButton(onClick = {
-                            editingMyServices = myServices
-                            showMyStreamingSettings = true
-                        }, modifier = Modifier.size(32.dp).semantics {
-                            contentDescription = "Configurar meus streamings"
-                        }) { Text("⚙", fontSize = 18.sp) }
-                        IconButton(onClick = { showGlobalSearch = !showGlobalSearch },
-                            modifier = Modifier.size(36.dp).semantics {
-                                contentDescription = "Buscar filmes e séries"
-                            }) { Text("⌕", fontSize = 25.sp) }
-                        IconButton(onClick = onDismiss, modifier = Modifier.size(34.dp)
-                            .semantics { contentDescription = "Fechar streaming" }) {
-                            Text("×", fontSize = 25.sp)
-                        }
-                    }
                     // The same real TV platform shortcuts, compact rather than a large list.
                     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -1284,16 +1256,7 @@ internal fun TclStreamingScreens(
                     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                         verticalAlignment = Alignment.CenterVertically) {
-                        listOf("all" to "Tudo", "movie" to "Filmes", "tv" to "Séries")
-                            .forEach { (kind, label) ->
-                                FilterChip(selected = homeContentType == kind,
-                                    onClick = {
-                                        homeContentType = kind; selectedHomeGenre = 0
-                                        homeLibrary = false
-                                    }, label = { Text(label, fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold) })
-                            }
-                        Text("│", color = MaterialTheme.colorScheme.outline)
+                        // Content type is selected in the compact top navigation.
                         FilterChip(selected = selectedHomeGenre == 0,
                             onClick = { selectedHomeGenre = 0; homeLibrary = false },
                             label = { Text("Todos", fontSize = 11.sp) })
