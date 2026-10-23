@@ -397,21 +397,26 @@ class StreamingScreens(unittest.TestCase):
             'genreMore[key] = it.more',
             'items(shelf.chunked(2))',
             'StreamingCatalog.discoveryGenrePage(',
-            'Text(if (genreLoading[moreKey] == true)',
-            '"Mostrar mais " + heading',
-            'genreShelves[moreKey] =',
+            'items(genreTitles, key =',
+            'if (!homeLibrary && selected == null && selectedHomeGenre > 0)',
+            '"Mostrar mais 20"',
+            'genreShelves[genreKey] =',
             'val films = discoveryShelves["Em alta nesta semana"]',
             'val shows = discoveryShelves["Séries em destaque"]',
             'for (i in 0 until 10)',
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
             'Triple("Em breve · Filmes", "movie/upcoming", "movie")',
-            'Text(if (item.media == "tv") "S" else "E"',
+            'Text(if (item.media == "tv") "S" else "F"',
             'scheduleAnyTvPremiereReminder(context, item)',
             'class AnyTvReleaseReminderReceiver',
         ):
             with self.subTest(snippet=snippet):
                 self.assertIn(snippet, self.screen)
         self.assertNotIn('items(shelf.take(12))', self.screen)
+        self.assertNotIn('"Mostrar mais " + heading', self.screen)
+        self.assertIn('Color(0xFFD62828) else Color(0xFF1769E0)', self.screen)
+        self.assertIn('includeFontPadding = false', self.screen)
+        self.assertIn('textAlign = TextAlign.Center', self.screen)
         self.assertNotIn('Text("★ "', self.screen)
 
     def test_search_live_suggestions_and_clear_button(self):
