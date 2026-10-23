@@ -696,67 +696,129 @@ internal fun TclStreamingScreens(
             Column(modifier = Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 if (selected == null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Streaming", fontSize = 20.sp, fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f))
-                        TextButton(onClick = onDismiss) { Text("Fechar") }
-                    }
                     Row(verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(
-                            value = globalSearchDraft,
-                            onValueChange = { globalSearchDraft = it.take(90) },
-                            label = { Text("Buscar filme ou série") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f))
-                        Button(onClick = { globalSearchTerm = globalSearchDraft.trim() },
-                            enabled = globalSearchDraft.trim().length >= 2) { Text("Buscar") }
-                        if (globalSearchTerm.isNotBlank()) TextButton(onClick = {
-                            globalSearchDraft = ""; globalSearchTerm = ""
-                        }) { Text("×") }
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text("Descobrir", fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        IconButton(onClick = { showGlobalSearch = !showGlobalSearch },
+                            modifier = Modifier.size(36.dp).semantics {
+                                contentDescription = "Buscar filmes e séries"
+                            }) { Text("⌕", fontSize = 25.sp) }
+                        TextButton(onClick = onDismiss,
+                            modifier = Modifier.height(36.dp),
+                            contentPadding = PaddingValues(horizontal = 6.dp)) {
+                            Text("Fechar", fontSize = 12.sp)
+                        }
                     }
-                    if (globalSearchBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
-                    if (globalSearchTerm.isNotBlank() && !globalSearchBusy) {
-                        Text("Resultados para: " + globalSearchTerm, fontSize = 12.sp)
-                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            globalSearchResults.forEach { found ->
-                                Column(modifier = Modifier.width(110.dp).clickable {
-                                    details = found; detailsPackage = null
-                                }) {
-                                    AsyncImage(model = "https://image.tmdb.org/t/p/w185" + found.poster,
-                                        contentDescription = found.name,
-                                        modifier = Modifier.fillMaxWidth().height(150.dp),
-                                        contentScale = ContentScale.Crop)
-                                    Text(found.name, fontSize = 11.sp, maxLines = 2, lineHeight = 12.sp)
-                                    StreamingOfferIcons(found, offerCache)
-                                }
+                    // The same real TV platform shortcuts, compact rather than a large list.
+                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
+                            Column(modifier = Modifier.width(65.dp).clickable {
+                                selected = app; media = "movie"; genre = 0; page = 1
+                                searchDraft = ""; searchTerm = ""; showSaved = false; message = null
+                            }.semantics { contentDescription = "Explorar " + app.name },
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                                OfficialTvIcon(app, 32.dp)
+                                Text(app.name, fontSize = 9.sp, maxLines = 1,
+                                    lineHeight = 11.sp, overflow = TextOverflow.Ellipsis)
                             }
                         }
-                        if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
                     }
-                    Text("Filtrar destaques por plataforma instalada na TV",
-                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                    Row(modifier = Modifier.fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(selected = discoveryProviderPackage == null,
-                            onClick = { discoveryProviderPackage = null },
-                            label = { Text("Todos") })
-                        displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
-                            FilterChip(selected = discoveryProviderPackage == app.packageName,
-                                onClick = { discoveryProviderPackage = app.packageName },
-                                label = { Text(app.name, maxLines = 1) })
+                    if (showGlobalSearch) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            OutlinedTextField(
+                                value = globalSearchDraft,
+                                onValueChange = { globalSearchDraft = it.take(90) },
+                                placeholder = { Text("Filme ou série", fontSize = 12.sp) },
+                                singleLine = true,
+                                modifier = Modifier.weight(1f).height(52.dp),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = {
+                                    globalSearchTerm = globalSearchDraft.trim()
+                                }))
+                            TextButton(onClick = { globalSearchTerm = globalSearchDraft.trim() },
+                                enabled = globalSearchDraft.trim().length >= 2,
+                                contentPadding = PaddingValues(horizontal = 4.dp)) {
+                                Text("Buscar", fontSize = 12.sp)
+                            }
+                            IconButton(onClick = {
+                                globalSearchDraft = ""; globalSearchTerm = ""
+                                showGlobalSearch = false
+                            }, modifier = Modifier.size(32.dp)) { Text("×", fontSize = 18.sp) }
+                        }
+                        if (globalSearchBusy) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        }
+                        if (globalSearchTerm.isNotBlank() && !globalSearchBusy) {
+                            Text("Resultados: " + globalSearchTerm, fontSize = 11.sp)
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.heightIn(max = 195.dp)) {
+                                items(globalSearchResults) { found ->
+                                    Column(modifier = Modifier.width(108.dp).clickable {
+                                        details = found; detailsPackage = null
+                                    }) {
+                                        AsyncImage(model = "https://image.tmdb.org/t/p/w185" + found.poster,
+                                            contentDescription = found.name,
+                                            modifier = Modifier.fillMaxWidth().height(138.dp),
+                                            contentScale = ContentScale.Crop)
+                                        Text(found.name, fontSize = 11.sp, maxLines = 2,
+                                            lineHeight = 12.sp)
+                                        StreamingOfferIcons(found, offerCache)
+                                    }
+                                }
+                            }
+                            if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
                         }
                     }
-                    if (filterBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
-                    Text("Descubra filmes e séries em várias plataformas.",
-                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (discoveryLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                    if (discoveryError != null && discoveryProviderPackage == null) Text(discoveryError.orEmpty(), fontSize = 12.sp)
-                    if (discoveryProviderPackage != null && !filterBusy && filteredShelves.isEmpty())
-                        Text("Não há títulos de assinatura confirmados para este serviço no Brasil.")
-                    val visibleShelves = if (discoveryProviderPackage == null) discoveryShelves else filteredShelves
+                    // Genre selector changes the highlights; chosen genres define home lists.
+                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        FilterChip(selected = selectedHomeGenre == 0,
+                            onClick = { selectedHomeGenre = 0 },
+                            label = { Text("Todos", fontSize = 11.sp) })
+                        mainGenres.forEach { item ->
+                            FilterChip(selected = selectedHomeGenre == item.id,
+                                onClick = { selectedHomeGenre = item.id },
+                                label = { Text(item.name, fontSize = 11.sp, maxLines = 1) })
+                        }
+                        TextButton(onClick = {
+                            editingGenreIds = preferredGenreIds
+                            showGenreSettings = true
+                        }, modifier = Modifier.height(38.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp)) {
+                            Text("Editar listas", fontSize = 11.sp)
+                        }
+                    }
+                    if (discoveryLoading || (selectedHomeGenre != 0 &&
+                            selectedHomeGenre !in genreShelves)) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    }
+                    if (discoveryError != null && selectedHomeGenre == 0) {
+                        Text(discoveryError.orEmpty(), fontSize = 11.sp)
+                    }
+                    val visibleShelves = linkedMapOf<String, List<StreamingTitle>>().apply {
+                        if (selectedHomeGenre == 0) {
+                            putAll(discoveryShelves)
+                            mainGenres.filter { it.id in preferredGenreIds }.forEach { kind ->
+                                genreShelves[kind.id]?.takeIf { it.isNotEmpty() }?.let {
+                                    put("Por gênero: " + kind.name, it)
+                                }
+                            }
+                        } else {
+                            val kind = mainGenres.firstOrNull { it.id == selectedHomeGenre }
+                            genreShelves[selectedHomeGenre]?.takeIf { it.isNotEmpty() }?.let {
+                                put("Em destaque: " + (kind?.name ?: "Gênero"), it)
+                            }
+                        }
+                    }
+                    if (selectedHomeGenre != 0 && selectedHomeGenre in genreShelves &&
+                        visibleShelves.isEmpty()) {
+                        Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
+                    }
                     val heroTitles = visibleShelves.values.firstOrNull().orEmpty().take(6)
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         if (heroTitles.isNotEmpty()) {
@@ -823,22 +885,6 @@ internal fun TclStreamingScreens(
                                         }
                                     }
                                 }
-                            }
-                        }
-                        item {
-                            Text("Explorar por plataforma",
-                                fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
-                        }
-                        items(displayed, key = { it.packageName }) { app ->
-                            Row(modifier = Modifier.fillMaxWidth().clickable {
-                                selected = app; media = "movie"; genre = 0; page = 1
-                                searchDraft = ""; searchTerm = ""; showSaved = false; message = null
-                            }.padding(7.dp),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                OfficialTvIcon(app, 48.dp)
-                                Text(app.name, modifier = Modifier.weight(1f), maxLines = 1)
-                                Text("›", fontSize = 22.sp)
                             }
                         }
                     }
