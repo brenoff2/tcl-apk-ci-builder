@@ -225,7 +225,7 @@
     "published": false,
     "development_branch": "feat/anytv-p0-device-proof-verifier-20261020",
     "build_request_commit": "9e48fa9c30ca216c24681eed80e4a660ee41f68b",
-    "workflow_run": 40037020490,
+    "workflow_run": 40038610382,
     "release_blocker": "Catalog monthly quota exhausted; remote real search returns HTTP 429 monthly_quota_exhausted; no V2 signing or OTA publication authorized until live search passes",
     "evidence_run": 40036848750,
     "server": "anytv-link-resolver-pilot.brenoff.workers.dev",
@@ -255,6 +255,20 @@
     "resolver_cache_policy": "24h search, 12h per-title watch providers, 7d genre/provider lists, 6h trending/now-playing; bounded monthly cap remains enforced",
     "resolver_offline_contract_run": 40037621092,
     "resolver_offline_contract_result": "SUCCESS incl node tests, SQLite, syntax, Wrangler dry-run; NO Cloudflare deployment",
-    "worker_production_quota": "EXHAUSTED_NOT_CHANGED"
+    "worker_production_quota": "EXHAUSTED_NOT_CHANGED",
+    "user_authorized_visual_release_with_known_quota": true,
+    "known_quota_status": "HTTP 429 monthly_quota_exhausted; tolerated ONLY for explicit user-approved UI rollout; not fixed",
+    "new_visual_features": [
+      "mixed movie and series hero up to 20 slides",
+      "two stacked rows scrolling horizontally with first 20 TMDB results",
+      "genre load more by explicit button",
+      "square E movie badge and circular S series badge",
+      "new TV on-the-air and movies upcoming sections",
+      "typeahead global search after 650ms debounce",
+      "X clears input not closes",
+      "local Android release reminder with notification permission and inexact alarm"
+    ],
+    "app_signed_or_ota_published": "PENDING_RUNNING_GITHUB_ACTIONS",
+    "backend_deployed": false
   }
 }
