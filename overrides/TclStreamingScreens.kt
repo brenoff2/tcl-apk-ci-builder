@@ -506,7 +506,7 @@ private fun StreamingOfferIcons(
     if (item.votes > 0 || offerings.isNotEmpty()) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp)) {
+            modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
             if (item.votes > 0) {
                 Text("★ " + String.format(java.util.Locale.US, "%.1f", item.rating),
                     fontSize = 11.sp, maxLines = 1,
@@ -519,9 +519,9 @@ private fun StreamingOfferIcons(
                 }
                 if (installed != null) {
                     // Exactly the same launcher icon component used on the main TV screen.
-                    OfficialTvIcon(installed, 30.dp)
+                    OfficialTvIcon(installed, 20.dp)
                 } else {
-                    Box(modifier = Modifier.size(30.dp).clip(RoundedCornerShape(8.dp))
+                    Box(modifier = Modifier.size(20.dp).clip(RoundedCornerShape(5.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center) {
                         if (offer.logo.isNotBlank()) {
@@ -544,7 +544,8 @@ private fun StreamingOfferIcons(
 
 @Composable
 internal fun TclStreamingScreens(
-    apps: List<TvOfficialApp>, host: String, pairing: String, onDismiss: () -> Unit
+    apps: List<TvOfficialApp>, host: String, pairing: String,
+    tvName: String, onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
     StreamingCatalog.configure(context)
@@ -948,30 +949,61 @@ internal fun TclStreamingScreens(
                 if (selected == null) {
                     Row(verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()) {
-                        Text("Descobrir", fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                        Row(modifier = Modifier.weight(1f)
+                            .horizontalScroll(rememberScrollState()),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            FilterChip(selected = !homeLibrary,
+                                onClick = { homeLibrary = false },
+                                label = { Text("Início", fontSize = 11.sp) })
+                            FilterChip(selected = homeLibrary && librarySection == "saved",
+                                onClick = { homeLibrary = true; librarySection = "saved" },
+                                label = { Text("♥ Minha lista", fontSize = 11.sp) })
+                            FilterChip(selected = homeLibrary && librarySection == "watching",
+                                onClick = { homeLibrary = true; librarySection = "watching" },
+                                label = { Text("Em andamento", fontSize = 11.sp) })
+                            FilterChip(selected = homeLibrary && librarySection == "watched",
+                                onClick = { homeLibrary = true; librarySection = "watched" },
+                                label = { Text("✓ Assistidos", fontSize = 11.sp) })
+                            FilterChip(selected = onlyMyStreaming,
+                                onClick = {
+                                    if (myServices.isEmpty()) {
+                                        editingMyServices = myServices
+                                        showMyStreamingSettings = true
+                                    } else {
+                                        onlyMyStreaming = !onlyMyStreaming
+                                        homeLibrary = false
+                                    }
+                                },
+                                label = { Text("Meus streamings", fontSize = 11.sp) })
+                        }
+                        IconButton(onClick = {
+                            editingMyServices = myServices
+                            showMyStreamingSettings = true
+                        }, modifier = Modifier.size(32.dp).semantics {
+                            contentDescription = "Configurar meus streamings"
+                        }) { Text("⚙", fontSize = 18.sp) }
                         IconButton(onClick = { showGlobalSearch = !showGlobalSearch },
                             modifier = Modifier.size(36.dp).semantics {
                                 contentDescription = "Buscar filmes e séries"
                             }) { Text("⌕", fontSize = 25.sp) }
-                        TextButton(onClick = onDismiss,
-                            modifier = Modifier.height(36.dp),
-                            contentPadding = PaddingValues(horizontal = 6.dp)) {
-                            Text("Fechar", fontSize = 12.sp)
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(34.dp)
+                            .semantics { contentDescription = "Fechar streaming" }) {
+                            Text("×", fontSize = 25.sp)
                         }
                     }
                     // The same real TV platform shortcuts, compact rather than a large list.
                     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                         displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
-                            Column(modifier = Modifier.width(65.dp).clickable {
+                            Column(modifier = Modifier.width(62.dp).clickable {
                                 selected = app; media = "movie"; genre = 0; page = 1
                                 searchDraft = ""; searchTerm = ""; showSaved = false; message = null
                             }.semantics { contentDescription = "Explorar " + app.name },
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                OfficialTvIcon(app, 32.dp)
-                                Text(app.name, fontSize = 9.sp, maxLines = 1,
+                                OfficialTvIcon(app, 56.dp)
+                                Text(app.name, fontSize = 10.sp, maxLines = 1,
                                     lineHeight = 11.sp, overflow = TextOverflow.Ellipsis)
                             }
                         }
@@ -1022,30 +1054,6 @@ internal fun TclStreamingScreens(
                                 }
                             }
                             if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
-                        }
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        FilterChip(selected = onlyMyStreaming, onClick = {
-                            if (myServices.isEmpty()) {
-                                editingMyServices = myServices
-                                showMyStreamingSettings = true
-                            } else {
-                                onlyMyStreaming = !onlyMyStreaming
-                            }
-                            homeLibrary = false
-                        }, label = { Text("Só meus streamings", fontSize = 11.sp) })
-                        TextButton(onClick = {
-                            editingMyServices = myServices
-                            showMyStreamingSettings = true
-                        }, contentPadding = PaddingValues(horizontal = 3.dp)) {
-                            Text("Escolher", fontSize = 11.sp)
-                        }
-                        Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { homeLibrary = !homeLibrary },
-                            contentPadding = PaddingValues(horizontal = 3.dp)) {
-                            Text(if (homeLibrary) "Descobrir" else "♥ Minha lista", fontSize = 11.sp)
                         }
                     }
                     // Genre selector changes the highlights; chosen genres define home lists.
