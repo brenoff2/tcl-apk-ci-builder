@@ -644,14 +644,18 @@ private fun StreamingOfferIcons(
     expanded: Boolean = false
 ) {
     val key = "${item.media}:${item.id}"
+    var lookupFailed by remember(key) { mutableStateOf(false) }
     LaunchedEffect(key) {
         if (key !in known) {
             runCatching { StreamingCatalog.offersInBrazil(item) }
-                .getOrNull()?.let { known[key] = it }
+                .onSuccess { known[key] = it }
+                .onFailure { lookupFailed = true }
         }
     }
     val offerings = known[key].orEmpty()
-    if (item.votes > 0 || offerings.isNotEmpty()) {
+    val officialDisney = item.media == "tv" && item.id == 224505
+    if (item.votes > 0 || offerings.isNotEmpty() || key in known ||
+        lookupFailed || officialDisney) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
@@ -685,6 +689,16 @@ private fun StreamingOfferIcons(
             }
             if (offerings.size > visible) {
                 Text("+${offerings.size - visible}", fontSize = 10.sp, maxLines = 1)
+            }
+            if (offerings.isEmpty()) {
+                Text(when {
+                    officialDisney -> "Disney+ · confirmado pela Disney"
+                    lookupFailed -> "Consulta indisponível"
+                    key in known -> "Canal não informado"
+                    else -> "Consultando..."
+                }, fontSize = 9.sp, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
