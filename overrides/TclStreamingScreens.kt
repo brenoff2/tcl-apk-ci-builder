@@ -759,13 +759,17 @@ private fun StreamingOfferIcons(
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
-            Box(modifier = Modifier.size(17.dp)
-                .clip(RoundedCornerShape(if (item.media == "tv") 9.dp else 3.dp))
-                .background(MaterialTheme.colorScheme.primaryContainer),
+            Box(modifier = Modifier.size(16.dp)
+                .clip(RoundedCornerShape(if (item.media == "tv") 8.dp else 3.dp))
+                .background(if (item.media == "tv") Color(0xFFD62828) else Color(0xFF1769E0)),
                 contentAlignment = Alignment.Center) {
-                Text(if (item.media == "tv") "S" else "E", fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+                Text(if (item.media == "tv") "S" else "F",
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center, maxLines = 1, softWrap = false,
+                    fontSize = 10.sp, lineHeight = 10.sp,
+                    style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                        includeFontPadding = false)),
+                    fontWeight = FontWeight.Bold, color = Color.White)
             }
             if (item.votes > 0) {
                 Text(String.format(java.util.Locale.US, "%.1f", item.rating),
