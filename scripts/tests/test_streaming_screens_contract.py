@@ -96,6 +96,36 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Nenhuma oferta de assinatura confirmada no Brasil.', self.screen)
         self.assertNotIn('displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->\n                                FilterChip(', self.screen)
 
+    def test_streaming_brands_compact_deduplicated_and_not_addon_channels(self):
+        self.assertIn('distinctBy { provider(it.name) ?: norm(it.name) }', self.screen)
+        self.assertIn('normalized.contains("channel")', self.screen)
+        self.assertIn('normalized.contains("canal")', self.screen)
+        self.assertIn('modifier = Modifier.size(24.dp)', self.screen)
+        self.assertIn('fontSize = 11.sp, maxLines = 1', self.screen)
+        self.assertIn('lineHeight = 12.sp', self.screen)
+
+    def test_compact_home_search_platforms_and_customizable_genre_lists(self):
+        for piece in (
+            'Text("Descobrir", fontSize = 17.sp',
+            'showGlobalSearch = !showGlobalSearch',
+            'if (showGlobalSearch)',
+            'OfficialTvIcon(app, 32.dp)',
+            'suspend fun discoveryGenre(id: Int)',
+            'with_genres=$id&page=1',
+            'StreamingCatalog.genres(token, "movie")',
+            'selectedHomeGenre = item.id',
+            'Text("Editar listas", fontSize = 11.sp)',
+            'putString("anytv_home_genres"',
+            'mainGenres.filter { it.id in preferredGenreIds }',
+            '"Por gênero: " + kind.name',
+        ):
+            with self.subTest(piece=piece):
+                self.assertIn(piece, self.screen)
+        self.assertNotIn('Text("Explorar por plataforma"', self.screen)
+        self.assertNotIn('Text("Streaming", fontSize = 20.sp', self.screen)
+        self.assertNotIn('Text("Filtrar destaques por plataforma instalada na TV"', self.screen)
+        self.assertIn('val heroTitles = visibleShelves.values.firstOrNull()', self.screen)
+
     def test_tv_16_missing_search_route_falls_back_to_launch(self):
         self.assertIn('path == "/title-search"', self.apps)
         self.assertIn('status == 404 || status == 405', self.apps)
