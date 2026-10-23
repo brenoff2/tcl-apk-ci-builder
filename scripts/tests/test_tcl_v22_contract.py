@@ -66,7 +66,7 @@ class PhoneUpdatesAndBack(unittest.TestCase):
 
     def test_single_package_higher_version(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.apk)
-        self.assertIn("versionCode = " + ("36" if os.environ.get("TCL_V36") == "1" else "35" if os.environ.get("TCL_V35") == "1" else "34"), self.apk)
+        self.assertIn("versionCode = " + ("39" if os.environ.get("TCL_V39") == "1" else "38" if os.environ.get("TCL_V38") == "1" else "37" if os.environ.get("TCL_V37") == "1" else "36" if os.environ.get("TCL_V36") == "1" else "35" if os.environ.get("TCL_V35") == "1" else "34"), self.apk)
 
 
 class TvUpdateAndBluetooth(unittest.TestCase):
@@ -97,7 +97,7 @@ class TvUpdateAndBluetooth(unittest.TestCase):
         self.assertIn("headphoneStatus = result", self.bridge)
 
     def test_tv_inplace_update_support(self):
-        self.assertIn("versionCode = " + ("15" if os.environ.get("TCL_TV_V24") == "1" else "14" if os.environ.get("TCL_TV_V23") == "1" else "13"), self.gradle)
+        self.assertIn("versionCode = " + ("16" if os.environ.get("TCL_TV_V25") == "1" else "15" if os.environ.get("TCL_TV_V24") == "1" else "14" if os.environ.get("TCL_TV_V23") == "1" else "13"), self.gradle)
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
         self.assertIn("REQUEST_INSTALL_PACKAGES", self.manifest)
         self.assertNotIn("BIND_ACCESSIBILITY_SERVICE", self.manifest)

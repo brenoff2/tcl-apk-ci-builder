@@ -3,6 +3,7 @@ package com.hari.androidtvremote.ui.app
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import android.content.Context
 import java.net.HttpURLConnection
 import java.net.URI
 import java.net.URL
@@ -78,13 +79,13 @@ internal object AnyTvPersonalLinks {
     }
 
     /** Resolve official title link through the AnyTV backend. No client API key. */
-    suspend fun resolve(title: StreamingTitle, packageName: String):
+    suspend fun resolve(context: Context, title: StreamingTitle, packageName: String):
         AnyTvPersonalResult? = withContext(Dispatchers.IO) {
         val provider = providerForPackage(packageName) ?: return@withContext null
         require(title.id > 0 && title.media in setOf("movie", "tv")) {
             "Identificador inválido."
         }
-        val url = URL("https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/resolve/" +
+        val url = URL(AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/resolve/" +
             title.media + "/" + title.id + "/" + provider)
         val conn = url.openConnection() as HttpURLConnection
         try {
@@ -92,6 +93,7 @@ internal object AnyTvPersonalLinks {
             conn.readTimeout = 8000
             conn.setRequestProperty("Accept", "application/json")
             conn.setRequestProperty("User-Agent", "AnyTV/2.9.8 (Android; streaming catalog client)")
+            AnyTvDeviceIdentity.attachProof(context, conn, url.toURI().rawPath)
             val status = conn.responseCode
             if (status == 404) return@withContext AnyTvPersonalResult.NotInSubscription
             if (status == 409) return@withContext AnyTvPersonalResult.NoSupportedLink

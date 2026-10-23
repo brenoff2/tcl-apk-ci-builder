@@ -345,3 +345,53 @@ test("TMDB upstream error reports status without exposing credentials",async()=>
   assert.equal(response.headers.get("x-anytv-upstream-status"),"401");
   assert.equal((await response.text()).includes(env.TMDB_READ_TOKEN),false);
 });
+
+
+test("discovery endpoints are allowlisted and cached without exposing TMDB token", async () => {
+  const env = makeEnv(50);
+  env.TMDB_READ_TOKEN = "secret-server-only";
+  let calls = 0;
+  const deps = { now: () => Date.parse("2026-10-21T12:00:00Z"),
+    fetch: async (url, init) => {
+      calls++;
+      assert.equal(new URL(url).hostname, "api.themoviedb.org");
+      assert.equal(init.headers.Authorization, "Bearer secret-server-only");
+      return new Response(JSON.stringify({ results: [{ id: 1, title: "Example" }] }), { status: 200 });
+    }
+  };
+  for (const route of [
+    "trending/movie/week", "trending/tv/day", "movie/top_rated",
+    "movie/now_playing", "tv/on_the_air", "movie/1/videos",
+    "tv/2/similar", "movie/3/recommendations"
+  ]) {
+    const req = new Request("https://anytv.invalid/v1/catalog/" + route + "?language=pt-BR");
+    assert.equal((await catalogRequest(req, env, deps)).status, 200, route);
+    assert.equal((await catalogRequest(req, env, deps)).status, 200, route);
+  }
+  assert.equal(calls, 8);
+  for (const route of ["movie/0/videos", "movie/1/credits/all", "trending/person/day"]) {
+    assert.equal((await catalogRequest(new Request("https://anytv.invalid/v1/catalog/" + route), env)).status, 400);
+  }
+});
+
+test("English metadata is permitted only for trailer videos", async () => {
+  const env = { TMDB_READ_TOKEN: "server-only", DB: {}, RATE_LIMIT: { limit: async () => ({ success: true }) } };
+  for (const url of [
+    "/v1/catalog/discover/movie?language=en-US",
+    "/v1/catalog/trending/movie/week?language=en-US",
+    "/v1/catalog/movie/1/recommendations?language=en-US"
+  ]) {
+    assert.equal((await catalogRequest(new Request("https://anytv.invalid" + url), env)).status, 400);
+  }
+  const operational = makeEnv(10);
+  operational.TMDB_READ_TOKEN = "secret-server-only";
+  let upstream = "";
+  const response = await catalogRequest(
+    new Request("https://anytv.invalid/v1/catalog/movie/42/videos?language=en-US"),
+    operational, { fetch: async url => {
+      upstream = String(url);
+      return new Response(JSON.stringify({results: []}), {status: 200});
+    }});
+  assert.equal(response.status, 200);
+  assert.equal(new URL(upstream).searchParams.get("language"), "en-US");
+});

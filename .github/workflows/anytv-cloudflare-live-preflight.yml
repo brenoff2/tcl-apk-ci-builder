@@ -1,0 +1,38 @@
+name: AnyTV Cloudflare live access preflight
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-cloudflare-live-preflight.yml']
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: 48172e80b82e7f0a2100e512831c48d2
+    steps:
+      - name: Inspect Cloudflare pilot metadata without printing tokens
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$CF_TOKEN" || { echo 'CLOUDFLARE_TOKEN_MISSING'; exit 1; }
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          base="https://api.cloudflare.com/client/v4/accounts/"+os.environ["CF_ACCOUNT_ID"]
+          headers={"Authorization":"Bearer "+os.environ["CF_TOKEN"],"Accept":"application/json"}
+          for label,path in (
+            ("worker", "/workers/scripts/anytv-link-resolver-pilot/settings"),
+            ("database", "/d1/database/9bab6598-d019-4e88-8b29-a327ff0cfd00"),
+          ):
+            req=urllib.request.Request(base+path,headers=headers,method="GET")
+            try:
+              with urllib.request.urlopen(req,timeout=15) as response:
+                body=json.load(response)
+                print(label+":accessible" if body.get("success") else label+":api_rejected")
+            except urllib.error.HTTPError as err:
+              print(label+":http_"+str(err.code))
+            except Exception as err:
+              print(label+":unreachable_"+type(err).__name__)
+          PY

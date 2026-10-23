@@ -114,18 +114,36 @@ class StreamingScreens(unittest.TestCase):
         preparer = Path("scripts/prepare_tcl.py").read_text(encoding="utf-8")
         self.assertIn("overrides/AnyTvPersonalLinks.kt", preparer)
         for fragment in (
-            "anytv-link-resolver-pilot.brenoff.workers.dev/v1/resolve/",
+            'AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/resolve/"',
             "validatedLink(", "NotInSubscription", "NoSupportedLink",
             "com.netflix.ninja", "com.disney.disneyplus",
             "com.apple.atve.androidtv.appletv", "com.wbd.stream",
         ):
             self.assertIn(fragment, resolver)
-        self.assertIn("AnyTvPersonalLinks.resolve(title, packageName)", self.screen)
+        identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
+        self.assertIn('RESOLVER_BASE = "https://anytv-link-resolver-pilot.brenoff.workers.dev"', identity)
+        self.assertIn("AnyTvPersonalLinks.resolve(context, title, packageName)", self.screen)
+        self.assertIn("AnyTvDeviceIdentity.attachProof(context, conn, url.toURI().rawPath)", resolver)
+        self.assertIn("overrides/AnyTvDeviceIdentity.kt", preparer)
         self.assertIn("StreamingCatalog.titleDeepLink(token, title, packageName)", self.screen)
         self.assertNotIn("AndroidKeyStore", resolver)
         self.assertNotIn("X-API-Key", resolver)
         self.assertNotIn("tokenDraft", self.screen)
         self.assertNotIn("personalKeyDraft", self.screen)
+
+    def test_activation_ui_never_persists_codes_and_runs_off_main_thread(self):
+        identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
+        for fragment in (
+            "Ativar links diretos neste dispositivo",
+            "AnyTvDeviceIdentity.activate(context, submitted)",
+            "withContext(Dispatchers.IO)",
+            "activationDraft = \"\"",
+        ):
+            self.assertIn(fragment, self.screen)
+        self.assertIn('connection.responseCode == 201', identity)
+        self.assertIn('activationCode.matches(Regex(', identity)
+        self.assertNotIn('putString("activation', identity)
+        self.assertNotIn('putString("activation', self.screen)
 
     def test_tv_apple_playable_id_requires_allowlisted_parameters(self):
         from pathlib import Path
@@ -137,7 +155,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
-        self.assertIn("versionCode = " + ("36" if os.environ.get("TCL_V36") == "1" else "35" if os.environ.get("TCL_V35") == "1" else "34"), self.gradle)
+        self.assertIn("versionCode = " + ("39" if os.environ.get("TCL_V39") == "1" else "38" if os.environ.get("TCL_V38") == "1" else "37" if os.environ.get("TCL_V37") == "1" else "36" if os.environ.get("TCL_V36") == "1" else "35" if os.environ.get("TCL_V35") == "1" else "34"), self.gradle)
 
 if __name__ == "__main__":
     unittest.main()

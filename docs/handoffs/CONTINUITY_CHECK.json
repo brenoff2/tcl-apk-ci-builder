@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "project": "ANYTV",
+  "factory_reference": "brenoff2/chatgpt-project-factory@feat/g1-core-vertical-slice",
+  "protocol": "docs/operations/PROJECT_CONTINUITY_PROTOCOL.md",
+  "status": "PENDING_INDEPENDENT_CHAT_TEST",
+  "checked_at": null,
+  "checks": [
+    {
+      "id": "identity_and_architecture",
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "both_branches_and_heads",
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "decisions_and_contracts",
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "own_progress_F0_F8",
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "ota_current_vs_target",
+      "result": "NOT_RUN"
+    },
+    {
+      "id": "next_action_and_blockers",
+      "result": "NOT_RUN"
+    }
+  ],
+  "acceptance": "Only PASS after an independent new conversation recovers each item from repository evidence without previous chat context."
+}

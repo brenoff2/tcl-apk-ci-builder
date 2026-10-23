@@ -1,3 +1,5 @@
+import { activateDevice } from "./device-activation.mjs";
+import { verifyDeviceProof } from "./device-proof.mjs";
 /**
  * AnyTV commercial resolver pilot.
  * Never deploy credentials or a permanent client token in an APK.
@@ -173,6 +175,11 @@ export async function catalogRequest(request, env, deps = {}) {
     /^(movie|tv)\/[1-9][0-9]{0,9}\/watch\/providers$/,
     /^(movie|tv)\/[1-9][0-9]{0,9}\/external_ids$/,
     /^(discover|search)\/(movie|tv)$/,
+    /^trending\/(movie|tv)\/(day|week)$/,
+    /^(movie|tv)\/(popular|top_rated)$/,
+    /^movie\/(now_playing|upcoming)$/,
+    /^tv\/(on_the_air|airing_today)$/,
+    /^(movie|tv)\/[1-9][0-9]{0,9}\/(videos|similar|recommendations)$/,
   ];
   if (!patterns.some(p => p.test(route))) return asJson({ status: "bad_request" }, 400);
   const allowed = new Set([
@@ -201,8 +208,10 @@ export async function catalogRequest(request, env, deps = {}) {
   if (query !== null && (query.length < 1 || query.length > 90)) {
     return asJson({ status: "bad_request" }, 400);
   }
+  const lang = parsed.searchParams.get("language") || "pt-BR";
+  const trailerLanguage = /^(movie|tv)\/[1-9][0-9]{0,9}\/videos$/.test(route);
   if ((parsed.searchParams.get("watch_region") || "BR") !== "BR" ||
-      (parsed.searchParams.get("language") || "pt-BR") !== "pt-BR" ||
+      (lang !== "pt-BR" && !(trailerLanguage && lang === "en-US")) ||
       (parsed.searchParams.get("include_adult") || "false") !== "false" ||
       (parsed.searchParams.get("with_watch_monetization_types") || "flatrate") !== "flatrate" ||
       (parsed.searchParams.get("sort_by") || "popularity.desc") !== "popularity.desc") {
@@ -217,7 +226,7 @@ export async function catalogRequest(request, env, deps = {}) {
     const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
     const upstream = new URL("https://api.themoviedb.org/3/" + route);
     for (const [k, v] of parsed.searchParams) upstream.searchParams.set(k, v);
-    upstream.searchParams.set("language", "pt-BR");
+    upstream.searchParams.set("language", lang);
     if (route.startsWith("discover/") || route.startsWith("watch/providers/")) {
       upstream.searchParams.set("watch_region", "BR");
     }
@@ -294,15 +303,33 @@ export async function catalogRequest(request, env, deps = {}) {
  * Does NOT authorize replaying arbitrary link strings from callers.
  */
 export async function handleRequest(request, env, deps = {}) {
-  if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
   const parsed = new URL(request.url);
+  // Enrollment remains disabled by default, including on existing deployments.
+  if (parsed.pathname === "/v1/device/activate" &&
+      env?.ANYTV_DEVICE_ACTIVATION_ENABLED === "true") {
+    return activateDevice(request, env, deps);
+  }
+  if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
   if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
   if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
-  if (!env?.ANYTV_CLIENT_TOKEN || !env?.ANYTV_MOVIE_API_KEY ||
-      !env?.DB || !env?.RATE_LIMIT || monthlyCap(env) === null) {
+  if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB || !env?.RATE_LIMIT ||
+      monthlyCap(env) === null ||
+      ((env.ANYTV_RESOLVER_AUTH_MODE || "pilot") === "pilot" &&
+       !env.ANYTV_CLIENT_TOKEN)) {
     return asJson({ status: "not_configured" }, 503);
   }
-  if (!safeEqual(request.headers.get("authorization") || "",
+  // Explicit opt-in for preapproved device proofs. Existing pilot-token
+  // deployments stay unchanged until an authenticated enrollment is available.
+  // An unknown mode must fail closed, not silently select the pilot bypass.
+  const authMode = env.ANYTV_RESOLVER_AUTH_MODE || "pilot";
+  if (authMode !== "pilot" && authMode !== "device") {
+    return asJson({ status: "not_configured" }, 503);
+  }
+  if (authMode === "device") {
+    if (!(await verifyDeviceProof(request, env, deps))) {
+      return asJson({ status: "unauthorized" }, 401);
+    }
+  } else if (!safeEqual(request.headers.get("authorization") || "",
       "Bearer " + env.ANYTV_CLIENT_TOKEN)) {
     return asJson({ status: "unauthorized" }, 401);
   }

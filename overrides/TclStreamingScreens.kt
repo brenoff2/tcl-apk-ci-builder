@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -52,7 +54,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.text.Normalizer
 
-internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String)
+internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "")
 internal data class StreamingGenre(val id: Int, val name: String)
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
 internal data class StreamingResults(val titles: List<StreamingTitle>, val more: Boolean)
@@ -128,7 +130,9 @@ private object StreamingCatalog {
                     (0 until itemGenres.length()).any { itemGenres.optInt(it) == genre })
                 if (movieId > 0 && name.isNotBlank() && matchGenre) {
                     add(StreamingTitle(movieId, name, entry.optString("overview"),
-                        entry.optString("poster_path").takeIf { it.startsWith("/") } ?: "", media))
+                        entry.optString("poster_path").takeIf { it.startsWith("/") } ?: "", media,
+                        entry.optDouble("vote_average", 0.0), entry.optInt("vote_count", 0),
+                        entry.optString("backdrop_path").takeIf { it.startsWith("/") } ?: ""))
                 }
             }
         }
@@ -236,6 +240,48 @@ private object StreamingCatalog {
             }
         }
 
+    /** Global editorial shelves independent of the TV's installed providers. */
+    suspend fun discoveryShelf(route: String, media: String): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+            require(route in setOf("trending/movie/week", "trending/tv/week",
+                "movie/now_playing", "movie/top_rated", "tv/on_the_air", "movie/popular"))
+            val payload = get("backend", route + "?language=pt-BR")
+            mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+        }
+
+    /** Global search is independent of the installed-streaming provider. */
+    suspend fun searchGlobal(query: String): List<StreamingTitle> = withContext(Dispatchers.IO) {
+        require(query.length in 2..90)
+        val encoded = URLEncoder.encode(query, "UTF-8")
+        listOf("movie", "tv").flatMap { kind ->
+            val response = get("backend", "search/$kind?language=pt-BR&query=$encoded")
+            mapTitles(response.optJSONArray("results") ?: JSONArray(), kind, 0).take(12)
+        }
+    }
+
+    suspend fun trailer(media: String, id: Int): String? = withContext(Dispatchers.IO) {
+        fun findTrailer(videos: JSONArray): String? =
+            (0 until videos.length()).mapNotNull { index ->
+                val video = videos.optJSONObject(index) ?: return@mapNotNull null
+                val key = video.optString("key")
+                if (video.optString("site") == "YouTube" &&
+                    video.optString("type") == "Trailer" &&
+                    key.matches(Regex("[A-Za-z0-9_-]{11}"))) key else null
+            }.firstOrNull()
+        val original = get("backend", "$media/$id/videos?language=pt-BR")
+        val preferred = findTrailer(original.optJSONArray("results") ?: JSONArray())
+        val key = preferred ?: runCatching {
+            val alternative = get("backend", "$media/$id/videos?language=en-US")
+            findTrailer(alternative.optJSONArray("results") ?: JSONArray())
+        }.getOrNull()
+        key?.let { "https://www.youtube.com/watch?v=" + it }
+    }
+
+    suspend fun related(media: String, id: Int): List<StreamingTitle> = withContext(Dispatchers.IO) {
+        val response = get("backend", "$media/$id/recommendations?language=pt-BR")
+        mapTitles(response.optJSONArray("results") ?: JSONArray(), media, 0).take(12)
+    }
+
     suspend fun discover(
         token: String, app: String, media: String, page: Int, genre: Int, query: String
     ): StreamingResults = withContext(Dispatchers.IO) {
@@ -279,7 +325,26 @@ internal fun TclStreamingScreens(
     // The client never requires user-supplied API credentials.
     val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
+    var showDeviceActivation by remember { mutableStateOf(false) }
+    var activationDraft by remember { mutableStateOf("") }
+    var activationBusy by remember { mutableStateOf(false) }
+    var activationFeedback by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
+    var discoverySlide by remember { mutableStateOf(0) }
+    var discoveryProviderPackage by remember { mutableStateOf<String?>(null) }
+    var filteredShelves by remember { mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap()) }
+    var filterBusy by remember { mutableStateOf(false) }
+    var globalSearchDraft by remember { mutableStateOf("") }
+    var globalSearchTerm by remember { mutableStateOf("") }
+    var globalSearchResults by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    var globalSearchBusy by remember { mutableStateOf(false) }
+
+    var discoveryShelves by remember {
+        mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap())
+    }
+    var discoveryLoading by remember { mutableStateOf(false) }
+    var discoveryError by remember { mutableStateOf<String?>(null) }
+
     var all by remember { mutableStateOf(false) }
     var media by remember { mutableStateOf("movie") }
     var page by remember { mutableStateOf(1) }
@@ -332,7 +397,69 @@ internal fun TclStreamingScreens(
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<StreamingTitle?>(null) }
+    var trailerLink by remember { mutableStateOf<String?>(null) }
+    var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    var detailLoading by remember { mutableStateOf(false) }
     val displayed = remember(apps, all) { apps.filter { all || StreamingCatalog.streaming(it) } }
+
+    LaunchedEffect(globalSearchTerm) {
+        globalSearchResults = emptyList()
+        if (globalSearchTerm.length >= 2) {
+            globalSearchBusy = true
+            globalSearchResults = runCatching {
+                StreamingCatalog.searchGlobal(globalSearchTerm)
+            }.getOrDefault(emptyList())
+            globalSearchBusy = false
+        }
+    }
+
+    LaunchedEffect(details?.media, details?.id) {
+        val item = details
+        trailerLink = null
+        relatedTitles = emptyList()
+        if (item != null) {
+            detailLoading = true
+            trailerLink = runCatching { StreamingCatalog.trailer(item.media, item.id) }.getOrNull()
+            relatedTitles = runCatching { StreamingCatalog.related(item.media, item.id) }
+                .getOrDefault(emptyList())
+            detailLoading = false
+        }
+    }
+
+    LaunchedEffect(discoveryProviderPackage, apps) {
+        val app = displayed.firstOrNull { it.packageName == discoveryProviderPackage }
+        filteredShelves = emptyMap()
+        if (app != null) {
+            filterBusy = true
+            val result = linkedMapOf<String, List<StreamingTitle>>()
+            for ((label, kind) in listOf("Filmes disponíveis" to "movie", "Séries disponíveis" to "tv")) {
+                runCatching {
+                    StreamingCatalog.discover(token, app.name, kind, 1, 0, "")
+                }.onSuccess { if (it.titles.isNotEmpty()) result[label] = it.titles }
+            }
+            filteredShelves = result
+            filterBusy = false
+        }
+    }
+
+    LaunchedEffect(token) {
+        discoveryLoading = true
+        discoveryError = null
+        val shelves = linkedMapOf<String, List<StreamingTitle>>()
+        for ((name, route, kind) in listOf(
+            Triple("Em alta nesta semana", "trending/movie/week", "movie"),
+            Triple("Lançamentos recentes", "movie/now_playing", "movie"),
+            Triple("Mais bem avaliados no TMDB", "movie/top_rated", "movie"),
+            Triple("Séries em destaque", "trending/tv/week", "tv"),
+            Triple("Populares no TMDB", "movie/popular", "movie")
+        )) {
+            runCatching { StreamingCatalog.discoveryShelf(route, kind) }
+                .onSuccess { if (it.isNotEmpty()) shelves[name] = it }
+                .onFailure { discoveryError = "Algumas seções não puderam carregar." }
+        }
+        discoveryShelves = shelves
+        discoveryLoading = false
+    }
 
     LaunchedEffect(token, media) {
         genres = if (token.isBlank()) emptyList() else
@@ -386,7 +513,7 @@ internal fun TclStreamingScreens(
                 // Personal-mode live link source takes priority over sparse Wikidata.
                 // It is optional, never baked into the APK and never sent to the TV.
                 val personalLookup = runCatching {
-                    AnyTvPersonalLinks.resolve(title, packageName)
+                    AnyTvPersonalLinks.resolve(context, title, packageName)
                 }
                 when (val direct = personalLookup?.getOrNull()) {
                     is AnyTvPersonalResult.Direct -> {
@@ -474,33 +601,142 @@ internal fun TclStreamingScreens(
                             modifier = Modifier.weight(1f))
                         TextButton(onClick = onDismiss) { Text("Fechar") }
                     }
-                    Text("Escolha um aplicativo realmente instalado na TCL.",
-                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Serviços", fontWeight = FontWeight.Medium,
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = globalSearchDraft,
+                            onValueChange = { globalSearchDraft = it.take(90) },
+                            label = { Text("Buscar filme ou série") },
+                            singleLine = true,
                             modifier = Modifier.weight(1f))
-                        TextButton(onClick = { all = !all }) {
-                            Text(if (all) "Só streaming" else "Ver todos")
+                        Button(onClick = { globalSearchTerm = globalSearchDraft.trim() },
+                            enabled = globalSearchDraft.trim().length >= 2) { Text("Buscar") }
+                        if (globalSearchTerm.isNotBlank()) TextButton(onClick = {
+                            globalSearchDraft = ""; globalSearchTerm = ""
+                        }) { Text("×") }
+                    }
+                    if (globalSearchBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    if (globalSearchTerm.isNotBlank() && !globalSearchBusy) {
+                        Text("Resultados para: " + globalSearchTerm, fontSize = 12.sp)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            globalSearchResults.forEach { found ->
+                                Column(modifier = Modifier.width(110.dp).clickable {
+                                    details = found; detailsPackage = null
+                                }) {
+                                    AsyncImage(model = "https://image.tmdb.org/t/p/w185" + found.poster,
+                                        contentDescription = found.name,
+                                        modifier = Modifier.fillMaxWidth().height(150.dp),
+                                        contentScale = ContentScale.Crop)
+                                    Text(found.name, fontSize = 11.sp, maxLines = 2)
+                                }
+                            }
+                        }
+                        if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
+                    }
+                    Text("Filtrar destaques por plataforma instalada na TV",
+                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(modifier = Modifier.fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(selected = discoveryProviderPackage == null,
+                            onClick = { discoveryProviderPackage = null },
+                            label = { Text("Todos") })
+                        displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
+                            FilterChip(selected = discoveryProviderPackage == app.packageName,
+                                onClick = { discoveryProviderPackage = app.packageName },
+                                label = { Text(app.name, maxLines = 1) })
                         }
                     }
-                    LazyColumn(modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (filterBusy) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    Text("Descubra filmes e séries em várias plataformas.",
+                        fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (discoveryLoading) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    if (discoveryError != null && discoveryProviderPackage == null) Text(discoveryError.orEmpty(), fontSize = 12.sp)
+                    if (discoveryProviderPackage != null && !filterBusy && filteredShelves.isEmpty())
+                        Text("Não há títulos de assinatura confirmados para este serviço no Brasil.")
+                    val visibleShelves = if (discoveryProviderPackage == null) discoveryShelves else filteredShelves
+                    val heroTitles = visibleShelves.values.firstOrNull().orEmpty().take(6)
+                    if (heroTitles.isNotEmpty()) {
+                        val current = heroTitles[discoverySlide % heroTitles.size]
+                        AsyncImage(model = "https://image.tmdb.org/t/p/w780" +
+                            current.backdrop.ifBlank { current.poster },
+                            contentDescription = "Destaque: " + current.name,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxWidth().height(150.dp)
+                                .pointerInput(heroTitles.size) {
+                                    var drag = 0f
+                                    detectHorizontalDragGestures(
+                                        onDragStart = { drag = 0f },
+                                        onDragEnd = {
+                                            if (drag > 60f) {
+                                                discoverySlide = (discoverySlide + heroTitles.size - 1) % heroTitles.size
+                                            } else if (drag < -60f) {
+                                                discoverySlide = (discoverySlide + 1) % heroTitles.size
+                                            }
+                                        },
+                                        onHorizontalDrag = { change, amount ->
+                                            change.consume()
+                                            drag += amount
+                                        })
+                                }.clickable {
+                                    details = current
+                                    detailsPackage = null
+                                })
+                        Text(current.name, fontWeight = FontWeight.Bold, maxLines = 2)
+                        if (current.votes > 0) Text("★ TMDB " + String.format(java.util.Locale.US, "%.1f", current.rating), fontSize = 12.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = {
+                                discoverySlide = (discoverySlide + heroTitles.size - 1) % heroTitles.size
+                            }) { Text("‹ Anterior") }
+                            OutlinedButton(onClick = {
+                                discoverySlide = (discoverySlide + 1) % heroTitles.size
+                            }) { Text("Próximo ›") }
+                            TextButton(onClick = {
+                                details = current
+                                detailsPackage = null
+                            }) { Text("Detalhes") }
+                        }
+                    }
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        visibleShelves.forEach { (heading, shelf) ->
+                            item {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text(heading, fontWeight = FontWeight.SemiBold)
+                                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                        shelf.take(12).forEach { item ->
+                                            Column(modifier = Modifier.width(116.dp).clickable {
+                                                details = item
+                                                detailsPackage = null
+                                            }) {
+                                                AsyncImage(model = "https://image.tmdb.org/t/p/w185" + item.poster,
+                                                    contentDescription = "Cartaz: " + item.name,
+                                                    modifier = Modifier.fillMaxWidth().height(158.dp),
+                                                    contentScale = ContentScale.Crop)
+                                                Text(item.name, maxLines = 2, fontSize = 11.sp)
+                                                if (item.votes > 0) Text("★ " + String.format(java.util.Locale.US, "%.1f", item.rating), fontSize = 10.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        item {
+                            Text("Explorar por plataforma",
+                                fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 14.dp))
+                        }
                         items(displayed, key = { it.packageName }) { app ->
                             Row(modifier = Modifier.fillMaxWidth().clickable {
-                                    selected = app; media = "movie"; genre = 0; page = 1
-                                    searchDraft = ""; searchTerm = ""; showSaved = false
-                                    message = null
-                                }.padding(7.dp),
+                                selected = app; media = "movie"; genre = 0; page = 1
+                                searchDraft = ""; searchTerm = ""; showSaved = false; message = null
+                            }.padding(7.dp),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
                                 OfficialTvIcon(app, 48.dp)
-                                Text(app.name, modifier = Modifier.weight(1f),
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(app.name, modifier = Modifier.weight(1f), maxLines = 1)
                                 Text("›", fontSize = 22.sp)
                             }
-                        }
-                        if (displayed.isEmpty()) item {
-                            Text("Nenhum serviço identificado. Atualize os aplicativos da TCL.")
                         }
                     }
                 } else {
@@ -695,12 +931,79 @@ internal fun TclStreamingScreens(
                         }
                     }
                 }
+                TextButton(onClick = {
+                    activationDraft = ""
+                    activationFeedback = null
+                    showDeviceActivation = true
+                }) { Text("Ativar links diretos neste dispositivo", fontSize = 12.sp) }
                 Text("ⓘ Fontes: TMDB / JustWatch",
                     modifier = Modifier.clickable { showCredits = true },
                     fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1)
             }
         }
+    }
+    if (showDeviceActivation) {
+        AlertDialog(
+            onDismissRequest = { if (!activationBusy) showDeviceActivation = false },
+            title = { Text("Ativação dos links diretos") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Informe apenas o código de ativação individual fornecido " +
+                        "pelo operador do AnyTV. Não é uma chave de API.",
+                        fontSize = 12.sp)
+                    OutlinedTextField(
+                        value = activationDraft,
+                        onValueChange = {
+                            activationDraft = it.take(43)
+                            activationFeedback = null
+                        },
+                        singleLine = true,
+                        label = { Text("Código de ativação") },
+                        enabled = !activationBusy
+                    )
+                    if (activationFeedback != null) {
+                        Text(activationFeedback.orEmpty(), fontSize = 12.sp)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !activationBusy &&
+                        activationDraft.matches(Regex("[A-Za-z0-9_-]{43}")),
+                    onClick = {
+                        if (!activationBusy) {
+                            val submitted = activationDraft
+                            activationBusy = true
+                            scope.launch {
+                                val result = withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        AnyTvDeviceIdentity.activate(context, submitted)
+                                    }
+                                }
+                                activationDraft = ""
+                                activationBusy = false
+                                activationFeedback = if (result.getOrDefault(false)) {
+                                    "Dispositivo ativado. Links diretos disponíveis quando " +
+                                        "oferecidos pelo serviço."
+                                } else {
+                                    "Ativação não concluída. Confira o código ou tente novamente."
+                                }
+                            }
+                        }
+                    }
+                ) { Text(if (activationBusy) "Ativando…" else "Ativar") }
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !activationBusy,
+                    onClick = {
+                        activationDraft = ""
+                        showDeviceActivation = false
+                    }
+                ) { Text("Fechar") }
+            }
+        )
     }
     if (showCredits) {
         AlertDialog(onDismissRequest = { showCredits = false },
@@ -726,6 +1029,53 @@ internal fun TclStreamingScreens(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
+                    if (title.votes > 0) {
+                        Text("★ Nota TMDB: " +
+                            String.format(java.util.Locale.US, "%.1f", title.rating) +
+                            " (" + title.votes + " votos)", fontSize = 12.sp)
+                    }
+                    if (detailLoading) CircularProgressIndicator(modifier = Modifier.size(22.dp))
+                    val video = trailerLink
+                    if (video != null) {
+                        TextButton(onClick = {
+                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(video)))
+                        }) { Text("▶ Ver trailer") }
+                    } else if (!detailLoading) {
+                        Text("Trailer não disponível.", fontSize = 12.sp)
+                    }
+                    if (relatedTitles.isNotEmpty()) {
+                        Text("Você também pode gostar", fontWeight = FontWeight.SemiBold)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            relatedTitles.forEach { suggested ->
+                                Column(modifier = Modifier.width(100.dp).clickable {
+                                    details = suggested
+                                    detailsPackage = null
+                                }) {
+                                    AsyncImage(model = "https://image.tmdb.org/t/p/w185" + suggested.poster,
+                                        contentDescription = suggested.name,
+                                        modifier = Modifier.fillMaxWidth().height(120.dp),
+                                        contentScale = ContentScale.Crop)
+                                    Text(suggested.name, fontSize = 11.sp, maxLines = 2)
+                                }
+                            }
+                        }
+                    }
+                    if (selected == null) {
+                        Text("Escolha um aplicativo da TCL para abrir este título:",
+                            fontSize = 12.sp)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
+                                FilterChip(
+                                    selected = detailsPackage == app.packageName,
+                                    onClick = { detailsPackage = app.packageName },
+                                    label = { Text(app.name, maxLines = 1, fontSize = 11.sp) })
+                            }
+                        }
+                        Text("A disponibilidade por assinatura deve ser confirmada na plataforma.",
+                            fontSize = 11.sp)
+                    }
                     Text("A TV poderá abrir a busca do título se este serviço aceitar " +
                         "pesquisa externa. Não existe deep link universal de reprodução.",
                         fontSize = 12.sp)
