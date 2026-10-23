@@ -46,7 +46,7 @@ jobs:
           python3 scripts/apply_tcl_v22.py
           python3 scripts/apply_tcl_ptbr_cleanup.py
           python3 scripts/apply_tcl_i18n.py
-          python3 scripts/apply_tcl_tv_brand.py
+          # V2 shows connected TV name automatically; legacy manual brand picker is obsolete.
           python3 scripts/apply_tcl_sticky_controls.py
           python3 scripts/apply_anytv_brand.py
           python3 scripts/apply_anytv_tv_tls_alias_isolation.py
