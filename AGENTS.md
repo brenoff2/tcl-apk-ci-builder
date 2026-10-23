@@ -1,5 +1,8 @@
 # ANYTV — regras persistentes de execução
 
+**REGRA VIGENTE DA LINHA ANYTV V2 — 23/10/2026:** o pacote ativo é `com.tclremote.livre.v2`; a última OTA comprovada é **2.9.17/code46** (`updates/android/v2/current.apk`, run `40021931010`, git blob `b1a7fab2ffb1963669abbbe5e635770d8901022f`). A 2.9.18/code47 permanece **não compilada e não publicada**. Recuperação/assinatura V2 já estão resolvidas operacionalmente por `signing-recovery/v2/phone-signer.aesgcm`, Secret Actions `ANYTV_SIGNER_V2_RECOVERY_HEX` e workflow reutilizável `.github/workflows/release-anytv-phone-v2-new-package.yml`. **Nunca reexecutar bootstrap, gerar assinatura nova, alterar updater/OTA ou disparar build-request sem autorização.** Fontes prevalecentes: `docs/handovers/2026-10-23-ANYTV-V2-2917-2918-CONTINUIDADE-CANONICA.md`, `docs/operations/ANYTV_V2_SIGNER_RECOVERY_AND_RELEASE_RUNBOOK.md` e `docs/handoffs/2026-10-23-anytv-2918-ui-links-unfinished.md`. As passagens mais abaixo sobre "OTA atual 2.9.12", cert2026 e segredo antigo são **históricas e aplicam-se apenas ao aplicativo legado**, nunca à linha V2.
+
+
 **ACESSO GITHUB/ASSINATURA — REGRA OPERACIONAL MAIS RECENTE (23/10/2026):** antes de afirmar falta de acesso, consultar MCP GitHub direto E MCP Business OS Hub v2 → provider GitHub; nenhum diagnóstico deve se basear no terminal Windows. A decisão vigente e o diagnóstico preciso de Actions Secrets estão SOMENTE em `docs/ASSINATURA_E_ATUALIZACAO.md`. A falha 39963496459 é histórica; secret no runner continua NÃO VERIFICADO. Não executar release sem aprovação.
 
 1. GitHub `brenoff2/tcl-apk-ci-builder` é o cânone. Código, OTA e logs comprovados precedem narrativas de chats. Ler `docs/handoffs/CURRENT_HANDOFF.md`, HEAD e `docs/roadmap/PROJECT_PROGRESS.json` antes de agir.
