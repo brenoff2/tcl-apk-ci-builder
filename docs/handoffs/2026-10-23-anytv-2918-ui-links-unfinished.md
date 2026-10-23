@@ -27,5 +27,8 @@ A tentativa de integrar o helper ao cabeçalho e estado dos filtros no arquivo `
 - `TclTvAppApi.searchTitle` tem fallback de abrir aplicativo quando `AnyTV Connect 1.6` não suporta `/title-search`; não afirmar que abre automaticamente o filme.
 - A UI atual ainda mantém o link inferior "Ativar links diretos neste dispositivo", a ser removido/reclassificado quando houver edição autorizada e validação.
 
+## Readback do Worker ativo (23/10/2026)
+Inspeção read-only na configuração oficial do Cloudflare confirmou `ANYTV_DEVICE_ACTIVATION_ENABLED=true` e `ANYTV_RESOLVER_AUTH_MODE=device`. Bindings `ANYTV_MOVIE_API_KEY` (secret), `TMDB_READ_TOKEN` (secret), `DB` (D1) e `RATE_LIMIT` presentes; **nenhum valor de segredo foi lido**. Significa que a função de ativação está habilitada no Worker, mas **não prova que este celular específico foi ativado** nem que cada título terá link direto. A autorização concreta depende da identidade e cadastro em D1, e da cobertura de links da plataforma. A ausência de um ícone TMDB/JustWatch não é por si só falha de ativação.
+
 ## Gate de release
 Somente após concluir a integração e executar testes de UI + Gradle + IME remoto, assinar com a MESMA identidade V2 e publicar pelo canal `updates/android/v2/current.apk`, checando versionCode superior, certificado, hash e byte readback. Nunca promover versão parcial.
