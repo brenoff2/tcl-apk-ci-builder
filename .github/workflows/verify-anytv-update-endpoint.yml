@@ -4,7 +4,7 @@ on:
     branches: [feat/tcl-v22-updates-back-bluetooth]
     paths:
       - updates/android/cert2026/current.apk
-      - .github/workflows/verify-anytv-update-endpoint.yml
+      - '.github/workflows/*.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,6 +16,27 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: feat/tcl-v22-updates-back-bluetooth
+      - name: Reject competing Android OTA publishing workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          workflows=Path('.github/workflows')
+          matches={p.name for p in workflows.glob('*.yml')
+                   if 'updates/android/cert2026/current.apk' in p.read_text(encoding='utf-8')}
+          expected={'publish-anytv-phone-github-only.yml', 'verify-anytv-update-endpoint.yml'}
+          if matches != expected:
+              raise SystemExit('BLOCKED duplicate Android cert2026 OTA writers or missing canonical verifier: '+repr(sorted(matches)))
+          old={p.name for p in workflows.glob('*.yml')
+               if 'updates/android/current.apk' in p.read_text(encoding='utf-8')}
+          if old:
+              raise SystemExit('BLOCKED legacy Android publishing references: '+repr(sorted(old)))
+          canonical=(workflows/'publish-anytv-phone-github-only.yml').read_text(encoding='utf-8')
+          assert 'secrets.ANYTV_RECOVERY_SECRET_2026' in canonical
+          assert canonical.count('secrets.') == 1
+          print('ANYTV_SINGLE_ANDROID_PUBLISHER_VERIFIED')
+          PY
       - uses: android-actions/setup-android@v4
       - run: sdkmanager 'build-tools;36.0.0'
       - name: Validate official Android package and original signer
