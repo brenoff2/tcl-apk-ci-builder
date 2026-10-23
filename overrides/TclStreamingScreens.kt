@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
+import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
@@ -528,7 +529,7 @@ internal fun AnyTvPinnedImage(
                 val drawable = state.result.drawable
                 saveScope.launch(Dispatchers.IO) {
                     runCatching {
-                        val bitmap = androidx.core.graphics.drawable.toBitmap(drawable)
+                        val bitmap = drawable.toBitmap()
                         val partial = File(target.parentFile, target.name + ".tmp")
                         partial.outputStream().use {
                             check(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, it))
