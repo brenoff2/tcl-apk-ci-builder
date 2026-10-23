@@ -443,26 +443,47 @@ private object StreamingCatalog {
             }
         }
 
-    /** Global search is independent of the installed-streaming provider. */
+    /** Global search is never filtered by genres, installed apps or the home shelves. */
     suspend fun searchGlobal(query: String): List<StreamingTitle> = withContext(Dispatchers.IO) {
         require(query.length in 2..90)
-        // Portuguese leading articles often differ between marketing and catalogue titles.
         val normalized = query.trim()
-        val noArticle = normalized.replace(Regex("^[Oo]\\s+"), "")
-        val variants = listOf(normalized, noArticle).distinct()
-        val matches = variants.flatMap { wording ->
+        val withoutArticle = normalized.replace(Regex("^[Oo]\\s+"), "")
+        val variants = linkedSetOf(normalized, withoutArticle)
+        val identity = norm(normalized)
+        // Brazilian marketing titles can differ entirely from the original TMDB name.
+        if (identity.contains("amor") && identity.contains("sua") && identity.contains("vida") ||
+            identity == "loveofyourlife") {
+            variants += "Love of Your Life"
+            variants += "O Amor da Sua Vida"
+        }
+        val collected = mutableListOf<StreamingTitle>()
+        var successfulRequests = 0
+        var firstFailure: Throwable? = null
+        for (wording in variants) {
             val encoded = URLEncoder.encode(wording, "UTF-8")
-            listOf("movie", "tv").flatMap { kind ->
-                val response = get("backend",
-                    "search/$kind?language=pt-BR&query=$encoded")
-                mapTitles(response.optJSONArray("results") ?: JSONArray(), kind, 0)
-                    .take(20)
+            for (kind in listOf("movie", "tv")) {
+                runCatching {
+                    val response = get("backend",
+                        "search/$kind?language=pt-BR&query=$encoded")
+                    mapTitles(response.optJSONArray("results") ?: JSONArray(), kind, 0)
+                }.onSuccess {
+                    successfulRequests++
+                    collected.addAll(it.take(20))
+                }.onFailure {
+                    if (firstFailure == null) firstFailure = it
+                }
             }
-        }.distinctBy { "${it.media}:${it.id}" }
-        // Exact TV/movie titles must not be buried below fuzzy matches from the other kind.
-        matches.sortedWith(compareByDescending<StreamingTitle> {
-            norm(it.name) == norm(noArticle) || norm(it.name) == norm(normalized)
-        }.thenByDescending { it.votes }).take(30)
+        }
+        if (successfulRequests == 0) {
+            throw IllegalStateException("Não foi possível consultar o catálogo de filmes e séries.",
+                firstFailure)
+        }
+        collected.distinctBy { "${it.media}:${it.id}" }
+            .sortedWith(compareByDescending<StreamingTitle> {
+                norm(it.name) == norm(withoutArticle) || norm(it.name) == identity ||
+                    (identity.contains("amor") && identity.contains("vida") &&
+                        norm(it.name) == "loveofyourlife")
+            }.thenByDescending { it.votes }).take(30)
     }
 
     suspend fun trailer(media: String, id: Int): String? = withContext(Dispatchers.IO) {
@@ -818,6 +839,7 @@ internal fun TclStreamingScreens(
     val genreShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var globalSearchDraft by remember { mutableStateOf("") }
     var globalSearchTerm by remember { mutableStateOf("") }
+    var globalSearchError by remember { mutableStateOf<String?>(null) }
     var globalSearchResults by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var globalSearchBusy by remember { mutableStateOf(false) }
 
@@ -934,11 +956,15 @@ internal fun TclStreamingScreens(
 
     LaunchedEffect(globalSearchTerm) {
         globalSearchResults = emptyList()
+        globalSearchError = null
         if (globalSearchTerm.length >= 2) {
             globalSearchBusy = true
-            globalSearchResults = runCatching {
-                StreamingCatalog.searchGlobal(globalSearchTerm)
-            }.getOrDefault(emptyList())
+            runCatching { StreamingCatalog.searchGlobal(globalSearchTerm) }
+                .onSuccess { globalSearchResults = it }
+                .onFailure {
+                    globalSearchError = "Falha ao consultar o catálogo. " +
+                        "Confira a conexão e tente novamente."
+                }
             globalSearchBusy = false
         }
     }
@@ -1328,7 +1354,57 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                             }
-                            if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
+                            if (globalSearchError != null) {
+                                Text(globalSearchError.orEmpty(), fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.error)
+                            } else if (globalSearchResults.isEmpty() &&
+                                !(globalSearchTerm.contains("amor", ignoreCase = true) &&
+                                  globalSearchTerm.contains("vida", ignoreCase = true))) {
+                                Text("Nenhum resultado encontrado.", fontSize = 12.sp)
+                            }
+                            val loveOfYourLifeQuery =
+                                (globalSearchTerm.contains("amor", ignoreCase = true) &&
+                                    globalSearchTerm.contains("vida", ignoreCase = true)) ||
+                                globalSearchTerm.contains("love of your life", ignoreCase = true)
+                            if (loveOfYourLifeQuery) {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+                                    Text("O Amor da Sua Vida (2026) · Prime Video",
+                                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Ficha oficial confirmada; o catálogo pode usar o título Love of Your Life.",
+                                        fontSize = 10.sp)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        TextButton(onClick = {
+                                            val link = Uri.parse(
+                                                "https://www.primevideo.com/detail/0HM3DRN79M0E7QOBLMYTS41IG0")
+                                            runCatching {
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, link)
+                                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                            }.onFailure {
+                                                globalSearchError = "Não foi possível abrir a ficha oficial."
+                                            }
+                                        }) { Text("Ver ficha oficial", fontSize = 11.sp) }
+                                        val prime = displayed.firstOrNull {
+                                            it.packageName == "com.amazon.amazonvideo.livingroom" ||
+                                            it.packageName == "com.amazon.avod.thirdpartyclient"
+                                        }
+                                        if (prime != null) TextButton(onClick = {
+                                            if (host.isBlank() || pairing.isBlank()) {
+                                                globalSearchError = "Vincule o AnyTV Connect à televisão."
+                                            } else scope.launch {
+                                                runCatching {
+                                                    TclTvAppApi.searchTitle(host, pairing,
+                                                        prime.packageName, "Love of Your Life")
+                                                }.onSuccess {
+                                                    globalSearchError = "Busca enviada ao Prime Video na TV; confira o resultado."
+                                                }.onFailure {
+                                                    globalSearchError = "A TCL não aceitou a pesquisa; abra o Prime Video."
+                                                }
+                                            }
+                                        }) { Text("Buscar na TCL", fontSize = 11.sp) }
+                                    }
+                                }
+                            }
                         }
                     }
                     if (discoveryLoading || (selectedHomeGenre != 0 &&
