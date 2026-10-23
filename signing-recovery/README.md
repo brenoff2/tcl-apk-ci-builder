@@ -2,7 +2,7 @@
 
 This repository stores **only** an AES-256-GCM encrypted PKCS#12 keystore backup at `ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin`.
 
-The separate decryption secret is stored privately in the user's Google Drive folder `AnyTV - Assinaturas Privadas - Nao Compartilhar` as `ANYTV_RECOVERY_SECRET_2026_PRIVADO.txt`. **Never commit that secret or plaintext keystores, nor print them in CI logs.**
+Production signing is performed **only in GitHub Actions** using the encrypted backup already tracked here and a separately configured GitHub Actions repository secret `ANYTV_RECOVERY_SECRET_2026` (legacy aliases `ANYTV_SIGNING_RECOVERY_KEY` or `ANYTV_RECOVERY_SECRET_2026_PRIVADO` are supported). Repository secrets are injected into the runner, not stored as text files. If none is available, the release must fail before publishing. **Never commit the decryption secret, plaintext keystores or passwords, nor print them in CI logs.**
 
 File structure: 9-byte ASCII `ANYTVAES1`, 12-byte nonce, AES-GCM ciphertext + 16-byte tag; 256-bit key in separate recovery file (hex). Decrypt with Python cryptography AESGCM and extract the in-memory ZIP into a private working directory. ZIP holds `anytv-phone-migration.p12`, `anytv-tv-migration.p12`, `phone.password`, `tv.password`, `IDENTIDADES.json`.
 
