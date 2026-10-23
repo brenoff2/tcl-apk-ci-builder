@@ -116,7 +116,7 @@ class StreamingScreens(unittest.TestCase):
             'selectedHomeGenre = kind.id',
             'Text("⚙ Listas", fontSize = 11.sp)',
             'putString("anytv_home_genres"',
-            'currentGenreList.filter { it.id in preferredGenreIds ||',
+            'choices.filter { it.id in filterGenreIds ||',
             '"Por gênero: " + kind.name',
         ):
             with self.subTest(piece=piece):
@@ -147,10 +147,14 @@ class StreamingScreens(unittest.TestCase):
             'Text("Streamings"', 'Text("Gêneros"',
             'myServices = editingMyServices', 'filterGenreIds = editingFilterGenres',
             'StreamingCatalog.discover(token, name, kind',
-            'if (!onlyMyStreaming)', 'activeServiceNames.forEach { name ->',
-            'val filteredShelves = visibleShelves.mapValues',
-            'title.genreIds.any { it in filterGenreIds }',
+            'activeServiceNames.forEach { name ->',
+            'val filteredShelves = visibleShelves',
             'val uniqueShelves = filteredShelves.mapNotNull',
+            '"Marcar todos"', '"Desmarcar todos"',
+            'editingFilterGenres = if (allGenreIds.isNotEmpty()',
+            'val requested = if (selectedHomeGenre == 0)',
+            'choices.filter { it.id in filterGenreIds',
+            'Gêneros escolhidos',
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, self.screen)
@@ -161,7 +165,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('@Composable\ninternal fun TclStreamingScreens(', self.screen)
         self.assertNotIn('@Composable\n/** Same one-row navigation', self.screen)
         self.assertIn('onFilters = { editingMyServices = myServices', self.screen)
-        self.assertIn('onContentType = { kind ->', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", homeContentType == "movie")', self.screen)
         self.assertIn('onHome = { selected = null; homeLibrary = false', self.screen)
         self.assertIn('onWatching = { selected = null; homeLibrary = true', self.screen)
         self.assertIn('onWatched = { selected = null; homeLibrary = true', self.screen)
@@ -227,10 +231,10 @@ class StreamingScreens(unittest.TestCase):
         for fragment in (
             'Icon(Icons.Filled.Home', 'Icon(Icons.Filled.Favorite',
             'Icon(Icons.Filled.PlayCircleFilled', 'Icon(Icons.Filled.CheckCircle',
-            'Icon(Icons.Filled.Tv', 'Icon(Icons.Filled.Search',
+            'Icon(Icons.Filled.FilterList', 'Icon(Icons.Filled.Search',
             'Icon(Icons.Filled.Close', '"Filmes"', '"Séries"',
             'librarySection = "watching"', 'librarySection = "watched"',
-            'Modifier.size(35.dp)', 'homeContentType = kind',
+            'Modifier.size(35.dp)', 'homeContentType = if (homeContentType == "movie")',
         ):
             self.assertIn(fragment, self.screen)
         self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
@@ -314,19 +318,38 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn("tokenDraft", self.screen)
         self.assertNotIn("personalKeyDraft", self.screen)
 
-    def test_activation_ui_never_persists_codes_and_runs_off_main_thread(self):
+    def test_unprovisioned_activation_prompt_is_removed(self):
         identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
-        for fragment in (
-            "Ativar links diretos neste dispositivo",
-            "AnyTvDeviceIdentity.activate(context, submitted)",
-            "withContext(Dispatchers.IO)",
-            "activationDraft = \"\"",
-        ):
-            self.assertIn(fragment, self.screen)
+        for old in ("Ativar links diretos neste dispositivo",
+                    "showDeviceActivation", 'Text("Código de ativação")',
+                    "activationDraft", "AnyTvDeviceIdentity.activate(context, submitted)"):
+            self.assertNotIn(old, self.screen)
         self.assertIn('connection.responseCode == 201', identity)
         self.assertIn('activationCode.matches(Regex(', identity)
         self.assertNotIn('putString("activation', identity)
-        self.assertNotIn('putString("activation', self.screen)
+
+    def test_full_screen_visual_consistency_and_empty_pages(self):
+        self.assertIn('Surface(modifier = Modifier.fillMaxSize()', self.screen)
+        self.assertIn('shape = RoundedCornerShape(0.dp)', self.screen)
+        self.assertIn('color = MaterialTheme.colorScheme.background', self.screen)
+        self.assertIn('horizontalArrangement = Arrangement.End', self.screen)
+        self.assertIn('Icons.Outlined.FavoriteBorder', self.screen)
+        self.assertIn('Icon(Icons.Filled.FilterList', self.screen)
+        for text in ('Sua lista está vazia.', 'Você ainda não acompanha nenhuma série.',
+                     'Nenhum filme marcado como assistido.'):
+            self.assertIn(text, self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes"', self.screen)
+        self.assertIn('AnyTvCompactChip("Séries"', self.screen)
+        self.assertIn('showGlobalSearch = !showGlobalSearch', self.screen)
+
+    def test_verified_disney_show_id_with_fallback(self):
+        self.assertIn('title.id == 224505', self.screen)
+        self.assertIn('title.media == "tv"', self.screen)
+        self.assertIn('packageName == "com.disney.disneyplus"', self.screen)
+        self.assertIn('entity-59565a16-d61f-49d1-85d7-1f0f87712748', self.screen)
+        self.assertIn('TclTvAppApi.openTitle(host, pairing, packageName,', self.screen)
+        self.assertIn('val noArticle = normalized.replace(', self.screen)
+        self.assertIn('matches.sortedWith(compareByDescending<StreamingTitle>', self.screen)
 
     def test_tv_apple_playable_id_requires_allowlisted_parameters(self):
         from pathlib import Path
