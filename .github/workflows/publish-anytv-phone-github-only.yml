@@ -19,7 +19,6 @@ jobs:
     timeout-minutes: 30
     env:
       GH_TOKEN: ${{ github.token }}
-      RECOVERY_HEX: ${{ secrets.ANYTV_RECOVERY_SECRET_2026 }}
       EXPECTED_CERT: 2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f
       APK_PACKAGE: com.tclremote.livre
     steps:
@@ -46,11 +45,7 @@ jobs:
           EXPECTED_CODE="$(jq -r .expected_version_code "$REQUEST")"
           echo "SOURCE_RUN_ID=$SOURCE_RUN_ID" >> "$GITHUB_ENV"
           echo "EXPECTED_CODE=$EXPECTED_CODE" >> "$GITHUB_ENV"
-          if [[ ! "${RECOVERY_HEX:-}" =~ ^[[:xdigit:]]{64}$ ]]; then
-            echo "::error::Repository Actions secret ANYTV_RECOVERY_SECRET_2026 missing or invalid. OTA unchanged."
-            exit 1
-          fi
-          echo "Release intent accepted for CI run $SOURCE_RUN_ID; credential is available"
+          echo "Release intent accepted for CI run $SOURCE_RUN_ID; signer gate remains pending"
 
       - name: Download one validated source artifact from GitHub Actions
         shell: bash
@@ -84,12 +79,23 @@ jobs:
       - name: Prepare official Android signing tools
         run: sdkmanager 'build-tools;36.0.0'
 
-      - name: Recover original signer and sign without exporting secrets
+      - name: Prepare signer decryption library without private credentials
         shell: bash
         run: |
           set -euo pipefail
-          umask 077
           python3 -m pip install -q 'cryptography>=43,<47'
+
+      - name: Recover original signer and sign without exporting secrets
+        shell: bash
+        env:
+          RECOVERY_HEX: ${{ secrets.ANYTV_RECOVERY_SECRET_2026 }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${RECOVERY_HEX:-}" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::Repository Actions secret ANYTV_RECOVERY_SECRET_2026 missing or invalid. OTA unchanged."
+            exit 1
+          fi
+          umask 077
           mkdir -m 700 -p signing-private
           trap 'rm -rf signing-private' EXIT
           python3 - <<'PY'
