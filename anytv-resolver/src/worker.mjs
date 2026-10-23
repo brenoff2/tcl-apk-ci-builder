@@ -266,10 +266,18 @@ export async function catalogRequest(request, env, deps = {}) {
     if (payload.length > 450000) return asJson({ status: "catalog_unavailable" }, 503);
     const parsedPayload = JSON.parse(payload);
     diagnosticStage = "cache_write";
+    // Read-only TMDB responses are cached by route to preserve the bounded
+    // monthly upstream budget. Search and provider availability still refresh.
+    const cacheTtl = route.startsWith("genre/") || route.startsWith("watch/providers/")
+      ? 7 * 86400
+      : route.endsWith("/watch/providers") ? 12 * 3600
+      : route.startsWith("search/") ? 24 * 3600
+      : route.startsWith("trending/") || route.includes("now_playing")
+        ? 6 * 3600 : 24 * 3600;
     await env.DB.prepare(
       "INSERT INTO link_cache(cache_key,payload,expires_at) VALUES (?,?,?) " +
       "ON CONFLICT(cache_key) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at"
-    ).bind(key, JSON.stringify(parsedPayload), now + 3600).run();
+    ).bind(key, JSON.stringify(parsedPayload), now + cacheTtl).run();
     return asJson(parsedPayload);
   } catch (error) {
     const detail = error instanceof Error ? String(error.message) : "";
