@@ -202,6 +202,15 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
         self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
 
+    def test_watched_and_tracking_history_does_not_depend_on_heart(self):
+        self.assertIn('fun restoreTrackedTitle(media: String, id: Int)', self.screen)
+        self.assertIn('StreamingDiskCache.previousTitle(media, id)', self.screen)
+        self.assertIn('val history = watchedFilms.mapNotNull', self.screen)
+        self.assertIn('val trackedIds = trackedSeries +', self.screen)
+        self.assertIn('val watching = trackedIds.mapNotNull', self.screen)
+        self.assertIn('"Filmes já assistidos", history', self.screen)
+        self.assertIn('"Séries em andamento", watching', self.screen)
+
     def test_quick_title_actions_and_permanent_local_artwork(self):
         for text in ('"Adicionar à minha lista"', '"Marcar como assistido"',
                      '"Acompanhar série"', 'Color(0xFF1CB96B)',
