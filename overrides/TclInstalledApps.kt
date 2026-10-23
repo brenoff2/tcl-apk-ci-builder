@@ -351,7 +351,7 @@ fun TclInstalledAppsBar(
             else favorites.mapNotNull { byPackage[it] }
         if (selectedApps.isNotEmpty()) {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                horizontalArrangement = Arrangement.End) {
                 selectedApps.forEach { app ->
                     Column(
                         modifier = Modifier.width(62.dp).clickable {
@@ -369,7 +369,7 @@ fun TclInstalledAppsBar(
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         OfficialTvIcon(app = app, size = 56.dp)
-                        Text(app.name, fontSize = 10.sp, maxLines = 1,
+                        Text(app.name, fontSize = 10.sp, maxLines = 1, color = androidx.compose.ui.graphics.Color.White,
                             textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
                     }
                 }
