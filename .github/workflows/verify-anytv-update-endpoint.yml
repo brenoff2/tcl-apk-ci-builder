@@ -35,6 +35,14 @@ jobs:
           canonical=(workflows/'publish-anytv-phone-github-only.yml').read_text(encoding='utf-8')
           assert 'secrets.ANYTV_RECOVERY_SECRET_2026' in canonical
           assert canonical.count('secrets.') == 1
+          assert 'workflow_dispatch:' not in canonical
+          assert 'inputs.candidate_run_id' not in canonical
+          header=canonical.split('jobs:',1)[0]
+          assert 'paths:' in header
+          assert '.github/anytv-phone-release-request.json' in header
+          assert '.github/workflows/publish-anytv-phone-github-only.yml' not in header
+          assert 'expected_version_code' in canonical
+          assert '(( NEW_CODE > OLD_CODE ))' in canonical
           print('ANYTV_SINGLE_ANDROID_PUBLISHER_VERIFIED')
           PY
       - uses: android-actions/setup-android@v4
