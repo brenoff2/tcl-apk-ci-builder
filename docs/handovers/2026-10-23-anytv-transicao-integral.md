@@ -1,3 +1,5 @@
+> **ARQUIVO HISTÓRICO anterior à V2.** O procedimento abaixo pertence à linha legada cert2026; para novas versões, [HANDOFF ATUAL](2026-10-23-ANYTV-V2-2917-2918-CONTINUIDADE-CANONICA.md) e [RUNBOOK V2](../operations/ANYTV_V2_SIGNER_RECOVERY_AND_RELEASE_RUNBOOK.md) prevalecem. Não recriar assinatura nem usar o Drive.
+
 # PROJETO ANYTV — TRANSICAO INTEGRAL E ESTADO CANONICO
 Data: 2026-10-23
 Repositorio privado: brenoff2/tcl-apk-ci-builder
