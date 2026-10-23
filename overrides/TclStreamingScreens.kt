@@ -59,7 +59,7 @@ import java.io.File
 import java.security.MessageDigest
 import java.text.Normalizer
 
-internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "")
+internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "")
 internal data class StreamingGenre(val id: Int, val name: String)
 internal data class StreamingOffer(val id: Int, val name: String, val logo: String)
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
@@ -198,7 +198,8 @@ private object StreamingCatalog {
                     add(StreamingTitle(movieId, name, entry.optString("overview"),
                         entry.optString("poster_path").takeIf { it.startsWith("/") } ?: "", media,
                         entry.optDouble("vote_average", 0.0), entry.optInt("vote_count", 0),
-                        entry.optString("backdrop_path").takeIf { it.startsWith("/") } ?: ""))
+                        entry.optString("backdrop_path").takeIf { it.startsWith("/") } ?: "",
+                        entry.optString(if (media == "tv") "first_air_date" else "release_date")))
                 }
             }
         }
@@ -521,18 +522,17 @@ internal fun TclStreamingScreens(
                     return@mapNotNull null
                 StreamingFavorite(
                     StreamingTitle(id, o.optString("name"), o.optString("overview"),
-                        o.optString("poster"), kind), pkg)
+                        o.optString("poster"), kind, date = o.optString("date")), pkg)
             }
         }.getOrDefault(emptyList<StreamingFavorite>()))
     }
     fun isFavorite(title: StreamingTitle, packageName: String): Boolean =
-        favorites.any { it.title.id == title.id && it.title.media == title.media &&
-            it.packageName == packageName }
+        favorites.any { it.title.id == title.id && it.title.media == title.media }
     fun toggleFavorite(title: StreamingTitle, packageName: String) {
         favorites = if (isFavorite(title, packageName)) favorites.filterNot {
-            it.title.id == title.id && it.title.media == title.media &&
-                it.packageName == packageName
-        } else listOf(StreamingFavorite(title, packageName)) + favorites
+            it.title.id == title.id && it.title.media == title.media
+        } else listOf(StreamingFavorite(title,
+            packageName.ifBlank { "library" })) + favorites
         val json = JSONArray()
         favorites.forEach { value ->
             json.put(JSONObject().put("id", value.title.id)
@@ -540,7 +540,8 @@ internal fun TclStreamingScreens(
                 .put("package", value.packageName)
                 .put("name", value.title.name)
                 .put("overview", value.title.overview)
-                .put("poster", value.title.poster))
+                .put("poster", value.title.poster)
+                .put("date", value.title.date))
         }
         prefs.edit().putString("streaming_favorites", json.toString()).apply()
     }
@@ -1283,6 +1284,12 @@ internal fun TclStreamingScreens(
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    val releasedYear = title.date.take(4).takeIf {
+                        it.length == 4 && it.all(Char::isDigit)
+                    }
+                    Text(listOfNotNull(if (title.media == "tv") "Série" else "Filme",
+                        releasedYear).joinToString(" · "),
+                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
                     if (title.votes > 0) {
                         Text("★ Nota TMDB: " +
@@ -1362,7 +1369,7 @@ internal fun TclStreamingScreens(
                     Text("A TV poderá abrir a busca do título se este serviço aceitar " +
                         "pesquisa externa. Não existe deep link universal de reprodução.",
                         fontSize = 12.sp)
-                    TextButton(onClick = { if (pkg.isNotBlank()) toggleFavorite(title, pkg) }) {
+                    TextButton(onClick = { toggleFavorite(title, pkg) }) {
                         Text(if (isFavorite(title, pkg)) "♥ Remover dos favoritos"
                             else "♡ Adicionar aos favoritos")
                     }
