@@ -112,7 +112,7 @@ class StreamingScreens(unittest.TestCase):
             'if (showGlobalSearch)',
             'OfficialTvIcon(app, 56.dp)',
             'suspend fun discoveryGenre(id: Int)',
-            'with_genres=$id&page=1',
+            'with_genres=$id&page=$page',
             'StreamingCatalog.genres(token, "movie")',
             'selectedHomeGenre = kind.id',
             'Text("⚙ Listas", fontSize = 11.sp)',
@@ -385,10 +385,43 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Text(selected?.name ?: "Início"', self.screen)
         self.assertIn('if (selected != null && !homeLibrary)', self.screen)
         self.assertIn('LaunchedEffect(selected?.packageName, homeContentType)', self.screen)
-        self.assertIn('myServiceShelves[key] = it.titles.take(12)', self.screen)
+        self.assertIn('myServiceShelves[key] = it.titles', self.screen)
         self.assertIn('HorizontalPager(', self.screen)
         self.assertIn('Modifier.padding(top = 16.dp, bottom = 9.dp)', self.screen)
         self.assertNotIn('} else {\\n                    val app = selected!!', self.screen)
+
+    def test_double_row_real_pagination_and_mixed_highlights(self):
+        for snippet in (
+            'suspend fun discoveryGenrePage(id: Int, media: String, page: Int)',
+            'page < payload.optInt("total_pages", page)',
+            'genreMore[key] = it.more',
+            'items(shelf.chunked(2))',
+            'StreamingCatalog.discoveryGenrePage(',
+            'Text(if (genreLoading[moreKey] == true)',
+            '"Mostrar mais " + heading',
+            'genreShelves[moreKey] =',
+            'val films = discoveryShelves["Em alta nesta semana"]',
+            'val shows = discoveryShelves["Séries em destaque"]',
+            'for (i in 0 until 10)',
+            'Triple("Novidades em séries", "tv/on_the_air", "tv")',
+            'Triple("Em breve · Filmes", "movie/upcoming", "movie")',
+            'Text(if (item.media == "tv") "S" else "E"',
+            'scheduleAnyTvPremiereReminder(context, item)',
+            'class AnyTvReleaseReminderReceiver',
+        ):
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, self.screen)
+        self.assertNotIn('items(shelf.take(12))', self.screen)
+        self.assertNotIn('Text("★ "', self.screen)
+
+    def test_search_live_suggestions_and_clear_button(self):
+        self.assertIn('LaunchedEffect(globalSearchDraft)', self.screen)
+        self.assertIn('delay(650)', self.screen)
+        self.assertIn('globalSearchTerm = globalSearchDraft.trim()', self.screen)
+        self.assertIn('modifier = Modifier.weight(1f).height(42.dp)', self.screen)
+        self.assertIn('Icon(Icons.Filled.Search, contentDescription = "Executar busca"', self.screen)
+        self.assertIn('globalSearchResults = emptyList(); globalSearchError = null', self.screen)
+        self.assertNotIn('showGlobalSearch = false\\n', self.screen.split('globalSearchDraft = ""; globalSearchTerm = ""')[1].split('}',1)[0])
 
     def test_tv_apple_playable_id_requires_allowlisted_parameters(self):
         from pathlib import Path
