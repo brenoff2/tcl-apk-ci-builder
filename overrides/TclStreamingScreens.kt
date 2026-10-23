@@ -1095,6 +1095,44 @@ internal fun TclStreamingScreens(
             }
         }
     }
+    if (showGenreSettings) {
+        AlertDialog(
+            onDismissRequest = { showGenreSettings = false },
+            title = { Text("Listas na página inicial", fontSize = 18.sp) },
+            text = {
+                Column(modifier = Modifier.heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Escolha os gêneros que aparecem na página Descobrir.",
+                        fontSize = 12.sp)
+                    mainGenres.forEach { kind ->
+                        val checked = kind.id in editingGenreIds
+                        Row(modifier = Modifier.fillMaxWidth().clickable {
+                            editingGenreIds = if (checked)
+                                editingGenreIds - kind.id else editingGenreIds + kind.id
+                        }, verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = checked, onCheckedChange = null)
+                            Text(kind.name, fontSize = 13.sp)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = editingGenreIds.isNotEmpty(),
+                    onClick = {
+                        preferredGenreIds = editingGenreIds
+                        prefs.edit().putString("anytv_home_genres",
+                            mainGenreIds.filter { it in editingGenreIds }.joinToString(",")).apply()
+                        selectedHomeGenre = 0
+                        showGenreSettings = false
+                    }) { Text("Aplicar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showGenreSettings = false }) { Text("Cancelar") }
+            }
+        )
+    }
     if (showDeviceActivation) {
         AlertDialog(
             onDismissRequest = { if (!activationBusy) showDeviceActivation = false },
