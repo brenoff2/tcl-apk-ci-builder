@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.verticalScroll
@@ -449,6 +451,7 @@ private object StreamingCatalog {
 private fun StreamingOfferIcons(
     item: StreamingTitle,
     known: MutableMap<String, List<StreamingOffer>>,
+    apps: List<TvOfficialApp>,
     expanded: Boolean = false
 ) {
     val key = "${item.media}:${item.id}"
@@ -470,13 +473,25 @@ private fun StreamingOfferIcons(
             }
             val visible = if (expanded) 4 else 2
             offerings.take(visible).forEach { offer ->
-                if (offer.logo.isNotBlank()) {
-                    AsyncImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
-                        contentDescription = "Disponível em " + offer.name,
-                        modifier = Modifier.size(24.dp),
-                        contentScale = ContentScale.Fit)
+                val installed = apps.firstOrNull {
+                    StreamingCatalog.appHasOffer(it, listOf(offer))
+                }
+                if (installed != null) {
+                    // Exactly the same launcher icon component used on the main TV screen.
+                    OfficialTvIcon(installed, 30.dp)
                 } else {
-                    Text(offer.name.take(2), fontSize = 10.sp, maxLines = 1)
+                    Box(modifier = Modifier.size(30.dp).clip(RoundedCornerShape(8.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        contentAlignment = Alignment.Center) {
+                        if (offer.logo.isNotBlank()) {
+                            AsyncImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
+                                contentDescription = "Disponível em " + offer.name,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Fit)
+                        } else {
+                            Text(offer.name.take(2), fontSize = 10.sp, maxLines = 1)
+                        }
+                    }
                 }
             }
             if (offerings.size > visible) {
@@ -926,9 +941,10 @@ internal fun TclStreamingScreens(
                                             contentDescription = found.name,
                                             modifier = Modifier.fillMaxWidth().height(138.dp),
                                             contentScale = ContentScale.Crop)
+                                        Spacer(Modifier.height(5.dp))
                                         Text(found.name, fontSize = 11.sp, maxLines = 2,
-                                            lineHeight = 12.sp)
-                                        StreamingOfferIcons(found, offerCache)
+                                            lineHeight = 14.sp)
+                                        StreamingOfferIcons(found, offerCache, displayed)
                                     }
                                 }
                             }
@@ -1063,9 +1079,10 @@ internal fun TclStreamingScreens(
                                             contentDescription = "Destaque: " + current.name,
                                             contentScale = ContentScale.Crop,
                                             modifier = Modifier.fillMaxWidth().height(150.dp))
+                                        Spacer(Modifier.height(5.dp))
                                         Text(current.name, fontWeight = FontWeight.Bold,
                                             maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                        StreamingOfferIcons(current, offerCache, expanded = true)
+                                        StreamingOfferIcons(current, offerCache, displayed, expanded = true)
                                     }
                                 }
                                 // Small noninteractive position dots: no previous/next buttons.
@@ -1094,8 +1111,9 @@ internal fun TclStreamingScreens(
                                                     contentDescription = "Cartaz: " + item.name,
                                                     modifier = Modifier.fillMaxWidth().height(158.dp),
                                                     contentScale = ContentScale.Crop)
-                                                Text(item.name, maxLines = 2, lineHeight = 12.sp, fontSize = 11.sp)
-                                                StreamingOfferIcons(item, offerCache)
+                                                Spacer(Modifier.height(5.dp))
+                                                Text(item.name, maxLines = 2, lineHeight = 14.sp, fontSize = 11.sp)
+                                                StreamingOfferIcons(item, offerCache, displayed)
                                             }
                                         }
                                     }
@@ -1235,10 +1253,11 @@ internal fun TclStreamingScreens(
                                             modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)
                                         )
                                     }
-                                    Text(title.name, fontSize = 11.sp, maxLines = 2, lineHeight = 12.sp,
+                                    Spacer(Modifier.height(5.dp))
+                                    Text(title.name, fontSize = 11.sp, maxLines = 2, lineHeight = 14.sp,
                                         textAlign = TextAlign.Center,
                                         overflow = TextOverflow.Ellipsis)
-                                    StreamingOfferIcons(title, offerCache)
+                                    StreamingOfferIcons(title, offerCache, displayed)
                                 }
                             }
                             if (more && !showSaved) item(span = {
@@ -1277,7 +1296,7 @@ internal fun TclStreamingScreens(
                                         Text(title.name, fontWeight = FontWeight.SemiBold,
                                             maxLines = 2, lineHeight = 17.sp,
                                             overflow = TextOverflow.Ellipsis)
-                                        StreamingOfferIcons(title, offerCache)
+                                        StreamingOfferIcons(title, offerCache, displayed)
                                         Text(title.overview.ifBlank { "Sinopse indisponível." },
                                             fontSize = 12.sp, maxLines = 3,
                                             overflow = TextOverflow.Ellipsis)
