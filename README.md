@@ -14,11 +14,11 @@ Se o segredo não estiver acessível ao runner, o workflow falha **antes de subs
 ## Estado verificado em 2026-10-23
 
 - Candidato Android 2.9.13 / código 42: compilação GitHub Actions `39891891049` aprovada e APK assinado localmente com a identidade original.
-- Publicador oficial genérico: commit `281a37ab2839c6c8c16e5d871b69a684f3f26270`; execução `39960928074` falhou no gate de acesso ao segredo `ANYTV_RECOVERY_SECRET_2026`, antes de assinar ou publicar.
+- Publicador oficial genérico: commit `281a37ab2839c6c8c16e5d871b69a684f3f26270`; execuções `39960928074` e `39963496459` falharam no gate de acesso ao segredo `ANYTV_RECOVERY_SECRET_2026`, antes de assinar ou publicar.
 - Canal OTA publicado: permanece 2.9.12 / código 41; **2.9.13 não publicada**.
 - O problema de TLS com a TCL não foi homologado como corrigido. Nenhuma alteração no canal da TV.
 - Os publicadores anteriores do Android foram **excluidos das duas branches de trabalho**, mas permanecem recuperaveis no historico Git. Somente `.github/workflows/publish-anytv-phone-github-only.yml` grava a OTA cert2026 do telefone. Publicadores exclusivos da TV foram preservados.
-- O verificador canônico `.github/workflows/verify-anytv-update-endpoint.yml` foi aprovado no GitHub Actions run `39962660246`; verificou assinatura do APK atual e readback remoto byte a byte.
+- O verificador canônico `.github/workflows/verify-anytv-update-endpoint.yml` foi aprovado no GitHub Actions run `39963760834`; verificou assinatura do APK atual e readback remoto byte a byte.
 
 ## Desenvolvimento
 
