@@ -1,15 +1,11 @@
 name: AnyTV | Publicador oficial Android cert2026
+# Release changes execute only after a separately reviewed, versioned intent
+# commit. Editing this workflow itself must never publish an APK.
 on:
   push:
     branches: [feat/tcl-v22-updates-back-bluetooth]
-    paths: [.github/workflows/publish-anytv-phone-github-only.yml]
-  workflow_dispatch:
-    inputs:
-      candidate_run_id:
-        description: "Execucao CI aprovada com APK Android nao assinado"
-        required: true
-        default: "39891891049"
-        type: string
+    paths:
+      - .github/anytv-phone-release-request.json
 permissions:
   actions: read
   contents: write
@@ -24,7 +20,6 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       RECOVERY_HEX: ${{ secrets.ANYTV_RECOVERY_SECRET_2026 }}
-      SOURCE_RUN_ID: ${{ inputs.candidate_run_id || '39891891049' }}
       EXPECTED_CERT: 2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f
       APK_PACKAGE: com.tclremote.livre
     steps:
@@ -34,16 +29,28 @@ jobs:
           ref: feat/tcl-v22-updates-back-bluetooth
           fetch-depth: 0
 
-      - name: Confirm official signer and private Actions secret
+      - name: Confirm explicit release request and original signer credential
         shell: bash
         run: |
           set -euo pipefail
           test -s signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin
+          REQUEST=.github/anytv-phone-release-request.json
+          test -s "$REQUEST"
+          jq -e '
+            .schema == 1 and
+            .intent == "publish-cert2026-phone" and
+            (.candidate_run_id | type == "string" and test("^[1-9][0-9]*$")) and
+            (.expected_version_code | type == "number" and . == floor and . > 0)
+          ' "$REQUEST" >/dev/null || { echo "::error::Invalid reviewed release request. OTA unchanged."; exit 1; }
+          SOURCE_RUN_ID="$(jq -r .candidate_run_id "$REQUEST")"
+          EXPECTED_CODE="$(jq -r .expected_version_code "$REQUEST")"
+          echo "SOURCE_RUN_ID=$SOURCE_RUN_ID" >> "$GITHUB_ENV"
+          echo "EXPECTED_CODE=$EXPECTED_CODE" >> "$GITHUB_ENV"
           if [[ ! "${RECOVERY_HEX:-}" =~ ^[[:xdigit:]]{64}$ ]]; then
-            echo "::error::GitHub Actions repository secret ANYTV_RECOVERY_SECRET_2026 missing or invalid. OTA unchanged."
+            echo "::error::Repository Actions secret ANYTV_RECOVERY_SECRET_2026 missing or invalid. OTA unchanged."
             exit 1
           fi
-          [[ "$SOURCE_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+          echo "Release intent accepted for CI run $SOURCE_RUN_ID; credential is available"
 
       - name: Download one validated source artifact from GitHub Actions
         shell: bash
@@ -126,6 +133,7 @@ jobs:
           OLD_CODE="$(echo "$OLD_BADGING" | sed -nE "s/.*versionCode='([0-9]+)'.*/\1/p" | head -1)"
           [[ "$NEW_CODE" =~ ^[0-9]+$ && "$OLD_CODE" =~ ^[0-9]+$ ]]
           (( NEW_CODE > OLD_CODE ))
+          [[ "$NEW_CODE" == "$EXPECTED_CODE" ]] || { echo "::error::Candidate versionCode differs from approved request. OTA unchanged."; exit 1; }
           "$BT/apksigner" verify --print-certs updates/android/cert2026/current.apk > existing-verify.txt
           grep -qi "$EXPECTED_CERT" existing-verify.txt
           echo "Upgrade candidate versionCode=$NEW_CODE from $OLD_CODE"
