@@ -1,0 +1,37 @@
+name: AnyTV TMDB live catalog smoke (no paid API key in CI)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-tmdb-live-smoke.yml']
+  workflow_dispatch:
+permissions: {contents: read}
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Live TMDB film, TV and genre search via official Cloudflare Worker
+        run: |
+          python3 - <<'PY'
+          import json, urllib.parse, urllib.request, urllib.error
+          base = "https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/"
+          for route, query in (
+              ("search/movie", {"language":"pt-BR","query":"Titanic"}),
+              ("search/tv", {"language":"pt-BR","query":"Breaking Bad"}),
+              ("discover/movie", {"language":"pt-BR","with_genres":"28","page":"1"}),
+              ("discover/movie", {"language":"pt-BR","with_genres":"28","page":"2"}),
+          ):
+              request = urllib.request.Request(base + route + "?" + urllib.parse.urlencode(query),
+                  headers={"Accept":"application/json", "User-Agent":"AnyTV/2.9.21 smoke"})
+              try:
+                  with urllib.request.urlopen(request, timeout=20) as response:
+                      data=json.load(response)
+                      assert response.status == 200, response.status
+                      assert isinstance(data.get("results"),list) and data["results"], route
+                      print("ANYTV_TMDB_LIVE_OK",route,"results",len(data["results"]),
+                            "total_pages",data.get("total_pages"))
+              except urllib.error.HTTPError as err:
+                  print("ANYTV_TMDB_LIVE_FAIL",route,err.code,
+                        err.read(150).decode("utf-8",errors="replace"))
+                  raise
+          PY
