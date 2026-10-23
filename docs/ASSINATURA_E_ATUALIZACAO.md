@@ -1,3 +1,5 @@
+> **ATENÇÃO — A SEÇÃO CERT2026 ABAIXO É HISTÓRICA PARA O APLICATIVO LEGADO** `com.tclremote.livre`. Para o **AnyTV V2** instalado (`com.tclremote.livre.v2`), o procedimento oficial, certificado e Secrets estão descritos em [RUNBOOK V2](operations/ANYTV_V2_SIGNER_RECOVERY_AND_RELEASE_RUNBOOK.md) e [Handoff canônico vigente](handovers/2026-10-23-ANYTV-V2-2917-2918-CONTINUIDADE-CANONICA.md). NÃO usar o arquivo de Drive rejeitado, não recriar identidade, não assinar V2 com cert2026.
+
 # AnyTV — assinatura Android cert2026 e acesso GitHub (procedimento operacional único)
 
 ## CORREÇÃO CRÍTICA DE PROVENIÊNCIA — 23/10/2026 (prevalece sobre instruções anteriores)
