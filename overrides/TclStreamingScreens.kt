@@ -4,8 +4,9 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -41,6 +42,7 @@ import androidx.compose.ui.window.DialogProperties
 import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -330,7 +332,6 @@ internal fun TclStreamingScreens(
     var activationBusy by remember { mutableStateOf(false) }
     var activationFeedback by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
-    var discoverySlide by remember { mutableStateOf(0) }
     var discoveryProviderPackage by remember { mutableStateOf<String?>(null) }
     var filteredShelves by remember { mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap()) }
     var filterBusy by remember { mutableStateOf(false) }
@@ -657,48 +658,53 @@ internal fun TclStreamingScreens(
                         Text("Não há títulos de assinatura confirmados para este serviço no Brasil.")
                     val visibleShelves = if (discoveryProviderPackage == null) discoveryShelves else filteredShelves
                     val heroTitles = visibleShelves.values.firstOrNull().orEmpty().take(6)
-                    if (heroTitles.isNotEmpty()) {
-                        val current = heroTitles[discoverySlide % heroTitles.size]
-                        AsyncImage(model = "https://image.tmdb.org/t/p/w780" +
-                            current.backdrop.ifBlank { current.poster },
-                            contentDescription = "Destaque: " + current.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxWidth().height(150.dp)
-                                .pointerInput(heroTitles.size) {
-                                    var drag = 0f
-                                    detectHorizontalDragGestures(
-                                        onDragStart = { drag = 0f },
-                                        onDragEnd = {
-                                            if (drag > 60f) {
-                                                discoverySlide = (discoverySlide + heroTitles.size - 1) % heroTitles.size
-                                            } else if (drag < -60f) {
-                                                discoverySlide = (discoverySlide + 1) % heroTitles.size
-                                            }
-                                        },
-                                        onHorizontalDrag = { change, amount ->
-                                            change.consume()
-                                            drag += amount
-                                        })
-                                }.clickable {
-                                    details = current
-                                    detailsPackage = null
-                                })
-                        Text(current.name, fontWeight = FontWeight.Bold, maxLines = 2)
-                        if (current.votes > 0) Text("★ TMDB " + String.format(java.util.Locale.US, "%.1f", current.rating), fontSize = 12.sp)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = {
-                                discoverySlide = (discoverySlide + heroTitles.size - 1) % heroTitles.size
-                            }) { Text("‹ Anterior") }
-                            OutlinedButton(onClick = {
-                                discoverySlide = (discoverySlide + 1) % heroTitles.size
-                            }) { Text("Próximo ›") }
-                            TextButton(onClick = {
-                                details = current
-                                detailsPackage = null
-                            }) { Text("Detalhes") }
-                        }
-                    }
                     LazyColumn(modifier = Modifier.weight(1f)) {
+                        if (heroTitles.isNotEmpty()) {
+                            item {
+                                // The slide is PART of the scrolling content, not a fixed header.
+                                val pagerState = rememberPagerState(pageCount = { heroTitles.size })
+                                LaunchedEffect(pagerState, heroTitles.map { it.id to it.media }, details?.id) {
+                                    while (details == null && heroTitles.size > 1) {
+                                        delay(3000)
+                                        if (!pagerState.isScrollInProgress) {
+                                            pagerState.animateScrollToPage(
+                                                (pagerState.currentPage + 1) % heroTitles.size)
+                                        }
+                                    }
+                                }
+                                HorizontalPager(
+                                    state = pagerState,
+                                    modifier = Modifier.fillMaxWidth()
+                                ) { pageIndex ->
+                                    val current = heroTitles[pageIndex]
+                                    Column(modifier = Modifier.fillMaxWidth().clickable {
+                                        details = current
+                                        detailsPackage = null
+                                    }) {
+                                        AsyncImage(model = "https://image.tmdb.org/t/p/w780" +
+                                            current.backdrop.ifBlank { current.poster },
+                                            contentDescription = "Destaque: " + current.name,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier.fillMaxWidth().height(150.dp))
+                                        Text(current.name, fontWeight = FontWeight.Bold,
+                                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        if (current.votes > 0) {
+                                            Text("★ TMDB " + String.format(java.util.Locale.US,
+                                                "%.1f", current.rating), fontSize = 12.sp)
+                                        }
+                                    }
+                                }
+                                // Small noninteractive position dots: no previous/next buttons.
+                                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 9.dp),
+                                    horizontalArrangement = Arrangement.Center) {
+                                    repeat(heroTitles.size) { dot ->
+                                        Text(if (pagerState.currentPage == dot) "●" else "○",
+                                            fontSize = 10.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
                         visibleShelves.forEach { (heading, shelf) ->
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1023,7 +1029,9 @@ internal fun TclStreamingScreens(
             },
             title = { Text(title.name) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     if (titleActionFeedback != null) {
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
