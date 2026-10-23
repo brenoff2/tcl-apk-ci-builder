@@ -78,6 +78,13 @@ private object StreamingDiskCache {
                 .apply { mkdirs() }
         }
     }
+    fun rememberTitle(media: String, id: Int, payload: JSONObject) {
+        // Cache immutable title metadata independently of changing ranking/shelf pages.
+        if (id > 0 && (media == "movie" || media == "tv")) {
+            write("title:$media:$id", payload, 90L * 86400000L)
+        }
+    }
+    fun previousTitle(media: String, id: Int): JSONObject? = read("title:$media:$id")
     private fun file(route: String): File? {
         val dir = root ?: return null
         val sha = MessageDigest.getInstance("SHA-256").digest(route.toByteArray())
@@ -109,7 +116,7 @@ private object StreamingDiskCache {
             var bytes = 0L
             files.forEachIndexed { index, item ->
                 bytes += item.length()
-                if (index >= 240 || bytes > 8_000_000L) item.delete()
+                if (index >= 450 || bytes > 12_000_000L) item.delete()
             }
         }
     }
@@ -199,11 +206,27 @@ private object StreamingCatalog {
                 val matchGenre = genre == 0 || (itemGenres != null &&
                     (0 until itemGenres.length()).any { itemGenres.optInt(it) == genre })
                 if (movieId > 0 && name.isNotBlank() && matchGenre) {
-                    add(StreamingTitle(movieId, name, entry.optString("overview"),
-                        entry.optString("poster_path").takeIf { it.startsWith("/") } ?: "", media,
-                        entry.optDouble("vote_average", 0.0), entry.optInt("vote_count", 0),
-                        entry.optString("backdrop_path").takeIf { it.startsWith("/") } ?: "",
-                        entry.optString(if (media == "tv") "first_air_date" else "release_date")))
+                    val previous = StreamingDiskCache.previousTitle(media, movieId)
+                    val overview = entry.optString("overview").ifBlank {
+                        previous?.optString("overview").orEmpty()
+                    }
+                    val released = entry.optString(
+                        if (media == "tv") "first_air_date" else "release_date"
+                    ).ifBlank {
+                        previous?.optString("date").orEmpty()
+                    }
+                    val poster = entry.optString("poster_path").takeIf {
+                        it.startsWith("/")
+                    } ?: previous?.optString("poster").orEmpty()
+                    val backdrop = entry.optString("backdrop_path").takeIf {
+                        it.startsWith("/")
+                    } ?: previous?.optString("backdrop").orEmpty()
+                    add(StreamingTitle(movieId, name, overview, poster, media,
+                        entry.optDouble("vote_average", 0.0),
+                        entry.optInt("vote_count", 0), backdrop, released))
+                    StreamingDiskCache.rememberTitle(media, movieId, JSONObject()
+                        .put("overview", overview).put("date", released)
+                        .put("poster", poster).put("backdrop", backdrop))
                 }
             }
         }
