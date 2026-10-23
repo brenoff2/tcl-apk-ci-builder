@@ -463,7 +463,8 @@ private fun TclApprovedHeader(
         horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Row(
-            modifier = Modifier.weight(1f).clickable(onClick = onChooseTv),
+            modifier = if (isConnected) Modifier.weight(1f)
+                else Modifier.weight(1f).clickable(onClick = onChooseTv),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
@@ -472,8 +473,10 @@ private fun TclApprovedHeader(
             Text(tvName, color = TclText, fontWeight = FontWeight.Medium,
                 fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false))
-            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Trocar televisão",
-                tint = TclMuted, modifier = Modifier.size(13.dp))
+            if (!isConnected) {
+                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Selecionar televisão manualmente",
+                    tint = TclMuted, modifier = Modifier.size(13.dp))
+            }
         }
         TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar",
             Color(0xFFFF4775), onPower)
