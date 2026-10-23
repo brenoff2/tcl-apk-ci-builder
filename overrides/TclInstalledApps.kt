@@ -344,21 +344,9 @@ fun TclInstalledAppsBar(
     }
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Aplicativos", fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-            TextButton(onClick = {
-                if (host.isBlank()) errorText = "Conecte a TCL primeiro."
-                else if (pairing.isBlank()) showPair = true
-                else showStreaming = true
-            }) { Text("Streaming") }
-            TextButton(onClick = {
-                if (host.isBlank()) errorText = "Conecte a TCL primeiro."
-                else if (pairing.isBlank()) showPair = true
-                else if (allApps.isEmpty()) refresh++
-                else showManager = true
-            }) { Text("Ver todos  ›") }
-        }
+        // Poster carousel replaces the old "Aplicativos / Streaming / Ver todos" text row.
+        // Discovery works before TV pairing; launching content still checks the TV separately.
+        AnyTvHomeFilmBanner(onOpenStreaming = { showStreaming = true })
         val byPackage = remember(allApps) { allApps.associateBy { it.packageName } }
         // First connection: show only packages actually reported by this TV.
         // The user chooses favorites; never invent Netflix/Prime/etc placeholders.
@@ -423,7 +411,7 @@ fun TclInstalledAppsBar(
 
     if (showStreaming) {
         TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
-            onDismiss = { showStreaming = false })
+            tvName = tvName.orEmpty(), onDismiss = { showStreaming = false })
     }
 
     if (showPair) {
