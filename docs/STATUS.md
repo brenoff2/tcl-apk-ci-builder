@@ -98,3 +98,10 @@ Teste local sobre o ZIP unsigned da CI 39699948020 e metadados `anytv-299-signed
 - OTA android/cert2026/current.apk segue 2.9.12 (versionCode 41). NÃO declarar 2.9.13 publicada.
 - Arquivos operacionais/documentação das branches de atualização e desenvolvimento estão sendo saneados de dependências de serviços externos.
 - Pareamento TLS da TCL permanece NÃO HOMOLOGADO fisicamente; o patch RSA-only da 2.9.13 é candidato, não prova de reparo.
+
+
+## 2026-10-23 — DOCUMENTO DE TRANSIÇÃO OBRIGATÓRIO
+
+Antes de retomar AnyTV, ler integralmente `docs/handovers/2026-10-23-anytv-full-transition.md` (mesmo conteúdo nas branches desenvolvimento e OTA). O handoff contém histórico 2.9.8–2.9.13, decisões de Cloudflare/TCL, assinatura cert2026, workflows removidos, SHA-256, IDs de CI, estado dos gates e próximos passos exatos.
+
+**Última verdade verificada:** OTA telefone 2.9.12 code 41; candidato 2.9.13 code 42 CI e assinatura local aprovados, **não publicado**, não homologado na TCL. Um único publicador oficial GitHub-only: `.github/workflows/publish-anytv-phone-github-only.yml`. Execução `39963496459` falhou porque o GitHub Actions não recebeu `ANYTV_RECOVERY_SECRET_2026`. Verificador canônico run `39963760834` SUCCESS (unicidade OTA/cert/readback). Não criar novos publicadores, não expor segredos.
