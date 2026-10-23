@@ -16,7 +16,7 @@ class StreamingScreens(unittest.TestCase):
     def test_real_installed_apps_are_the_source(self):
         self.assertIn('request(host, code, "/apps")', self.apps)
         self.assertIn("TclStreamingScreens(apps = allApps", self.apps)
-        self.assertIn("OfficialTvIcon(app, 48.dp)", self.screen)
+        self.assertIn("OfficialTvIcon(app, 32.dp)", self.screen)
         self.assertNotIn("listOf(TvOfficialApp(", self.screen)
         self.assertIn('"favorites:$deviceKey"', self.apps)
 
