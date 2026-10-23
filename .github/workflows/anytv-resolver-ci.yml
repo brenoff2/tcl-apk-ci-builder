@@ -1,7 +1,7 @@
 name: AnyTV commercial resolver - offline contracts
 on:
   push:
-    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    branches: ['feat/tcl-v22-updates-back-bluetooth', 'feat/anytv-p0-device-proof-verifier-20261020']
     paths:
       - 'anytv-resolver/**'
       - '.github/workflows/anytv-resolver-ci.yml'
