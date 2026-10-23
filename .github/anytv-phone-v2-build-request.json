@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 45,
+  "expected_version_code": 46,
   "preserve_legacy_ota": true,
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
   "new_install_only": false,
-  "release_version": "2.9.16-AnyTV",
-  "release_scope": "local disk cache for titles and catalogue, my streaming subscriptions, persistent library and episode progress, home-shelf dedup, consistent icons and title-year; no API credentials in APK, same V2 signer",
+  "release_version": "2.9.17-AnyTV",
+  "release_scope": "main-home 3s poster-banner, saved TV automatic reconnection after network loss, 56dp platform icons, compact tab navigation, film/series/genre filter, pinned metadata and artwork, year+genre, favorite/watched upper actions, watched-hidden discovery, watching list, real TV label",
   "ci_revision": 2
 }
