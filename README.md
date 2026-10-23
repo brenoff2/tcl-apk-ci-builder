@@ -14,9 +14,10 @@ Se o segredo não estiver acessível ao runner, o workflow falha **antes de subs
 ## Estado verificado em 2026-10-23
 
 - Candidato Android 2.9.13 / código 42: compilação GitHub Actions `39891891049` aprovada e APK assinado localmente com a identidade original.
-- Publicador GitHub-only: commit `129e86a7d01af0260f15a36af52a4a05cc8d6e22`; execução `39955533005` falhou porque o GitHub Actions não recebeu um segredo de recuperação.
+- Publicador oficial genérico: commit `281a37ab2839c6c8c16e5d871b69a684f3f26270`; execução `39960928074` falhou no gate de acesso ao segredo `ANYTV_RECOVERY_SECRET_2026`, antes de assinar ou publicar.
 - Canal OTA publicado: permanece 2.9.12 / código 41; **2.9.13 não publicada**.
 - O problema de TLS com a TCL não foi homologado como corrigido. Nenhuma alteração no canal da TV.
+- Workflows de publicações anteriores ainda existem no histórico e alguns permanecem na árvore atual. A remoção em lote foi recusada pela integração; **não usar esses workflows**. A designação de um processo canônico não significa que os arquivos antigos já tenham sido todos excluídos.
 
 ## Desenvolvimento
 
