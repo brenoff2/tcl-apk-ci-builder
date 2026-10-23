@@ -214,5 +214,37 @@
       "local Android release notification scheduling with POST_NOTIFICATIONS permission",
       "previous approved layout corrections"
     ]
+  },
+  "v2_candidate": {
+    "version": "2.9.21",
+    "versionCode": 50,
+    "request_commit": "5f3a0fa18913e317fd637acfceb136d9cefaf51e",
+    "workflow_run": 40041711964,
+    "release_state": "BUILD_RUNNING_NOT_YET_SIGNED",
+    "features": [
+      "centered 16dp white F on blue square for movie and S on red circle for series",
+      "fixed 42dp triple-line title reservation all horizontal home cards plus mandatory 20dp media metadata row",
+      "genre page top slider plus vertically scrolling list of 20 results and only-genre Mostrar mais 20 (no show-more on home)"
+    ],
+    "worker": {
+      "deployed": true,
+      "cloudflare_version": "e407174c-2bff-4444-ab2c-9cd694b99728",
+      "cloudflare_deployment": "394563a2-1dae-4ea6-b5d4-ff202851194e",
+      "rollback_version": "e661eeb6-c49f-4e2b-b0cd-d173e4c2a395",
+      "catalog_monthly_200_removed": true,
+      "link_resolver_200_month_separate": true,
+      "api_keys_preserved": true,
+      "bindings_inherited": 7,
+      "cache_route_ttl": true
+    },
+    "live_smoke": {
+      "workflow_run": 40041659711,
+      "conclusion": "success",
+      "movie_query_results": 20,
+      "tv_query_results": 5,
+      "genre_page1_results": 20,
+      "genre_page2_results": 20
+    },
+    "physical_qa": "NOT_HOMOLOGATED"
   }
 }
