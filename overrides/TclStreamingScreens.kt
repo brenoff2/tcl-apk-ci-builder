@@ -61,7 +61,7 @@ import java.io.File
 import java.security.MessageDigest
 import java.text.Normalizer
 
-internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "")
+internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "", val genreIds: List<Int> = emptyList())
 internal data class StreamingGenre(val id: Int, val name: String)
 internal data class StreamingSeason(val number: Int, val name: String, val count: Int)
 internal data class StreamingEpisode(val number: Int, val name: String, val airDate: String)
@@ -221,9 +221,11 @@ private object StreamingCatalog {
                     val backdrop = entry.optString("backdrop_path").takeIf {
                         it.startsWith("/")
                     } ?: previous?.optString("backdrop").orEmpty()
+                    val genreIds = (0 until (itemGenres?.length() ?: 0))
+                        .map { itemGenres!!.optInt(it) }.filter { it > 0 }
                     add(StreamingTitle(movieId, name, overview, poster, media,
                         entry.optDouble("vote_average", 0.0),
-                        entry.optInt("vote_count", 0), backdrop, released))
+                        entry.optInt("vote_count", 0), backdrop, released, genreIds))
                     StreamingDiskCache.rememberTitle(media, movieId, JSONObject()
                         .put("overview", overview).put("date", released)
                         .put("poster", poster).put("backdrop", backdrop))
@@ -544,6 +546,9 @@ internal fun TclStreamingScreens(
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     val mainGenreIds = remember { listOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14) }
     var mainGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
+    var tvGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
+    var homeContentType by remember { mutableStateOf("all") }
+    var librarySection by remember { mutableStateOf("saved") }
     var selectedHomeGenre by remember { mutableIntStateOf(0) }
     var showGenreSettings by remember { mutableStateOf(false) }
     var showMyStreamingSettings by remember { mutableStateOf(false) }
@@ -556,6 +561,16 @@ internal fun TclStreamingScreens(
     var editingMyServices by remember { mutableStateOf(storedMyServices) }
     val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var homeLibrary by remember { mutableStateOf(false) }
+    var trackedSeries by remember {
+        mutableStateOf(prefs.getString("anytv_tracking_series", "")
+            ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
+    }
+    fun toggleSeriesTracking(id: Int) {
+        trackedSeries = if (id.toString() in trackedSeries)
+            trackedSeries - id.toString() else trackedSeries + id.toString()
+        prefs.edit().putString("anytv_tracking_series",
+            trackedSeries.sorted().joinToString(",")).apply()
+    }
     var showGlobalSearch by remember { mutableStateOf(false) }
     val initialGenreIds = remember(prefs) {
         prefs.getString("anytv_home_genres", null)?.split(",")
@@ -600,7 +615,10 @@ internal fun TclStreamingScreens(
                     return@mapNotNull null
                 StreamingFavorite(
                     StreamingTitle(id, o.optString("name"), o.optString("overview"),
-                        o.optString("poster"), kind, date = o.optString("date")), pkg)
+                        o.optString("poster"), kind, date = o.optString("date"),
+                        genreIds = o.optJSONArray("genres")?.let { arr ->
+                            (0 until arr.length()).map { arr.optInt(it) }.filter { it > 0 }
+                        } ?: emptyList()), pkg)
             }
         }.getOrDefault(emptyList<StreamingFavorite>()))
     }
@@ -619,7 +637,8 @@ internal fun TclStreamingScreens(
                 .put("name", value.title.name)
                 .put("overview", value.title.overview)
                 .put("poster", value.title.poster)
-                .put("date", value.title.date))
+                .put("date", value.title.date)
+                .put("genres", JSONArray(value.title.genreIds)))
         }
         prefs.edit().putString("streaming_favorites", json.toString()).apply()
     }
@@ -720,6 +739,8 @@ internal fun TclStreamingScreens(
             .getOrDefault(emptyList())
             .filter { it.id in mainGenreIds }
             .sortedBy { mainGenreIds.indexOf(it.id) }
+        tvGenres = runCatching { StreamingCatalog.genres(token, "tv") }
+            .getOrDefault(emptyList())
     }
     // Fetch each genre shelf only once per screen, preserving user-selected order.
     LaunchedEffect(mainGenres, preferredGenreIds, selectedHomeGenre) {
@@ -1045,9 +1066,18 @@ internal fun TclStreamingScreens(
                                 .map { it.title }.distinctBy { it.id }
                             val unseen = films.filter { it.id.toString() !in watchedFilms }
                             val seen = films.filter { it.id.toString() in watchedFilms }
-                            if (unseen.isNotEmpty()) put("Filmes para assistir", unseen)
-                            if (series.isNotEmpty()) put("Séries que acompanho", series)
-                            if (seen.isNotEmpty()) put("Filmes já assistidos", seen)
+                            val watching = series.filter {
+                                it.id.toString() in trackedSeries ||
+                                    watchedEpisodes.any { mark -> mark.startsWith("${it.id}:") }
+                            }
+                            if (librarySection == "saved") {
+                                if (unseen.isNotEmpty()) put("Filmes para assistir", unseen)
+                                if (series.isNotEmpty()) put("Minhas séries", series)
+                            } else if (librarySection == "watching") {
+                                if (watching.isNotEmpty()) put("Séries em andamento", watching)
+                            } else if (librarySection == "watched") {
+                                if (seen.isNotEmpty()) put("Filmes já assistidos", seen)
+                            }
                         } else if (!onlyMyStreaming) {
                             if (selectedHomeGenre == 0) {
                                 putAll(discoveryShelves)
@@ -1534,9 +1564,14 @@ internal fun TclStreamingScreens(
                     val releasedYear = title.date.take(4).takeIf {
                         it.length == 4 && it.all(Char::isDigit)
                     }
+                    val knownGenreNames = if (title.media == "tv") tvGenres else mainGenres
+                    val titleGenres = title.genreIds.mapNotNull { id ->
+                        knownGenreNames.firstOrNull { it.id == id }?.name
+                    }.take(3)
                     Text(listOfNotNull(if (title.media == "tv") "Série" else "Filme",
-                        releasedYear).joinToString(" · "),
-                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        releasedYear, titleGenres.takeIf { it.isNotEmpty() }?.joinToString(" · "))
+                        .joinToString(" · "), fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold)
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
                     if (title.votes > 0) {
                         Text("★ Nota TMDB: " +
