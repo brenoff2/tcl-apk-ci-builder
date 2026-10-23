@@ -417,6 +417,11 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Color(0xFFD62828) else Color(0xFF1769E0)', self.screen)
         self.assertIn('includeFontPadding = false', self.screen)
         self.assertIn('textAlign = TextAlign.Center', self.screen)
+        self.assertIn('Text(item.name, maxLines = 3, lineHeight = 14.sp,', self.screen)
+        self.assertIn('modifier = Modifier.fillMaxWidth().height(42.dp)', self.screen)
+        self.assertIn('Always reserve a metadata row', self.screen)
+        self.assertNotIn('if (item.votes > 0 || offerings.isNotEmpty())', self.screen)
+        self.assertIn('modifier = Modifier.width(116.dp)', self.screen)
         self.assertNotIn('Text("★ "', self.screen)
 
     def test_search_live_suggestions_and_clear_button(self):
