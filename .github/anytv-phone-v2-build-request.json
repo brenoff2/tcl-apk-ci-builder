@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 47,
+  "expected_version_code": 48,
   "preserve_legacy_ota": true,
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
   "new_install_only": false,
-  "release_version": "2.9.18-AnyTV",
-  "release_scope": "2.9.18 code47: shared icon navigation connected in streaming catalogue and provider view; persisted two-column subscriptions and genre filtering; approved 75dp home banner, connected TV header, cache, favorites, series progress and same V2 signer preserved; build gates corrected for approved automatic TV header and precise Compose integration regression",
-  "ci_revision": 6
+  "release_version": "2.9.19-AnyTV",
+  "release_scope": "2.9.19 code48: fix favorite icons including detail, remove framed gray streaming surface, right align header and TV shortcut icons, white labels, compact search/type/genre row, readable shelf separation, proper empty list/finished/watching page titles, preset genre selections and mark/unmark-all per column, show selected service and genre shelves at home and provider level, remove unusable activation form, explicit offer coverage status, robust Portuguese title search and official Disney+ TV 224505 Amor da Minha Vida detail link with TV fallback; preserve same signer, companion and updater",
+  "ci_revision": 1
 }
