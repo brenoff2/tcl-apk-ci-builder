@@ -144,6 +144,10 @@
     {
       "date": "2026-10-23",
       "event": "V2 2.9.20/code49 publicada pelo workflow 40038610382 (SUCCESS, 32 etapas); signed sha256 547463d..., OTA readback PASS; user aceitou limitação conhecida de busca HTTP429 mensal sem alterar Worker/quota; homologação física ainda pendente. Sem promoção de gates."
+    },
+    {
+      "date": "2026-10-23",
+      "event": "2.9.21/code50 publicada, workflow 40041711964 success signed OTA SHA256 95d716c..., website byte readback pass; Cloudflare Worker e40717 deployed with independent TMDB and 200/month JustWatch link-only; live searches movie/TV and genre pagination pass; physical UI and notification QA pending. Gates remain unchanged."
     }
   ],
   "discovery_v3": {
@@ -187,6 +191,41 @@
   },
   "v2_current": {
     "as_of": "2026-10-23",
+    "version": "2.9.21",
+    "versionCode": 50,
+    "package": "com.tclremote.livre.v2",
+    "published": true,
+    "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
+    "ota_path": "updates/android/v2/current.apk",
+    "workflow_run": 40041711964,
+    "workflow_conclusion": "success",
+    "apk_sha256": "95d716c22baf70f9f9f9d7670a88778a4bf1962f14f298980bce1852b90c552e",
+    "apk_git_blob": "80bda3585ae6c3a7cd478f74dad5d51a48e9ba74",
+    "apk_bytes": 28396388,
+    "ota_commit": "20e5e800326f3fe588cd4a34d5cdeb2d12f9059f",
+    "signer_cert_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9",
+    "legacy_ota_blob_unchanged": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
+    "remote_byte_readback": true,
+    "live_search": "PASS: movie Titanic 20 results, series Breaking Bad 5",
+    "genre_paging_live": "PASS: discover movie genre 28 page 1 and 2, 20 each",
+    "cloudflare_worker_current": "e407174c-2bff-4444-ab2c-9cd694b99728",
+    "cloudflare_100_percent_traffic": true,
+    "cloudflare_deploy": "394563a2-1dae-4ea6-b5d4-ff202851194e",
+    "cloudflare_previous_version_rollback": "e661eeb6-c49f-4e2b-b0cd-d173e4c2a395",
+    "tmdb_200_monthly_quota_removed": true,
+    "justwatch_link_limit_200_separate": true,
+    "rate_limit_and_cache_preserved": true,
+    "physical_qa": "NOT_HOMOLOGATED",
+    "changes": [
+      "16dp F movie white on blue square, S series white on red circle, centered",
+      "fixed column width 116dp, 9dp horizontal gap, title 42dp for 3 lines, always reserved metadata row",
+      "genre filtered page uses hero slider then vertical list in 20-card pages with ONLY THERE show-more button",
+      "main home remains two-row horizontal scroll with no show more",
+      "Cloudflare TMDB search quota unblocked while JustWatch link budget remains separately bounded"
+    ]
+  },
+  "v2_previous": {
+    "as_of": "2026-10-23",
     "version": "2.9.20",
     "versionCode": 49,
     "package": "com.tclremote.livre.v2",
@@ -214,37 +253,5 @@
       "local Android release notification scheduling with POST_NOTIFICATIONS permission",
       "previous approved layout corrections"
     ]
-  },
-  "v2_candidate": {
-    "version": "2.9.21",
-    "versionCode": 50,
-    "request_commit": "5f3a0fa18913e317fd637acfceb136d9cefaf51e",
-    "workflow_run": 40041711964,
-    "release_state": "BUILD_RUNNING_NOT_YET_SIGNED",
-    "features": [
-      "centered 16dp white F on blue square for movie and S on red circle for series",
-      "fixed 42dp triple-line title reservation all horizontal home cards plus mandatory 20dp media metadata row",
-      "genre page top slider plus vertically scrolling list of 20 results and only-genre Mostrar mais 20 (no show-more on home)"
-    ],
-    "worker": {
-      "deployed": true,
-      "cloudflare_version": "e407174c-2bff-4444-ab2c-9cd694b99728",
-      "cloudflare_deployment": "394563a2-1dae-4ea6-b5d4-ff202851194e",
-      "rollback_version": "e661eeb6-c49f-4e2b-b0cd-d173e4c2a395",
-      "catalog_monthly_200_removed": true,
-      "link_resolver_200_month_separate": true,
-      "api_keys_preserved": true,
-      "bindings_inherited": 7,
-      "cache_route_ttl": true
-    },
-    "live_smoke": {
-      "workflow_run": 40041659711,
-      "conclusion": "success",
-      "movie_query_results": 20,
-      "tv_query_results": 5,
-      "genre_page1_results": 20,
-      "genre_page2_results": 20
-    },
-    "physical_qa": "NOT_HOMOLOGATED"
   }
 }
