@@ -112,15 +112,22 @@ jobs:
           import json
           import urllib.parse
           import urllib.request
+          import urllib.error
           base = "https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/"
           for kind, title in (("movie", "Titanic"), ("tv", "Breaking Bad")):
               query = urllib.parse.urlencode({"language": "pt-BR", "query": title})
               request = urllib.request.Request(
                   base + "search/" + kind + "?" + query,
                   headers={"Accept": "application/json", "User-Agent": "AnyTV/2.9.20 QA"})
-              with urllib.request.urlopen(request, timeout=15) as response:
-                  assert response.status == 200, (kind, response.status)
-                  body = json.load(response)
+              try:
+                  with urllib.request.urlopen(request, timeout=15) as response:
+                      assert response.status == 200, (kind, response.status)
+                      body = json.load(response)
+              except urllib.error.HTTPError as error:
+                  diagnostic = error.read(400).decode("utf-8", errors="replace")
+                  print("ANYTV_CATALOG_HTTP_DIAGNOSTIC", kind, error.code,
+                        diagnostic[:180], flush=True)
+                  raise
               results = body.get("results", [])
               assert isinstance(results, list) and len(results) > 0, (kind, title)
               print("ANYTV_LIVE_GLOBAL_SEARCH_SUCCESS", kind, title, len(results))
