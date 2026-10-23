@@ -1729,6 +1729,85 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         }
+                        // Genre view: keep the hero carousel above a vertically scrolling
+                        // list. Each explicit tap appends exactly one page (up to 20).
+                        if (!homeLibrary && selected == null && selectedHomeGenre > 0) {
+                            val genreKey = "$selectedGenreKind:$selectedHomeGenre"
+                            val genreTitles = genreShelves[genreKey].orEmpty()
+                                .filterNot { it.media == "movie" &&
+                                    it.id.toString() in watchedFilms }
+                                .distinctBy { "${it.media}:${it.id}" }
+                            item {
+                                Text("Filmes e séries · " + (currentGenreList.firstOrNull {
+                                    it.id == selectedHomeGenre }?.name ?: "Gênero"),
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(top = 15.dp, bottom = 8.dp))
+                            }
+                            items(genreTitles, key = { "${it.media}:${it.id}" }) { title ->
+                                Row(modifier = Modifier.fillMaxWidth().clickable {
+                                        details = title; detailsPackage = null
+                                    }.padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top) {
+                                    AnyTvPinnedImage(
+                                        model = "https://image.tmdb.org/t/p/w185" + title.poster,
+                                        contentDescription = "Cartaz: " + title.name,
+                                        modifier = Modifier.size(width = 86.dp, height = 118.dp),
+                                        contentScale = ContentScale.Crop)
+                                    Column(modifier = Modifier.weight(1f),
+                                        verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                        Text(title.name, maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis,
+                                            fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                        if (title.date.isNotBlank()) {
+                                            Text(title.date.take(4), fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        StreamingOfferIcons(title, offerCache, displayed)
+                                    }
+                                }
+                                HorizontalDivider(color =
+                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                            }
+                            item {
+                                if (genreMore[genreKey] == true) {
+                                    TextButton(enabled = genreLoading[genreKey] != true,
+                                        onClick = {
+                                            if (genreLoading[genreKey] != true) {
+                                                genreLoading[genreKey] = true
+                                                scope.launch {
+                                                    val next = (genrePage[genreKey] ?: 1) + 1
+                                                    runCatching {
+                                                        StreamingCatalog.discoveryGenrePage(
+                                                            selectedHomeGenre, selectedGenreKind, next)
+                                                    }.onSuccess { result ->
+                                                        genreShelves[genreKey] =
+                                                            (genreShelves[genreKey].orEmpty() +
+                                                                result.titles).distinctBy {
+                                                                "${it.media}:${it.id}"
+                                                            }
+                                                        genrePage[genreKey] = next
+                                                        genreMore[genreKey] = result.more
+                                                        genreErrors.remove(genreKey)
+                                                    }.onFailure {
+                                                        genreErrors[genreKey] =
+                                                            "Não foi possível carregar mais títulos."
+                                                    }
+                                                    genreLoading[genreKey] = false
+                                                }
+                                            }
+                                        }, modifier = Modifier.fillMaxWidth()) {
+                                        Text(if (genreLoading[genreKey] == true)
+                                            "Carregando…" else "Mostrar mais 20",
+                                            fontSize = 13.sp)
+                                    }
+                                }
+                                genreErrors[genreKey]?.let { error ->
+                                    Text(error, color = MaterialTheme.colorScheme.error,
+                                        fontSize = 12.sp)
+                                }
+                            }
+                        } else {
                         uniqueShelves.forEach { (heading, shelf) ->
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1785,56 +1864,9 @@ internal fun TclStreamingScreens(
                                             }
                                         }
                                     }
-                                    val moreKey = when {
-                                        heading.startsWith("Em destaque: ") &&
-                                            selectedHomeGenre > 0 ->
-                                            "$selectedGenreKind:$selectedHomeGenre"
-                                        heading.startsWith("Por gênero: ") ->
-                                            currentGenreList.firstOrNull {
-                                                heading == "Por gênero: " + it.name
-                                            }?.let { "$selectedGenreKind:${it.id}" }
-                                        else -> null
-                                    }
-                                    if (moreKey != null && genreMore[moreKey] == true) {
-                                        TextButton(enabled = genreLoading[moreKey] != true,
-                                            onClick = {
-                                                val pieces = moreKey.split(":")
-                                                val genreId = pieces.getOrNull(1)?.toIntOrNull()
-                                                if (genreId != null && genreLoading[moreKey] != true) {
-                                                    genreLoading[moreKey] = true
-                                                    scope.launch {
-                                                        val next = (genrePage[moreKey] ?: 1) + 1
-                                                        runCatching {
-                                                            StreamingCatalog.discoveryGenrePage(
-                                                                genreId, pieces[0], next)
-                                                        }.onSuccess { result ->
-                                                            genreShelves[moreKey] =
-                                                                (genreShelves[moreKey].orEmpty() +
-                                                                    result.titles).distinctBy {
-                                                                    "${it.media}:${it.id}"
-                                                                }
-                                                            genrePage[moreKey] = next
-                                                            genreMore[moreKey] = result.more
-                                                            genreErrors.remove(moreKey)
-                                                        }.onFailure {
-                                                            genreErrors[moreKey] =
-                                                                "Não foi possível carregar mais títulos."
-                                                        }
-                                                        genreLoading[moreKey] = false
-                                                    }
-                                                }
-                                            }) {
-                                            Text(if (genreLoading[moreKey] == true)
-                                                "Carregando…" else "Mostrar mais " + heading,
-                                                fontSize = 11.sp)
-                                        }
-                                    }
-                                    if (moreKey != null && genreErrors[moreKey] != null) {
-                                        Text(genreErrors[moreKey].orEmpty(), fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.error)
-                                    }
                                 }
                             }
+                        }
                         }
                     }
                 // Links oficiais são mostrados quando disponíveis; nenhum código é exigido.
