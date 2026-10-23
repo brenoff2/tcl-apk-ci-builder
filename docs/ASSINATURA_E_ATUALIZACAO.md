@@ -23,8 +23,14 @@ Falha de credencial, compilacao, versao ou integridade **interrompe a publicacao
 - 2.9.10: a assinatura original foi recuperada com sucesso e o APK assinado produzido, mas isso **nao configurou automaticamente** a credencial de recuperacao no GitHub Actions.
 - 2.9.13: APK compilado pelo GitHub Actions run `39891891049` e assinado localmente com o mesmo certificado; teste na TCL nao homologado.
 - GitHub-only canonical publisher commit `281a37ab2839c6c8c16e5d871b69a684f3f26270`.
-- Execucao `39960928074`: falhou no gate de segredo **ANTES** da assinatura; por isso OTA segue em 2.9.12. Nao significa perda da chave ou necessidade de outro certificado.
+- Execucoes `39960928074` e `39963496459`: falharam no gate de credencial **ANTES** da assinatura. O log da `39963496459` confirma `RECOVERY_HEX` vazio. A OTA segue em 2.9.12; a chave original nao foi perdida e nao deve ser trocada.
 - Para liberar publicacao totalmente automatizada pelo GitHub, um administrador deve gravar a credencial existente sob o nome exato `ANYTV_RECOVERY_SECRET_2026` nas configuracoes de Actions do repositorio. O valor da chave nao pode ser colocado no Git, na resposta de chat ou em logs.
+
+## Limite real do GitHub Actions
+
+O workflow de publicacao esta na branch OTA, enquanto a branch padrao do repositorio e `main`. De acordo com a documentacao do GitHub, `workflow_dispatch` depende de o workflow existir na branch padrao; portanto, nao presumir que um botao manual esteja disponivel aqui. O gatilho `push` existente na branch OTA exige controle de alteracoes para que a manutencao do workflow nao seja confundida com autorizacao de publicar. Nao criar launcher alternativo nem mover workflow para `main` sem decisao explicita.
+
+O desbloqueio efetivo exige que a credencial original esteja disponivel ao runner em Actions Repository Secrets sob o nome unico `ANYTV_RECOVERY_SECRET_2026`; codigo/documentacao nao podem recuperar o valor privado a partir do backup AES-GCM sozinho. A integracao GitHub desta conversa nao administra Actions Secrets. Nenhuma alteracao no workflow, certificado, OTA ou chave privada foi aplicada por este registro.
 
 ## Nao repetir
 
