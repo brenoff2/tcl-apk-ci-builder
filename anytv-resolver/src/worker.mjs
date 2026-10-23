@@ -174,6 +174,8 @@ export async function catalogRequest(request, env, deps = {}) {
     /^watch\/providers\/(movie|tv)$/,
     /^(movie|tv)\/[1-9][0-9]{0,9}\/watch\/providers$/,
     /^(movie|tv)\/[1-9][0-9]{0,9}\/external_ids$/,
+    /^tv\/[1-9][0-9]{0,9}$/,
+    /^tv\/[1-9][0-9]{0,9}\/season\/[0-9]{1,3}$/,
     /^(discover|search)\/(movie|tv)$/,
     /^trending\/(movie|tv)\/(day|week)$/,
     /^(movie|tv)\/(popular|top_rated)$/,
