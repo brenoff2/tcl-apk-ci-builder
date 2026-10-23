@@ -1,3 +1,5 @@
+> **ARQUIVO HISTÓRICO anterior à V2.** O procedimento abaixo pertence à linha legada cert2026; para novas versões, [HANDOFF ATUAL](2026-10-23-ANYTV-V2-2917-2918-CONTINUIDADE-CANONICA.md) e [RUNBOOK V2](../operations/ANYTV_V2_SIGNER_RECOVERY_AND_RELEASE_RUNBOOK.md) prevalecem. Não recriar assinatura nem usar o Drive.
+
 > **ATENÇÃO — DOCUMENTO HISTÓRICO:** Esta página registra decisões e estado antigo da linha `cert2026` e pode afirmar incorretamente que a OTA "atual" é 2.9.12 ou que não se pode criar nova identidade. O usuário **aprovou e instalou a nova identidade V2** posteriormente. O estado atual está em [Handoff 2.9.17/2.9.18](2026-10-23-ANYTV-V2-2917-2918-CONTINUIDADE-CANONICA.md) e no [Runbook da assinatura V2](../operations/ANYTV_V2_SIGNER_RECOVERY_AND_RELEASE_RUNBOOK.md). A próxima release usa o signer V2 EXISTENTE e o botão atualizar; NÃO recuperar chave antiga do Drive.
 
 # PROJETO ANYTV — TRANSICAO INTEGRAL E ESTADO CANONICO
