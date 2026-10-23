@@ -1357,27 +1357,40 @@ internal fun TclStreamingScreens(
                 } else {
                     val app = selected!!
                     Row(modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        IconButton(onClick = {
-                            selected = null; details = null; message = null
-                        }, modifier = Modifier.size(40.dp).semantics {
-                            contentDescription = "Voltar aos serviços"
-                        }) { Text("‹", fontSize = 24.sp) }
-                        OfficialTvIcon(app, 32.dp)
-                        Text(app.name, fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.weight(1f).padding(start = 3.dp),
-                            maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            fontSize = 16.sp)
-                        TextButton(onClick = { openOnTv(app) },
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                            modifier = Modifier.height(40.dp)) {
-                            Text("Abrir na TCL", fontSize = 12.sp, maxLines = 1)
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Row(modifier = Modifier.weight(1f)
+                            .horizontalScroll(rememberScrollState()),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            IconButton(onClick = { selected = null; details = null },
+                                modifier = Modifier.size(34.dp).semantics {
+                                    contentDescription = "Voltar ao catálogo"
+                                }) { Text("‹", fontSize = 23.sp) }
+                            OfficialTvIcon(app, 32.dp)
+                            Text(app.name, fontSize = 12.sp, maxLines = 1,
+                                fontWeight = FontWeight.SemiBold)
+                            TextButton(onClick = {
+                                selected = null; homeLibrary = true
+                                librarySection = "saved"
+                            }) { Text("♥ Minha lista", fontSize = 11.sp) }
+                            TextButton(onClick = {
+                                selected = null; homeLibrary = true
+                                librarySection = "watching"
+                            }) { Text("Em andamento", fontSize = 11.sp) }
+                            TextButton(onClick = {
+                                selected = null; homeLibrary = true
+                                librarySection = "watched"
+                            }) { Text("✓ Assistidos", fontSize = 11.sp) }
+                            TextButton(onClick = {
+                                selected = null
+                                editingMyServices = myServices
+                                showMyStreamingSettings = true
+                            }) { Text("Meus streamings", fontSize = 11.sp) }
                         }
-                        IconButton(onClick = onDismiss,
-                            modifier = Modifier.size(40.dp).semantics {
-                                contentDescription = "Fechar Streaming"
-                            }) { Text("×", fontSize = 24.sp) }
+                        IconButton(onClick = onDismiss, modifier = Modifier.size(34.dp)
+                            .semantics { contentDescription = "Fechar streaming" }) {
+                            Text("×", fontSize = 24.sp)
+                        }
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
