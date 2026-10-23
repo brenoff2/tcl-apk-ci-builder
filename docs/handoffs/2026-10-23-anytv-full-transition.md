@@ -1,0 +1,79 @@
+# PROJETO ANYTV — TRANSIÇÃO INTEGRAL E CONTINUIDADE
+Data de consolidação: 23/10/2026 | Estado: investigação ativa, NÃO encerrado | Fonte: GitHub canônico + verificações de CI + relato de uso físico.
+
+## 0. RESUMO EXECUTIVO PARA A PRIMEIRA MENSAGEM DO PRÓXIMO CHAT
+
+O projeto AnyTV NÃO começa do zero. É um sistema existente para controlar a TCL/Android TV pelo celular Android, preservar pareamento/controle remoto/Bluetooth, descobrir e abrir aplicativos e títulos reais, com companion na TV, catálogo e Discovery Home V3 e resolvedor Cloudflare Worker/D1. Repositório: https://github.com/brenoff2/tcl-apk-ci-builder . Branch de desenvolvimento feat/anytv-p0-device-proof-verifier-20261020 (PR #3 draft); branch de distribuição do telefone feat/tcl-v22-updates-back-bluetooth. Pacote do celular com.tclremote.livre; companion com.tclremote.tvcompanion. Preservar a identidade cert2026 (fingerprint SHA-256 do celular 2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f). A 2.9.8 (versionCode 37) FUNCIONAVA NA TCL, inclusive controle de conexão, segundo o usuário.
+
+Depois de releases 2.9.10 (code 39), 2.9.11 (40) e 2.9.12 (41), surgiram/reapareceram erros TLS/SSL na conexão com a TCL. O 2.9.11 removeu preferências locais HOST/PIN ao tentar re-parear; a tela passou de Paired para New, e a 2.9.12 não recuperou esse dado mesmo restaurando o código anterior. Causa completa NÃO comprovada. A 2.9.13 (42) é candidato com isolamento da identidade RSA de TV versus chave EC/P256 de Cloudflare; compilado e assinado, ainda SEM TESTE FÍSICO nem OTA. Não declarar conexão corrigida.
+
+A OTA de fato distribuída continua AnyTV 2.9.12 (41), arquivo updates/android/cert2026/current.apk na branch OTA, tamanho 28.347.236 bytes, blob git 44c766b433ddb370f4589b87843f1edfd9cd7b7a, SHA-256 do APK 28c2881899bc9c6a79fcfd908d66528750534c89c7f334b8cc57096f80cf63f3. CI de verificação oficial 39963760834 SUCCESS: assinatura original, exclusividade do publicador e readback byte a byte.
+
+A assinatura original NÃO está perdida: backup AES-256-GCM cifrado em signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin no GitHub, já recuperado com sucesso em ambiente privado para APKs 2.9.10 a 2.9.13. A complicação é OUTRA: o único workflow canônico de publicação GitHub Actions, .github/workflows/publish-anytv-phone-github-only.yml, exige Actions Repository Secret ANYTV_RECOVERY_SECRET_2026; os jobs 39960928074 e 39963496459 falharam ANTES DA ASSINATURA pois esse segredo não estava acessível ao runner. Disponibilidade do backup cifrado NÃO equivale a segredo provisionado no Actions. Nunca criar outra chave, adicionar segredo em arquivo público, nem impor uma segunda rota de publicação. A conexão GitHub desta conversa não oferece API de cadastro de Secrets. O trabalho não foi concluído: a 2.9.13 ainda não está na OTA.
+
+Meta imediata do próximo chat: preservar tudo; conferir HEAD, rota oficial e execução; identificar/regularizar acesso autorizado ao segredo privado em GitHub Actions sem expor o valor; executar o ÚNICO publicador para a compilação 2.9.13 (run 39891891049), somente com gates de pacote/versionCode/certificado/assinatura/readback e reconhecimento de que é um teste; validar atualização pelo botão Buscar atualizações no celular e depois a conexão física à TCL. NÃO reescrever apps, NÃO reconstruir assinaturas desnecessariamente, NÃO criar workflows avulsos.
+
+## 1. OBJETIVOS, ARQUITETURA E DECISÕES DE PRODUTO
+
+1) Celular: aplicativo AnyTV com.tclremote.livre. Controle remoto LAN Android TV, pareamento TLS, D-pad, voltar, teclado, volume, descoberta de aparelhos, favoritos, inventário real de aplicativos instalados, Bluetooth e navegação fluida. Versão estável física de referência: 2.9.8. UI PT-BR, preservação de dimensões e botões aprovados.
+2) TV: AnyTV Connect, pacote com.tclremote.tvcompanion; serviço de lançamento seguro de aplicativos/títulos, inventário, fluxo de conexão e identidade de assinatura própria. Canal TV separado; não mudar por correção exclusiva do telefone. Última referência aprovada documental Connect 2.5/code16, sem afirmar prova física da nova versão.
+3) Backend Cloudflare: Worker anytv-link-resolver-pilot + D1, lógica de ativação por dispositivo/prova de chave e rotas de catálogo, links oficiais de provedores. Preservar bindings, dados, ativação idempotente e quotas. Token/API key nunca no APK.
+4) Discovery Home V3: centro global Descobrir com slides/hero, carrosséis, filmes, séries, tendências TMDB, nota e quantidade de votos, estreias, trailers PT-BR fallback EN acionados pelo usuário, relacionados e busca global; plataformas de streaming viram FILTROS opcionais, mantendo páginas específicas. Instalação de app não prova assinatura ativa. Não inventar disponibilidade BR/audiência nem burlar DRM.
+5) OTA: botão Buscar atualizações no app deve consultar diretamente GitHub em updates/android/cert2026/current.apk, sem Drive na consulta, download ou publicação normal. Não prometer instalação silenciosa Android (requer autorização do sistema). O usuário NÃO quer sideload como fluxo regular.
+6) Princípios: não reinstalar/limpar dados do aplicativo ou da TV; não trocar certificados; não perder função que já operava; GitHub-first, mudanças mínimas, readback e rollback; separar CI/build, APK assinado, OTA, instalação e homologação real.
+
+## 2. REPOSITÓRIO, CANÔNICO E PRECEDÊNCIA DE ESTADO
+
+GitHub: https://github.com/brenoff2/tcl-apk-ci-builder .
+Branch dev: feat/anytv-p0-device-proof-verifier-20261020 (PR #3 draft -> base branch OTA). Branch OTA: feat/tcl-v22-updates-back-bluetooth. Main NÃO deve ser mesclada automaticamente. Sempre consultar HEAD novo ao retomar: SHAs mudam após gravações.
+Entrada canônica principal: AGENTS.md; docs/VISION.md; docs/handoffs/CURRENT_HANDOFF.md; ESTE DOCUMENTO; docs/STATUS.md; docs/roadmap/PROJECT_PROGRESS.json; docs/roadmap/MASTER_ROADMAP.md; docs/operations/PROJECT_CONTINUITY_PROTOCOL.md; docs/ASSINATURA_E_ATUALIZACAO.md; signing-recovery/README.md; .github/workflows/publish-anytv-phone-github-only.yml (na OTA); .github/workflows/verify-anytv-update-endpoint.yml.
+Contratos preservados: docs/CONTRATO_FUNCIONAL_TCL.md, docs/ANYTV_STREAMING_MATRIX.md, docs/ANYTV_STREAMING_SCREENS.md, docs/ANYTV_DISCOVERY_HOME_V3.md e ADR-0001, ADR-0002.
+Precedência: API/árvore atual GitHub + CI concluído + readback OTA + relato físico do usuário > textos antigos congelados em histórico. Docs antigos de 2026-10-21 descreviam OTA 2.9.8/2.9.9; agora são HISTÓRICOS, não executáveis. Histórico Git não pode ser apagado sem perda de auditoria.
+
+## 3. CRONOLOGIA DE VERSÕES E PROVAS
+
+- 2.9.8 / code37: funcional em uso real segundo usuário antes das alterações; build 39661373378, cert2026, OTA então publicada. Fonte de referência para regressão TCL.
+- 2.9.9 / code38 Discovery V3: build 39699948020; arquivo signed de 28.347.236 B, SHA256 56142e5f3e33d54f1be41c5f702b0d8e1bf00bff206e3c011438a5c2648a2a93. Candidato produzido mas NÃO foi versão OTA oficial na sequência.
+- 2.9.10 / code39: build 39774708705 SUCCESS, artefato unsigned anytv-discovery-v3-2910-unsigned-audit ID 12423064871. Assinatura original recuperada e APK instalável produzido localmente, verificado v2/v3, entregue ao usuário; SHA256 e21d63f516e7d6af300e10d117ef089ab08b13afbdad0814f25cdd478cdb6965. NÃO assumir que sua assinatura local tornou a chave automaticamente disponível ao GitHub Actions. Erro observado após instalação: SSL certificate error ao reconectar TCL.
+- 2.9.11 / code40: adicionou scripts/apply_anytv_ssl_repair.py; ao erro TLS passou a iniciar novo PIN e remover indicador HOST/PIN. Build 39788803659 SUCCESS; signed SHA256 5dd764f8b074715ecb59e658562186912382b7937b18c2b481806f46f5886e9b; OTA publicada run 39797520084 SUCCESS e readback. QA física FALHOU: Discover mostrava New e Read error: ssl... I/O error during system call, Success. Não repetir esta alteração às cegas.
+- 2.9.12 / code41: candidata de recuperação com o código LAN da 2.9.8, removido patch TLS 2.9.11. Build 39881405936 SUCCESS; signed SHA256 28c2881899bc9c6a79fcfd908d66528750534c89c7f334b8cc57096f80cf63f3; OTA run 39882583323 SUCCESS; status de readback comprovado e novamente pelo verificador 39963760834 SUCCESS. QA física FALHOU, ainda New / Read error SSL. Restaurar código não restaurou preferências removidas pela 2.9.11.
+- 2.9.13 / code42: hipótese controlada de chave TLS: AndroidKeyStore tinha RSA androidtv-local (TCL) e EC anytv-resolver-p256-v1 (Cloudflare). Original KeyStoreManager.getKeyManagers oferecia todos os aliases, o que PODE selecionar identidade incorreta. Patch scripts/apply_anytv_tv_tls_alias_isolation.py restringe TLS da TV a RSA, sem apagar chaves; teste scripts/tests/test_anytv_tv_tls_identity_isolation.py; CI 39891891049 SUCCESS; artefato unsigned anytv-rsa-tls-2913-unsigned-audit ID 12475073264, arquivo local assinado com cert2026, 28.347.236 B, SHA256 fbbc1398465f27b2aadccef1d48be6e08e51af0b729aab694189ca8c06b3c1f5. NÃO ESTÁ na OTA; não homologado na TCL, não declarar reparo concluído.
+
+CI/tela físico: testes unitários ou apksigner só comprovam compilação/identidade/estrutura, não garantem TLS funcional em TV. Não atribuir causa definitiva ao Cloudflare: o endpoint Cloudflare já existia na 2.9.8, e a hipótese do alias é plausível mas pendente de prova de protocolo.
+
+## 4. ASSINATURA — DECISÃO ÚNICA E PONTO DE BLOQUEIO
+
+Certificado fixo do Android: 2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f. Não confundir identidade de assinatura APK do GitHub com chaves de pareamento RSA AndroidKeyStore no celular nem com chave P-256 usada no Worker. São três camadas distintas.
+Backup original criptografado no GitHub: signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin (formato ANYTVAES1/AES-GCM). Backup armazena material de identidade para phone e TV; nenhum plaintext ou senha no GitHub. O usuário determinou que o problema de assinatura NUNCA deveria se repetir.
+O APK 2.9.10 e versões seguintes foram assinados em execução privada usando backup+segredo existente e passaram verificação; isso NÃO equivale a provisionar permanentemente o Actions. O publicador permanente requer unicamente Actions Repository Secret ANYTV_RECOVERY_SECRET_2026, valor hex de recuperação; **não divulgar nem versionar**. Na run 39963496459 o gate Confirm official signer and private Actions secret falhou porque o segredo estava ausente ou inacessível ao runner.
+Não criar chaves alternativas, nunca adicionar plaintext a repositório ou a um input de workflow, nunca usar URL temporária de transferência como arquitetura. As integrações GitHub habilitadas nesta conversa não fornecem gestão de Secrets; usar procedimento administrativo GitHub autorizado, com acesso necessário, para confirmar o nome/escopo/visibilidade do secret. Não presumir que o segredo não existe em outro escopo sem auditoria.
+A OTA depende exclusivamente do workflow .github/workflows/publish-anytv-phone-github-only.yml. Ele baixa artifact unsigned de run validado (via gh), confere checksum SHA, recupera signer cifrado dentro do runner, assina via apksigner, confere pacote/cert/v2/versionCode crescente e publica somente current.apk; confirma bytes remotos. Concurrency evita disputa. Critério de pronto: run SUCCESS + assinatura correta + readback + teste no app.
+Workflows de publicação do telefone de versões antigas foram apagados da árvore ATIVA da branch OTA e da dev em 23/10; Git history preservado. Fluxos EXCLUSIVOS da TV foram preservados. Verificador .github/workflows/verify-anytv-update-endpoint.yml possui gate de exclusividade de publicador e verificou OTA na run 39963760834 SUCCESS.
+As antigas instruções de assinatura foram substituídas por docs/ASSINATURA_E_ATUALIZACAO.md e signing-recovery/README.md, nas duas branches. Documentos históricos de inventário permanecem para auditoria; não são rotas de produção.
+
+## 5. ROADMAP/GATES E O QUE REALMENTE FALTA
+
+Baseline M01–M11: 7 marcos técnicos aceitos em 11 = 63%, conforme docs/roadmap/PROJECT_PROGRESS.json. Não inflar por builds recentes; NENHUM dos 9 gates humanos F0–F8 foi aprovado. F0 M01 1/1; F1 e F2 sem marcos próprios aferidos; F3 2/2; F4 2/3 (ativação M08 em QA); F5 0/1 (abertura título M09 em QA); F6 0/1 (regressão/rollback); F7 2/2 históricos (canais OTA existiam, NÃO significa OTA atual 2.9.13); F8 0/1 (operação/aceite). Discovery V3 escopo D01–D07 separado.
+Prioridade P0 atual: tornar assinatura do publicador GitHub-only efetivamente executável pela credencial existente, **sem pedir ao usuário a chave em chat**; publicar candidata 2.9.13 com evidência de assinatura/readback se for o teste desejado; confirmar busca, instalação pelo atualizador e conexão TLS real; se TLS falhar, analisar logs/etapa do handshake e histórico de identidade antes de novo patch, sem resetar TV ou apagar dados.
+Outros gates: homologação real de ativação, lançamento de título, disponibilidade BR, UI Discovery V3, TV companion/Bluetooth; preservar preferências e escopo.
+Condição de aceite de assinatura: Actions consegue abrir backup cifrado e assinar sem operador, mantendo segredo privado e sem alternativas. Condição de aceite OTA: current.apk de code42 correspondente ao APK validado, readback SHA, app instalado pela rota de atualização. Condição de aceite TCL: TV pareia e comandos funcionam no aparelho real. São provas independentes.
+
+## 6. PASSOS IMEDIATOS, SEM REINICIAR O TRABALHO
+
+1. Revalidar as HEADs, conferir execução 39963760834 (verificação de exclusividade/cert/readback SUCCESS), 39963496459 (secret-gate FAIL) e build 39891891049 (SUCCESS). Não utilizar texto histórico que ainda mencione OTA 2.9.8 ou 2.9.9.
+2. Auditar via interface GitHub Actions autorizada a existência/nome/escopo do secret ANYTV_RECOVERY_SECRET_2026. Se não estiver realmente acessível ao runner, providenciar sua configuração segura pelo administrador. NÃO gerar outra identidade, não pedir ao usuário segredo plaintext na conversa, não tentar burlar restrição de API.
+3. Reexecutar somente .github/workflows/publish-anytv-phone-github-only.yml com candidate_run_id 39891891049. Verificar porta de saída no runner; validar checks de hash/assinatura/versionCode. Se falhar, consertar especificamente causa comprovada no mesmo workflow, sem versões ou rotas paralelas.
+4. Conferir OTA cert2026/current.apk (versionCode esperado 42 após publicação; SHA do signed depende de assinatura determinística e do checksum efetivo conferido). Não declarar sucesso se permanecer 41. Entregar usuário instrução para atualizar pelo botão do app, não arquivo de instalação manual como padrão.
+5. Testar no dispositivo real Discover/TCL. Se novo TLS falhar, recuperar logs observáveis por etapa TLS e investigar identidade AndroidKeyStore, certificado servidor, portas 6466/6467 e preferências HOST/PIN. Não presumir reboot da TV como solução.
+6. Atualizar AGENTS.md, docs/STATUS.md, handoff e marcos SOMENTE com evidência; preservar F0-F8 e ADRs, seguir o canônico. Finalizar resposta em português com acompanhamento real e distinção de bloqueios.
+
+## 7. REFERÊNCIAS E STATUS EM 23/10/2026
+
+Repo: https://github.com/brenoff2/tcl-apk-ci-builder
+PR #3: https://github.com/brenoff2/tcl-apk-ci-builder/pull/3
+CI candidata 2.9.13: https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/39891891049
+Publicador GitHub-only bloqueado no gate: https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/39963496459
+CI verificação do canal cert2026 e single publisher: https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/39963760834
+Canal OTA: https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/cert2026/current.apk
+Marcos: docs/roadmap/PROJECT_PROGRESS.json; PR #3 segue draft; não executar merge em main.
+Dados secretos: NENHUM deve constar neste handoff. Backup cifrado permanece no GitHub; valor de segredo permanece fora de Git e de chats.
