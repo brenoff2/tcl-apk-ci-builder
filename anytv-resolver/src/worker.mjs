@@ -47,8 +47,9 @@ function safeEqual(a, b) {
   return diff === 0;
 }
 
-function monthlyCap(env) {
-  const n = Number(env.MAX_UPSTREAM_CALLS_MONTH || "200");
+// The limited JustWatch/link-resolver budget is NOT the TMDB catalog budget.
+function linkMonthlyCap(env) {
+  const n = Number(env.MAX_LINK_CALLS_MONTH || env.MAX_UPSTREAM_CALLS_MONTH || "200");
   return Number.isSafeInteger(n) && n > 0 && n <= 10000 ? n : null;
 }
 
@@ -127,14 +128,15 @@ async function useCached(env, key, now) {
   return result;
 }
 
-async function reserveQuota(env, now) {
-  const month = new Date(now * 1000).toISOString().slice(0, 7);
+async function reserveLinkQuota(env, now) {
+  // Separate the link budget from the historical shared counter, already full.
+  const month = new Date(now * 1000).toISOString().slice(0, 7) + ":links";
   await env.DB.prepare(
     "INSERT OR IGNORE INTO monthly_quota (month, used) VALUES (?, 0)"
   ).bind(month).run();
   const reserved = await env.DB.prepare(
     "UPDATE monthly_quota SET used = used + 1 WHERE month = ? AND used < ? RETURNING used"
-  ).bind(month, monthlyCap(env)).first();
+  ).bind(month, linkMonthlyCap(env)).first();
   return reserved !== null;
 }
 
@@ -240,12 +242,8 @@ export async function catalogRequest(request, env, deps = {}) {
     if (cached && cached.expires_at > now) {
       return asJson(JSON.parse(cached.payload), 200, { "x-anytv-cache": "hit" });
     }
-    // Count uncached catalog lookups against the same bounded upstream budget.
-    // Prevent an unauthenticated public catalog from becoming an unlimited TMDB proxy.
-    diagnosticStage = "quota_reserve";
-    if (monthlyCap(env) === null || !(await reserveQuota(env, now))) {
-      return asJson({ status: "monthly_quota_exhausted" }, 429);
-    }
+    // TMDB metadata is not charged against the separate JustWatch link budget.
+    // Public requests remain rate-limited by IP, allowlisted, validated and cached.
     // TMDB offers either a v4 Read Access Token (Bearer) or a 32-char v3 API key.
     // Both stay exclusively in Cloudflare Secrets; no credential reaches the app.
     const credential = String(env.TMDB_READ_TOKEN).trim().replace(/^Bearer\s+/i, "").replace(/\s+/g, "");
@@ -266,8 +264,8 @@ export async function catalogRequest(request, env, deps = {}) {
     if (payload.length > 450000) return asJson({ status: "catalog_unavailable" }, 503);
     const parsedPayload = JSON.parse(payload);
     diagnosticStage = "cache_write";
-    // Read-only TMDB responses are cached by route to preserve the bounded
-    // monthly upstream budget. Search and provider availability still refresh.
+    // Cache validated read-only TMDB metadata to reduce upstream load.
+    // Search and availability have route-specific expiration.
     const cacheTtl = route.startsWith("genre/") || route.startsWith("watch/providers/")
       ? 7 * 86400
       : route.endsWith("/watch/providers") ? 12 * 3600
@@ -323,7 +321,7 @@ export async function handleRequest(request, env, deps = {}) {
   if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
   if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
   if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB || !env?.RATE_LIMIT ||
-      monthlyCap(env) === null ||
+      linkMonthlyCap(env) === null ||
       ((env.ANYTV_RESOLVER_AUTH_MODE || "pilot") === "pilot" &&
        !env.ANYTV_CLIENT_TOKEN)) {
     return asJson({ status: "not_configured" }, 503);
@@ -358,7 +356,7 @@ export async function handleRequest(request, env, deps = {}) {
     const key = media + ":" + id + ":" + provider + ":br";
     const cached = await useCached(env, key, now);
     if (cached) return report(cached, true);
-    if (!(await reserveQuota(env, now))) {
+    if (!(await reserveLinkQuota(env, now))) {
       return asJson({ status: "monthly_quota_exhausted" }, 429);
     }
     const sourceUrl = new URL(ORIGIN + "/shows/" + media + "%2F" + id);
