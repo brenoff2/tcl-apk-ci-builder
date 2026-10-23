@@ -1,0 +1,130 @@
+name: AnyTV phone cert2026 - GitHub-only OTA
+on:
+  push:
+    branches: ['feat/tcl-v22-updates-back-bluetooth']
+    paths: ['.github/workflows/publish-anytv-phone-github-only.yml']
+  workflow_dispatch:
+permissions:
+  actions: read
+  contents: write
+concurrency:
+  group: anytv-cert2026-publish
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RECOVERY_HEX: ${{ secrets.ANYTV_RECOVERY_SECRET_2026 || secrets.ANYTV_SIGNING_RECOVERY_KEY || secrets.ANYTV_RECOVERY_SECRET_2026_PRIVADO }}
+      EXPECTED_UNSIGNED_SHA: bceeadb43abf1b9dee040bb891abc94b820e2cc6ca2a0ba7f903b0b3fbfe36c8
+      EXPECTED_SIGNED_SHA: fbbc1398465f27b2aadccef1d48be6e08e51af0b729aab694189ca8c06b3c1f5
+      EXPECTED_CERT_SHA: 2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f
+    steps:
+      - name: Checkout phone OTA branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/tcl-v22-updates-back-bluetooth
+          fetch-depth: 0
+      - name: Android SDK
+        uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Verify GitHub-built candidate and original encrypted signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin
+          if [ -z "${RECOVERY_HEX:-}" ]; then
+            echo '::error::Configure the existing cert2026 recovery credential as an Actions secret; private signing material must never be added to the repository.'
+            exit 1
+          fi
+          if ! [[ "$RECOVERY_HEX" =~ ^[A-Fa-f0-9]{64}$ ]]; then
+            echo '::error::Invalid private recovery credential format.'
+            exit 1
+          fi
+          gh api 'repos/brenoff2/tcl-apk-ci-builder/actions/runs/39891891049' \
+            --jq '.conclusion + " " + .head_branch + " " + .path + " " + .head_sha' |
+            grep -Fx 'success feat/anytv-p0-device-proof-verifier-20261020 .github/workflows/anytv-2913-rsa-tls-candidate.yml 0f641bf16f0c35b98c8c42f0f2de4838c33a88c3'
+          mkdir -p incoming signed
+          gh run download 39891891049 --name anytv-rsa-tls-2913-unsigned-audit --dir incoming
+          echo "$EXPECTED_UNSIGNED_SHA  incoming/AnyTV_2_9_13_RELEASE_UNSIGNED.apk" | sha256sum -c -
+      - name: Recover existing cert2026 signer inside runner only
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 -m pip install -q 'cryptography>=43,<47'
+          mkdir -p signing-private
+          python3 - <<'PY'
+          import io, os, pathlib, zipfile
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          blob=pathlib.Path('signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin').read_bytes()
+          if blob[:9] != b'ANYTVAES1':
+              raise RuntimeError('Invalid encrypted signing backup format')
+          key=bytes.fromhex(os.environ['RECOVERY_HEX'])
+          data=AESGCM(key).decrypt(blob[9:21],blob[21:],None)
+          with zipfile.ZipFile(io.BytesIO(data)) as z:
+              for name in ('anytv-phone-migration.p12','phone.password'):
+                  target=pathlib.Path('signing-private')/name
+                  target.write_bytes(z.read(name))
+                  target.chmod(0o600)
+          print('Original phone signer recovered without exposing private material')
+          PY
+      - name: Sign, validate cert2026 and exact APK bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          export PHONE_PASSWORD
+          PHONE_PASSWORD="$(cat signing-private/phone.password)"
+          echo "::add-mask::$PHONE_PASSWORD"
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/apksigner" sign --ks signing-private/anytv-phone-migration.p12 --ks-type PKCS12 \
+            --ks-pass env:PHONE_PASSWORD --key-pass env:PHONE_PASSWORD \
+            --out signed/AnyTV_2_9_13_CERT2026.apk incoming/AnyTV_2_9_13_RELEASE_UNSIGNED.apk
+          rm -rf signing-private
+          trap 'rm -rf signing-private' EXIT
+          "$BT/apksigner" verify --verbose --print-certs signed/AnyTV_2_9_13_CERT2026.apk > signed/certificate-audit.txt
+          grep -qx 'Verifies' signed/certificate-audit.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed/certificate-audit.txt
+          grep -qi "$EXPECTED_CERT_SHA" signed/certificate-audit.txt
+          "$BT/aapt" dump badging signed/AnyTV_2_9_13_CERT2026.apk | grep -q "name='com.tclremote.livre' versionCode='42' versionName='2.9.13-AnyTV'"
+          "$BT/zipalign" -c 4 signed/AnyTV_2_9_13_CERT2026.apk
+          echo "$EXPECTED_SIGNED_SHA  signed/AnyTV_2_9_13_CERT2026.apk" | sha256sum -c -
+      - name: Verify existing phone OTA before updating
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/aapt" dump badging updates/android/cert2026/current.apk | grep -q "name='com.tclremote.livre' versionCode='41'"
+          "$BT/apksigner" verify --print-certs updates/android/cert2026/current.apk > existing-cert.txt
+          grep -qi "$EXPECTED_CERT_SHA" existing-cert.txt
+          echo '28c2881899bc9c6a79fcfd908d66528750534c89c7f334b8cc57096f80cf63f3  updates/android/cert2026/current.apk' | sha256sum -c -
+      - name: Publish validated phone APK from GitHub Actions
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp signed/AnyTV_2_9_13_CERT2026.apk updates/android/cert2026/current.apk
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -f updates/android/cert2026/current.apk
+          git diff --cached --check
+          if ! git diff --cached --quiet; then
+            git commit -m 'release(anytv): publish phone 2.9.13 cert2026 OTA [skip ci]'
+            git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+          fi
+      - name: Confirm OTA remote bytes match signed artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/cert2026/current.apk?verify=$attempt" -o published.apk || true
+            if test -s published.apk && cmp -s published.apk signed/AnyTV_2_9_13_CERT2026.apk; then
+              echo "$EXPECTED_SIGNED_SHA  published.apk" | sha256sum -c -
+              echo 'ANYTV_2913_GITHUB_ONLY_OTA_READBACK_OK'
+              exit 0
+            fi
+            sleep 10
+          done
+          echo '::error::Published OTA bytes differ from signed GitHub-built artifact'
+          exit 1
