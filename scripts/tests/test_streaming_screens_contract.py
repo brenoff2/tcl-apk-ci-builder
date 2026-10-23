@@ -158,8 +158,8 @@ class StreamingScreens(unittest.TestCase):
 
     def test_navigation_is_connected_not_just_declared(self):
         self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
-        self.assertIn('@Composable\\ninternal fun TclStreamingScreens(', self.screen)
-        self.assertNotIn('@Composable\\n/** Same one-row navigation', self.screen)
+        self.assertIn('@Composable\ninternal fun TclStreamingScreens(', self.screen)
+        self.assertNotIn('@Composable\n/** Same one-row navigation', self.screen)
         self.assertIn('onFilters = { editingMyServices = myServices', self.screen)
         self.assertIn('onContentType = { kind ->', self.screen)
         self.assertIn('onHome = { selected = null; homeLibrary = false', self.screen)
