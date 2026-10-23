@@ -1,6 +1,6 @@
 # HANDOFF ATUAL — ANYTV — 23/10/2026
 
-**LER PRIMEIRO**: docs/handoffs/2026-10-23-anytv-full-transition.md (histórico integral, versões, decisões, assinatura, Cloudflare e próximos passos). Esta página é somente índice atual, substitui handoff de 21–22/10 desatualizado. Documentos precedentes permanecem no histórico Git.
+**MENSAGEM PRONTA PARA COPIAR NO PRÓXIMO CHAT:** [docs/handoffs/NEXT_CHAT_FIRST_MESSAGE.md](./NEXT_CHAT_FIRST_MESSAGE.md). Abrir com ela e depois ler integralmente o documento canônico abaixo; não depender de memória de conversa.\n\n**LER PRIMEIRO**: docs/handoffs/2026-10-23-anytv-full-transition.md (histórico integral, versões, decisões, assinatura, Cloudflare e próximos passos). Esta página é somente índice atual, substitui handoff de 21–22/10 desatualizado. Documentos precedentes permanecem no histórico Git.
 
 ## Objetivo
 Preservar AnyTV Android com.tclremote.livre, AnyTV Connect da TCL, controle LAN/Bluetooth/pareamento, inventário de apps, streaming e Discovery V3, com um **único** atualizador GitHub-only e certificado cert2026 original, sem Drive no processo OTA. Não reiniciar o projeto nem criar rotas alternativas.
