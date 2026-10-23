@@ -6,6 +6,6 @@
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
   "new_install_only": false,
   "release_version": "2.9.17-AnyTV",
-  "release_scope": "main-home 3s poster-banner, saved TV automatic reconnection after network loss, 56dp platform icons, compact tab navigation, film/series/genre filter, pinned metadata and artwork, year+genre, favorite/watched upper actions, watched-hidden discovery, watching list, real TV label",
+  "release_scope": "2.9.17 code46: corrected main film poster banner, restored saved-TV auto-reconnect after involuntary network loss, same home streaming icons, compact tabs & type filters, pinned poster/metadata, genres, TV-neutral action, separate favorite/tracking/watched history",
   "ci_revision": 2
 }
