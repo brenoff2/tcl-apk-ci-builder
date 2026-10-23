@@ -124,6 +124,10 @@
     {
       "date": "2026-10-21",
       "event": "Reconciliada evidencia cronologica da V3: falha CI antiga 39699232465 superada por success 39699948020, APK assinado verificado; OTA e QA fisica pendentes. Sem alterar 7/11 P0."
+    },
+    {
+      "date": "2026-10-23",
+      "event": "Transição integral consolidada; OTA real do telefone 2.9.12/code41 verificada por CI 39963760834; candidata 2.9.13/code42 CI e assinatura aprovadas mas NAO publicada e TCL NAO homologada. Publicador único GitHub-only, Actions secret ainda indisponível ao runner; sem mudança de marcos ou gates."
     }
   ],
   "discovery_v3": {
@@ -133,6 +137,36 @@
     "release_evidence": "docs/operations/RELEASE_299_EVIDENCE_AND_BLOCKERS.md",
     "state": "IN_DEVELOPMENT_NOT_HOMOLOGATED",
     "release_299": "SIGNED_VERIFIED_NOT_OTA_PUBLISHED",
-    "note": "CI posterior 39699948020 success (supera falha anterior 39699232465); APK cert2026 assinado versionCode38 sha256 56142e5f3e33d54f1be41c5f702b0d8e1bf00bff206e3c011438a5c2648a2a93, 28347236 bytes; OTA Android current.apk permanece 2.9.8 conforme readback; QA fisica V3 pendente."
+    "note": "CI posterior 39699948020 success (supera falha anterior 39699232465); APK cert2026 assinado versionCode38 sha256 56142e5f3e33d54f1be41c5f702b0d8e1bf00bff206e3c011438a5c2648a2a93, 28347236 bytes; OTA Android current.apk permanece 2.9.8 conforme readback; QA fisica V3 pendente. Atualização 2026-10-23: o registro release_299 nesta seção é HISTÓRICO, não indica OTA atual; para estado operacional consultar operational_checkpoint (OTA 2.9.12)."
+  },
+  "operational_checkpoint": {
+    "date": "2026-10-23",
+    "handoff": "docs/handoffs/2026-10-23-anytv-full-transition.md",
+    "decision": "docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md",
+    "phone_ota": {
+      "version": "2.9.12",
+      "versionCode": 41,
+      "path": "updates/android/cert2026/current.apk",
+      "branch": "feat/tcl-v22-updates-back-bluetooth",
+      "blob_sha": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
+      "sha256": "28c2881899bc9c6a79fcfd908d66528750534c89c7f334b8cc57096f80cf63f3",
+      "verified_run": 39963760834
+    },
+    "candidate": {
+      "version": "2.9.13",
+      "versionCode": 42,
+      "build_run": 39891891049,
+      "signed_apk_sha256": "fbbc1398465f27b2aadccef1d48be6e08e51af0b729aab694189ca8c06b3c1f5",
+      "published": false,
+      "physical_tcl_qa": "NOT_HOMOLOGATED"
+    },
+    "signing": {
+      "original_cert_sha256": "2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f",
+      "publisher": ".github/workflows/publish-anytv-phone-github-only.yml",
+      "required_actions_secret_name": "ANYTV_RECOVERY_SECRET_2026",
+      "access_gate": "BLOCKED",
+      "failure_run": 39963496459
+    },
+    "progress_unchanged": true
   }
 }
