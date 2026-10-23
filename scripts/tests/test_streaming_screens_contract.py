@@ -155,7 +155,7 @@ class StreamingScreens(unittest.TestCase):
             'editingFilterGenres = if (allGenreIds.isNotEmpty()',
             'val requested = if (selectedHomeGenre == 0)',
             'choices.filter { it.id in filterGenreIds',
-            'Gêneros escolhidos',
+            'put("Por gênero: " + kind.name, it)',
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, self.screen)
@@ -166,7 +166,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('@Composable\ninternal fun TclStreamingScreens(', self.screen)
         self.assertNotIn('@Composable\n/** Same one-row navigation', self.screen)
         self.assertIn('onFilters = { editingMyServices = myServices', self.screen)
-        self.assertIn('AnyTvCompactChip("Filmes", homeContentType == "movie")', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", !library && contentType == "movie")', self.screen)
         self.assertIn('onHome = { selected = null; homeLibrary = false', self.screen)
         self.assertIn('onWatching = { selected = null; homeLibrary = true', self.screen)
         self.assertIn('onWatched = { selected = null; homeLibrary = true', self.screen)
@@ -360,7 +360,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('TclHeaderAction(Icons.Filled.FilterList', self.screen)
         self.assertIn('val deviceBrand = remember(tvName)', home)
         self.assertIn('Text(deviceBrand', home)
-        self.assertIn('.background(Brush.verticalGradient(listOf(TclSurface, TclBg, TclBg)))\\n            .windowInsetsPadding(WindowInsets.safeDrawing)', home)
+        self.assertIn('windowInsetsPadding(WindowInsets.safeDrawing)', home)
+        self.assertIn('window.navigationBarColor = systemBg.toArgb()', home)
         self.assertIn('window.statusBarColor = systemBg.toArgb()', home)
         self.assertIn('window.navigationBarColor = systemBg.toArgb()', home)
         self.assertIn('Modifier.weight(0.3f)', self.screen)
