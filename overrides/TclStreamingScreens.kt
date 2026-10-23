@@ -543,54 +543,69 @@ internal fun AnyTvPinnedImage(
     )
 }
 
-/** Slim, swipeable movie-cover entrypoint for the main remote screen. */
+/** Short interactive carousel: name and entry affordance left, official artwork right. */
 @Composable
 internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
     val context = LocalContext.current
     var previews by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     LaunchedEffect(Unit) {
         StreamingCatalog.configure(context)
+        // discoveryShelf appends language itself: never pass a duplicate query.
         previews = runCatching {
-            StreamingCatalog.discoveryShelf("trending/movie/week?language=pt-BR", "movie")
-        }.getOrDefault(emptyList()).filter { it.poster.isNotBlank() }.take(12)
+            StreamingCatalog.discoveryShelf("trending/movie/week", "movie")
+        }.getOrDefault(emptyList())
+            .filter { it.backdrop.isNotBlank() || it.poster.isNotBlank() }.take(12)
     }
-    Surface(modifier = Modifier.fillMaxWidth().height(75.dp).clickable(onClick = onOpenStreaming),
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(75.dp)
+            .clickable(onClick = onOpenStreaming)
+            .semantics { contentDescription = "Abrir destaques de filmes e séries" },
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh) {
-        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 3.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            if (previews.isNotEmpty()) {
-                val count = (previews.size + 2) / 3
-                val pagerState = rememberPagerState(pageCount = { count })
-                LaunchedEffect(pagerState, count) {
-                    while (count > 1) {
-                        delay(3000)
-                        if (!pagerState.isScrollInProgress)
-                            pagerState.animateScrollToPage((pagerState.currentPage + 1) % count)
-                    }
-                }
-                HorizontalPager(state = pagerState,
-                    modifier = Modifier.weight(1f).fillMaxHeight()) { index ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        previews.drop(index * 3).take(3).forEach { item ->
-                            AnyTvPinnedImage(
-                                model = "https://image.tmdb.org/t/p/w185" + item.poster,
-                                contentDescription = item.name,
-                                modifier = Modifier.width(45.dp).fillMaxHeight()
-                                    .clip(RoundedCornerShape(5.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                        }
-                    }
-                }
-            } else {
-                Text("Filmes e séries", modifier = Modifier.weight(1f),
-                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
+    ) {
+        if (previews.isEmpty()) {
+            Row(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Text("Destaques de filmes e séries", modifier = Modifier.weight(1f),
+                    maxLines = 1, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Text("Ver ›", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
             }
-            Text("Explorar  ›", fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary)
+        } else {
+            val pager = rememberPagerState(pageCount = { previews.size })
+            LaunchedEffect(pager, previews.map { it.id }) {
+                while (previews.size > 1) {
+                    delay(3000)
+                    if (!pager.isScrollInProgress)
+                        pager.animateScrollToPage((pager.currentPage + 1) % previews.size)
+                }
+            }
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(),
+                userScrollEnabled = true) { index ->
+                val movie = previews[index]
+                Row(modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    Column(modifier = Modifier.weight(1f)
+                        .padding(start = 12.dp, end = 5.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("EM DESTAQUE", fontSize = 9.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold)
+                        Text(movie.name, fontSize = 12.sp, lineHeight = 14.sp,
+                            maxLines = 2, overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.SemiBold)
+                        Text("Ver ›", fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.primary)
+                    }
+                    AnyTvPinnedImage(
+                        model = "https://image.tmdb.org/t/p/w500" +
+                            movie.backdrop.ifBlank { movie.poster },
+                        contentDescription = "Destaque: " + movie.name,
+                        modifier = Modifier.fillMaxHeight().fillMaxWidth(0.48f)
+                            .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+            }
         }
     }
 }
