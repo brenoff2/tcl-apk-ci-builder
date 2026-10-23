@@ -29,7 +29,7 @@ jobs:
           if matches != expected:
               raise SystemExit('BLOCKED duplicate Android cert2026 OTA writers or missing canonical verifier: '+repr(sorted(matches)))
           old={p.name for p in workflows.glob('*.yml')
-               if 'updates/android/current.apk' in p.read_text(encoding='utf-8')}
+               if ('updates/android/' + 'current.apk') in p.read_text(encoding='utf-8')}
           if old:
               raise SystemExit('BLOCKED legacy Android publishing references: '+repr(sorted(old)))
           canonical=(workflows/'publish-anytv-phone-github-only.yml').read_text(encoding='utf-8')
