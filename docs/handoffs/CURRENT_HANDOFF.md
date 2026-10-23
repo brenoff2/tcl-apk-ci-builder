@@ -32,3 +32,11 @@ https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/39963760834
 ## Revisão de execução — 23/10/2026
 
 O workflow único de assinatura foi corrigido na branch OTA: `.github/workflows/publish-anytv-phone-github-only.yml` aceita pedidos **apenas** por push de `.github/anytv-phone-release-request.json` com ID de CI aprovado e `versionCode` explícito. Alterar workflow/documentação não dispara publicação. Credencial `ANYTV_RECOVERY_SECRET_2026` injetada apenas no passo de assinatura, nunca no job inteiro. Commits do workflow OTA `bc73a647` e `ae2b438e`; verificação automatizada `ef2eddc4`. Não foi criado pedido de release, o segredo ainda não foi comprovado no runner, a OTA continua 2.9.12/code41 e a 2.9.13/code42 não está publicada nem homologada na TCL. CI da revisão: run `39973828725` SUCCESS (exclusividade do publicador, certificado cert2026 da OTA atual e readback remoto). A assinatura de um NOVO APK continua NÃO TESTADA pelo Actions enquanto o secret não estiver disponível; nenhum gate físico foi aprovado.
+
+
+## Tentativa de entrega da 2.9.13 — 23/10/2026
+
+- Pedido de release criado na branch OTA: `.github/anytv-phone-release-request.json`, commit `1530c887aa394168f004ce942d7996d019c71f76`, apontando para CI `39891891049` e `expected_version_code: 42`.
+- Execução REAL do único publicador: GitHub Actions `39988081281` (FAILURE). Checkout, leitura do pedido, download do artefato de CI, Android SDK e dependência de criptografia passaram; a etapa **Recover original signer and sign without exporting secrets** falhou porque o runner recebeu `RECOVERY_HEX` VAZIO, com erro `Repository Actions secret ANYTV_RECOVERY_SECRET_2026 missing or invalid. OTA unchanged.`
+- Etapas de assinatura, validação, publicação e readback de NOVO APK não se concluíram; o publicador não alterou `updates/android/cert2026/current.apk`. OTA permanece `2.9.12/code41`, candidatа `2.9.13/code42` NÃO entregue pela rota OTA. Não fornecer artifact unsigned como APK instalável.
+- Estado decisivo atualizado: **BLOCKED_ACTIONS_SIGNER_SECRET_NOT_IN_RUNNER** comprovado ao vivo no run `39988081281`; não confundir com falta de acesso ao repositório (ambos MCPs GitHub seguem disponíveis). A fonte privada de recuperação existe e não deve ser publicada no Git/chat/inputs/argumentos de tools. Não criar publicador alternativo nem nova identidade.
