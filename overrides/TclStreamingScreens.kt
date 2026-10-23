@@ -493,6 +493,55 @@ private object StreamingCatalog {
     }
 }
 
+/**
+ * Once an artwork has actually been displayed, keep its bytes on-device with no
+ * time expiration. Unlike editorial lists this is intentionally user-clearable
+ * only (Android "Clear app storage"/uninstall); never stores server credentials.
+ */
+@Composable
+internal fun AnyTvPinnedImage(
+    model: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit
+) {
+    val context = LocalContext.current
+    val url = model.takeIf { it.startsWith("https://image.tmdb.org/t/p/") }
+    val target = remember(url) {
+        url?.let {
+            val hash = MessageDigest.getInstance("SHA-256").digest(it.toByteArray())
+                .joinToString("") { b -> "%02x".format(b) }
+            File(File(context.applicationContext.filesDir, "anytv_artwork_saved").apply {
+                mkdirs()
+            }, hash + ".jpg")
+        }
+    }
+    var saved by remember(target) { mutableStateOf(target?.takeIf { it.isFile }) }
+    val saveScope = rememberCoroutineScope()
+    AsyncImage(
+        model = saved ?: model,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = contentScale,
+        onSuccess = { state ->
+            if (saved == null && target != null && !target.exists()) {
+                val drawable = state.result.drawable
+                saveScope.launch(Dispatchers.IO) {
+                    runCatching {
+                        val bitmap = androidx.core.graphics.drawable.toBitmap(drawable)
+                        val partial = File(target.parentFile, target.name + ".tmp")
+                        partial.outputStream().use {
+                            check(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 85, it))
+                        }
+                        if (!target.exists()) partial.renameTo(target) else partial.delete()
+                        if (target.isFile) withContext(Dispatchers.Main) { saved = target }
+                    }
+                }
+            }
+        }
+    )
+}
+
 /** Compact, single-line score and verified Brazilian subscription platform marks. */
 @Composable
 private fun StreamingOfferIcons(
@@ -531,7 +580,7 @@ private fun StreamingOfferIcons(
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center) {
                         if (offer.logo.isNotBlank()) {
-                            AsyncImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
+                            AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
                                 contentDescription = "Disponível em " + offer.name,
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Fit)
@@ -1053,7 +1102,7 @@ internal fun TclStreamingScreens(
                                     Column(modifier = Modifier.width(108.dp).clickable {
                                         details = found; detailsPackage = null
                                     }) {
-                                        AsyncImage(model = "https://image.tmdb.org/t/p/w185" + found.poster,
+                                        AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w185" + found.poster,
                                             contentDescription = found.name,
                                             modifier = Modifier.fillMaxWidth().height(138.dp),
                                             contentScale = ContentScale.Crop)
@@ -1205,7 +1254,7 @@ internal fun TclStreamingScreens(
                                         details = current
                                         detailsPackage = null
                                     }) {
-                                        AsyncImage(model = "https://image.tmdb.org/t/p/w780" +
+                                        AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w780" +
                                             current.backdrop.ifBlank { current.poster },
                                             contentDescription = "Destaque: " + current.name,
                                             contentScale = ContentScale.Crop,
@@ -1238,7 +1287,7 @@ internal fun TclStreamingScreens(
                                                 details = item
                                                 detailsPackage = null
                                             }) {
-                                                AsyncImage(model = "https://image.tmdb.org/t/p/w185" + item.poster,
+                                                AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w185" + item.poster,
                                                     contentDescription = "Cartaz: " + item.name,
                                                     modifier = Modifier.fillMaxWidth().height(158.dp),
                                                     contentScale = ContentScale.Crop)
@@ -1377,7 +1426,7 @@ internal fun TclStreamingScreens(
                                         else app.packageName
                                 }, horizontalAlignment = Alignment.CenterHorizontally) {
                                     if (title.poster.isNotBlank()) {
-                                        AsyncImage(
+                                        AnyTvPinnedImage(
                                             model = "https://image.tmdb.org/t/p/w185" + title.poster,
                                             contentDescription = "Cartaz: " + title.name,
                                             contentScale = ContentScale.Crop,
@@ -1416,7 +1465,7 @@ internal fun TclStreamingScreens(
                                     horizontalArrangement = Arrangement.spacedBy(9.dp),
                                     verticalAlignment = Alignment.CenterVertically) {
                                     if (title.poster.isNotEmpty()) {
-                                        AsyncImage(
+                                        AnyTvPinnedImage(
                                             model = "https://image.tmdb.org/t/p/w185" + title.poster,
                                             contentDescription = "Cartaz: " + title.name,
                                             contentScale = ContentScale.Crop,
@@ -1782,7 +1831,7 @@ internal fun TclStreamingScreens(
                                     details = suggested
                                     detailsPackage = null
                                 }) {
-                                    AsyncImage(model = "https://image.tmdb.org/t/p/w185" + suggested.poster,
+                                    AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w185" + suggested.poster,
                                         contentDescription = suggested.name,
                                         modifier = Modifier.fillMaxWidth().height(120.dp),
                                         contentScale = ContentScale.Crop)
@@ -1804,7 +1853,7 @@ internal fun TclStreamingScreens(
                                 Column(horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier.widthIn(min = 54.dp, max = 85.dp)) {
                                     if (offer.logo.isNotEmpty()) {
-                                        AsyncImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
+                                        AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
                                             contentDescription = offer.name,
                                             modifier = Modifier.size(32.dp))
                                     }
