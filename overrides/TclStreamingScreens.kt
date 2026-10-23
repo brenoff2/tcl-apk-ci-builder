@@ -1638,22 +1638,77 @@ internal fun TclStreamingScreens(
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text(heading, fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.padding(top = 16.dp, bottom = 9.dp))
-                                    LazyRow(
-                                        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                        items(shelf.take(12)) { item ->
-                                            Column(modifier = Modifier.width(116.dp).clickable {
-                                                details = item
-                                                detailsPackage = null
-                                            }) {
-                                                AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w185" + item.poster,
-                                                    contentDescription = "Cartaz: " + item.name,
-                                                    modifier = Modifier.fillMaxWidth().height(158.dp),
-                                                    contentScale = ContentScale.Crop)
-                                                Spacer(Modifier.height(5.dp))
-                                                Text(item.name, maxLines = 2, lineHeight = 14.sp, fontSize = 11.sp)
-                                                StreamingOfferIcons(item, offerCache, displayed)
+                                    // One horizontal scroll moves two stacked rows.
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                        items(shelf.chunked(2)) { pair ->
+                                            Column(verticalArrangement = Arrangement.spacedBy(11.dp),
+                                                modifier = Modifier.width(116.dp)) {
+                                                pair.forEach { item ->
+                                                    Column(modifier = Modifier.fillMaxWidth().clickable {
+                                                        details = item
+                                                        detailsPackage = null
+                                                    }) {
+                                                        AnyTvPinnedImage(
+                                                            model = "https://image.tmdb.org/t/p/w185" + item.poster,
+                                                            contentDescription = "Cartaz: " + item.name,
+                                                            modifier = Modifier.fillMaxWidth().height(158.dp),
+                                                            contentScale = ContentScale.Crop)
+                                                        Spacer(Modifier.height(5.dp))
+                                                        Text(item.name, maxLines = 2, lineHeight = 14.sp,
+                                                            fontSize = 11.sp)
+                                                        StreamingOfferIcons(item, offerCache, displayed)
+                                                    }
+                                                }
                                             }
                                         }
+                                    }
+                                    val moreKey = when {
+                                        heading.startsWith("Em destaque: ") &&
+                                            selectedHomeGenre > 0 ->
+                                            "$selectedGenreKind:$selectedHomeGenre"
+                                        heading.startsWith("Por gênero: ") ->
+                                            currentGenreList.firstOrNull {
+                                                heading == "Por gênero: " + it.name
+                                            }?.let { "$selectedGenreKind:${it.id}" }
+                                        else -> null
+                                    }
+                                    if (moreKey != null && genreMore[moreKey] == true) {
+                                        TextButton(enabled = genreLoading[moreKey] != true,
+                                            onClick = {
+                                                val pieces = moreKey.split(":")
+                                                val genreId = pieces.getOrNull(1)?.toIntOrNull()
+                                                if (genreId != null && genreLoading[moreKey] != true) {
+                                                    genreLoading[moreKey] = true
+                                                    scope.launch {
+                                                        val next = (genrePage[moreKey] ?: 1) + 1
+                                                        runCatching {
+                                                            StreamingCatalog.discoveryGenrePage(
+                                                                genreId, pieces[0], next)
+                                                        }.onSuccess { result ->
+                                                            genreShelves[moreKey] =
+                                                                (genreShelves[moreKey].orEmpty() +
+                                                                    result.titles).distinctBy {
+                                                                    "${it.media}:${it.id}"
+                                                                }
+                                                            genrePage[moreKey] = next
+                                                            genreMore[moreKey] = result.more
+                                                            genreErrors.remove(moreKey)
+                                                        }.onFailure {
+                                                            genreErrors[moreKey] =
+                                                                "Não foi possível carregar mais títulos."
+                                                        }
+                                                        genreLoading[moreKey] = false
+                                                    }
+                                                }
+                                            }) {
+                                            Text(if (genreLoading[moreKey] == true)
+                                                "Carregando…" else "Mostrar mais " + heading,
+                                                fontSize = 11.sp)
+                                        }
+                                    }
+                                    if (moreKey != null && genreErrors[moreKey] != null) {
+                                        Text(genreErrors[moreKey].orEmpty(), fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.error)
                                     }
                                 }
                             }
