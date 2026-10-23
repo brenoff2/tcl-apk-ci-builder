@@ -28,6 +28,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.PlayCircleFilled
+import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -666,6 +675,76 @@ private fun StreamingOfferIcons(
 }
 
 @Composable
+/** Same one-row navigation across catalogue and individual provider views. */
+@Composable
+private fun AnyTvStreamNavBar(
+    library: Boolean,
+    section: String,
+    contentType: String,
+    filtersActive: Boolean,
+    onHome: () -> Unit,
+    onList: () -> Unit,
+    onWatching: () -> Unit,
+    onWatched: () -> Unit,
+    onFilters: () -> Unit,
+    onContentType: (String) -> Unit,
+    onSearch: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val primary = MaterialTheme.colorScheme.primary
+    val neutral = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+            IconButton(onClick = onHome, modifier = Modifier.size(35.dp)) {
+                Icon(Icons.Filled.Home, contentDescription = "Início: filmes e séries",
+                    modifier = Modifier.size(21.dp),
+                    tint = if (!library && contentType == "all") primary else neutral)
+            }
+            IconButton(onClick = onList, modifier = Modifier.size(35.dp)) {
+                Icon(Icons.Filled.Favorite, contentDescription = "Minha lista",
+                    modifier = Modifier.size(21.dp),
+                    tint = if (library && section == "saved") primary else neutral)
+            }
+            IconButton(onClick = onWatching, modifier = Modifier.size(35.dp)) {
+                Icon(Icons.Filled.PlayCircleFilled, contentDescription = "Em andamento",
+                    modifier = Modifier.size(21.dp),
+                    tint = if (library && section == "watching") primary else neutral)
+            }
+            IconButton(onClick = onWatched, modifier = Modifier.size(35.dp)) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = "Assistidos",
+                    modifier = Modifier.size(21.dp),
+                    tint = if (library && section == "watched") primary else neutral)
+            }
+            IconButton(onClick = onFilters, modifier = Modifier.size(35.dp)) {
+                Icon(Icons.Filled.Tv, contentDescription = "Filtrar por streamings e gêneros",
+                    modifier = Modifier.size(21.dp),
+                    tint = if (filtersActive) primary else neutral)
+            }
+            Spacer(Modifier.width(3.dp))
+            FilterChip(selected = !library && contentType == "movie",
+                onClick = {
+                    onContentType(if (contentType == "movie") "all" else "movie")
+                }, label = { Text("Filmes", fontSize = 11.sp) },
+                modifier = Modifier.height(33.dp))
+            FilterChip(selected = !library && contentType == "tv",
+                onClick = {
+                    onContentType(if (contentType == "tv") "all" else "tv")
+                }, label = { Text("Séries", fontSize = 11.sp) },
+                modifier = Modifier.height(33.dp))
+        }
+        IconButton(onClick = onSearch, modifier = Modifier.size(34.dp)) {
+            Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries",
+                modifier = Modifier.size(21.dp))
+        }
+        IconButton(onClick = onDismiss, modifier = Modifier.size(34.dp)) {
+            Icon(Icons.Filled.Close, contentDescription = "Fechar streaming",
+                modifier = Modifier.size(23.dp))
+        }
+    }
+}
+
 internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String,
     tvName: String, onDismiss: () -> Unit
