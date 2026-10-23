@@ -17,7 +17,8 @@ Se o segredo não estiver acessível ao runner, o workflow falha **antes de subs
 - Publicador oficial genérico: commit `281a37ab2839c6c8c16e5d871b69a684f3f26270`; execução `39960928074` falhou no gate de acesso ao segredo `ANYTV_RECOVERY_SECRET_2026`, antes de assinar ou publicar.
 - Canal OTA publicado: permanece 2.9.12 / código 41; **2.9.13 não publicada**.
 - O problema de TLS com a TCL não foi homologado como corrigido. Nenhuma alteração no canal da TV.
-- Workflows de publicações anteriores ainda existem no histórico e alguns permanecem na árvore atual. A remoção em lote foi recusada pela integração; **não usar esses workflows**. A designação de um processo canônico não significa que os arquivos antigos já tenham sido todos excluídos.
+- Os publicadores anteriores do Android foram **excluidos das duas branches de trabalho**, mas permanecem recuperaveis no historico Git. Somente `.github/workflows/publish-anytv-phone-github-only.yml` grava a OTA cert2026 do telefone. Publicadores exclusivos da TV foram preservados.
+- O verificador canônico `.github/workflows/verify-anytv-update-endpoint.yml` foi aprovado no GitHub Actions run `39962660246`; verificou assinatura do APK atual e readback remoto byte a byte.
 
 ## Desenvolvimento
 
