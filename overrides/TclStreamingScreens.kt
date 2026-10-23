@@ -396,7 +396,8 @@ private object StreamingCatalog {
     suspend fun discoveryShelf(route: String, media: String): List<StreamingTitle> =
         withContext(Dispatchers.IO) {
             require(route in setOf("trending/movie/week", "trending/tv/week",
-                "movie/now_playing", "movie/top_rated", "tv/on_the_air", "movie/popular"))
+                "movie/now_playing", "movie/top_rated", "tv/on_the_air",
+                "movie/upcoming", "movie/popular"))
             val payload = get("backend", route + "?language=pt-BR")
             mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
         }
@@ -1106,7 +1107,9 @@ internal fun TclStreamingScreens(
             Triple("Lançamentos recentes", "movie/now_playing", "movie"),
             Triple("Mais bem avaliados no TMDB", "movie/top_rated", "movie"),
             Triple("Séries em destaque", "trending/tv/week", "tv"),
-            Triple("Populares no TMDB", "movie/popular", "movie")
+            Triple("Novidades em séries", "tv/on_the_air", "tv"),
+            Triple("Populares no TMDB", "movie/popular", "movie"),
+            Triple("Em breve · Filmes", "movie/upcoming", "movie")
         )) {
             runCatching { StreamingCatalog.discoveryShelf(route, kind) }
                 .onSuccess { if (it.isNotEmpty()) shelves[name] = it }
@@ -1552,10 +1555,22 @@ internal fun TclStreamingScreens(
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
                     val filteredShelves = visibleShelves
-                    val heroTitles = if (homeLibrary) emptyList()
-                        else filteredShelves.values.firstOrNull().orEmpty()
-                            .filterNot { it.media == "movie" &&
-                                it.id.toString() in watchedFilms }.take(6)
+                    val heroTitles = if (homeLibrary) emptyList() else {
+                        val mixed = if (selected == null && selectedHomeGenre == 0 &&
+                            homeContentType == "all") {
+                            val films = discoveryShelves["Em alta nesta semana"].orEmpty()
+                            val shows = discoveryShelves["Séries em destaque"].orEmpty()
+                            buildList {
+                                for (i in 0 until 10) {
+                                    films.getOrNull(i)?.let { add(it) }
+                                    shows.getOrNull(i)?.let { add(it) }
+                                }
+                            }
+                        } else filteredShelves.values.flatMap { it }
+                        mixed.distinctBy { "${it.media}:${it.id}" }.filterNot {
+                            it.media == "movie" && it.id.toString() in watchedFilms
+                        }.take(20)
+                    }
                     val uniqueShelves = filteredShelves.mapNotNull { (heading, shelf) ->
                         val unique = shelf.filter {
                             homeLibrary || it.media != "movie" ||
