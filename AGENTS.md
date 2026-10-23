@@ -1,5 +1,7 @@
 # ANYTV — regras persistentes de execução
 
+**ACESSO GITHUB/ASSINATURA — REGRA OPERACIONAL MAIS RECENTE (23/10/2026):** antes de afirmar falta de acesso, consultar MCP GitHub direto E MCP Business OS Hub v2 → provider GitHub; nenhum diagnóstico deve se basear no terminal Windows. A decisão vigente e o diagnóstico preciso de Actions Secrets estão SOMENTE em `docs/ASSINATURA_E_ATUALIZACAO.md`. A falha 39963496459 é histórica; secret no runner continua NÃO VERIFICADO. Não executar release sem aprovação.
+
 1. GitHub `brenoff2/tcl-apk-ci-builder` é o cânone. Código, OTA e logs comprovados precedem narrativas de chats. Ler `docs/handoffs/CURRENT_HANDOFF.md`, HEAD e `docs/roadmap/PROJECT_PROGRESS.json` antes de agir.
 2. Preservar visão, app Android, AnyTV Connect, UX aprovada, descoberta de apps reais, Bluetooth, streaming e canais de assinatura `cert2026`. Não recomeçar o projeto.
 3. Papéis de estratégia, arquitetura, engenharia, QA e segurança são responsabilidades coordenadas; não simular auditorias independentes.
