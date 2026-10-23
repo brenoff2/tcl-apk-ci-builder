@@ -47,3 +47,11 @@ No runner, o segredo de recuperação é injetado SOMENTE na etapa de assinatura
 4. Atualizar handoff/status e gates apenas após prova. Se ainda faltar permissão para Secrets, deixar claro `BLOCKED_ACTIONS_SECRETS_WRITE_CAPABILITY`, preservando o restante.
 
 **Precedência e limpeza:** qualquer recomendação anterior de que só existe o MCP direto, de que a ausência do GitHub CLI Windows bloqueia acesso, de que um administrador deve NECESSARIAMENTE fazer a operação manual, de que a chave foi perdida ou de que se deve trocar certificado está revogada. Histórico Git permanece consultável para auditoria. Este é o ÚNICO procedimento operacional; outros documentos devem apontar para ele, não manter instruções alternativas.
+
+
+## Tentativa de entrega da 2.9.13 — 23/10/2026
+
+- Pedido de release criado na branch OTA: `.github/anytv-phone-release-request.json`, commit `1530c887aa394168f004ce942d7996d019c71f76`, apontando para CI `39891891049` e `expected_version_code: 42`.
+- Execução REAL do único publicador: GitHub Actions `39988081281` (FAILURE). Checkout, leitura do pedido, download do artefato de CI, Android SDK e dependência de criptografia passaram; a etapa **Recover original signer and sign without exporting secrets** falhou porque o runner recebeu `RECOVERY_HEX` VAZIO, com erro `Repository Actions secret ANYTV_RECOVERY_SECRET_2026 missing or invalid. OTA unchanged.`
+- Etapas de assinatura, validação, publicação e readback de NOVO APK não se concluíram; o publicador não alterou `updates/android/cert2026/current.apk`. OTA permanece `2.9.12/code41`, candidatа `2.9.13/code42` NÃO entregue pela rota OTA. Não fornecer artifact unsigned como APK instalável.
+- Estado decisivo atualizado: **BLOCKED_ACTIONS_SIGNER_SECRET_NOT_IN_RUNNER** comprovado ao vivo no run `39988081281`; não confundir com falta de acesso ao repositório (ambos MCPs GitHub seguem disponíveis). A fonte privada de recuperação existe e não deve ser publicada no Git/chat/inputs/argumentos de tools. Não criar publicador alternativo nem nova identidade.
