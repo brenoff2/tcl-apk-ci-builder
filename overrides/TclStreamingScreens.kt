@@ -682,8 +682,16 @@ private fun StreamingOfferIcons(
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
+            Box(modifier = Modifier.size(17.dp)
+                .clip(RoundedCornerShape(if (item.media == "tv") 9.dp else 3.dp))
+                .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center) {
+                Text(if (item.media == "tv") "S" else "E", fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer)
+            }
             if (item.votes > 0) {
-                Text("★ " + String.format(java.util.Locale.US, "%.1f", item.rating),
+                Text(String.format(java.util.Locale.US, "%.1f", item.rating),
                     fontSize = 11.sp, maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -1062,7 +1070,7 @@ internal fun TclStreamingScreens(
                 if (key !in myServiceShelves) {
                     runCatching {
                         StreamingCatalog.discover(token, name, kind, 1, chosenGenre, "")
-                    }.onSuccess { myServiceShelves[key] = it.titles.take(12) }
+                    }.onSuccess { myServiceShelves[key] = it.titles }
                 }
             }
         }
@@ -1079,7 +1087,7 @@ internal fun TclStreamingScreens(
             if (key !in myServiceShelves) {
                 runCatching {
                     StreamingCatalog.discover(token, app.name, kind, 1, 0, "")
-                }.onSuccess { myServiceShelves[key] = it.titles.take(12) }
+                }.onSuccess { myServiceShelves[key] = it.titles }
             }
         }
     }
@@ -1141,7 +1149,7 @@ internal fun TclStreamingScreens(
             if (key !in myServiceShelves) {
                 runCatching {
                     StreamingCatalog.discover(token, app.name, media, 1, kind.id, "")
-                }.onSuccess { myServiceShelves[key] = it.titles.take(12) }
+                }.onSuccess { myServiceShelves[key] = it.titles }
             }
         }
     }
