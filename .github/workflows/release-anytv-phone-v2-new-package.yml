@@ -106,7 +106,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
       - name: Validar troca opt-in de endpoint somente em staging
         run: python3 -m unittest discover -s scripts/tests -p 'test_anytv_staging_endpoint.py' -v
-      - name: Versionar nova atualização como AnyTV V2 2.9.15 (code 43)
+      - name: Versionar nova atualização como AnyTV V2 2.9.15 (code 44)
         run: |
           set -euo pipefail
           python3 - <<'PY'
