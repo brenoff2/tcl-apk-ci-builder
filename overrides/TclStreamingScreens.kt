@@ -478,6 +478,16 @@ internal fun TclStreamingScreens(
     var mainGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
     var selectedHomeGenre by remember { mutableIntStateOf(0) }
     var showGenreSettings by remember { mutableStateOf(false) }
+    var showMyStreamingSettings by remember { mutableStateOf(false) }
+    var onlyMyStreaming by remember { mutableStateOf(false) }
+    val storedMyServices = remember(prefs) {
+        prefs.getString("anytv_my_streamings", "")?.split(",")
+            ?.filter { it.isNotBlank() }?.toSet() ?: emptySet()
+    }
+    var myServices by remember { mutableStateOf(storedMyServices) }
+    var editingMyServices by remember { mutableStateOf(storedMyServices) }
+    val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    var homeLibrary by remember { mutableStateOf(false) }
     var showGlobalSearch by remember { mutableStateOf(false) }
     val initialGenreIds = remember(prefs) {
         prefs.getString("anytv_home_genres", null)?.split(",")
@@ -602,6 +612,26 @@ internal fun TclStreamingScreens(
             if (id !in genreShelves) {
                 runCatching { StreamingCatalog.discoveryGenre(id) }
                     .onSuccess { genreShelves[id] = it }
+            }
+        }
+    }
+
+    LaunchedEffect(myServices, onlyMyStreaming, selectedHomeGenre, apps) {
+        val selection = displayed.filter { it.packageName in myServices &&
+            StreamingCatalog.streaming(it) }.take(6)
+        if (selection.isNotEmpty()) {
+            for (app in selection) {
+                val kinds = if (selectedHomeGenre > 0) listOf("movie")
+                    else listOf("movie", "tv")
+                for (kind in kinds) {
+                    val key = app.packageName + ":" + kind + ":" + selectedHomeGenre
+                    if (key !in myServiceShelves) {
+                        runCatching {
+                            StreamingCatalog.discover(token, app.name, kind, 1,
+                                if (kind == "movie") selectedHomeGenre else 0, "")
+                        }.onSuccess { myServiceShelves[key] = it.titles.take(12) }
+                    }
+                }
             }
         }
     }
@@ -837,6 +867,30 @@ internal fun TclStreamingScreens(
                             if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
                         }
                     }
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        FilterChip(selected = onlyMyStreaming, onClick = {
+                            if (myServices.isEmpty()) {
+                                editingMyServices = myServices
+                                showMyStreamingSettings = true
+                            } else {
+                                onlyMyStreaming = !onlyMyStreaming
+                            }
+                            homeLibrary = false
+                        }, label = { Text("Só meus streamings", fontSize = 11.sp) })
+                        TextButton(onClick = {
+                            editingMyServices = myServices
+                            showMyStreamingSettings = true
+                        }, contentPadding = PaddingValues(horizontal = 3.dp)) {
+                            Text("Escolher", fontSize = 11.sp)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        TextButton(onClick = { homeLibrary = !homeLibrary },
+                            contentPadding = PaddingValues(horizontal = 3.dp)) {
+                            Text(if (homeLibrary) "Descobrir" else "♥ Minha lista", fontSize = 11.sp)
+                        }
+                    }
                     // Genre selector changes the highlights; chosen genres define home lists.
                     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
@@ -865,17 +919,40 @@ internal fun TclStreamingScreens(
                         Text(discoveryError.orEmpty(), fontSize = 11.sp)
                     }
                     val visibleShelves = linkedMapOf<String, List<StreamingTitle>>().apply {
-                        if (selectedHomeGenre == 0) {
-                            putAll(discoveryShelves)
-                            mainGenres.filter { it.id in preferredGenreIds }.forEach { kind ->
-                                genreShelves[kind.id]?.takeIf { it.isNotEmpty() }?.let {
-                                    put("Por gênero: " + kind.name, it)
+                        if (homeLibrary) {
+                            val films = favorites.filter { it.title.media == "movie" }
+                                .map { it.title }.distinctBy { it.id }
+                            val series = favorites.filter { it.title.media == "tv" }
+                                .map { it.title }.distinctBy { it.id }
+                            if (films.isNotEmpty()) put("Meus filmes", films)
+                            if (series.isNotEmpty()) put("Séries que acompanho", series)
+                        } else if (!onlyMyStreaming) {
+                            if (selectedHomeGenre == 0) {
+                                putAll(discoveryShelves)
+                                mainGenres.filter { it.id in preferredGenreIds }.forEach { kind ->
+                                    genreShelves[kind.id]?.takeIf { it.isNotEmpty() }?.let {
+                                        put("Por gênero: " + kind.name, it)
+                                    }
+                                }
+                            } else {
+                                val kind = mainGenres.firstOrNull { it.id == selectedHomeGenre }
+                                genreShelves[selectedHomeGenre]?.takeIf { it.isNotEmpty() }?.let {
+                                    put("Em destaque: " + (kind?.name ?: "Gênero"), it)
                                 }
                             }
-                        } else {
-                            val kind = mainGenres.firstOrNull { it.id == selectedHomeGenre }
-                            genreShelves[selectedHomeGenre]?.takeIf { it.isNotEmpty() }?.let {
-                                put("Em destaque: " + (kind?.name ?: "Gênero"), it)
+                        }
+                        if (!homeLibrary) {
+                            displayed.filter { it.packageName in myServices &&
+                                StreamingCatalog.streaming(it) }.take(6).forEach { app ->
+                                val kinds = if (selectedHomeGenre == 0) listOf("movie", "tv")
+                                    else listOf("movie")
+                                kinds.forEach { kind ->
+                                    val key = app.packageName + ":" + kind + ":" + selectedHomeGenre
+                                    myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
+                                        put("Destaques " + app.name +
+                                            if (kind == "tv") " · Séries" else " · Filmes", it)
+                                    }
+                                }
                             }
                         }
                     }
@@ -883,7 +960,13 @@ internal fun TclStreamingScreens(
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
-                    val heroTitles = visibleShelves.values.firstOrNull().orEmpty().take(6)
+                    val heroTitles = if (homeLibrary) emptyList()
+                        else visibleShelves.values.firstOrNull().orEmpty().take(6)
+                    val seenInHome = heroTitles.map { "${it.media}:${it.id}" }.toMutableSet()
+                    val uniqueShelves = visibleShelves.mapNotNull { (heading, shelf) ->
+                        val unique = shelf.filter { seenInHome.add("${it.media}:${it.id}") }
+                        if (unique.isEmpty()) null else heading to unique
+                    }
                     LazyColumn(modifier = Modifier.weight(1f)) {
                         if (heroTitles.isNotEmpty()) {
                             item {
@@ -928,7 +1011,7 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         }
-                        visibleShelves.forEach { (heading, shelf) ->
+                        uniqueShelves.forEach { (heading, shelf) ->
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(heading, fontWeight = FontWeight.SemiBold)
@@ -1158,6 +1241,45 @@ internal fun TclStreamingScreens(
                     maxLines = 1)
             }
         }
+    }
+    if (showMyStreamingSettings) {
+        AlertDialog(
+            onDismissRequest = { showMyStreamingSettings = false },
+            title = { Text("Meus streamings") },
+            text = {
+                Column(modifier = Modifier.heightIn(max = 420.dp)
+                    .verticalScroll(rememberScrollState())) {
+                    Text("Selecione os serviços que você assina. Ter o aplicativo na TCL não significa ter assinatura.",
+                        fontSize = 12.sp)
+                    displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
+                        val selectedHere = app.packageName in editingMyServices
+                        Row(modifier = Modifier.fillMaxWidth().clickable {
+                            editingMyServices = if (selectedHere)
+                                editingMyServices - app.packageName
+                            else editingMyServices + app.packageName
+                        }, verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = selectedHere, onCheckedChange = null)
+                            OfficialTvIcon(app, 32.dp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(app.name, fontSize = 13.sp, maxLines = 1)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    myServices = editingMyServices
+                    prefs.edit().putString("anytv_my_streamings",
+                        editingMyServices.sorted().joinToString(",")).apply()
+                    onlyMyStreaming = myServices.isNotEmpty()
+                    homeLibrary = false
+                    showMyStreamingSettings = false
+                }) { Text("Aplicar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showMyStreamingSettings = false }) { Text("Cancelar") }
+            }
+        )
     }
     if (showGenreSettings) {
         AlertDialog(
