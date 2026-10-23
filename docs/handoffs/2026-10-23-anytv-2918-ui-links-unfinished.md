@@ -36,3 +36,19 @@ Inspeção read-only na configuração oficial do Cloudflare confirmou `ANYTV_DE
 
 ## Gate de release
 Somente após concluir a integração e executar testes de UI + Gradle + IME remoto, assinar com a MESMA identidade V2 e publicar pelo canal `updates/android/v2/current.apk`, checando versionCode superior, certificado, hash e byte readback. Nunca promover versão parcial.
+
+## Auditoria de continuidade GitHub ao vivo (23/10/2026, após HEAD c2cd853)
+
+**Somente leitura de produto e documentação — nenhum APK foi compilado, assinado, publicado, instalado ou homologado nesta auditoria.**
+
+- GitHub DEV HEAD confirmado por git ref: `c2cd853880e82bbaa0481ba74161d30cefc7c769`; último commit altera links do runbook, sem integração de interface. GitHub OTA HEAD: `f504025ea6369050c1dd72d0697cf9fca2da470f`.
+- Árvore OTA confirma `updates/android/v2/current.apk` git blob `b1a7fab2ffb1963669abbbe5e635770d8901022f`, tamanho 28.396.388 bytes, igual à evidência canônica 2.9.17/code46. Run de release `40021931010` continua `completed/success`. SHA256 do APK permanece o do readback daquela publicação; nenhum novo hash byte a byte foi calculado nesta auditoria.
+- `overrides/TclStreamingScreens.kt` tem **uma única ocorrência** de `AnyTvStreamNavBar(` — sua declaração; não há invocação. A interface ainda utiliza os `FilterChip` textuais antigos e o seletor redundante `Tudo`. O diálogo `showMyStreamingSettings` lista apenas `displayed.filter { StreamingCatalog.streaming(it) }`, não um catálogo independente de serviços. O filtro solicitado em duas colunas não existe.
+- Potencial falha de compilação identificada **sem executar Gradle**: duas anotações `@Composable` consecutivas antecedem `private fun AnyTvStreamNavBar` (linhas 677–680). A definição oficial de `Composable` não inclui `@Repeatable`. Marcar **NAO_TESTADO** até build real; remover apenas a duplicação quando a edição da interface estiver autorizada e disponível.
+- A ativação do device continua não comprovada por aparelho: o Worker GitHub não contém rota explícita `/v1/device/status`; `AnyTvPersonalLinks.resolve` transforma respostas não-2xx, inclusive 401, em resultado nulo, sem diagnóstico na UI.
+- `StreamingCatalog.offersInBrazil` consulta somente `results.BR.flatrate`; isso atende aos ícones por assinatura, mas não representa compra, aluguel ou canais extras. Não interpretar a ausência do logo como ausência de direito/licenciamento fora dessa modalidade.
+- Caso de teste `O Amor da Sua Vida` (`Love of Your Life`, 2026): página **oficial** encontrada em `https://www.primevideo.com/detail/0HM3DRN79M0E7QOBLMYTS41IG0` e estreia BR noticiada em 14/10/2026. **Não** confundir página web com deep link Android/TV testado. O validador atual de links Prime aceita apenas `app.primevideo.com/detail?gti=amzn1.dv.gti...`; o URL encontrado **não passaria** no validador atual. TMDB ID do título e retorno BR da API ainda não confirmados.
+- A API GitHub reportou o repositório como `visibility=public`, apesar dos handoffs dizerem `privado`. Esta divergência exige avaliação de visibilidade/custódia; nenhuma configuração de acesso ou segredo foi alterada.
+- `docs/dev-context/STATUS.md`, `DECISIONS.md` e `CODEBASE_MAP.md` **não existem nesta branch** no HEAD conferido; consultar `AGENTS.md`, `docs/STATUS.md`, handoff e o código real, sem inventar um mapa correspondente.
+
+**Decisão:** BLOCK quanto à integração do helper no arquivo que recebeu bloqueio anterior de escrita: não repetir nem contornar a restrição. Readback da árvore, código e documentação concluído; testes de compilação, UI integrada, reconexão real, ativação e OTA 2.9.18 = **NAO_TESTADO**. Não alterar assinatura V2, pacote, OTA, updater, companion TV ou build request.
