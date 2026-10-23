@@ -6,6 +6,6 @@
   "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
   "new_install_only": false,
   "release_version": "2.9.18-AnyTV",
-  "release_scope": "2.9.18 code47: shared icon navigation connected in streaming catalogue and provider view; persisted two-column subscriptions and genre filtering; approved 75dp home banner, connected TV header, cache, favorites, series progress and same V2 signer preserved; CI retry after removal of obsolete TV brand picker preparation step",
-  "ci_revision": 5
+  "release_scope": "2.9.18 code47: shared icon navigation connected in streaming catalogue and provider view; persisted two-column subscriptions and genre filtering; approved 75dp home banner, connected TV header, cache, favorites, series progress and same V2 signer preserved; build gates corrected for approved automatic TV header and precise Compose integration regression",
+  "ci_revision": 6
 }
