@@ -401,19 +401,25 @@ private object StreamingCatalog {
             mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
         }
 
-    /** Discovery lists for real movie genres, localized using the upstream genre catalogue. */
+    /** A genre page contains up to 20 real TMDB entries; page 2+ is user-triggered. */
     suspend fun discoveryGenre(id: Int): List<StreamingTitle> =
-        discoveryGenre(id, "movie")
+        discoveryGenrePage(id, "movie", 1).titles
     suspend fun discoveryGenre(id: Int, media: String): List<StreamingTitle> =
+        discoveryGenrePage(id, media, 1).titles
+
+    suspend fun discoveryGenrePage(id: Int, media: String, page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
-        require(media == "movie" || media == "tv")
-        require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14,
-            10759, 80, 10765, 10766, 10768, 10762))
-        val route = "discover/$media?language=pt-BR&include_adult=false" +
-            "&sort_by=popularity.desc&with_genres=$id&page=1"
-        val payload = get("backend", route)
-        mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id).take(12)
-    }
+            require(media == "movie" || media == "tv")
+            require(page in 1..50)
+            require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14,
+                10759, 80, 10765, 10766, 10768, 10762))
+            val route = "discover/$media?language=pt-BR&include_adult=false" +
+                "&sort_by=popularity.desc&with_genres=$id&page=$page"
+            val payload = get("backend", route)
+            StreamingResults(
+                mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id),
+                page < payload.optInt("total_pages", page))
+        }
 
     /** Real TMDB seasons and episodes; cached locally so opening the same series costs nothing. */
     suspend fun seasons(id: Int): List<StreamingSeason> = withContext(Dispatchers.IO) {
@@ -837,6 +843,10 @@ internal fun TclStreamingScreens(
     var preferredGenreIds by remember { mutableStateOf(initialGenreIds) }
     var editingGenreIds by remember { mutableStateOf(initialGenreIds) }
     val genreShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val genrePage = remember { mutableStateMapOf<String, Int>() }
+    val genreMore = remember { mutableStateMapOf<String, Boolean>() }
+    val genreLoading = remember { mutableStateMapOf<String, Boolean>() }
+    val genreErrors = remember { mutableStateMapOf<String, String>() }
     var globalSearchDraft by remember { mutableStateOf("") }
     var globalSearchTerm by remember { mutableStateOf("") }
     var globalSearchError by remember { mutableStateOf<String?>(null) }
@@ -1031,8 +1041,12 @@ internal fun TclStreamingScreens(
         for (id in requested) {
             val key = "$mediaKind:$id"
             if (key !in genreShelves) {
-                runCatching { StreamingCatalog.discoveryGenre(id, mediaKind) }
-                    .onSuccess { genreShelves[key] = it }
+                runCatching { StreamingCatalog.discoveryGenrePage(id, mediaKind, 1) }
+                    .onSuccess {
+                        genreShelves[key] = it.titles
+                        genrePage[key] = 1
+                        genreMore[key] = it.more
+                    }
             }
         }
     }
