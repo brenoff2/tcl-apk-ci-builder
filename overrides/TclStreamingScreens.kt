@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -58,6 +59,7 @@ import java.text.Normalizer
 
 internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "")
 internal data class StreamingGenre(val id: Int, val name: String)
+internal data class StreamingOffer(val id: Int, val name: String, val logo: String)
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
 internal data class StreamingResults(val titles: List<StreamingTitle>, val more: Boolean)
 
@@ -157,6 +159,27 @@ private object StreamingCatalog {
         return (0 until result.length()).any {
             result.optJSONObject(it)?.optInt("provider_id") == providerId
         }
+    }
+
+    /** Confirmed BR subscription offers for exactly this TMDB title, not the installed app list. */
+    suspend fun offersInBrazil(item: StreamingTitle): List<StreamingOffer> =
+        withContext(Dispatchers.IO) {
+            val providers = get("backend", "${item.media}/${item.id}/watch/providers")
+                .optJSONObject("results")?.optJSONObject("BR")?.optJSONArray("flatrate")
+                ?: return@withContext emptyList()
+            (0 until providers.length()).mapNotNull { index ->
+                val offer = providers.optJSONObject(index) ?: return@mapNotNull null
+                val id = offer.optInt("provider_id")
+                val name = offer.optString("provider_name")
+                if (id <= 0 || name.isBlank()) return@mapNotNull null
+                StreamingOffer(id, name,
+                    offer.optString("logo_path").takeIf { it.startsWith("/") } ?: "")
+            }.distinctBy { it.id }
+        }
+
+    fun appHasOffer(app: TvOfficialApp, offers: List<StreamingOffer>): Boolean {
+        val service = provider(app.name) ?: return false
+        return offers.any { provider(it.name) == service }
     }
 
     /**
@@ -315,6 +338,37 @@ private object StreamingCatalog {
     }
 }
 
+/** Only display small provider marks for a verified regional subscription offer. */
+@Composable
+private fun StreamingOfferIcons(
+    item: StreamingTitle,
+    known: MutableMap<String, List<StreamingOffer>>
+) {
+    val key = "${item.media}:${item.id}"
+    LaunchedEffect(key) {
+        if (key !in known) {
+            runCatching { StreamingCatalog.offersInBrazil(item) }
+                .getOrNull()?.let { known[key] = it }
+        }
+    }
+    val offerings = known[key].orEmpty()
+    if (offerings.isNotEmpty()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(3.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            offerings.take(3).forEach { offer ->
+                if (offer.logo.isNotEmpty()) {
+                    AsyncImage(model = "https://image.tmdb.org/t/p/w45" + offer.logo,
+                        contentDescription = "Disponível em " + offer.name,
+                        modifier = Modifier.size(18.dp))
+                } else {
+                    Text(offer.name.take(2), fontSize = 9.sp)
+                }
+            }
+            if (offerings.size > 3) Text("+${offerings.size - 3}", fontSize = 9.sp)
+        }
+    }
+}
+
 @Composable
 internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String, onDismiss: () -> Unit
@@ -400,6 +454,8 @@ internal fun TclStreamingScreens(
     var details by remember { mutableStateOf<StreamingTitle?>(null) }
     var trailerLink by remember { mutableStateOf<String?>(null) }
     var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    val offerCache = remember { mutableStateMapOf<String, List<StreamingOffer>>() }
+    var detailsOffers by remember { mutableStateOf<List<StreamingOffer>?>(null) }
     var detailLoading by remember { mutableStateOf(false) }
     val displayed = remember(apps, all) { apps.filter { all || StreamingCatalog.streaming(it) } }
 
@@ -418,11 +474,16 @@ internal fun TclStreamingScreens(
         val item = details
         trailerLink = null
         relatedTitles = emptyList()
+        detailsOffers = null
         if (item != null) {
             detailLoading = true
             trailerLink = runCatching { StreamingCatalog.trailer(item.media, item.id) }.getOrNull()
             relatedTitles = runCatching { StreamingCatalog.related(item.media, item.id) }
                 .getOrDefault(emptyList())
+            val key = "${item.media}:${item.id}"
+            detailsOffers = offerCache[key] ?:
+                runCatching { StreamingCatalog.offersInBrazil(item) }.getOrNull()
+            detailsOffers?.let { offerCache[key] = it }
             detailLoading = false
         }
     }
@@ -630,6 +691,7 @@ internal fun TclStreamingScreens(
                                         modifier = Modifier.fillMaxWidth().height(150.dp),
                                         contentScale = ContentScale.Crop)
                                     Text(found.name, fontSize = 11.sp, maxLines = 2)
+                                    StreamingOfferIcons(found, offerCache)
                                 }
                             }
                         }
@@ -692,6 +754,7 @@ internal fun TclStreamingScreens(
                                             Text("★ TMDB " + String.format(java.util.Locale.US,
                                                 "%.1f", current.rating), fontSize = 12.sp)
                                         }
+                                        StreamingOfferIcons(current, offerCache)
                                     }
                                 }
                                 // Small noninteractive position dots: no previous/next buttons.
@@ -709,9 +772,9 @@ internal fun TclStreamingScreens(
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Text(heading, fontWeight = FontWeight.SemiBold)
-                                    Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                    LazyRow(
                                         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                        shelf.take(12).forEach { item ->
+                                        items(shelf.take(12)) { item ->
                                             Column(modifier = Modifier.width(116.dp).clickable {
                                                 details = item
                                                 detailsPackage = null
@@ -721,6 +784,7 @@ internal fun TclStreamingScreens(
                                                     modifier = Modifier.fillMaxWidth().height(158.dp),
                                                     contentScale = ContentScale.Crop)
                                                 Text(item.name, maxLines = 2, fontSize = 11.sp)
+                                                StreamingOfferIcons(item, offerCache)
                                                 if (item.votes > 0) Text("★ " + String.format(java.util.Locale.US, "%.1f", item.rating), fontSize = 10.sp)
                                             }
                                         }
@@ -880,6 +944,7 @@ internal fun TclStreamingScreens(
                                     Text(title.name, fontSize = 11.sp, maxLines = 2,
                                         textAlign = TextAlign.Center,
                                         overflow = TextOverflow.Ellipsis)
+                                    StreamingOfferIcons(title, offerCache)
                                 }
                             }
                             if (more && !showSaved) item(span = {
@@ -917,6 +982,7 @@ internal fun TclStreamingScreens(
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(title.name, fontWeight = FontWeight.SemiBold,
                                             maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        StreamingOfferIcons(title, offerCache)
                                         Text(title.overview.ifBlank { "Sinopse indisponível." },
                                             fontSize = 12.sp, maxLines = 3,
                                             overflow = TextOverflow.Ellipsis)
@@ -1069,20 +1135,48 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
-                    if (selected == null) {
-                        Text("Escolha um aplicativo da TCL para abrir este título:",
-                            fontSize = 12.sp)
-                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
-                                FilterChip(
-                                    selected = detailsPackage == app.packageName,
-                                    onClick = { detailsPackage = app.packageName },
-                                    label = { Text(app.name, maxLines = 1, fontSize = 11.sp) })
+                    Text("Onde assistir por assinatura no Brasil",
+                        fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    when {
+                        detailsOffers == null -> Text("Disponibilidade não confirmada. Verifique a conexão.",
+                            fontSize = 11.sp)
+                        detailsOffers!!.isEmpty() -> Text("Nenhuma oferta de assinatura confirmada no Brasil.",
+                            fontSize = 11.sp)
+                        else -> Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            detailsOffers!!.forEach { offer ->
+                                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier = Modifier.widthIn(min = 54.dp, max = 85.dp)) {
+                                    if (offer.logo.isNotEmpty()) {
+                                        AsyncImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
+                                            contentDescription = offer.name,
+                                            modifier = Modifier.size(32.dp))
+                                    }
+                                    Text(offer.name, fontSize = 10.sp, maxLines = 2,
+                                        textAlign = TextAlign.Center)
+                                }
                             }
                         }
-                        Text("A disponibilidade por assinatura deve ser confirmada na plataforma.",
-                            fontSize = 11.sp)
+                    }
+                    if (selected == null) {
+                        val eligible = displayed.filter { app ->
+                            detailsOffers?.let { StreamingCatalog.appHasOffer(app, it) } == true
+                        }
+                        if (eligible.isNotEmpty()) {
+                            Text("Abrir em aplicativo instalado na TCL:", fontSize = 12.sp)
+                            Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                eligible.forEach { app ->
+                                    FilterChip(
+                                        selected = detailsPackage == app.packageName,
+                                        onClick = { detailsPackage = app.packageName },
+                                        label = { Text(app.name, maxLines = 1, fontSize = 11.sp) })
+                                }
+                            }
+                        } else {
+                            Text("Nenhum aplicativo instalado na TCL foi confirmado para este título.",
+                                fontSize = 11.sp)
+                        }
                     }
                     Text("A TV poderá abrir a busca do título se este serviço aceitar " +
                         "pesquisa externa. Não existe deep link universal de reprodução.",
@@ -1101,7 +1195,11 @@ internal fun TclStreamingScreens(
             confirmButton = {
                 TextButton(onClick = {
                     if (pkg.isBlank()) {
-                        titleActionFeedback = "O aplicativo deste título não foi encontrado na TCL."
+                        titleActionFeedback = "Selecione um serviço disponível para este título."
+                    } else if (detailsOffers?.let { offers ->
+                            displayed.any { app -> app.packageName == pkg &&
+                                StreamingCatalog.appHasOffer(app, offers) } } != true) {
+                        titleActionFeedback = "Oferta de assinatura no Brasil não confirmada para este aplicativo."
                     } else {
                         searchOnTv(title, pkg)
                     }
