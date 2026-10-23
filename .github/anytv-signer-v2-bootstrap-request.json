@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "intent": "bootstrap-phone-v2-2026",
+  "no_ota_publication": true,
+  "reason": "owner-approved-new-identity-with-github-escrow"
+}
