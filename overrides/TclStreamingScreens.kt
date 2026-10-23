@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.outlined.FavoriteBorder
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -688,58 +690,33 @@ private fun AnyTvStreamNavBar(
     onWatching: () -> Unit,
     onWatched: () -> Unit,
     onFilters: () -> Unit,
-    onContentType: (String) -> Unit,
-    onSearch: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Row(modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-            IconButton(onClick = onHome, modifier = Modifier.size(35.dp)) {
-                Icon(Icons.Filled.Home, contentDescription = "Início: filmes e séries",
-                    modifier = Modifier.size(21.dp),
-                    tint = if (!library && contentType == "all") primary else neutral)
-            }
-            IconButton(onClick = onList, modifier = Modifier.size(35.dp)) {
-                Icon(Icons.Filled.Favorite, contentDescription = "Minha lista",
-                    modifier = Modifier.size(21.dp),
-                    tint = if (library && section == "saved") primary else neutral)
-            }
-            IconButton(onClick = onWatching, modifier = Modifier.size(35.dp)) {
-                Icon(Icons.Filled.PlayCircleFilled, contentDescription = "Em andamento",
-                    modifier = Modifier.size(21.dp),
-                    tint = if (library && section == "watching") primary else neutral)
-            }
-            IconButton(onClick = onWatched, modifier = Modifier.size(35.dp)) {
-                Icon(Icons.Filled.CheckCircle, contentDescription = "Assistidos",
-                    modifier = Modifier.size(21.dp),
-                    tint = if (library && section == "watched") primary else neutral)
-            }
-            IconButton(onClick = onFilters, modifier = Modifier.size(35.dp)) {
-                Icon(Icons.Filled.Tv, contentDescription = "Filtrar por streamings e gêneros",
-                    modifier = Modifier.size(21.dp),
-                    tint = if (filtersActive) primary else neutral)
-            }
-            Spacer(Modifier.width(3.dp))
-            FilterChip(selected = !library && contentType == "movie",
-                onClick = {
-                    onContentType(if (contentType == "movie") "all" else "movie")
-                }, label = { Text("Filmes", fontSize = 11.sp) },
-                modifier = Modifier.height(33.dp))
-            FilterChip(selected = !library && contentType == "tv",
-                onClick = {
-                    onContentType(if (contentType == "tv") "all" else "tv")
-                }, label = { Text("Séries", fontSize = 11.sp) },
-                modifier = Modifier.height(33.dp))
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End,
+        verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onHome, modifier = Modifier.size(35.dp)) {
+            Icon(Icons.Filled.Home, contentDescription = "Início: filmes e séries",
+                tint = if (!library && contentType == "all") primary else neutral)
         }
-        IconButton(onClick = onSearch, modifier = Modifier.size(34.dp)) {
-            Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries",
-                modifier = Modifier.size(21.dp))
+        IconButton(onClick = onList, modifier = Modifier.size(35.dp)) {
+            Icon(Icons.Filled.Favorite, contentDescription = "Minha lista",
+                tint = if (library && section == "saved") primary else neutral)
         }
-        IconButton(onClick = onDismiss, modifier = Modifier.size(34.dp)) {
+        IconButton(onClick = onWatching, modifier = Modifier.size(35.dp)) {
+            Icon(Icons.Filled.PlayCircleFilled, contentDescription = "Em andamento",
+                tint = if (library && section == "watching") primary else neutral)
+        }
+        IconButton(onClick = onWatched, modifier = Modifier.size(35.dp)) {
+            Icon(Icons.Filled.CheckCircle, contentDescription = "Assistidos",
+                tint = if (library && section == "watched") primary else neutral)
+        }
+        IconButton(onClick = onFilters, modifier = Modifier.size(35.dp)) {
+            Icon(Icons.Filled.FilterList, contentDescription = "Filtrar por streamings e gêneros",
+                tint = if (filtersActive) primary else neutral)
+        }
+        IconButton(onClick = onDismiss, modifier = Modifier.size(35.dp)) {
             Icon(Icons.Filled.Close, contentDescription = "Fechar streaming",
                 modifier = Modifier.size(23.dp))
         }
@@ -1170,9 +1147,9 @@ internal fun TclStreamingScreens(
 
     Dialog(onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(modifier = Modifier.fillMaxSize().padding(8.dp),
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface) {
+        Surface(modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(0.dp),
+            color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 AnyTvStreamNavBar(
@@ -1188,19 +1165,12 @@ internal fun TclStreamingScreens(
                     onFilters = { editingMyServices = myServices
                         editingFilterGenres = filterGenreIds
                         showMyStreamingSettings = true },
-                    onContentType = { kind ->
-                        homeLibrary = false; homeContentType = kind; selectedHomeGenre = 0
-                        if (selected != null && kind != "all") {
-                            media = kind; genre = 0; page = 1; showSaved = false
-                        } else selected = null
-                    },
-                    onSearch = { selected = null; showGlobalSearch = !showGlobalSearch },
                     onDismiss = onDismiss
                 )
                 if (selected == null) {
                     // The same real TV platform shortcuts, compact rather than a large list.
                     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                        horizontalArrangement = Arrangement.End) {
                         displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
                             Column(modifier = Modifier.width(62.dp).clickable {
                                 selected = app; media = "movie"; genre = 0; page = 1
@@ -1210,7 +1180,8 @@ internal fun TclStreamingScreens(
                                 verticalArrangement = Arrangement.spacedBy(1.dp)) {
                                 OfficialTvIcon(app, 56.dp)
                                 Text(app.name, fontSize = 10.sp, maxLines = 1,
-                                    lineHeight = 11.sp, overflow = TextOverflow.Ellipsis)
+                                    color = Color.White, lineHeight = 11.sp,
+                                    overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -1421,7 +1392,7 @@ internal fun TclStreamingScreens(
                         }
                         uniqueShelves.forEach { (heading, shelf) ->
                             item {
-                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text(heading, fontWeight = FontWeight.SemiBold)
                                     LazyRow(
                                         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -1462,7 +1433,9 @@ internal fun TclStreamingScreens(
                             modifier = Modifier.size(40.dp).semantics {
                                 contentDescription = if (showSaved) "Voltar ao catálogo" else "Minha lista"
                             }) {
-                            Text(if (showSaved) "▤" else "♥", fontSize = 20.sp)
+                            Icon(if (showSaved) Icons.Filled.CheckCircle else Icons.Filled.Favorite,
+                                    contentDescription = if (showSaved) "Voltar ao catálogo"
+                                        else "Minha lista", modifier = Modifier.size(20.dp))
                         }
                         IconButton(onClick = {
                             gridView = !gridView
@@ -1606,7 +1579,10 @@ internal fun TclStreamingScreens(
                                             color = MaterialTheme.colorScheme.primary)
                                     }
                                     TextButton(onClick = { toggleFavorite(title, itemPackage) }) {
-                                        Text(if (isFavorite(title, itemPackage)) "♥" else "♡")
+                                        Icon(if (isFavorite(title, itemPackage)) Icons.Filled.Favorite
+                                        else Icons.Outlined.FavoriteBorder,
+                                        contentDescription = if (isFavorite(title, itemPackage))
+                                            "Remover da minha lista" else "Adicionar à minha lista")
                                     }
                                 }
                             }
@@ -1831,8 +1807,12 @@ internal fun TclStreamingScreens(
                         contentDescription = if (isFavorite(title, pkg))
                             "Remover da minha lista" else "Adicionar à minha lista"
                     }) {
-                        Text(if (isFavorite(title, pkg)) "♥" else "♡",
-                            color = MaterialTheme.colorScheme.primary, fontSize = 26.sp)
+                        Icon(if (isFavorite(title, pkg)) Icons.Filled.Favorite
+                            else Icons.Outlined.FavoriteBorder,
+                            contentDescription = if (isFavorite(title, pkg))
+                                "Remover da minha lista" else "Adicionar à minha lista",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(24.dp))
                     }
                     IconButton(onClick = {
                         if (title.media == "movie") {
