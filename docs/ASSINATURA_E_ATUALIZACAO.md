@@ -1,82 +1,31 @@
-> **HISTÓRICO — situação superada:** esta investigação documentou incompatibilidades antigas de 1.7/1.8. Para entregas atuais do AnyTV 2.5 e AnyTV Connect 1.6, consultar [ANYTV_RELEASE_SIGNING_AND_UPDATES.md](./ANYTV_RELEASE_SIGNING_AND_UPDATES.md). As chaves privadas necessárias para o celular e para a variante TV 8b2b foram posteriormente recuperadas e os APKs compatíveis publicados e verificados em 14/10/2026. Os bloqueios descritos abaixo são históricos, não o estado atual de publicação.\n\n# Controle TCL Livre — bloqueio de atualização Android
+# AnyTV — assinatura e atualizacao (procedimento unico)
 
-## Situação comprovada (13/10/2026)
+> Esta e a politica atual. A documentacao dos metodos antigos (TCL 1.7/1.8, backups de certificado anterior, scripts de assinatura avulsos e publicadores por versao) permanece no historico Git, nao como procedimento operacional.
 
-O identificador instalado `com.tclremote.livre` **não é suficiente**
-para uma atualização: a chave de assinatura do novo APK precisa ser
-compatível com a chave usada no APK **efetivamente instalado**, e o
-`versionCode` precisa avançar.
+## Uma unica identidade Android
 
-Certificados SHA-256 obtidos com `apksigner verify --print-certs`
-dos APKs preservados:
+- Aplicativo: `com.tclremote.livre`.
+- Canal de atualizacao: `updates/android/cert2026/current.apk`, branch `feat/tcl-v22-updates-back-bluetooth`.
+- Certificado permanente do telefone (SHA-256): `2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f`.
+- Backup criptografado da identidade: `signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin`.
+- **Unico nome autorizado para a credencial no GitHub Actions**: `ANYTV_RECOVERY_SECRET_2026`. Valor sigiloso, protegido em Actions Repository Secrets, nunca em arquivo versionado. A existencia do backup cifrado NAO implica que o runner ja esteja habilitado a descriptografa-lo.
 
-- 1.2, 1.3, 1.4 e o APK 1.7 final fornecido pelo usuário: `49de7c9ad97bf4cfb2409f5e6480ab21bff816f093f8e7df66a33cce61077a04` (iguais).
-- 1.5, 1.6, 1.7 **CI** e 1.8: certificados diferentes desses e entre si
-  nos artefatos de `assembleDebug` com runners temporários do GitHub Actions.
-- 1.8 teste: `51cfe5c439f05eaa07b4b4ad7135ab550b4fbcb32198e02e9226ccc5b8301e2d`.
+## Um unico publicador
 
-**Novo achado: APK 1.7 RESGATE ANEXADO PELO USUARIO.** O arquivo original
-`Controle_TCL_Livre_1.7_Resgate.apk` fornecido pelo usuário nesta
-conversa tem SHA-256 de arquivo
-`61450aa66d42116b9be7c198b95f6807fb7ca94ed5812544f38bb7afd6371820`
-e certificado SHA-256
-`49de7c9ad97bf4cfb2409f5e6480ab21bff816f093f8e7df66a33cce61077a04`,
-**igual ao das versões 1.2–1.4**. Portanto, o APK final 1.7 do
-usuário é diferente do 1.7 de depuração baixado do GitHub Actions.
-Não tratar a assinatura do artefato CI como se fosse a do APK instalado.
+`.github/workflows/publish-anytv-phone-github-only.yml`.
 
-Isso comprova que um processo externo assinou o APK distribuído com
-uma chave consistente, mas a **chave privada** não está no repositório
-e não foi recuperada da biblioteca de artefatos. Não é possível
-derivá-la dos APKs assinados. Para produzir atualização de 1.7,
-o certificado final deve permanecer 49DE... e o versionCode deve subir.
-O certificado do arquivo anexo ainda precisa ser comparado ao
-certificado efetivamente instalado, se a instalação real tiver divergido.
+O publicador recebe um `candidate_run_id` de CI aprovado, baixa o APK nao assinado e o respectivo checksum do GitHub Actions, recupera temporariamente a identidade original no runner, assina com `apksigner`, verifica pacote, `versionCode` monotono, certificado cert2026 e integridade; publica apenas o APK Android validado e faz readback byte por byte.
 
-## Política de entrega (bloqueio preventivo)
+Falha de credencial, compilacao, versao ou integridade **interrompe a publicacao sem alterar a OTA**. Variantes da TV possuem certificado e canal proprios, e nao fazem parte do publicador do telefone.
 
-1. Identificar o `versionCode` e SHA-256 do certificado do APK
-   **instalado no telefone do usuário**. Não presumir a versão.
-2. Localizar a chave privada original correspondente ao certificado.
-   Se estiver perdida, bloquear a publicação como atualização.
-3. O script `scripts/sign_update_apk.sh` compara a chave fornecida
-   com `TCL_EXPECTED_CERT_SHA256` antes de assinar; recusa divergências.
-4. Só publicar atualização quando o resultado tiver **a mesma
-   assinatura aceita pelo Android**, a versão for superior e o
-   APK for validado no aparelho.
-5. **Não publicar** builds de depuração efêmeros como atualizações.
-6. Chaves privadas e senhas nunca devem ser enviadas ao repositório
-   público, logadas em workflow ou empacotadas com artefatos.
-7. **Não desinstalar** o aplicativo atual antes de obter um backup
-   independente e validar um plano de restauração de dados; não afirmar
-   que backup/restauração funcionam sem testes.
+## Comprovacao objetiva — 2026-10-23
 
-## Quando a chave original estiver disponível
+- 2.9.10: a assinatura original foi recuperada com sucesso e o APK assinado produzido, mas isso **nao configurou automaticamente** a credencial de recuperacao no GitHub Actions.
+- 2.9.13: APK compilado pelo GitHub Actions run `39891891049` e assinado localmente com o mesmo certificado; teste na TCL nao homologado.
+- GitHub-only canonical publisher commit `281a37ab2839c6c8c16e5d871b69a684f3f26270`.
+- Execucao `39960928074`: falhou no gate de segredo **ANTES** da assinatura; por isso OTA segue em 2.9.12. Nao significa perda da chave ou necessidade de outro certificado.
+- Para liberar publicacao totalmente automatizada pelo GitHub, um administrador deve gravar a credencial existente sob o nome exato `ANYTV_RECOVERY_SECRET_2026` nas configuracoes de Actions do repositorio. O valor da chave nao pode ser colocado no Git, na resposta de chat ou em logs.
 
-Executar com o Android SDK e Java 17 em ambiente privado, utilizando
-variáveis de ambiente, sem incluir segredos nos argumentos ou histórico
-de shell. O script aceita keystore por caminho local
-(`TCL_SIGNING_KEYSTORE_PATH`) ou em base64 via secret
-(`TCL_SIGNING_KEYSTORE_B64`), além de:
+## Nao repetir
 
-- `TCL_SIGNING_STORE_PASS`
-- `TCL_SIGNING_KEY_PASS`
-- `TCL_SIGNING_KEY_ALIAS`
-- `TCL_EXPECTED_CERT_SHA256`
-- `TCL_APKSIGNER_BIN` (opcional; padrão do Android SDK 36)
-
-Primeiro: `bash scripts/sign_update_apk.sh --check`.
-Depois: `bash scripts/sign_update_apk.sh input.apk output.apk`.
-
-Esse script **não** substitui a validação da identidade do APK instalado
-nem a homologação visual/funcional da TCL.
-
-## Se a chave original estiver irrecuperável
-
-Atualização direta sem remoção do pacote é bloqueada pelo modelo de
-assinatura do Android. Planejar migração de dados em ambiente confiável
-(com backup e restauração testados) e definir **uma única** nova chave
-permanente protegida, para futuras atualizações. Não criar APK com
-identificador novo como falso substituto de uma atualização.
-
-Referência: https://developer.android.com/studio/publish/app-signing
+Nao criar workflows de publicacao por versao, rotas de arquivos externos, metodos de assinatura alternativos ou novas identidades para contornar a ausencia da configuracao do secret. Os procedimentos anteriores foram substituidos por este e podem ser consultados somente no historico Git.
