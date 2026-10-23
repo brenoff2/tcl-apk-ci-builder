@@ -100,7 +100,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('distinctBy { provider(it.name) ?: norm(it.name) }', self.screen)
         self.assertIn('normalized.contains("channel")', self.screen)
         self.assertIn('normalized.contains("canal")', self.screen)
-        self.assertIn('OfficialTvIcon(installed, 30.dp)', self.screen)
+        self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
         self.assertIn('fontSize = 11.sp, maxLines = 1', self.screen)
         self.assertIn('lineHeight = 14.sp', self.screen)
 
@@ -174,12 +174,44 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Token TMDB', self.screen)
 
     def test_same_home_app_icons_year_and_readable_spacing(self):
-        self.assertIn('OfficialTvIcon(installed, 30.dp)', self.screen)
+        self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
         self.assertIn('lineHeight = 14.sp', self.screen)
         self.assertIn('Spacer(Modifier.height(5.dp))', self.screen)
         self.assertIn('first_air_date', self.screen)
         self.assertIn('release_date', self.screen)
         self.assertIn('val releasedYear = title.date.take(4)', self.screen)
+
+    def test_home_banner_uses_actual_movie_posters_and_opens_discovery(self):
+        self.assertIn('internal fun AnyTvHomeFilmBanner(', self.screen)
+        self.assertIn('trending/movie/week?language=pt-BR', self.screen)
+        self.assertIn('onOpenStreaming: () -> Unit', self.screen)
+        self.assertIn('delay(3000)', self.screen)
+        self.assertIn('modifier = Modifier.width(45.dp)', self.screen)
+        self.assertIn('tvName: String, onDismiss: () -> Unit', self.screen)
+        self.assertIn('tvName.ifBlank { "TV conectada" }', self.screen)
+        self.assertNotIn('"Onde assistir e links disponíveis"', self.screen)
+
+    def test_navigation_is_compact_and_library_recoverable(self):
+        for text in ('"♥ Minha lista"', '"Em andamento"', '"✓ Assistidos"',
+                     '"Meus streamings"', '"Fechar streaming"',
+                     'homeContentType = kind', '"movie" to "Filmes"',
+                     '"tv" to "Séries"', 'librarySection = "watching"',
+                     'librarySection = "watched"'):
+            self.assertIn(text, self.screen)
+        self.assertNotIn('Text("Descobrir", fontSize = 17.sp', self.screen)
+        self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
+        self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
+
+    def test_quick_title_actions_and_permanent_local_artwork(self):
+        for text in ('"Adicionar à minha lista"', '"Marcar como assistido"',
+                     '"Acompanhar série"', 'Color(0xFF1CB96B)',
+                     'saved_title_', 'anytv_artwork_saved', 'drawable.toBitmap()',
+                     'AnyTvPinnedImage(', 'fun previousTitle(',
+                     'val knownGenreNames', 'title.genreIds',
+                     'title.id.toString() !in watchedFilms'):
+            self.assertIn(text, self.screen)
+        self.assertNotIn('90L * 86400000L', self.screen)
+        self.assertIn('OutlinedButton(onClick = {\n                    details = null', self.screen)
 
     def test_tv_16_missing_search_route_falls_back_to_launch(self):
         self.assertIn('path == "/title-search"', self.apps)
