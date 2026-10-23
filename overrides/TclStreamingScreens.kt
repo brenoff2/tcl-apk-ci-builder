@@ -543,6 +543,58 @@ internal fun AnyTvPinnedImage(
     )
 }
 
+/** Slim, swipeable movie-cover entrypoint for the main remote screen. */
+@Composable
+internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
+    val context = LocalContext.current
+    var previews by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        StreamingCatalog.configure(context)
+        previews = runCatching {
+            StreamingCatalog.discoveryShelf("trending/movie/week?language=pt-BR", "movie")
+        }.getOrDefault(emptyList()).filter { it.poster.isNotBlank() }.take(12)
+    }
+    Surface(modifier = Modifier.fillMaxWidth().height(75.dp).clickable(onClick = onOpenStreaming),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (previews.isNotEmpty()) {
+                val count = (previews.size + 2) / 3
+                val pagerState = rememberPagerState(pageCount = { count })
+                LaunchedEffect(pagerState, count) {
+                    while (count > 1) {
+                        delay(3000)
+                        if (!pagerState.isScrollInProgress)
+                            pagerState.animateScrollToPage((pagerState.currentPage + 1) % count)
+                    }
+                }
+                HorizontalPager(state = pagerState,
+                    modifier = Modifier.weight(1f).fillMaxHeight()) { index ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        previews.drop(index * 3).take(3).forEach { item ->
+                            AnyTvPinnedImage(
+                                model = "https://image.tmdb.org/t/p/w185" + item.poster,
+                                contentDescription = item.name,
+                                modifier = Modifier.width(45.dp).fillMaxHeight()
+                                    .clip(RoundedCornerShape(5.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
+                }
+            } else {
+                Text("Filmes e séries", modifier = Modifier.weight(1f),
+                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Text("Explorar  ›", fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary)
+        }
+    }
+}
+
 /** Compact, single-line score and verified Brazilian subscription platform marks. */
 @Composable
 private fun StreamingOfferIcons(
