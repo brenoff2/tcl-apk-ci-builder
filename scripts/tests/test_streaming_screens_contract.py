@@ -183,13 +183,23 @@ class StreamingScreens(unittest.TestCase):
 
     def test_home_banner_uses_actual_movie_posters_and_opens_discovery(self):
         self.assertIn('internal fun AnyTvHomeFilmBanner(', self.screen)
-        self.assertIn('trending/movie/week?language=pt-BR', self.screen)
+        self.assertIn('discoveryShelf("trending/movie/week", "movie")', self.screen)
         self.assertIn('onOpenStreaming: () -> Unit', self.screen)
         self.assertIn('delay(3000)', self.screen)
-        self.assertIn('modifier = Modifier.width(45.dp)', self.screen)
+        self.assertIn('movie.backdrop.ifBlank { movie.poster }', self.screen)
         self.assertIn('tvName: String, onDismiss: () -> Unit', self.screen)
         self.assertIn('tvName.ifBlank { "TV conectada" }', self.screen)
         self.assertNotIn('"Onde assistir e links disponíveis"', self.screen)
+
+    def test_banner_is_below_tv_icons_and_uses_valid_trending_route(self):
+        self.assertNotIn('discoveryShelf("trending/movie/week?language=pt-BR"', self.screen)
+        self.assertIn('modifier = Modifier.fillMaxWidth().height(75.dp)', self.screen)
+        self.assertIn('Text(movie.name, fontSize = 12.sp', self.screen)
+        self.assertIn('Text("Ver ›", fontSize = 10.sp', self.screen)
+        self.assertLess(
+            self.apps.index('OfficialTvIcon(app = app, size = 56.dp)'),
+            self.apps.index('AnyTvHomeFilmBanner(onOpenStreaming = { showStreaming = true })')
+        )
 
     def test_navigation_is_compact_and_library_recoverable(self):
         for text in ('"♥ Minha lista"', '"Em andamento"', '"✓ Assistidos"',
