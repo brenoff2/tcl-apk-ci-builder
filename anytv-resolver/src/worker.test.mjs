@@ -163,10 +163,10 @@ test("fetches a Brazilian subscription, sends key as header and caches it", asyn
   body = await b.json();
   assert.equal(body.cached, true);
   assert.equal(fetches, 1);
-  assert.equal(env._months.get("2026-10"), 1);
+  assert.equal(env._months.get("2026-10:links"), 1);
 });
 
-test("respects global monthly upstream cap across different titles", async () => {
+test("respects separate monthly JustWatch link budget across titles", async () => {
   const env = makeEnv(1);
   const deps = { now: () => Date.parse("2026-10-15T12:00:00Z"),
     fetch: async () => response(show("movie/329", [mockOffer("prime", FIX.prime)])) };
@@ -299,7 +299,7 @@ test("catalog proxy keeps TMDB secret on server and caches read-only responses",
   assert.equal(calls, 1);
 });
 
-test("catalog search remains cached after one hour without spending extra monthly calls", async () => {
+test("catalog search remains cached then refreshes even with exhausted link budget", async () => {
   const env = makeEnv(1);
   env.TMDB_READ_TOKEN = "server-only";
   let calls = 0;
@@ -313,15 +313,18 @@ test("catalog search remains cached after one hour without spending extra monthl
   assert.equal((await catalogRequest(req, env, deps)).status, 200);
   now += 2 * 3600 * 1000;
   assert.equal((await catalogRequest(req, env, deps)).status, 200);
-  assert.equal(calls, 1, "2-hour cache hit must not spend another upstream quota");
+  assert.equal(calls, 1, "2-hour cache hit must not fetch upstream");
   now += 23 * 3600 * 1000;
+  // Even a spent link budget cannot disable global movie/series search.
+  env._months.set("2026-10:links", 1);
+  env._months.set("2026-10", 200);
   const expired = await catalogRequest(req, env, deps);
-  assert.equal(expired.status, 429, "expired cache must respect monthly quota");
-  assert.equal((await expired.json()).status, "monthly_quota_exhausted");
-  assert.equal(calls, 1);
+  assert.equal(expired.status, 200);
+  assert.equal(calls, 2);
+  assert.equal(env._months.get("2026-10:links"), 1);
 });
 
-test("catalog uncached lookups stop at monthly upstream cap", async () => {
+test("catalog TMDB discovery is not blocked by exhausted 200-call legacy budget", async () => {
   const env = makeEnv(1);
   env.TMDB_READ_TOKEN = "server-only";
   let calls = 0;
@@ -334,9 +337,10 @@ test("catalog uncached lookups stop at monthly upstream cap", async () => {
   const next = await catalogRequest(
     new Request("https://anytv.invalid/v1/catalog/discover/movie?page=2"), env, dependencies);
   assert.equal(first.status, 200);
-  assert.equal(next.status, 429);
-  assert.equal((await next.json()).status, "monthly_quota_exhausted");
-  assert.equal(calls, 1);
+  env._months.set("2026-10", 200);
+  env._months.set("2026-10:links", 1);
+  assert.equal(next.status, 200);
+  assert.equal(calls, 2);
 });
 
 test("TMDB v3 key stays server-only as upstream api_key", async () => {
