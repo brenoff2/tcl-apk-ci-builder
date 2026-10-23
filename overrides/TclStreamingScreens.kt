@@ -278,6 +278,15 @@ private object StreamingCatalog {
             mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
         }
 
+    /** Discovery lists for real movie genres, localized using the upstream genre catalogue. */
+    suspend fun discoveryGenre(id: Int): List<StreamingTitle> = withContext(Dispatchers.IO) {
+        require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14))
+        val route = "discover/movie?language=pt-BR&include_adult=false" +
+            "&sort_by=popularity.desc&with_genres=$id&page=1"
+        val payload = get("backend", route)
+        mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", id).take(12)
+    }
+
     /** Global search is independent of the installed-streaming provider. */
     suspend fun searchGlobal(query: String): List<StreamingTitle> = withContext(Dispatchers.IO) {
         require(query.length in 2..90)
@@ -401,9 +410,19 @@ internal fun TclStreamingScreens(
     var activationBusy by remember { mutableStateOf(false) }
     var activationFeedback by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
-    var discoveryProviderPackage by remember { mutableStateOf<String?>(null) }
-    var filteredShelves by remember { mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap()) }
-    var filterBusy by remember { mutableStateOf(false) }
+    val mainGenreIds = remember { listOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14) }
+    var mainGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
+    var selectedHomeGenre by remember { mutableIntStateOf(0) }
+    var showGenreSettings by remember { mutableStateOf(false) }
+    var showGlobalSearch by remember { mutableStateOf(false) }
+    val initialGenreIds = remember(prefs) {
+        prefs.getString("anytv_home_genres", null)?.split(",")
+            ?.mapNotNull { it.toIntOrNull() }?.filter { it in mainGenreIds }?.toSet()
+            ?: setOf(28, 18, 35, 53, 37)
+    }
+    var preferredGenreIds by remember { mutableStateOf(initialGenreIds) }
+    var editingGenreIds by remember { mutableStateOf(initialGenreIds) }
+    val genreShelves = remember { mutableStateMapOf<Int, List<StreamingTitle>>() }
     var globalSearchDraft by remember { mutableStateOf("") }
     var globalSearchTerm by remember { mutableStateOf("") }
     var globalSearchResults by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
@@ -503,19 +522,23 @@ internal fun TclStreamingScreens(
         }
     }
 
-    LaunchedEffect(discoveryProviderPackage, apps) {
-        val app = displayed.firstOrNull { it.packageName == discoveryProviderPackage }
-        filteredShelves = emptyMap()
-        if (app != null) {
-            filterBusy = true
-            val result = linkedMapOf<String, List<StreamingTitle>>()
-            for ((label, kind) in listOf("Filmes disponíveis" to "movie", "Séries disponíveis" to "tv")) {
-                runCatching {
-                    StreamingCatalog.discover(token, app.name, kind, 1, 0, "")
-                }.onSuccess { if (it.titles.isNotEmpty()) result[label] = it.titles }
+    // Genre identifiers and display names come from the real PT-BR TMDB catalogue.
+    LaunchedEffect(token) {
+        mainGenres = runCatching { StreamingCatalog.genres(token, "movie") }
+            .getOrDefault(emptyList())
+            .filter { it.id in mainGenreIds }
+            .sortedBy { mainGenreIds.indexOf(it.id) }
+    }
+    // Fetch each genre shelf only once per screen, preserving user-selected order.
+    LaunchedEffect(mainGenres, preferredGenreIds, selectedHomeGenre) {
+        val requested = if (selectedHomeGenre == 0)
+            mainGenres.filter { it.id in preferredGenreIds }.map { it.id }
+            else listOf(selectedHomeGenre)
+        for (id in requested) {
+            if (id !in genreShelves) {
+                runCatching { StreamingCatalog.discoveryGenre(id) }
+                    .onSuccess { genreShelves[id] = it }
             }
-            filteredShelves = result
-            filterBusy = false
         }
     }
 
