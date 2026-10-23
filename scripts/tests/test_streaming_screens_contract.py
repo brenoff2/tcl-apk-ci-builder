@@ -106,17 +106,17 @@ class StreamingScreens(unittest.TestCase):
 
     def test_compact_home_search_platforms_and_customizable_genre_lists(self):
         for piece in (
-            'Text("Descobrir", fontSize = 17.sp',
+            'Text("Início", fontSize = 11.sp)',
             'showGlobalSearch = !showGlobalSearch',
             'if (showGlobalSearch)',
-            'OfficialTvIcon(app, 32.dp)',
+            'OfficialTvIcon(app, 56.dp)',
             'suspend fun discoveryGenre(id: Int)',
             'with_genres=$id&page=1',
             'StreamingCatalog.genres(token, "movie")',
             'selectedHomeGenre = item.id',
             'Text("Editar listas", fontSize = 11.sp)',
             'putString("anytv_home_genres"',
-            'mainGenres.filter { it.id in preferredGenreIds }',
+            'currentGenreList.filter { it.id in preferredGenreIds ||',
             '"Por gênero: " + kind.name',
         ):
             with self.subTest(piece=piece):
@@ -130,7 +130,7 @@ class StreamingScreens(unittest.TestCase):
         for fragment in (
             'private object StreamingDiskCache', 'anytv_catalog_v1',
             'fun rememberTitle(media: String, id: Int',
-            '90L * 86400000L', 'StreamingDiskCache.read(route)',
+            'saved_title_', 'StreamingDiskCache.read(route)',
             'StreamingDiskCache.write(route, payload, ttl(route))',
             'route.contains("/watch/providers") -> 12L * 3600000L',
             'index >= 450 || bytes > 12_000_000L',
@@ -140,7 +140,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_my_streamings_filter_is_opt_in_and_persistent(self):
         for fragment in (
-            '"anytv_my_streamings"', '"Só meus streamings"',
+            '"anytv_my_streamings"', '"Meus streamings"',
             'showMyStreamingSettings = true', 'onlyMyStreaming = !onlyMyStreaming',
             'it.packageName in myServices', 'StreamingCatalog.discover(token, app.name',
             'if (!homeLibrary)', 'if (!onlyMyStreaming)',
@@ -198,7 +198,7 @@ class StreamingScreens(unittest.TestCase):
                      '"tv" to "Séries"', 'librarySection = "watching"',
                      'librarySection = "watched"'):
             self.assertIn(text, self.screen)
-        self.assertNotIn('Text("Descobrir", fontSize = 17.sp', self.screen)
+        self.assertNotIn('Text("Início", fontSize = 11.sp)', self.screen)
         self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
         self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
 
@@ -210,7 +210,7 @@ class StreamingScreens(unittest.TestCase):
                      'val knownGenreNames', 'title.genreIds',
                      'title.id.toString() !in watchedFilms'):
             self.assertIn(text, self.screen)
-        self.assertNotIn('90L * 86400000L', self.screen)
+        self.assertNotIn('saved_title_', self.screen)
         self.assertIn('OutlinedButton(onClick = {\n                    details = null', self.screen)
 
     def test_tv_16_missing_search_route_falls_back_to_launch(self):
@@ -224,7 +224,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('titleActionPending by remember', self.screen)
         self.assertIn('titleActionFeedback by remember', self.screen)
         self.assertIn('if (titleActionFeedback != null)', self.screen)
-        self.assertIn('Text(if (titleActionPending) "Abrindo…" else "Abrir na TCL")', self.screen)
+        self.assertIn('tvName.ifBlank { "TV conectada" }', self.screen)
         self.assertIn('A conexão do controle remoto é independente', self.screen)
         self.assertIn('O AnyTV Connect instalado', self.screen)
         self.assertIn('Não foi possível abrir: ', self.screen)
