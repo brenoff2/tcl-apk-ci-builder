@@ -170,11 +170,15 @@ private object StreamingCatalog {
             (0 until providers.length()).mapNotNull { index ->
                 val offer = providers.optJSONObject(index) ?: return@mapNotNull null
                 val id = offer.optInt("provider_id")
-                val name = offer.optString("provider_name")
+                val name = offer.optString("provider_name").trim()
                 if (id <= 0 || name.isBlank()) return@mapNotNull null
+                val normalized = norm(name)
+                // An Amazon/Apple add-on channel is not the base Paramount/Max subscription.
+                if (normalized.contains("channel") || normalized.contains("canal") ||
+                    normalized.contains("addon")) return@mapNotNull null
                 StreamingOffer(id, name,
                     offer.optString("logo_path").takeIf { it.startsWith("/") } ?: "")
-            }.distinctBy { it.id }
+            }.distinctBy { provider(it.name) ?: norm(it.name) }
         }
 
     fun appHasOffer(app: TvOfficialApp, offers: List<StreamingOffer>): Boolean {
@@ -338,11 +342,12 @@ private object StreamingCatalog {
     }
 }
 
-/** Only display small provider marks for a verified regional subscription offer. */
+/** Compact, single-line score and verified Brazilian subscription platform marks. */
 @Composable
 private fun StreamingOfferIcons(
     item: StreamingTitle,
-    known: MutableMap<String, List<StreamingOffer>>
+    known: MutableMap<String, List<StreamingOffer>>,
+    expanded: Boolean = false
 ) {
     val key = "${item.media}:${item.id}"
     LaunchedEffect(key) {
@@ -352,19 +357,29 @@ private fun StreamingOfferIcons(
         }
     }
     val offerings = known[key].orEmpty()
-    if (offerings.isNotEmpty()) {
-        Row(horizontalArrangement = Arrangement.spacedBy(3.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            offerings.take(3).forEach { offer ->
-                if (offer.logo.isNotEmpty()) {
-                    AsyncImage(model = "https://image.tmdb.org/t/p/w45" + offer.logo,
+    if (item.votes > 0 || offerings.isNotEmpty()) {
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp)) {
+            if (item.votes > 0) {
+                Text("★ " + String.format(java.util.Locale.US, "%.1f", item.rating),
+                    fontSize = 11.sp, maxLines = 1,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            val visible = if (expanded) 4 else 2
+            offerings.take(visible).forEach { offer ->
+                if (offer.logo.isNotBlank()) {
+                    AsyncImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
                         contentDescription = "Disponível em " + offer.name,
-                        modifier = Modifier.size(18.dp))
+                        modifier = Modifier.size(24.dp),
+                        contentScale = ContentScale.Fit)
                 } else {
-                    Text(offer.name.take(2), fontSize = 9.sp)
+                    Text(offer.name.take(2), fontSize = 10.sp, maxLines = 1)
                 }
             }
-            if (offerings.size > 3) Text("+${offerings.size - 3}", fontSize = 9.sp)
+            if (offerings.size > visible) {
+                Text("+${offerings.size - visible}", fontSize = 10.sp, maxLines = 1)
+            }
         }
     }
 }
@@ -690,7 +705,7 @@ internal fun TclStreamingScreens(
                                         contentDescription = found.name,
                                         modifier = Modifier.fillMaxWidth().height(150.dp),
                                         contentScale = ContentScale.Crop)
-                                    Text(found.name, fontSize = 11.sp, maxLines = 2)
+                                    Text(found.name, fontSize = 11.sp, maxLines = 2, lineHeight = 12.sp)
                                     StreamingOfferIcons(found, offerCache)
                                 }
                             }
@@ -750,11 +765,7 @@ internal fun TclStreamingScreens(
                                             modifier = Modifier.fillMaxWidth().height(150.dp))
                                         Text(current.name, fontWeight = FontWeight.Bold,
                                             maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                        if (current.votes > 0) {
-                                            Text("★ TMDB " + String.format(java.util.Locale.US,
-                                                "%.1f", current.rating), fontSize = 12.sp)
-                                        }
-                                        StreamingOfferIcons(current, offerCache)
+                                        StreamingOfferIcons(current, offerCache, expanded = true)
                                     }
                                 }
                                 // Small noninteractive position dots: no previous/next buttons.
@@ -783,9 +794,8 @@ internal fun TclStreamingScreens(
                                                     contentDescription = "Cartaz: " + item.name,
                                                     modifier = Modifier.fillMaxWidth().height(158.dp),
                                                     contentScale = ContentScale.Crop)
-                                                Text(item.name, maxLines = 2, fontSize = 11.sp)
+                                                Text(item.name, maxLines = 2, lineHeight = 12.sp, fontSize = 11.sp)
                                                 StreamingOfferIcons(item, offerCache)
-                                                if (item.votes > 0) Text("★ " + String.format(java.util.Locale.US, "%.1f", item.rating), fontSize = 10.sp)
                                             }
                                         }
                                     }
@@ -941,7 +951,7 @@ internal fun TclStreamingScreens(
                                             modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)
                                         )
                                     }
-                                    Text(title.name, fontSize = 11.sp, maxLines = 2,
+                                    Text(title.name, fontSize = 11.sp, maxLines = 2, lineHeight = 12.sp,
                                         textAlign = TextAlign.Center,
                                         overflow = TextOverflow.Ellipsis)
                                     StreamingOfferIcons(title, offerCache)
@@ -981,7 +991,8 @@ internal fun TclStreamingScreens(
                                     }
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(title.name, fontWeight = FontWeight.SemiBold,
-                                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                            maxLines = 2, lineHeight = 17.sp,
+                                            overflow = TextOverflow.Ellipsis)
                                         StreamingOfferIcons(title, offerCache)
                                         Text(title.overview.ifBlank { "Sinopse indisponível." },
                                             fontSize = 12.sp, maxLines = 3,
