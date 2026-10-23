@@ -637,6 +637,18 @@ internal fun TclStreamingScreens(
     var selectedSeriesSeason by remember { mutableIntStateOf(1) }
     var seasonEpisodes by remember { mutableStateOf<List<StreamingEpisode>>(emptyList()) }
     var episodeError by remember { mutableStateOf<String?>(null) }
+    var manualSeason by remember { mutableStateOf("1") }
+    var manualEpisode by remember { mutableStateOf("1") }
+    var watchedFilms by remember {
+        mutableStateOf(prefs.getString("anytv_watched_movies", "")
+            ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
+    }
+    fun toggleFilmWatched(id: Int) {
+        val key = id.toString()
+        watchedFilms = if (key in watchedFilms) watchedFilms - key else watchedFilms + key
+        prefs.edit().putString("anytv_watched_movies",
+            watchedFilms.sorted().joinToString(",")).apply()
+    }
     var watchedEpisodes by remember {
         mutableStateOf(prefs.getString("anytv_watched_episodes", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
@@ -1031,8 +1043,11 @@ internal fun TclStreamingScreens(
                                 .map { it.title }.distinctBy { it.id }
                             val series = favorites.filter { it.title.media == "tv" }
                                 .map { it.title }.distinctBy { it.id }
-                            if (films.isNotEmpty()) put("Meus filmes", films)
+                            val unseen = films.filter { it.id.toString() !in watchedFilms }
+                            val seen = films.filter { it.id.toString() in watchedFilms }
+                            if (unseen.isNotEmpty()) put("Filmes para assistir", unseen)
                             if (series.isNotEmpty()) put("Séries que acompanho", series)
+                            if (seen.isNotEmpty()) put("Filmes já assistidos", seen)
                         } else if (!onlyMyStreaming) {
                             if (selectedHomeGenre == 0) {
                                 putAll(discoveryShelves)
@@ -1537,6 +1552,17 @@ internal fun TclStreamingScreens(
                     } else if (!detailLoading) {
                         Text("Trailer não disponível.", fontSize = 12.sp)
                     }
+                    if (title.media == "movie") {
+                        val seenFilm = title.id.toString() in watchedFilms
+                        Row(modifier = Modifier.fillMaxWidth().clickable {
+                            toggleFilmWatched(title.id)
+                        }, verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = seenFilm, onCheckedChange = {
+                                toggleFilmWatched(title.id)
+                            })
+                            Text("Já assisti a este filme", fontSize = 12.sp)
+                        }
+                    }
                     if (title.media == "tv") {
                         Text("Acompanhar episódios", fontWeight = FontWeight.SemiBold,
                             fontSize = 14.sp)
@@ -1579,7 +1605,48 @@ internal fun TclStreamingScreens(
                                 Text(episodeError.orEmpty(), fontSize = 11.sp)
                             }
                         } else if (!detailLoading) {
-                            Text("Temporadas indisponíveis no momento.", fontSize = 11.sp)
+                            Text("Registro manual de episódios", fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp)
+                            Text("Os dados reais de temporadas ainda não estão disponíveis. " +
+                                "Registre o progresso sem informar nomes ou contagens fictícias.",
+                                fontSize = 11.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                OutlinedTextField(value = manualSeason,
+                                    onValueChange = {
+                                        manualSeason = it.filter(Char::isDigit).take(3)
+                                    }, label = { Text("Temporada") }, singleLine = true,
+                                    modifier = Modifier.weight(1f))
+                                OutlinedTextField(value = manualEpisode,
+                                    onValueChange = {
+                                        manualEpisode = it.filter(Char::isDigit).take(3)
+                                    }, label = { Text("Episódio") }, singleLine = true,
+                                    modifier = Modifier.weight(1f))
+                            }
+                            val seasonNum = manualSeason.toIntOrNull()
+                            val epNum = manualEpisode.toIntOrNull()
+                            TextButton(onClick = {
+                                if (seasonNum != null && epNum != null)
+                                    toggleWatched(title.id, seasonNum, epNum)
+                            }, enabled = seasonNum != null && seasonNum in 1..999 &&
+                                epNum != null && epNum in 1..999) {
+                                Text("Marcar/desmarcar episódio")
+                            }
+                            watchedEpisodes.filter { it.startsWith("${title.id}:") }
+                                .mapNotNull { raw ->
+                                    val pieces = raw.split(":")
+                                    if (pieces.size == 3) {
+                                        val nSeason = pieces[1].toIntOrNull()
+                                        val nEpisode = pieces[2].toIntOrNull()
+                                        if (nSeason != null && nEpisode != null)
+                                            nSeason to nEpisode else null
+                                    } else null
+                                }.sortedWith(compareBy({ it.first }, { it.second }))
+                                .forEach { (sn, en) ->
+                                    TextButton(onClick = { toggleWatched(title.id, sn, en) }) {
+                                        Text("✓ T$sn · E$en   ×", fontSize = 11.sp)
+                                    }
+                                }
                         }
                     }
                     if (relatedTitles.isNotEmpty()) {
