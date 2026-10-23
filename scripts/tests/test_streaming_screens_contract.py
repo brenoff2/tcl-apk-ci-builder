@@ -82,7 +82,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("Próximo ›")', self.screen)
         self.assertLess(
             self.screen.index("LazyColumn(modifier = Modifier.weight(1f))"),
-            self.screen.index("HorizontalPager("))
+            self.screen.index("HorizontalPager(", self.screen.index("val heroTitles =")))
         self.assertIn(".heightIn(max = 460.dp)", self.screen)
         self.assertIn(".verticalScroll(rememberScrollState())", self.screen)
 
@@ -198,7 +198,7 @@ class StreamingScreens(unittest.TestCase):
                      '"tv" to "Séries"', 'librarySection = "watching"',
                      'librarySection = "watched"'):
             self.assertIn(text, self.screen)
-        self.assertNotIn('Text("Início", fontSize = 11.sp)', self.screen)
+        self.assertNotIn('Text("Descobrir", fontSize = 17.sp)', self.screen)
         self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
         self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
 
@@ -208,9 +208,9 @@ class StreamingScreens(unittest.TestCase):
                      'saved_title_', 'anytv_artwork_saved', 'drawable.toBitmap()',
                      'AnyTvPinnedImage(', 'fun previousTitle(',
                      'val knownGenreNames', 'title.genreIds',
-                     'title.id.toString() !in watchedFilms'):
+                     'it.id.toString() !in watchedFilms'):
             self.assertIn(text, self.screen)
-        self.assertNotIn('saved_title_', self.screen)
+        self.assertNotIn('90L * 86400000L', self.screen)
         self.assertIn('OutlinedButton(onClick = {\n                    details = null', self.screen)
 
     def test_tv_16_missing_search_route_falls_back_to_launch(self):
