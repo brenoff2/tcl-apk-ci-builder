@@ -106,7 +106,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_compact_home_search_platforms_and_customizable_genre_lists(self):
         for piece in (
-            'Text("Início", fontSize = 11.sp)',
+            'Icon(Icons.Filled.Home, contentDescription = "Início: filmes e séries"',
             'showGlobalSearch = !showGlobalSearch',
             'if (showGlobalSearch)',
             'OfficialTvIcon(app, 56.dp)',
@@ -138,14 +138,36 @@ class StreamingScreens(unittest.TestCase):
         ):
             self.assertIn(fragment, self.screen)
 
-    def test_my_streamings_filter_is_opt_in_and_persistent(self):
+    def test_discovery_filters_use_real_services_and_persist_choices(self):
         for fragment in (
-            '"anytv_my_streamings"', '"Meus streamings"',
-            'showMyStreamingSettings = true', 'onlyMyStreaming = !onlyMyStreaming',
-            'it.packageName in myServices', 'StreamingCatalog.discover(token, app.name',
-            'if (!homeLibrary)', 'if (!onlyMyStreaming)',
+            '"anytv_my_streamings"', '"anytv_discovery_genre_filter"',
+            'subscriptionNames = remember', '"Netflix"', '"Prime Video"',
+            '"Paramount+"', '"Disney+"', '"Max"',
+            'showMyStreamingSettings = true', 'Text("Filtros de descoberta")',
+            'Text("Streamings"', 'Text("Gêneros"',
+            'myServices = editingMyServices', 'filterGenreIds = editingFilterGenres',
+            'StreamingCatalog.discover(token, name, kind',
+            'if (!onlyMyStreaming)', 'activeServiceNames.forEach { name ->',
+            'val filteredShelves = visibleShelves.mapValues',
+            'title.genreIds.any { it in filterGenreIds }',
+            'val uniqueShelves = filteredShelves.mapNotNull',
         ):
-            self.assertIn(fragment, self.screen)
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, self.screen)
+        self.assertNotIn('displayed.filter { it.packageName in myServices', self.screen)
+
+    def test_navigation_is_connected_not_just_declared(self):
+        self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
+        self.assertIn('@Composable\\ninternal fun TclStreamingScreens(', self.screen)
+        self.assertNotIn('@Composable\\n/** Same one-row navigation', self.screen)
+        self.assertIn('onFilters = { editingMyServices = myServices', self.screen)
+        self.assertIn('onContentType = { kind ->', self.screen)
+        self.assertIn('onHome = { selected = null; homeLibrary = false', self.screen)
+        self.assertIn('onWatching = { selected = null; homeLibrary = true', self.screen)
+        self.assertIn('onWatched = { selected = null; homeLibrary = true', self.screen)
+        self.assertNotIn('listOf("all" to "Tudo"', self.screen)
+        self.assertNotIn('label = { Text("Início", fontSize = 11.sp) }', self.screen)
+        self.assertNotIn('FilterChip(selected = media == "movie" && !showSaved', self.screen)
 
     def test_library_global_saves_watch_progress_and_deduplicates(self):
         for fragment in (
@@ -202,13 +224,15 @@ class StreamingScreens(unittest.TestCase):
         )
 
     def test_navigation_is_compact_and_library_recoverable(self):
-        for text in ('"♥ Minha lista"', '"Em andamento"', '"✓ Assistidos"',
-                     '"Meus streamings"', '"Fechar streaming"',
-                     'homeContentType = kind', '"movie" to "Filmes"',
-                     '"tv" to "Séries"', 'librarySection = "watching"',
-                     'librarySection = "watched"'):
-            self.assertIn(text, self.screen)
-        self.assertNotIn('Text("Descobrir", fontSize = 17.sp)', self.screen)
+        for fragment in (
+            'Icon(Icons.Filled.Home', 'Icon(Icons.Filled.Favorite',
+            'Icon(Icons.Filled.PlayCircleFilled', 'Icon(Icons.Filled.CheckCircle',
+            'Icon(Icons.Filled.Tv', 'Icon(Icons.Filled.Search',
+            'Icon(Icons.Filled.Close', '"Filmes"', '"Séries"',
+            'librarySection = "watching"', 'librarySection = "watched"',
+            'Modifier.size(35.dp)', 'homeContentType = kind',
+        ):
+            self.assertIn(fragment, self.screen)
         self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
         self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
 
