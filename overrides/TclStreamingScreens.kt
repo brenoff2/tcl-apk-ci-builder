@@ -61,6 +61,8 @@ import java.text.Normalizer
 
 internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "")
 internal data class StreamingGenre(val id: Int, val name: String)
+internal data class StreamingSeason(val number: Int, val name: String, val count: Int)
+internal data class StreamingEpisode(val number: Int, val name: String, val airDate: String)
 internal data class StreamingOffer(val id: Int, val name: String, val logo: String)
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
 internal data class StreamingResults(val titles: List<StreamingTitle>, val more: Boolean)
@@ -350,6 +352,34 @@ private object StreamingCatalog {
         mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", id).take(12)
     }
 
+    /** Real TMDB seasons and episodes; cached locally so opening the same series costs nothing. */
+    suspend fun seasons(id: Int): List<StreamingSeason> = withContext(Dispatchers.IO) {
+        val items = get("backend", "tv/$id?language=pt-BR").optJSONArray("seasons")
+            ?: JSONArray()
+        (0 until items.length()).mapNotNull { index ->
+            val e = items.optJSONObject(index) ?: return@mapNotNull null
+            val season = e.optInt("season_number", -1)
+            val count = e.optInt("episode_count")
+            if (season < 0 || count <= 0) null
+            else StreamingSeason(season, e.optString("name").ifBlank {
+                if (season == 0) "Especiais" else "Temporada $season"
+            }, count)
+        }
+    }
+    suspend fun episodes(id: Int, season: Int): List<StreamingEpisode> =
+        withContext(Dispatchers.IO) {
+            require(season in 0..999)
+            val items = get("backend", "tv/$id/season/$season?language=pt-BR")
+                .optJSONArray("episodes") ?: JSONArray()
+            (0 until items.length()).mapNotNull { index ->
+                val item = items.optJSONObject(index) ?: return@mapNotNull null
+                val number = item.optInt("episode_number", 0)
+                if (number <= 0) null else StreamingEpisode(
+                    number, item.optString("name").ifBlank { "Episódio $number" },
+                    item.optString("air_date"))
+            }
+        }
+
     /** Global search is independent of the installed-streaming provider. */
     suspend fun searchGlobal(query: String): List<StreamingTitle> = withContext(Dispatchers.IO) {
         require(query.length in 2..90)
@@ -565,6 +595,21 @@ internal fun TclStreamingScreens(
     val offerCache = remember { mutableStateMapOf<String, List<StreamingOffer>>() }
     var detailsOffers by remember { mutableStateOf<List<StreamingOffer>?>(null) }
     var detailLoading by remember { mutableStateOf(false) }
+    var seriesSeasons by remember { mutableStateOf<List<StreamingSeason>>(emptyList()) }
+    var selectedSeriesSeason by remember { mutableIntStateOf(1) }
+    var seasonEpisodes by remember { mutableStateOf<List<StreamingEpisode>>(emptyList()) }
+    var episodeError by remember { mutableStateOf<String?>(null) }
+    var watchedEpisodes by remember {
+        mutableStateOf(prefs.getString("anytv_watched_episodes", "")
+            ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
+    }
+    fun toggleWatched(id: Int, season: Int, episode: Int) {
+        val key = "$id:$season:$episode"
+        watchedEpisodes = if (key in watchedEpisodes) watchedEpisodes - key
+            else watchedEpisodes + key
+        prefs.edit().putString("anytv_watched_episodes",
+            watchedEpisodes.sorted().joinToString(",")).apply()
+    }
     val displayed = remember(apps, all) { apps.filter { all || StreamingCatalog.streaming(it) } }
 
     LaunchedEffect(globalSearchTerm) {
@@ -583,7 +628,16 @@ internal fun TclStreamingScreens(
         trailerLink = null
         relatedTitles = emptyList()
         detailsOffers = null
+        seriesSeasons = emptyList()
+        seasonEpisodes = emptyList()
+        episodeError = null
         if (item != null) {
+            if (item.media == "tv") {
+                seriesSeasons = runCatching { StreamingCatalog.seasons(item.id) }
+                    .getOrDefault(emptyList())
+                selectedSeriesSeason = seriesSeasons.firstOrNull { it.number == 1 }?.number
+                    ?: seriesSeasons.firstOrNull()?.number ?: 1
+            }
             detailLoading = true
             trailerLink = runCatching { StreamingCatalog.trailer(item.media, item.id) }.getOrNull()
             relatedTitles = runCatching { StreamingCatalog.related(item.media, item.id) }
@@ -593,6 +647,20 @@ internal fun TclStreamingScreens(
                 runCatching { StreamingCatalog.offersInBrazil(item) }.getOrNull()
             detailsOffers?.let { offerCache[key] = it }
             detailLoading = false
+        }
+    }
+
+    LaunchedEffect(details?.id, details?.media, selectedSeriesSeason) {
+        val show = details
+        seasonEpisodes = emptyList()
+        if (show?.media == "tv" && seriesSeasons.any { it.number == selectedSeriesSeason }) {
+            episodeError = null
+            seasonEpisodes = runCatching {
+                StreamingCatalog.episodes(show.id, selectedSeriesSeason)
+            }.getOrElse {
+                episodeError = "Não foi possível consultar episódios; tente novamente mais tarde."
+                emptyList()
+            }
         }
     }
 
@@ -1426,6 +1494,51 @@ internal fun TclStreamingScreens(
                         }) { Text("▶ Ver trailer") }
                     } else if (!detailLoading) {
                         Text("Trailer não disponível.", fontSize = 12.sp)
+                    }
+                    if (title.media == "tv") {
+                        Text("Acompanhar episódios", fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp)
+                        if (seriesSeasons.isNotEmpty()) {
+                            Row(modifier = Modifier.fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                seriesSeasons.forEach { season ->
+                                    FilterChip(
+                                        selected = selectedSeriesSeason == season.number,
+                                        onClick = { selectedSeriesSeason = season.number },
+                                        label = { Text(season.name, fontSize = 11.sp) })
+                                }
+                            }
+                            val watchedThisSeason = seasonEpisodes.count {
+                                "${title.id}:${selectedSeriesSeason}:${it.number}" in watchedEpisodes
+                            }
+                            Text("$watchedThisSeason de ${seasonEpisodes.size} episódios assistidos",
+                                fontSize = 12.sp)
+                            seasonEpisodes.forEach { episode ->
+                                val marked = "${title.id}:${selectedSeriesSeason}:${episode.number}" in watchedEpisodes
+                                Row(modifier = Modifier.fillMaxWidth().clickable {
+                                    toggleWatched(title.id, selectedSeriesSeason, episode.number)
+                                }, verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Checkbox(checked = marked, onCheckedChange = {
+                                        toggleWatched(title.id, selectedSeriesSeason, episode.number)
+                                    })
+                                    Column {
+                                        Text("${episode.number}. ${episode.name}",
+                                            fontSize = 12.sp, lineHeight = 15.sp)
+                                        if (episode.airDate.length >= 10) {
+                                            Text(episode.airDate, fontSize = 10.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                            if (episodeError != null) {
+                                Text(episodeError.orEmpty(), fontSize = 11.sp)
+                            }
+                        } else if (!detailLoading) {
+                            Text("Temporadas indisponíveis no momento.", fontSize = 11.sp)
+                        }
                     }
                     if (relatedTitles.isNotEmpty()) {
                         Text("Você também pode gostar", fontWeight = FontWeight.SemiBold)
