@@ -724,6 +724,22 @@ private fun AnyTvStreamNavBar(
 }
 
 @Composable
+private fun AnyTvCompactChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(13.dp)
+    Box(modifier = Modifier.padding(end = 2.dp)
+        .clip(shape)
+        .background(if (selected) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerLow)
+        .border(1.dp, if (selected) MaterialTheme.colorScheme.primary
+               else MaterialTheme.colorScheme.outlineVariant, shape)
+        .clickable(onClick = onClick)
+        .padding(horizontal = 7.dp, vertical = 5.dp)) {
+        Text(label, fontSize = 11.sp, maxLines = 1,
+            color = MaterialTheme.colorScheme.onSurface)
+    }
+}
+
+@Composable
 internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String,
     tvName: String, onDismiss: () -> Unit
@@ -1185,6 +1201,39 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
+                    // Search, content type and genres share one compact line.
+                    val selectedGenreKind = if (homeContentType == "tv") "tv" else "movie"
+                    val currentGenreList = if (selectedGenreKind == "tv") tvGenres else mainGenres
+                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = { showGlobalSearch = !showGlobalSearch },
+                            modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries",
+                                modifier = Modifier.size(20.dp))
+                        }
+                        AnyTvCompactChip("Filmes", homeContentType == "movie") {
+                            homeContentType = if (homeContentType == "movie") "all" else "movie"
+                            selectedHomeGenre = 0; homeLibrary = false
+                        }
+                        AnyTvCompactChip("Séries", homeContentType == "tv") {
+                            homeContentType = if (homeContentType == "tv") "all" else "tv"
+                            selectedHomeGenre = 0; homeLibrary = false
+                        }
+                        AnyTvCompactChip("Todos", selectedHomeGenre == 0) {
+                            selectedHomeGenre = 0; homeLibrary = false
+                        }
+                        currentGenreList.forEach { kind ->
+                            AnyTvCompactChip(kind.name, selectedHomeGenre == kind.id) {
+                                selectedHomeGenre = kind.id; homeLibrary = false
+                            }
+                        }
+                        TextButton(onClick = {
+                            editingGenreIds = preferredGenreIds; showGenreSettings = true
+                        }, contentPadding = PaddingValues(horizontal = 5.dp)) {
+                            Text("⚙ Listas", fontSize = 11.sp)
+                        }
+                    }
                     if (showGlobalSearch) {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -1231,28 +1280,6 @@ internal fun TclStreamingScreens(
                                 }
                             }
                             if (globalSearchResults.isEmpty()) Text("Nenhum resultado encontrado.")
-                        }
-                    }
-                    // One compact horizontal line: content type FIRST, then genres.
-                    val selectedGenreKind = if (homeContentType == "tv") "tv" else "movie"
-                    val currentGenreList = if (selectedGenreKind == "tv") tvGenres else mainGenres
-                    Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        // Content type is selected in the compact top navigation.
-                        FilterChip(selected = selectedHomeGenre == 0,
-                            onClick = { selectedHomeGenre = 0; homeLibrary = false },
-                            label = { Text("Todos", fontSize = 11.sp) })
-                        currentGenreList.forEach { kind ->
-                            FilterChip(selected = selectedHomeGenre == kind.id,
-                                onClick = {
-                                    selectedHomeGenre = kind.id; homeLibrary = false
-                                }, label = { Text(kind.name, fontSize = 11.sp) })
-                        }
-                        TextButton(onClick = {
-                            editingGenreIds = preferredGenreIds; showGenreSettings = true
-                        }, contentPadding = PaddingValues(horizontal = 5.dp)) {
-                            Text("⚙ Listas", fontSize = 11.sp)
                         }
                     }
                     if (discoveryLoading || (selectedHomeGenre != 0 &&
@@ -1497,14 +1524,26 @@ internal fun TclStreamingScreens(
                         }
                         Row(modifier = Modifier.fillMaxWidth()
                             .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FilterChip(selected = genre == 0,
-                                onClick = { genre = 0; page = 1 },
-                                label = { Text("Todos") })
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { selected = null; showGlobalSearch = true },
+                                modifier = Modifier.size(32.dp)) {
+                                Icon(Icons.Filled.Search, contentDescription = "Buscar em todos os títulos",
+                                    modifier = Modifier.size(20.dp))
+                            }
+                            AnyTvCompactChip("Filmes", media == "movie") {
+                                media = "movie"; genre = 0; page = 1
+                            }
+                            AnyTvCompactChip("Séries", media == "tv") {
+                                media = "tv"; genre = 0; page = 1
+                            }
+                            AnyTvCompactChip("Todos", genre == 0) {
+                                genre = 0; page = 1
+                            }
                             genres.forEach { option ->
-                                FilterChip(selected = genre == option.id,
-                                    onClick = { genre = option.id; page = 1 },
-                                    label = { Text(option.name) })
+                                AnyTvCompactChip(option.name, genre == option.id) {
+                                    genre = option.id; page = 1
+                                }
                             }
                         }
                     } else {
