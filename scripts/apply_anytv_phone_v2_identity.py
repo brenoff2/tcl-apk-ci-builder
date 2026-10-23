@@ -34,11 +34,6 @@ replace_exact(shared, 'suffix = "android/cert2026";', 'suffix = "android/v2";')
 replace_exact(shared,
               '} else if (PHONE_CERT_LEGACY.equals(signer)) {\n                        suffix = "android";\n',
               '')
-# With the explicit preceding branch ending brace removed above, ensure the
-# following 'else' attaches to the V2 certificate clause.
-replace_exact(shared,
-              'suffix = "android/v2";\n                     } else {',
-              'suffix = "android/v2";\n                     } else {') if False else None
 # Add visible launcher distinction; old app remains installed unchanged.
 replace_exact(base / "src/main/res/values/strings.xml",
               '<string name="app_name">AnyTV</string>',
