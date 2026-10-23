@@ -446,11 +446,23 @@ private object StreamingCatalog {
     /** Global search is independent of the installed-streaming provider. */
     suspend fun searchGlobal(query: String): List<StreamingTitle> = withContext(Dispatchers.IO) {
         require(query.length in 2..90)
-        val encoded = URLEncoder.encode(query, "UTF-8")
-        listOf("movie", "tv").flatMap { kind ->
-            val response = get("backend", "search/$kind?language=pt-BR&query=$encoded")
-            mapTitles(response.optJSONArray("results") ?: JSONArray(), kind, 0).take(12)
-        }
+        // Portuguese leading articles often differ between marketing and catalogue titles.
+        val normalized = query.trim()
+        val noArticle = normalized.replace(Regex("^[Oo]\\s+"), "")
+        val variants = listOf(normalized, noArticle).distinct()
+        val matches = variants.flatMap { wording ->
+            val encoded = URLEncoder.encode(wording, "UTF-8")
+            listOf("movie", "tv").flatMap { kind ->
+                val response = get("backend",
+                    "search/$kind?language=pt-BR&query=$encoded")
+                mapTitles(response.optJSONArray("results") ?: JSONArray(), kind, 0)
+                    .take(20)
+            }
+        }.distinctBy { "${it.media}:${it.id}" }
+        // Exact TV/movie titles must not be buried below fuzzy matches from the other kind.
+        matches.sortedWith(compareByDescending<StreamingTitle> {
+            norm(it.name) == norm(noArticle) || norm(it.name) == norm(normalized)
+        }.thenByDescending { it.votes }).take(30)
     }
 
     suspend fun trailer(media: String, id: Int): String? = withContext(Dispatchers.IO) {
@@ -1059,6 +1071,24 @@ internal fun TclStreamingScreens(
         }
     }
 
+    LaunchedEffect(selected?.packageName, media, filterGenreIds, allMovieGenres, tvGenres) {
+        val app = selected ?: return@LaunchedEffect
+        val choices = if (media == "tv") tvGenres else allMovieGenres
+        val selectedChoices = choices.filter { kind ->
+            kind.id in filterGenreIds || allMovieGenres.any {
+                it.name == kind.name && it.id in filterGenreIds
+            }
+        }.take(8)
+        for (kind in selectedChoices) {
+            val key = app.name + ":" + media + ":" + kind.id
+            if (key !in myServiceShelves) {
+                runCatching {
+                    StreamingCatalog.discover(token, app.name, media, 1, kind.id, "")
+                }.onSuccess { myServiceShelves[key] = it.titles.take(12) }
+            }
+        }
+    }
+
     fun openOnTv(app: TvOfficialApp) {
         if (host.isBlank() || pairing.isBlank()) {
             message = "Conecte o AnyTV Connect e vincule a TV antes de abrir aplicativos."
@@ -1549,6 +1579,43 @@ internal fun TclStreamingScreens(
                     } else {
                         Text("Filmes e séries favoritos de todos os serviços",
                             fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (!showSaved && filterGenreIds.isNotEmpty()) {
+                        val choices = if (media == "tv") tvGenres else allMovieGenres
+                        val selectedChoices = choices.filter { kind ->
+                            kind.id in filterGenreIds || allMovieGenres.any {
+                                it.name == kind.name && it.id in filterGenreIds
+                            }
+                        }.take(8)
+                        if (selectedChoices.isNotEmpty()) {
+                            Text("Gêneros escolhidos", fontWeight = FontWeight.SemiBold,
+                                fontSize = 13.sp)
+                            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 240.dp)
+                                .verticalScroll(rememberScrollState()),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                selectedChoices.forEach { kind ->
+                                    val shelf = myServiceShelves[app.name + ":" + media + ":" + kind.id]
+                                    if (!shelf.isNullOrEmpty()) {
+                                        Text(kind.name, fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium)
+                                        LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                            items(shelf) { found ->
+                                                Column(modifier = Modifier.width(96.dp).clickable {
+                                                    details = found; detailsPackage = app.packageName
+                                                }) {
+                                                    AnyTvPinnedImage(
+                                                        model = "https://image.tmdb.org/t/p/w185" + found.poster,
+                                                        contentDescription = found.name,
+                                                        modifier = Modifier.fillMaxWidth().height(122.dp),
+                                                        contentScale = ContentScale.Crop)
+                                                    Text(found.name, maxLines = 2, fontSize = 10.sp)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                     if (loading && !showSaved) CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     if (message != null) Text(message.orEmpty(), fontSize = 12.sp,
