@@ -508,6 +508,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()', self.screen)
         self.assertIn('if (kind == "movie" && selectedHomeGenre > 0)', self.screen)
         self.assertIn('if (pageGenreId == ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('cinemaIds = cinemaIds + result.titles.map { it.id }', self.screen)
         self.assertNotIn('inCinema = offerings.isEmpty()', self.screen)
 
     def test_three_row_cards_and_icon_only_genre_selector(self):
