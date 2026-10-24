@@ -1,3 +1,5 @@
+> **CONTINUIDADE MAIS RECENTE (24/10/2026):** a candidata V2 de interface e links está na branch `feat/anytv-p0-device-proof-verifier-20261020`/PR #3, **validada em CI**: Android #40060106346 (39+2 testes, Gradle PASS), Worker #40060118239 (32/32, dry-run PASS) e companion TV #40060021841 (7+3, Gradle PASS). **NÃO assinada, publicada, implantada nem testada no aparelho**. A versão disponível ainda é AnyTV 2.9.22/code51, Worker ce51439e. Estado e próximos gates: [QA candidata](../qa/ANYTV_V2_POST_2922_UI_LINKS_CANDIDATE.md), `docs/roadmap/PROJECT_PROGRESS.json`, 7/11=63%, F0–F8 não homologados. Não tratar 401/503 como indisponibilidade; diferenciar 404 `not_available` de 404 `no_supported_link` e 409 `ambiguous`.
+
 # ANYTV — PRIMEIRA MENSAGEM PARA O PRÓXIMO CHAT (ESTADO CORRETO E ATUAL)
 
 **Leia este texto como instrução de continuidade. Não reinicie o projeto, não confunda a V2 com o legado e não use o handoff arquivado de 2.9.12/2.9.13 como estado atual.**
