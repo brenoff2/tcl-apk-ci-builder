@@ -7,5 +7,5 @@
   "new_install_only": false,
   "release_version": "2.9.25-AnyTV",
   "release_scope": "Atualizar somente o aplicativo AnyTV para telefone com o pacote com.tclremote.livre.v2, versionCode 54 e versionName 2.9.25-AnyTV, preservando certificado V2 original, dados locais, vinculo com TCL, OTA exclusiva updates/android/v2/current.apk e backup inalterado updates/android/cert2026/current.apk; incluir redesign preto/grafite, direcional OK vermelho, banner cinema e melhorias recentes de busca/series/24 titulos. Exigir CI de contratos, Kotlin, IME, catalogo, signer SHA256, verificacao OTA HTTPS byte por byte, rollforward so code54; TV companion e Worker inalterados. QA fisica posterior.",
-  "ci_revision": 11
+  "ci_revision": 12
 }
