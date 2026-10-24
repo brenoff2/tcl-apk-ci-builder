@@ -147,7 +147,7 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('OfficialTvIcon(app = app, size = 52.dp)', apps)
         self.assertIn('Brush.horizontalGradient(listOf(', streaming)
         self.assertIn('modifier = Modifier.fillMaxWidth().height(92.dp)', streaming)
-        self.assertIn('color = Color(0xFF181A20)', playback)
+        self.assertIn('containerColor = Color(0xFF181A20)', playback)
         self.assertIn('KEYCODE_MEDIA_PLAY', playback)
         self.assertIn('KEYCODE_MEDIA_PAUSE', playback)
         self.assertIn('KEYCODE_MEDIA_STOP', playback)
