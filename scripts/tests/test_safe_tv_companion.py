@@ -83,6 +83,16 @@ class SafeTvCompanionTests(unittest.TestCase):
             self.assertIn(pkg, self.bridge)
             self.assertIn('android:name="' + pkg + '"', self.manifest)
 
+    def test_tv_companion_accepts_verified_prime_netflix_variants_only(self):
+        self.assertIn('path.matches("/title/[0-9]{6,9}/?")', self.bridge)
+        self.assertIn('path.matches("/detail/[0-9A-Z]{10,40}")', self.bridge)
+        self.assertIn('"www.primevideo.com".equals(host)', self.bridge)
+        self.assertIn('"app.primevideo.com".equals(host)', self.bridge)
+        self.assertIn('"https".equals(u.getScheme())', self.bridge)
+        self.assertIn('direct.setPackage(pkg)', self.bridge)
+        self.assertIn('validProviderTitleLink(pkg, url)', self.bridge)
+        self.assertNotIn('Intent.createChooser(', self.bridge)
+
     def test_package_and_version_and_no_old_java(self):
         self.assertIn('applicationId = "com.tclremote.tvcompanion"', self.gradle)
         self.assertIn("versionCode = " + ("16" if os.environ.get("TCL_TV_V25") == "1" else "15" if os.environ.get("TCL_TV_V24") == "1" else "14" if os.environ.get("TCL_TV_V23") == "1" else "13" if os.environ.get("TCL_TV_V22") == "1" else "12" if os.environ.get("TCL_TV_V21") == "1" else "11" if os.environ.get("TCL_TV_V20") == "1" else "10" if os.environ.get("TCL_TV_V19") == "1" else "9" if os.environ.get("TCL_TV_V18") == "1" else "8" if os.environ.get("TCL_TV_V17") == "1" else "7" if os.environ.get("TCL_TV_V16") == "1" else "6" if os.environ.get("TCL_TV_V15") == "1" else "5" if os.environ.get("TCL_TV_V14") == "1" else "4"), self.gradle)
