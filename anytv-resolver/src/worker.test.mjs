@@ -333,6 +333,54 @@ test("catalog proxy rejects arbitrary paths and regions without contacting TMDB"
   }
 });
 
+test("watched-film metadata route reads exact TMDB ID only, caches and rejects unsafe queries", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "movie-metadata-token";
+  const called = [];
+  const deps = { now: () => Date.parse("2026-10-24T12:00:00Z"),
+    fetch: async (url, init) => {
+      const upstream = new URL(url);
+      called.push(upstream);
+      assert.equal(upstream.hostname, "api.themoviedb.org");
+      assert.equal(upstream.pathname, "/3/movie/550");
+      assert.equal(upstream.searchParams.get("language"), "pt-BR");
+      assert.equal(upstream.searchParams.size, 1);
+      assert.equal(init.headers.Authorization, "Bearer movie-metadata-token");
+      return response({ id: 550, title: "Título oficial TMDB",
+        original_title: "Original title", poster_path: "/valid.jpg",
+        backdrop_path: "/backdrop.jpg", release_date: "1999-10-15",
+        genres: [{ id: 18, name: "Drama" }], vote_average: 8.3,
+        vote_count: 999, overview: "Sinopse publicada" });
+    } };
+  const req = request("/v1/catalog/movie/550?language=pt-BR");
+  for (let n = 0; n < 2; n++) {
+    const result = await catalogRequest(req, env, deps);
+    assert.equal(result.status, 200);
+    const value = await result.json();
+    assert.equal(value.id, 550);
+    assert.equal(value.title, "Título oficial TMDB");
+    assert.equal(value.poster_path, "/valid.jpg");
+    assert.equal(JSON.stringify(value).includes("movie-metadata-token"), false);
+  }
+  assert.equal(called.length, 1, "one TMDB request, second response from D1 cache");
+  assert.equal(env._cache.size, 1);
+  for (const path of [
+    "/v1/catalog/movie/0", "/v1/catalog/movie/-1",
+    "/v1/catalog/movie/0550", "/v1/catalog/movie/550/credits",
+    "/v1/catalog/movie/550?region=BR",
+    "/v1/catalog/movie/550?query=someone",
+    "/v1/catalog/movie/550?page=2",
+    "/v1/catalog/movie/550?with_watch_providers=2",
+    "/v1/catalog/movie/550?language=en-US",
+    "/v1/catalog/movie/550?language=pt-BR&language=pt-BR",
+  ]) {
+    assert.equal((await catalogRequest(request(path), env, deps)).status, 400, path);
+  }
+  assert.equal(called.length, 1, "invalid inputs must not contact upstream");
+  assert.equal((await handleRequest(new Request("https://resolver.example.test/v1/catalog/movie/550",
+    { method: "POST" }), env, deps)).status, 405, "movie details is GET-only");
+});
+
 test("catalog proxy keeps TMDB secret on server and caches read-only responses", async () => {
   const env = makeEnv();
   env.TMDB_READ_TOKEN = "secret-server-only";

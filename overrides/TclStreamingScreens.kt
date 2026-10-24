@@ -741,6 +741,26 @@ private object StreamingCatalog {
         key?.let { "https://www.youtube.com/watch?v=" + it }
     }
 
+    /** Recover ID-only watched films from authentic TMDB metadata only.
+     * The caller preserves IDs when an old deployed Worker returns HTTP 400.
+     */
+    suspend fun lookupMovie(id: Int): StreamingTitle? = withContext(Dispatchers.IO) {
+        if (id < 1) return@withContext null
+        val entry = get("backend", "movie/$id?language=pt-BR")
+        val name = entry.optString("title").ifBlank { entry.optString("original_title") }
+        if (entry.optInt("id") != id || name.isBlank()) return@withContext null
+        val genres = entry.optJSONArray("genres")
+        val genreIds = (0 until (genres?.length() ?: 0))
+            .map { genres!!.optJSONObject(it)?.optInt("id") ?: 0 }.filter { it > 0 }
+        val poster = entry.optString("poster_path").takeIf { it.startsWith("/") }.orEmpty()
+        val backdrop = entry.optString("backdrop_path").takeIf { it.startsWith("/") }.orEmpty()
+        StreamingTitle(id, name, entry.optString("overview"), poster, "movie",
+            rating = entry.optDouble("vote_average", 0.0),
+            votes = entry.optInt("vote_count", 0),
+            backdrop = backdrop, date = entry.optString("release_date"),
+            genreIds = genreIds)
+    }
+
     /** Recover legacy tracked shows whose title was lost from older editorial caches. */
     suspend fun lookupSeries(id: Int): StreamingTitle? = withContext(Dispatchers.IO) {
         if (id < 1) return@withContext null
@@ -1657,6 +1677,10 @@ internal fun TclStreamingScreens(
         mutableStateOf(prefs.getString("anytv_watched_movies", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
     }
+    // The existing public Worker rejects movie/{id}; probe at most once per
+    // screen session until its metadata route is separately approved/deployed.
+    var movieDetailRouteUnsupported by remember { mutableStateOf(false) }
+    var restoringWatchedMovies by remember { mutableStateOf(false) }
     fun toggleFilmWatched(title: StreamingTitle) {
         val key = title.id.toString()
         if (key !in watchedFilms) {
@@ -1674,14 +1698,45 @@ internal fun TclStreamingScreens(
         prefs.edit().putString("anytv_watched_movies",
             watchedFilms.sorted().joinToString(",")).apply()
     }
-    // Migrates legacy ID-only records when matching names/artwork already exist
-    // in favorites or the local TMDB snapshot cache. No Worker movie/{id} request.
+    // Recover legitimate local records first; only unknown IDs need the new
+    // server-side metadata lookup. Do not remove IDs, guess film titles or
+    // contact unapproved third-party APIs from the Android application.
     LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection) {
         if (homeLibrary && librarySection == "watched") {
-            val recovered = watchedFilms.mapNotNull(String::toIntOrNull).distinct()
-                .filter { it !in watchedMovieTitles }
+            val ids = watchedFilms.mapNotNull(String::toIntOrNull)
+                .filter { it > 0 }.distinct().sorted()
+            val locallyRecovered = ids.filter { it !in watchedMovieTitles }
                 .mapNotNull { restoreTrackedTitle("movie", it) }
-            preserveWatchedMovieTitles(recovered)
+            preserveWatchedMovieTitles(locallyRecovered)
+            if (!movieDetailRouteUnsupported) {
+                val missing = ids.filter { restoreTrackedTitle("movie", it) == null }
+                    .take(12)
+                if (missing.isNotEmpty()) {
+                    restoringWatchedMovies = true
+                    try {
+                        val remotelyRecovered = mutableListOf<StreamingTitle>()
+                        for (id in missing) {
+                            val film = try {
+                                StreamingCatalog.lookupMovie(id)
+                            } catch (error: java.util.concurrent.CancellationException) {
+                                throw error
+                            } catch (error: Exception) {
+                                // Old deployments reject the route with HTTP 400.
+                                // Stop after one probe, without flooding the Worker.
+                                if (error.message?.contains("(HTTP 400)") == true)
+                                    movieDetailRouteUnsupported = true
+                                // Offline or upstream unavailable: retry only on
+                                // a future visit; never delete the saved TMDB ID.
+                                break
+                            }
+                            if (film != null) remotelyRecovered.add(film)
+                        }
+                        preserveWatchedMovieTitles(remotelyRecovered)
+                    } finally {
+                        restoringWatchedMovies = false
+                    }
+                }
+            }
         }
     }
     var watchedEpisodes by remember {
@@ -2795,6 +2850,13 @@ internal fun TclStreamingScreens(
                             val missingIds = watchedFilms.mapNotNull(String::toIntOrNull)
                                 .distinct().filter { restoreTrackedTitle("movie", it) == null }
                                 .sorted()
+                            if (restoringWatchedMovies) {
+                                item {
+                                    Text("Recuperando metadados dos filmes antigos…",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp)
+                                }
+                            }
                             if (missingIds.isNotEmpty()) {
                                 item {
                                     Text("${missingIds.size} registros antigos permanecem " +

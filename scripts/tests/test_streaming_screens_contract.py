@@ -706,11 +706,12 @@ class StreamingScreens(unittest.TestCase):
         migration = self.screen.split(
             'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection)', 1)[1].split(
             'var watchedEpisodes by remember', 1)[0]
-        self.assertIn('watchedFilms.mapNotNull(String::toIntOrNull).distinct()', migration)
+        self.assertIn('watchedFilms.mapNotNull(String::toIntOrNull)', migration)
         self.assertIn('.filter { it !in watchedMovieTitles }', migration)
         self.assertIn('restoreTrackedTitle("movie", it)', migration)
-        self.assertIn('preserveWatchedMovieTitles(recovered)', migration)
-        self.assertNotIn('StreamingCatalog.lookupMovie', migration)
+        self.assertIn('preserveWatchedMovieTitles(locallyRecovered)', migration)
+        self.assertIn('StreamingCatalog.lookupMovie(id)', migration)
+        self.assertIn('preserveWatchedMovieTitles(remotelyRecovered)', migration)
         self.assertNotIn('movie/$id', migration)
 
     def test_legacy_watched_ids_remain_visible_without_invented_movie_metadata(self):
@@ -733,6 +734,50 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('items(shelf.take(sectionVisibleCount).chunked(3))', self.screen)
         self.assertNotIn('StreamingTitle(id, "Filme', library)
         self.assertNotIn('https://image.tmdb.org/t/p/w342" + id', library)
+
+    def test_watched_movie_detail_uses_server_metadata_with_id_validation(self):
+        lookup = self.screen.split('suspend fun lookupMovie(id: Int): StreamingTitle?', 1)[1].split(
+            '/** Recover legacy tracked shows', 1)[0]
+        for fragment in (
+            'if (id < 1) return@withContext null',
+            'get("backend", "movie/$id?language=pt-BR")',
+            'entry.optString("title").ifBlank { entry.optString("original_title") }',
+            'entry.optInt("id") != id || name.isBlank()',
+            'entry.optJSONArray("genres")',
+            'poster_path', 'backdrop_path', 'release_date',
+            'StreamingTitle(id, name, entry.optString("overview"), poster, "movie"',
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, lookup)
+        self.assertNotIn('api.themoviedb.org/3/movie/', lookup)
+        self.assertNotIn('TMDB_READ_TOKEN', lookup)
+        self.assertNotIn('StreamingCatalog.searchGlobal(', lookup)
+
+    def test_remote_history_restore_is_bounded_and_old_worker_fails_closed(self):
+        effect = self.screen.split(
+            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection)', 1)[1].split(
+            'var watchedEpisodes by remember', 1)[0]
+        for fragment in (
+            'if (homeLibrary && librarySection == "watched")',
+            'preserveWatchedMovieTitles(locallyRecovered)',
+            'if (!movieDetailRouteUnsupported)',
+            'val missing = ids.filter { restoreTrackedTitle("movie", it) == null }',
+            '.take(12)', 'restoringWatchedMovies = true',
+            'StreamingCatalog.lookupMovie(id)',
+            'java.util.concurrent.CancellationException',
+            'throw error',
+            'error.message?.contains("(HTTP 400)") == true',
+            'movieDetailRouteUnsupported = true',
+            'break', 'preserveWatchedMovieTitles(remotelyRecovered)',
+            'restoringWatchedMovies = false',
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, effect)
+        self.assertIn('Recuperando metadados dos filmes antigos…', self.screen)
+        self.assertIn('if (missingIds.isNotEmpty())', self.screen)
+        self.assertIn('IDs TMDB: ', self.screen)
+        self.assertNotIn('watchedFilms = watchedFilms -', effect)
+        self.assertNotIn('favorites =', effect)
 
     def test_watched_poster_preserves_title_without_favorite_or_cache_ttl(self):
         self.assertIn('fun toggleFilmWatched(title: StreamingTitle)', self.screen)

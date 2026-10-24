@@ -170,7 +170,7 @@ export async function catalogRequest(request, env, deps = {}) {
     /^watch\/providers\/(movie|tv)$/,
     /^(movie|tv)\/[1-9][0-9]{0,9}\/watch\/providers$/,
     /^(movie|tv)\/[1-9][0-9]{0,9}\/external_ids$/,
-    /^tv\/[1-9][0-9]{0,9}$/,
+    /^(movie|tv)\/[1-9][0-9]{0,9}$/,
     /^tv\/[1-9][0-9]{0,9}\/season\/[0-9]{1,3}$/,
     /^(discover|search)\/(movie|tv)$/,
     /^trending\/(movie|tv)\/(day|week)$/,
@@ -188,6 +188,12 @@ export async function catalogRequest(request, env, deps = {}) {
   const keys = [...parsed.searchParams.keys()];
   if (keys.length > 9 || keys.some(k => !allowed.has(k)) ||
       new Set(keys).size !== keys.length) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  // A watched-film ID lookup needs only localized read-only metadata.
+  // Keep all other discovery, provider and arbitrary query parameters blocked.
+  if (/^movie\/[1-9][0-9]{0,9}$/.test(route) &&
+      keys.some(k => k !== "language")) {
     return asJson({ status: "bad_request" }, 400);
   }
   const page = parsed.searchParams.get("page") || "1";
