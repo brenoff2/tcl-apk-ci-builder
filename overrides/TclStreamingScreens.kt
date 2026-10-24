@@ -2259,12 +2259,25 @@ internal fun TclStreamingScreens(
                                     else -> null
                                 }
                             }
+                            // A provider-specific genre rail must remain within
+                            // that provider on Ver mais and every subsequent page.
+                            val selectedGenreProvider = selected?.takeIf {
+                                sectionTitle.startsWith("Por gênero: ")
+                            }?.let { app ->
+                                val sourceGenres = if (media == "tv") tvGenres else allMovieGenres
+                                sourceGenres.firstOrNull {
+                                    it.name == sectionTitle.removePrefix("Por gênero: ")
+                                }?.let { genreItem ->
+                                    Triple(app.name, media, genreItem.id)
+                                }
+                            }
                             val homeProvider = activeServiceNames.firstOrNull { name ->
                                 sectionTitle == "Destaques $name · Filmes" ||
                                     sectionTitle == "Destaques $name · Séries"
                             }
                             val sectionCanPage = editorialRoute != null ||
-                                selectedProvider != null || homeProvider != null
+                                selectedProvider != null || selectedGenreProvider != null ||
+                                homeProvider != null
                             item {
                                 TextButton(onClick = { openedSection = null }) {
                                     Text("‹ Voltar às seções")
@@ -2313,6 +2326,11 @@ internal fun TclStreamingScreens(
                                                                     else selectedHomeGenre.coerceAtLeast(0),
                                                                     if (sectionTitle.startsWith(
                                                                             "Em destaque ·")) searchTerm else "")
+                                                            selectedGenreProvider != null ->
+                                                                StreamingCatalog.discover(token,
+                                                                    selectedGenreProvider.first,
+                                                                    selectedGenreProvider.second, next,
+                                                                    selectedGenreProvider.third, "")
                                                             homeProvider != null -> {
                                                                 // Mirror the initial home shelf: its TV
                                                                 // source is unfiltered, even in movie genre.
@@ -2709,6 +2727,11 @@ internal fun TclStreamingScreens(
                                                         homeContentType = "movie"
                                                         selectedHomeGenre = ANYTV_CINEMA_FILTER
                                                         openedSection = null
+                                                    }
+                                                    heading.startsWith("Por gênero: ") &&
+                                                        selected != null -> {
+                                                        // Keep this streaming's own genre catalog.
+                                                        openedSection = heading
                                                     }
                                                     targetGenre != null -> {
                                                         selected = null

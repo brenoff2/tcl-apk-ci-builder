@@ -535,6 +535,26 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
         self.assertIn('AnyTvOneRowPreview("Em breve · Cinema"', self.screen)
 
+    def test_provider_genre_ver_mais_keeps_service_and_loads_next_24(self):
+        page = self.screen.split('if (openedSection != null) {', 1)[1].split(
+            '} // standalone section or main catalogue', 1)[0]
+        self.assertIn('val selectedGenreProvider = selected?.takeIf {', page)
+        self.assertIn('sectionTitle.startsWith("Por gênero: ")', page)
+        self.assertIn('val sourceGenres = if (media == "tv") tvGenres else allMovieGenres', page)
+        self.assertIn('Triple(app.name, media, genreItem.id)', page)
+        self.assertIn('selectedProvider != null || selectedGenreProvider != null ||', page)
+        self.assertIn('selectedGenreProvider != null ->', page)
+        self.assertIn('selectedGenreProvider.first,', page)
+        self.assertIn('selectedGenreProvider.second, next,', page)
+        self.assertIn('selectedGenreProvider.third, "")', page)
+        nav = self.screen.split('val targetGenre = if (heading.startsWith("Por gênero: "))', 1)[1].split(
+            'modifier = Modifier.height(34.dp)', 1)[0]
+        self.assertLess(nav.index('heading.startsWith("Por gênero: ") &&'),
+                        nav.index('targetGenre != null ->'))
+        self.assertIn('selected != null -> {', nav)
+        self.assertIn('openedSection = heading', nav)
+        self.assertIn('selectedHomeGenre = targetGenre.id', nav)
+
     def test_ver_mais_editorial_and_provider_pages_fetch_next_24(self):
         for snippet in (
             'suspend fun discoveryShelfPage(route: String, media: String, page: Int)',
