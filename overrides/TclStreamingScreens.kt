@@ -1082,6 +1082,7 @@ internal fun TclStreamingScreens(
     var titleActionPending by remember { mutableStateOf(false) }
     var titleActionFeedback by remember { mutableStateOf<String?>(null) }
     var deviceLinkStatus by remember { mutableStateOf<String?>(null) }
+    var deviceIdSuffix by remember { mutableStateOf<String?>(null) }
     var linkActivationRequired by remember { mutableStateOf(false) }
     var deviceActivationCode by remember { mutableStateOf("") }
     var deviceActivationPending by remember { mutableStateOf(false) }
@@ -2301,7 +2302,7 @@ internal fun TclStreamingScreens(
             onDismissRequest = {
                 details = null; detailsPackage = null; titleActionFeedback = null
                 deviceActivationCode = ""; linkActivationRequired = false
-                deviceLinkStatus = null
+                deviceLinkStatus = null; deviceIdSuffix = null
             },
             title = {
                 Row(modifier = Modifier.fillMaxWidth(),
@@ -2358,6 +2359,9 @@ internal fun TclStreamingScreens(
                     TextButton(onClick = {
                         scope.launch {
                             val state = AnyTvPersonalLinks.activationStatus(context)
+                            deviceIdSuffix = withContext(Dispatchers.IO) {
+                                runCatching { AnyTvDeviceIdentity.deviceId(context).takeLast(8) }.getOrNull()
+                            }
                             linkActivationRequired = state == "unauthorized"
                             deviceActivationCode = ""
                             deviceLinkStatus = when (state) {
@@ -2375,7 +2379,7 @@ internal fun TclStreamingScreens(
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         // Each APK has a separate Android Keystore identity.
                         Text("Instalação: " + context.packageName + " · " +
-                            AnyTvDeviceIdentity.deviceId(context).takeLast(8),
+                            (deviceIdSuffix ?: "não identificada"),
                             fontSize = 10.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
