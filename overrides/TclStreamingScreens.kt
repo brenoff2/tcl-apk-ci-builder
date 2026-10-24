@@ -1811,10 +1811,9 @@ internal fun TclStreamingScreens(
                         }.take(10)
                     }
                     val uniqueShelves = filteredShelves.mapNotNull { (heading, shelf) ->
-                        val unique = shelf.filter {
-                            homeLibrary || it.media != "movie" ||
-                                it.id.toString() !in watchedFilms
-                        }.distinctBy { "${it.media}:${it.id}" }
+                        // Keep cards visible when marked so the green check reflects
+                        // the new state immediately; Assistidos keeps its own view.
+                        val unique = shelf.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty()) null else heading to unique
                     }
                     LazyColumn(state = catalogScrollState,
