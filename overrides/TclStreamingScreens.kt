@@ -2300,6 +2300,8 @@ internal fun TclStreamingScreens(
         AlertDialog(
             onDismissRequest = {
                 details = null; detailsPackage = null; titleActionFeedback = null
+                deviceActivationCode = ""; linkActivationRequired = false
+                deviceLinkStatus = null
             },
             title = {
                 Row(modifier = Modifier.fillMaxWidth(),
