@@ -550,6 +550,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('else -> openedSection = heading', self.screen)
         self.assertIn('items(sectionTitles.chunked(3))', self.screen)
         self.assertIn('Text("‹ Voltar às seções")', self.screen)
+        self.assertIn('LaunchedEffect(openedSection) {', self.screen)
+        self.assertIn('catalogScrollState.scrollToItem(0)', self.screen)
         self.assertNotIn('expandedHomeShelf', self.screen)
         self.assertNotIn('shelf.chunked(3).forEach', self.screen)
 
