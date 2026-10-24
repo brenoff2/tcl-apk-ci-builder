@@ -81,6 +81,8 @@ import java.security.MessageDigest
 import java.text.Normalizer
 
 internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "", val genreIds: List<Int> = emptyList())
+private const val ANYTV_CINEMA_FILTER = -1
+private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
 internal data class StreamingGenre(val id: Int, val name: String)
 internal data class StreamingSeason(val number: Int, val name: String, val count: Int)
 internal data class StreamingEpisode(val number: Int, val name: String, val airDate: String)
@@ -480,8 +482,20 @@ private object StreamingCatalog {
             require(route in setOf("trending/movie/week", "trending/tv/week",
                 "movie/now_playing", "movie/top_rated", "tv/on_the_air",
                 "movie/upcoming", "movie/popular"))
-            val payload = get("backend", route + "?language=pt-BR")
+            val suffix = if (route == "movie/now_playing") "&region=BR" else ""
+            val payload = get("backend", route + "?language=pt-BR" + suffix)
             mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+        }
+
+    /** TMDB theatrical listing for BR; no guessing from absent provider logos. */
+    suspend fun discoveryCinemaPage(page: Int): StreamingResults =
+        withContext(Dispatchers.IO) {
+            require(page in 1..50)
+            val payload = get("backend",
+                "movie/now_playing?language=pt-BR&region=BR&page=$page")
+            StreamingResults(
+                mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", 0),
+                page < payload.optInt("total_pages", page))
         }
 
     /** A genre page contains up to 20 real TMDB entries; page 2+ is user-triggered. */
@@ -1072,6 +1086,16 @@ internal fun TclStreamingScreens(
     }
     var discoveryLoading by remember { mutableStateOf(false) }
     var discoveryError by remember { mutableStateOf<String?>(null) }
+    // Only positive matches in Brazil's now-playing feed receive the Cinema badge.
+    var cinemaIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    LaunchedEffect(token) {
+        for (page in 1..5) {
+            val response = runCatching { StreamingCatalog.discoveryCinemaPage(page) }
+                .getOrNull() ?: break
+            cinemaIds = cinemaIds + response.titles.map { it.id }
+            if (!response.more) break
+        }
+    }
 
     var all by remember { mutableStateOf(false) }
     var media by remember { mutableStateOf("movie") }
@@ -1260,7 +1284,8 @@ internal fun TclStreamingScreens(
             choices.filter { it.id in filterGenreIds ||
                 mainGenres.any { movie -> movie.id in filterGenreIds && movie.name == it.name } }
                 .map { it.id }
-        } else listOf(selectedHomeGenre)
+        } else if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()
+          else listOf(selectedHomeGenre)
         for (id in requested) {
             val key = "$mediaKind:$id" +
                 if (selectedHomeGenre > 0) ":$genreSort" else ""
@@ -1278,13 +1303,31 @@ internal fun TclStreamingScreens(
         }
     }
 
+    LaunchedEffect(selectedHomeGenre, homeContentType, genreSort) {
+        if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
+            val key = "movie:$ANYTV_CINEMA_FILTER:$genreSort"
+            if (key !in genreShelves) {
+                runCatching { StreamingCatalog.discoveryCinemaPage(1) }
+                    .onSuccess {
+                        genreShelves[key] = it.titles
+                        cinemaIds = cinemaIds + it.titles.map { title -> title.id }
+                        genrePage[key] = 1
+                        genreMore[key] = it.more
+                    }.onFailure {
+                        genreErrors[key] = "Não foi possível consultar cinemas no Brasil."
+                    }
+            }
+        }
+    }
+
     LaunchedEffect(activeServiceNames, selectedHomeGenre, homeContentType) {
         for (name in activeServiceNames) {
             val kinds = listOf("movie", "tv").filter {
                 homeContentType == "all" || it == homeContentType
             }
             for (kind in kinds) {
-                val chosenGenre = if (kind == "movie") selectedHomeGenre else 0
+                val chosenGenre = if (kind == "movie" && selectedHomeGenre > 0)
+                    selectedHomeGenre else 0
                 val key = name + ":" + kind + ":" + chosenGenre
                 if (key !in myServiceShelves) {
                     runCatching {
@@ -1317,7 +1360,7 @@ internal fun TclStreamingScreens(
         val shelves = linkedMapOf<String, List<StreamingTitle>>()
         for ((name, route, kind) in listOf(
             Triple("Em alta nesta semana", "trending/movie/week", "movie"),
-            Triple("Lançamentos recentes", "movie/now_playing", "movie"),
+            Triple(ANYTV_CINEMA_SHELF, "movie/now_playing", "movie"),
             Triple("Mais bem avaliados no TMDB", "movie/top_rated", "movie"),
             Triple("Séries em destaque", "trending/tv/week", "tv"),
             Triple("Novidades em séries", "tv/on_the_air", "tv"),
@@ -1778,7 +1821,8 @@ internal fun TclStreamingScreens(
                                     homeContentType == "all" || it == homeContentType
                                 }
                                 kinds.forEach { kind ->
-                                    val chosenGenre = if (kind == "movie") selectedHomeGenre else 0
+                                    val chosenGenre = if (kind == "movie" && selectedHomeGenre > 0)
+                    selectedHomeGenre else 0
                                     val key = name + ":" + kind + ":" + chosenGenre
                                     myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
                                         put("Destaques " + name +
