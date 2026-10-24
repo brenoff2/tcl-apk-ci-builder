@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const base64url = b => Buffer.from(b).toString("base64url");
 
 export function issueActivation({ now = Math.floor(Date.now() / 1000),
-  activationSeconds = 600, deviceDays = 30, random = randomBytes } = {}) {
+  activationSeconds = 600, deviceDays = 365, random = randomBytes } = {}) {
   if (!Number.isSafeInteger(now) || now <= 0 ||
       !Number.isSafeInteger(activationSeconds) || activationSeconds < 60 ||
       activationSeconds > 3600 || !Number.isSafeInteger(deviceDays) ||
