@@ -17,8 +17,9 @@
 ## Contratos e evidências
 
 - O arquivo `scripts/tests/test_streaming_screens_contract.py` inclui regressões que exigem a visibilidade da prateleira mesmo com zero títulos, a preservação do botão em páginas vazias, o teto de 50 páginas do endpoint de futuros, mensagens honestas e consistência das chaves e dos gêneros entre página inicial, provedor, Filmes, Séries, Todos e páginas seguintes.
-- [CI unsigned Android #40127722728](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40127722728): **COMPLETED/SUCCESS (64 testes Streaming + 2 credenciais + 11 visuais; Gradle BUILD SUCCESSFUL 4m41s; identidade V2/code54; artefato unsigned #12574245289)**.
-- [CI isolada P0 #40127722710](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40127722710): **COMPLETED/SUCCESS**.
+- [CI intermediário unsigned #40127722728](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40127722728): **COMPLETED/FAILURE**, por asserção textual desatualizada de teste após ajustar parênteses; esta execução não concluiu a compilação Android. **Não usar como prova de build.**
+- [CI unsigned final #40127825662](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40127825662): **COMPLETED/SUCCESS (64 testes Streaming + 2 credenciais + 11 visuais; Gradle BUILD SUCCESSFUL 4m41s; identidade V2/code54; artefato unsigned #12574245289)**.
+- [Prova isolada final #40127825663](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40127825663): **COMPLETED/SUCCESS**.
 - Upstream: referência ao estado `LaunchedEffect` e `remember` no repositório oficial `androidx/androidx` e regras de `page`/discover/watch-provider do TMDB já implementadas na allowlist do Worker e no contrato de catálogo do projeto.
 
 ## QA físico e riscos restantes

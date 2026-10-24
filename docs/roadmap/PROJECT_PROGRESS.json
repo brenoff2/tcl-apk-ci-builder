@@ -256,6 +256,10 @@
     {
       "date": "2026-10-24",
       "event": "DEV AnyTV: ef73ec03 corrige Em breve Streaming sem titulo BR na primeira pagina (ainda navegavel pelas paginas 2-50, sem falsos resultados), mensagens explicitas, e consistencia dos filtros de genero movie/TV para home, provedor, Ver mais e paginas seguintes. Teste textual legado corrigido isoladamente em 229b7567. Primeiro CI #40127722728 FAILED (expectativa de uma linha obsoleta); novo CI #40127825662 COMPLETED/SUCCESS (64 testes Streaming + 2 credenciais + 11 visuais; Gradle BUILD SUCCESSFUL 4m41s; identidade V2/code54; artefato unsigned #12574245289), prova isolada #40127825663 COMPLETED/SUCCESS. QA docs/qa/ANYTV_20261024_EMPTY_FUTURE_PROVIDER_GENRES.md. Somente DEV/PR #3 DRAFT. OTA oficial 2.9.25/code54 intocada. Android/TCL fisicos NAO_TESTADOS, P0 7/11=63%, F0-F8 NAO_HOMOLOGADO."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "AnyTV DEV/PR #3: commit 4ade163d preserva metadados reais dos filmes assistidos em SharedPreferences (anytv_watched_movie_titles_v1), migra ID-only a partir de favoritos/cache existente em lote, exibe sem inventar nome/cartaz IDs TMDB ainda sem metadados; sem Worker ou API novo, sem alteraçao de poster/ícones/OTA. CI unsigned #40129882058 COMPLETED/SUCCESS: 66 contratos Streaming + 2 credenciais + 11 visuais; Gradle BUILD SUCCESSFUL em 3m13s; Android com.tclremote.livre.v2/versionCode54 verificado, artefato #12574047328 (anytv-v2-2925-code54-unsigned-audit, 23.285.790 bytes), prova isolada #40129882062 COMPLETED/SUCCESS. QA docs/qa/ANYTV_20261024_WATCHED_HISTORY_LEGACY_IDS.md. OTA oficial 2.9.25/code54 intocada, sem merge/assinatura/deploy; Android/TCL físicos NAO_TESTADOS; progresso 7/11=63%, F0-F8 NAO_HOMOLOGADO."
     }
   ],
   "discovery_v3": {
