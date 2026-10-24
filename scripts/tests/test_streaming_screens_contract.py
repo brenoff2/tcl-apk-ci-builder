@@ -82,7 +82,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("‹ Anterior")', self.screen)
         self.assertNotIn('Text("Próximo ›")', self.screen)
         self.assertLess(
-            self.screen.index("LazyColumn(modifier = Modifier.weight(1f))"),
+            self.screen.index("LazyColumn(state = catalogScrollState,"),
             self.screen.index("HorizontalPager(", self.screen.index("val heroTitles =")))
         self.assertIn(".heightIn(max = 460.dp)", self.screen)
         self.assertIn(".verticalScroll(rememberScrollState())", self.screen)
@@ -364,7 +364,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('window.navigationBarColor = systemBg.toArgb()', home)
         self.assertIn('window.statusBarColor = systemBg.toArgb()', home)
         self.assertIn('window.navigationBarColor = systemBg.toArgb()', home)
-        self.assertIn('Modifier.weight(0.3f)', self.screen)
+        self.assertIn('Modifier.fillMaxHeight().weight(0.3f)', self.screen)
         self.assertIn('Modifier.fillMaxHeight().weight(0.7f)', self.screen)
         self.assertNotIn('Canal não informado', self.screen)
 
