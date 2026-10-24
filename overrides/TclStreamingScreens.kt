@@ -768,7 +768,13 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
     LaunchedEffect(Unit) {
         StreamingCatalog.configure(context)
         bannerCinemaIds = runCatching {
-            StreamingCatalog.discoveryCinemaPage(1).titles.map { it.id }.toSet()
+            val ids = mutableSetOf<Int>()
+            for (page in 1..5) {
+                val response = StreamingCatalog.discoveryCinemaPage(page)
+                ids.addAll(response.titles.map { it.id })
+                if (!response.more) break
+            }
+            ids.toSet()
         }.getOrDefault(emptySet())
         // discoveryShelf appends language itself: never pass a duplicate query.
         previews = runCatching {
@@ -1921,15 +1927,7 @@ internal fun TclStreamingScreens(
                                         if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
                                     }
                                 }
-                                val future = upcomingStreaming.filter {
-                                    homeContentType == "all" || it.media == homeContentType
-                                }
-                                if (future.isNotEmpty()) put("Em breve · Streaming", future)
-                                if (homeContentType != "tv") {
-                                    discoveryShelves[ANYTV_CINEMA_SHELF]?.let { cinema ->
-                                        if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)
-                                    }
-                                }
+
                             } else {
                                 val kind = currentGenreList.firstOrNull { it.id == selectedHomeGenre }
                                 genreShelves["$selectedGenreKind:$selectedHomeGenre:$genreSort"]
@@ -1939,6 +1937,15 @@ internal fun TclStreamingScreens(
                             }
                         }
                         if (!homeLibrary && selected == null && selectedHomeGenre == 0) {
+                            val future = upcomingStreaming.filter {
+                                homeContentType == "all" || it.media == homeContentType
+                            }
+                            if (future.isNotEmpty()) put("Em breve · Streaming", future)
+                            if (homeContentType != "tv") {
+                                discoveryShelves[ANYTV_CINEMA_SHELF]?.let { cinema ->
+                                    if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)
+                                }
+                            }
                                 currentGenreList.filter { it.id in filterGenreIds ||
                                     mainGenres.any { m -> m.id in filterGenreIds && m.name == it.name } }
                                     .forEach { kind ->
