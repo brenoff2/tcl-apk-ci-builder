@@ -1063,7 +1063,9 @@ private fun AnyTvOneRowPreview(
             LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 items(titles.distinctBy { "${it.media}:${it.id}" }
                     .take(ANYTV_LIST_BATCH)) { title ->
-                    card(title, Modifier.width(cardWidth), heading.contains("Cinema"))
+                    // International and upcoming cinema listings are not proof of
+                    // being in theaters in Brazil. Only cinemaIds identifies BR titles.
+                    card(title, Modifier.width(cardWidth), false)
                 }
             }
         }
@@ -2311,12 +2313,17 @@ internal fun TclStreamingScreens(
                                                                     else selectedHomeGenre.coerceAtLeast(0),
                                                                     if (sectionTitle.startsWith(
                                                                             "Em destaque ·")) searchTerm else "")
-                                                            homeProvider != null ->
+                                                            homeProvider != null -> {
+                                                                // Mirror the initial home shelf: its TV
+                                                                // source is unfiltered, even in movie genre.
+                                                                val homeKind = if (sectionTitle.endsWith("· Séries"))
+                                                                    "tv" else "movie"
+                                                                val homeGenre = if (homeKind == "movie")
+                                                                    selectedHomeGenre.coerceAtLeast(0) else 0
                                                                 StreamingCatalog.discover(token,
-                                                                    homeProvider,
-                                                                    if (sectionTitle.endsWith("· Séries"))
-                                                                        "tv" else "movie", next,
-                                                                    selectedHomeGenre.coerceAtLeast(0), "")
+                                                                    homeProvider, homeKind, next,
+                                                                    homeGenre, "")
+                                                            }
                                                             else -> StreamingResults(emptyList(), false)
                                                         }
                                                     }.onSuccess { result ->

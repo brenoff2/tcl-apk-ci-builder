@@ -502,9 +502,38 @@ class StreamingScreens(unittest.TestCase):
             self.assertIn(value, nav)
         self.assertEqual(nav.count('TclHeaderAction(Icons.Filled.'), 6)
 
-    def test_provider_ver_mais_preserves_active_genre_in_next_batch(self):
+    def test_provider_ver_mais_uses_same_media_genre_as_initial_shelf(self):
+        # Home provider movie shelves use the selected movie genre, but TV
+        # shelves always use 0. Page 2 must not accidentally apply movie IDs
+        # to TMDB discover/tv and silently empty the series section.
+        source = self.screen.split('LaunchedEffect(activeServiceNames,', 1)[1].split(
+            '// Provider pages reuse the home carousel', 1)[0]
+        self.assertIn('if (kind == "movie" && selectedHomeGenre > 0)', source)
+        self.assertIn('selectedHomeGenre else 0', source)
+        page = self.screen.split('homeProvider != null -> {', 1)[1].split(
+            'else -> StreamingResults(emptyList(), false)', 1)[0]
+        self.assertIn('val homeKind = if (sectionTitle.endsWith("· Séries"))', page)
+        self.assertIn('val homeGenre = if (homeKind == "movie")', page)
+        self.assertIn('selectedHomeGenre.coerceAtLeast(0) else 0', page)
+        self.assertIn('homeProvider, homeKind, next,', page)
+        self.assertIn('homeGenre, "")', page)
+        self.assertNotIn('selectedHomeGenre.coerceAtLeast(0), "")', page)
+        # Provider-specific "Em destaque" remains tied to the current
+        # provider search and genre, not the home provider fallback.
         self.assertIn('else selectedHomeGenre.coerceAtLeast(0),', self.screen)
-        self.assertIn('"tv" else "movie", next,', self.screen)
+        self.assertIn('searchTerm else "")', self.screen)
+
+    def test_international_and_future_rails_never_invent_cinema_br(self):
+        preview = self.screen.split('private fun AnyTvOneRowPreview(', 1)[1].split(
+            '/** Compact, single-line score', 1)[0]
+        self.assertIn('card(title, Modifier.width(cardWidth), false)', preview)
+        self.assertNotIn('heading.contains("Cinema")', preview)
+        # Each individual poster still carries an independently confirmed
+        # BR now-playing Cinema marker (when the movie is in cinemaIds).
+        self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', self.screen)
+        self.assertIn('inCinema = current.id in cinemaIds', self.screen)
+        self.assertIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
+        self.assertIn('AnyTvOneRowPreview("Em breve · Cinema"', self.screen)
 
     def test_ver_mais_editorial_and_provider_pages_fetch_next_24(self):
         for snippet in (
