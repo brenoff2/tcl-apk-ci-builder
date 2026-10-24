@@ -208,6 +208,10 @@
     {
       "date": "2026-10-24",
       "event": "Nova rodada UX AnyTV 2.9.25 DEV: corrigido desaparecimento intermitente em Séries em andamento com metadados próprios anytv_watching_titles_v1, lookup TV para dados legados e proteção saved_title_*.json contra evicção do catálogo; grade 2 colunas, busca local, ordenação estável, reset de scroll por aba/consulta. Busca global agora Dialog tela cheia preta com botões separados Fechar/Limpar, rolagem vertical de resultados, histórico local limitado 10 consultas explícitas e exclusão. Commits de código ece07158 0e307755 40526a9c c3ccdec0 67643c8b d7b0aaf9; testes 7d77ef03; CI candidato unsigned code54 run 40103094753 contratos SUCCESS, Gradle ainda em execução no último readback. QA docs/qa/ANYTV_2925_WATCHING_SEARCH_OVERLAY_20261024.md. Nenhuma atualização OTA signer/Worker/TV/merge. P0 7/11=63%, gates F0-F8 NAO_HOMOLOGADO."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "Nova proposta visual do controle principal AnyTV recebida em screenshot (709x1536). Implementada na branch DEV: HOME preto grafite #08090D/acento #E9003B e cabeçalho duplo (TV + subtítulo Android TV), três ações circulares, seis atalhos padrão de apps REALMENTE instalados, hero TMDB full-bleed 92dp, transporte grafite sem moldura, D-pad radial até 304dp com OK 28% e aro vermelho sem borda externa, laterais volume/canal com trilho decorativo SEM percentual falso e cinco atalhos redondos inferiores. Preservados todos os callbacks/pressões longas e dados. Transformador sticky scripts/apply_tcl_sticky_controls.py atualizado para manter rodapé/dpad. Testes scripts/tests/test_approved_visual_contract.py e test_streaming_screens_contract.py atualizados, CI DEV 40104547392 contratos SUCCESS, Gradle em andamento no último readback. Relatório docs/qa/ANYTV_2925_REMOTE_VISUAL_20261024.md. Nenhuma assinatura/OTA/Worker/D1/companion/merge. Última OTA V2 assinada 2.9.24/code53. Gate P0 7/11=63%, F0-F8 NAO_HOMOLOGADO; QA física permanece pendente."
     }
   ],
   "discovery_v3": {
