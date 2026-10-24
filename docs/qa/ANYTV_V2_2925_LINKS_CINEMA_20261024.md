@@ -1,0 +1,28 @@
+# AnyTV V2 — logos completos, cinema e solicitação de acesso sem código no aplicativo
+
+**Data de implementação:** 2026-10-24. **Branch:** `feat/anytv-p0-device-proof-verifier-20261020`, PR #3 draft.  
+**Status técnico:** Android candidata **2.9.24/code53** (compilada sem assinatura após alterações), Worker de solicitação de acesso publicado e testado. **Próxima OTA assinada 2.9.25/code54 NÃO PUBLICADA** — atualização do workflow protegido foi bloqueada pelo controle de segurança da ferramenta. Não contornar, não distribuir APK unsigned.
+
+## Alterações efetivamente gravadas
+
+1. `overrides/TclStreamingScreens.kt`: os ícones de provedores confirmados no Brasil são exibidos independentemente dos aplicativos instalados; `StreamingOfferIcons` não corta mais a lista após 2/4; usa linha compacta com rolagem horizontal. Provedores distintos por `provider_id` e identidade canônica já deduplicada em `offersInBrazil()`. Usa ícone instalado quando correspondente, ou logo TMDB `logo_path` quando não instalado. Não inventar disponibilidade.
+2. Categoria e selo azul **Cinema** com `movie/now_playing?region=BR` já haviam sido implementados na candidata anterior e foram preservados. A nova ficha oferece **Ver cinemas e sessões · Ingresso.com** para consulta na cidade do usuário; sem contrato de parceiro, não exibir lista de salas/horários como se estivesse confirmada no app. Documentação oficial: https://suporte.ingresso.com/portal/pt-br/kb/articles/integra%C3%A7%C3%A3o-com-a-api-de-conte%C3%BAdo-1-11-2022 e https://atendimento.ingresso.com/portal/pt-br/kb/articles/como-consultar-os-filmes-dispon%C3%ADveis-na-programa%C3%A7%C3%A3o-e-hor%C3%A1rios-das-sess%C3%B5es.
+3. **Nenhum segredo de uso único** foi gravado no Git nem no APK. O código anteriormente fornecido pelo usuário não é reutilizado. Em lugar de formulário, o Android exibe **Verificar acesso aos links** e, se não autorizado, **Solicitar liberação**. A solicitação usa `AnyTvDeviceIdentity.requestApproval()`, assina `ANYTV-REQUEST1` com chave P-256 exclusiva do Android Keystore e envia somente identidade pública, nonce e assinatura; não concede acesso por si só.
+4. `anytv-resolver/src/device-request.mjs`: novo `POST /v1/device/request`, valida corpo/nonce/chave/prova criptográfica. Insere apenas `device_keys.enabled=0` no D1 com vencimento de pedido em 7 dias; registro previamente autorizado não é substituído. Exige **aprovação manual de operador** na chave exata antes de o status assinado se tornar `activated`. Limite de segurança 100 registros pendentes protege o armazenamento; não é limite de uso de links. A antiga rota de ativação não ganhou bypass.
+5. Tests: `anytv-resolver/src/device-request.test.mjs` exercita chave válida, assinatura forjada, substituição de chave, pendência e autorização controlada; `scripts/tests/test_streaming_screens_contract.py` exige campo sem código, fluxo assinado, marcas BR e consulta cinema.
+
+## Evidências
+
+- [Worker offline & bundle #40097287821](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40097287821): **SUCCESS**.
+- [Device proof #40097330068](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40097330068): **SUCCESS**.
+- [Android unsigned #40097330186](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40097330186): **SUCCESS**, contratos, Gradle, pacote V2/code53 sem signer (fonte compilada após correções acima).
+- Worker Cloudflare atual `58fe4b33-6ee2-4841-8587-c28acaaad435`, deployment `25de8328-10ab-471a-8e94-fb4cdbce13d9`, **100%** do tráfego. Rollback `58a1c0c3-eafc-406a-9961-9656a01e14ec`; 5 bindings herdados inalterados, `mode=device`, D1 canônico. Smoke público: health 200, catalog movie 200, status sem prova 401, request inválido 400.
+- Última versão OTA ASSINADA e disponível: **2.9.24/code53**, [release #40095671540](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40095671540). Não declarar nova versão distribuída.
+
+## Bloqueios honestos
+
+- A assinatura/publicação de **2.9.25/code54** exige modificar `.github/workflows/release-anytv-phone-v2-new-package.yml` (atualmente code53) e o `.github/anytv-phone-v2-build-request.json` (também code53), preservando certificado V2 e OTA independente. A tentativa de modificar o workflow via conector foi bloqueada pelas configurações de segurança da OpenAI. **Não contornar por outra rota.** Quando autorizado, acionar exatamente uma release, aguardar signer, APK SHA-256, Git blob e byte readback.
+- A instalação real não tem autorização nova até que envie pedido com chave própria e que um operador habilite exatamente a mesma chave no D1; não prometer acesso automático.
+- Nomes de cinemas e sessões **por filme/cidade** não estão incorporados por falta de credencial/contrato de parceiro da Ingresso.com. CTA oficial permite consulta fora do AnyTV. Nunca afirmar que TMDB `now_playing` confirma sessão em cinema específico.
+- Nenhum APK novo do companion TV foi gerado: estes ajustes afetam catálogo e identidade do celular. A atualização TV requer comparar versão e certificado reais, preservar instalação e só publicar quando a alteração necessária for comprovada.
+- **Progresso formal 7/11=63%, gates F0–F8 NÃO HOMOLOGADOS**. CI não comprova instalação ou playback na TCL.
