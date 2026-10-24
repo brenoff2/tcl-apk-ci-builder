@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
@@ -161,11 +162,11 @@ private fun TclHoldDPad(
     onHoldStart: (Remotemessage.RemoteKeyCode) -> Unit,
     onHoldEnd: (Remotemessage.RemoteKeyCode) -> Unit,
 ) {
-    val top = MaterialTheme.colorScheme.surfaceContainerHigh
-    val bottom = MaterialTheme.colorScheme.surfaceContainer
-    val accent = MaterialTheme.colorScheme.primary
-    val foreground = MaterialTheme.colorScheme.onSurface
-    val arrow = (size * .17f).coerceIn(28.dp, 50.dp)
+    val top = Color(0xFF22242C)
+    val bottom = Color(0xFF101217)
+    val accent = Color(0xFFE9003B)
+    val foreground = Color(0xFFF9F9FB)
+    val arrow = (size * .13f).coerceIn(27.dp, 38.dp)
     @Composable
     fun directional(
         modifier: Modifier,
@@ -190,8 +191,7 @@ private fun TclHoldDPad(
     Box(
         modifier = Modifier.size(size)
             .clip(CircleShape)
-            .background(Brush.radialGradient(listOf(top, bottom)))
-            .border(1.dp, accent.copy(alpha = 0.45f), CircleShape),
+            .background(Brush.radialGradient(listOf(top, bottom))),
         contentAlignment = Alignment.Center
     ) {
         // Four independent, generous hit rectangles around the central OK.
@@ -225,13 +225,13 @@ private fun TclHoldDPad(
             Icons.Filled.KeyboardArrowRight
         )
         TclHeldZone(
-            modifier = Modifier.size(size * .19f)
+            modifier = Modifier.size(size * .28f)
                 .clip(CircleShape)
                 .background(Brush.radialGradient(listOf(
-                    accent.copy(alpha = 0.38f),
-                    top
+                    Color(0xFF292B33),
+                    Color(0xFF111218)
                 )))
-                .border(2.dp, accent, CircleShape),
+                .border(2.5.dp, accent, CircleShape),
             label = "OK",
             key = Remotemessage.RemoteKeyCode.KEYCODE_DPAD_CENTER,
             isConnected = isConnected,
@@ -243,7 +243,7 @@ private fun TclHoldDPad(
             Text(
                 "OK",
                 color = foreground,
-                fontSize = if (size < 228.dp) 12.sp else 14.sp,
+                fontSize = if (size < 228.dp) 16.sp else 18.sp,
                 fontWeight = FontWeight.Bold
             )
         }
