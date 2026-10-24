@@ -1,4 +1,5 @@
 import { activateDevice } from "./device-activation.mjs";
+import { requestDeviceEnrollment } from "./device-request.mjs";
 import { verifyDeviceProof } from "./device-proof.mjs";
 /**
  * AnyTV commercial resolver pilot.
@@ -319,6 +320,13 @@ export async function handleRequest(request, env, deps = {}) {
   if (parsed.pathname === "/v1/device/activate" &&
       env?.ANYTV_DEVICE_ACTIVATION_ENABLED === "true") {
     return activateDevice(request, env, deps);
+  }
+  // An enrollment request proves ownership of its key; it never authorizes
+  // streaming links until the existing D1 row is explicitly enabled by an operator.
+  if (parsed.pathname === "/v1/device/request" &&
+      env?.ANYTV_RESOLVER_AUTH_MODE === "device" &&
+      env.ANYTV_DEVICE_ACTIVATION_ENABLED === "true") {
+    return requestDeviceEnrollment(request, env, deps);
   }
   if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
   // A signed status check reveals only whether THIS key is enabled, not keys
