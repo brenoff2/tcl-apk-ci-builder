@@ -232,7 +232,11 @@ private object StreamingDiskCache {
                 .put("value", value).toString()
             if (entry.length > 470000) return
             target.writeText(entry, Charsets.UTF_8)
-            val files = target.parentFile?.listFiles { it.isFile && it.name.endsWith(".json") }
+            // Persistent title snapshots are user data, not expiring editorial responses.
+            val files = target.parentFile?.listFiles {
+                it.isFile && it.name.endsWith(".json") &&
+                    !it.name.startsWith("saved_title_")
+            }
                 ?.sortedByDescending { it.lastModified() } ?: return
             var bytes = 0L
             files.forEachIndexed { index, item ->
@@ -710,6 +714,21 @@ private object StreamingCatalog {
             findTrailer(alternative.optJSONArray("results") ?: JSONArray())
         }.getOrNull()
         key?.let { "https://www.youtube.com/watch?v=" + it }
+    }
+
+    /** Recover legacy tracked shows whose title was lost from older editorial caches. */
+    suspend fun lookupSeries(id: Int): StreamingTitle? = withContext(Dispatchers.IO) {
+        if (id < 1) return@withContext null
+        val entry = get("backend", "tv/$id?language=pt-BR")
+        val name = entry.optString("name")
+        if (name.isBlank()) return@withContext null
+        val genreItems = entry.optJSONArray("genres")
+        val genreIds = (0 until (genreItems?.length() ?: 0))
+            .map { genreItems!!.optJSONObject(it)?.optInt("id") ?: 0 }.filter { it > 0 }
+        val poster = entry.optString("poster_path").takeIf { it.startsWith("/") }.orEmpty()
+        val backdrop = entry.optString("backdrop_path").takeIf { it.startsWith("/") }.orEmpty()
+        StreamingTitle(id, name, entry.optString("overview"), poster, "tv",
+            backdrop = backdrop, date = entry.optString("first_air_date"), genreIds = genreIds)
     }
 
     suspend fun related(media: String, id: Int): List<StreamingTitle> = withContext(Dispatchers.IO) {
@@ -1482,6 +1501,21 @@ internal fun TclStreamingScreens(
         prefs.edit().putString("anytv_watched_episodes",
             watchedEpisodes.sorted().joinToString(",")).apply()
     }
+    var watchingRefreshing by remember { mutableStateOf(false) }
+    LaunchedEffect(trackedSeries, watchedEpisodes) {
+        val keys = trackedSeries + watchedEpisodes.mapNotNull {
+            it.substringBefore(":").takeIf(String::isNotBlank)
+        }
+        val missing = keys.mapNotNull(String::toIntOrNull).filter {
+            restoreTrackedTitle("tv", it) == null
+        }.distinct()
+        watchingRefreshing = missing.isNotEmpty()
+        for (id in missing) {
+            val restored = runCatching { StreamingCatalog.lookupSeries(id) }.getOrNull()
+            if (restored != null) rememberWatchingTitle(restored)
+        }
+        watchingRefreshing = false
+    }
     val displayed = remember(apps, all) { apps.filter { all || StreamingCatalog.streaming(it) } }
 
     LaunchedEffect(globalSearchTerm) {
@@ -2147,7 +2181,8 @@ internal fun TclStreamingScreens(
                                 if (visibleShelves.isEmpty()) {
                                     Spacer(Modifier.height(16.dp))
                                     Text(when (librarySection) {
-                                        "watching" -> "Você ainda não acompanha nenhuma série."
+                                        "watching" -> if (watchingRefreshing) "Recuperando séries acompanhadas…"
+                                            else "Você ainda não acompanha nenhuma série."
                                         "watched" -> "Nenhum filme marcado como assistido."
                                         else -> "Sua lista está vazia. Salve filmes e séries para vê-los aqui."
                                     }, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2630,10 +2665,10 @@ internal fun TclStreamingScreens(
                                 onValueChange = { globalSearchDraft = it.take(90) },
                                 singleLine = true,
                                 textStyle = TextStyle(fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface),
-                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                    color = Color.White),
+                                cursorBrush = SolidColor(Color(0xFFE3383F)),
                                 modifier = Modifier.weight(1f).height(44.dp)
-                                    .border(1.dp, MaterialTheme.colorScheme.outline,
+                                    .border(1.dp, Color.DarkGray,
                                         RoundedCornerShape(12.dp))
                                     .padding(horizontal = 12.dp),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
@@ -2645,7 +2680,7 @@ internal fun TclStreamingScreens(
                                         contentAlignment = Alignment.CenterStart) {
                                         if (globalSearchDraft.isEmpty()) {
                                             Text("Buscar filme ou série", fontSize = 13.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                color = Color.LightGray)
                                         }
                                         innerTextField()
                                     }
