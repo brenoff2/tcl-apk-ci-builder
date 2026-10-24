@@ -260,6 +260,10 @@
     {
       "date": "2026-10-24",
       "event": "AnyTV DEV/PR #3: commit 4ade163d preserva metadados reais dos filmes assistidos em SharedPreferences (anytv_watched_movie_titles_v1), migra ID-only a partir de favoritos/cache existente em lote, exibe sem inventar nome/cartaz IDs TMDB ainda sem metadados; sem Worker ou API novo, sem alteraçao de poster/ícones/OTA. CI unsigned #40129882058 COMPLETED/SUCCESS: 66 contratos Streaming + 2 credenciais + 11 visuais; Gradle BUILD SUCCESSFUL em 3m13s; Android com.tclremote.livre.v2/versionCode54 verificado, artefato #12574047328 (anytv-v2-2925-code54-unsigned-audit, 23.285.790 bytes), prova isolada #40129882062 COMPLETED/SUCCESS. QA docs/qa/ANYTV_20261024_WATCHED_HISTORY_LEGACY_IDS.md. OTA oficial 2.9.25/code54 intocada, sem merge/assinatura/deploy; Android/TCL físicos NAO_TESTADOS; progresso 7/11=63%, F0-F8 NAO_HOMOLOGADO."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "AnyTV DEV PR#3 e6501f52: Android+Worker preparados para recuperar filmes antigos assistidos apenas por ID TMDB via movie/{id}, GET/lang pt-BR exclusivamente no backend, D1 cache, ID/nome reais, no max 12 IDs por visita e interrompe apos HTTP400 do Worker publicado. Testes Worker e Android no commit; offline Worker CI #40132378555 COMPLETED/SUCCESS (34 testes Node PASS; SQL/D1 PASS; Wrangler --dry-run PASS, sem deploy); Android unsigned CI #40132378495 COMPLETED/SUCCESS (68 testes Streaming, 2 credenciais, 11 contratos visuais; Gradle BUILD SUCCESSFUL 3m19s; identidade com.tclremote.livre.v2/code54 verificada); proof #40132378590 COMPLETED/SUCCESS (54 testes PASS); artefato #12575398131 (anytv-v2-2925-code54-unsigned-audit; 23.287.325 bytes). Worker de producao NAO alterado/deployado. PR draft, sem merge/assinatura/OTA, oficial 2.9.25/code54 inalterado. Android/TCL fisicos NAO_TESTADOS; 7/11=63%; F0-F8 NAO_HOMOLOGADO; detalhes docs/qa/ANYTV_20261024_MOVIE_ID_REMOTE_RECOVERY_DEV.md."
     }
   ],
   "discovery_v3": {
