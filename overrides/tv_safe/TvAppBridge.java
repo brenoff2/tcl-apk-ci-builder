@@ -369,7 +369,7 @@ public final class TvAppBridge {
 
     /** Only provider-owned schemes and paths are accepted from the paired LAN. */
     private boolean validProviderTitleLink(String pkg, String url) {
-        if (pkg == null || url == null || url.length() < 16 || url.length() > 250) return false;
+        if (pkg == null || url == null || url.length() < 16 || url.length() > 500) return false;
         try {
             Uri u = Uri.parse(url);
             if (!"https".equals(u.getScheme()) || u.getPort() != -1
