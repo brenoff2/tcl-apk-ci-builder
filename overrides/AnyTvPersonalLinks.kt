@@ -122,9 +122,21 @@ internal object AnyTvPersonalLinks {
             AnyTvDeviceIdentity.attachProof(context, conn, url.toURI().rawPath)
             val status = conn.responseCode
             if (status == 401) return@withContext AnyTvPersonalResult.ActivationRequired
-            if (status == 503) return@withContext AnyTvPersonalResult.ResolverUnavailable
-            if (status == 404) return@withContext AnyTvPersonalResult.NotInSubscription
-            if (status == 409) return@withContext AnyTvPersonalResult.NoSupportedLink
+            if (status in 500..599) return@withContext AnyTvPersonalResult.ResolverUnavailable
+            // HTTP 404 has TWO different provider meanings. Preserve the JSON
+            // status rather than incorrectly treating a missing URL as no subscription.
+            if (status == 404 || status == 409) {
+                val sourceStatus = runCatching {
+                    JSONObject(conn.errorStream?.bufferedReader()?.use {
+                        it.readText()
+                    } ?: "").optString("status")
+                }.getOrNull()
+                return@withContext when (sourceStatus) {
+                    "not_available" -> AnyTvPersonalResult.NotInSubscription
+                    "no_supported_link", "ambiguous" -> AnyTvPersonalResult.NoSupportedLink
+                    else -> null // Unknown/upstream HTTP error: try secondary lookup.
+                }
+            }
             if (status !in 200..299) return@withContext null
             val response = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
             if (response.optString("status") != "link_candidate") return@withContext null
