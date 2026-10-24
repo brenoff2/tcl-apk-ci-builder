@@ -43,16 +43,20 @@ Preservar o intervalo entre cartões, colunas da home de 116dp/9dp, duas fileira
 | U03 | Home em duas fileiras, estado vermelho/verde persistente e sem trailer nos cartões | NAO_TESTADO_EM_APARELHO |
 | U04 | Alternância ícones lista/grade, ordenação e paginação sem regressão | NAO_TESTADO_EM_APARELHO |
 | U05 | Trailer presente e funcional somente na ficha | NAO_TESTADO_EM_APARELHO |
-| L01 | Node tests: normalização Netflix/Prime, `videoLink` seguro, 401/503 e replay | PASS (31/31) #40058621968 |
-| L02 | Kotlin/Python contratos e Gradle `assembleRelease` para V2 candidata | PASS no commit `6a3be3e`: 38 + 2 contratos, Gradle BUILD SUCCESSFUL, identidade V2 #40058791096; regressão após `b5a969e` em CI |
+| L01 | Node tests: normalização Netflix/Prime, `videoLink`, 404/409 com status distinto, 401/5xx e replay | PASS 32/32 #40060118239 |
+| L02 | Kotlin/Python contratos e Gradle `assembleRelease` da V2 candidata | PASS 38+2 testes e BUILD SUCCESSFUL #40058791096; última revisão de semântica HTTP em #40060106346 AINDA EM VERIFICAÇÃO |
 | L03 | Dispositivo real ativado: status 200; não ativado: 401 com mensagem correta | NAO_TESTADO_EM_APARELHO |
 | L04 | Prime, Netflix, Disney, Apple e Max: ficha / busca / app aberto (registrar separadamente) | NAO_TESTADO_NA_TCL |
 | L05 | Assinatura V2/OTA e preservação dos dados após eventual release autorizada | NAO_EXECUTADO |
+| L06 | Resposta 404 `not_available` diferente de 404 `no_supported_link` e 409 `ambiguous`; fallback TMDB/Wikidata não interrompido por 401/5xx | TESTES_BACKEND_PASS 32/32; COMPILACAO_FINAL_ANDROID_PENDENTE |
+| L07 | Java/TV APK seguro, allowlist compatível e limite 500 caracteres sem Acessibilidade | PASS 7+3 testes e Gradle #40060021841; instalação TCL NAO_TESTADA |
 
 **Evidência nova (readback 24/10):** [resolver offline #40058621968](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058621968) SUCCESS, 31/31 testes, zero falhas; [prova de dispositivo #40058631392](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058631392) SUCCESS. [Compilação V2 sem assinatura #40058791096](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058791096) terminou SUCCESS (38 testes de streaming + 2 de segurança, Gradle `BUILD SUCCESSFUL in 4m 34s`, verificação do pacote V2). O ajuste posterior que mantém fallback TMDB/Wikidata após 401/503/no_supported_link está no commit `b5a969e` e será verificado em execução independente. Nenhum deploy ou OTA.
 
 **Cobertura oficial Movie of the Night Brasil (fonte pública em 24/10):** https://docs.movieofthenight.com/guide/countries-and-services lista `netflix`, `prime`, `disney`, `hbo`, `apple`, `paramount`, `mubi`, `curiosity`, `plutotv`, `crunchyroll`, `zee5`; **não lista Globoplay nem Plex**. Não prometer link direto desses serviços apenas com a API atual; estudar fonte licenciada ou capacidade oficial do app TCL.
 
 **CI TV sem publicação:** link da [candidata do companion #40059722774](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40059722774); valida URLs oficiais Prime/Netflix, permissões, compilação, identidade do TV companion. Estado inicial EM_EXECUCAO; não instala no aparelho.
+
+**Conferência complementar de 24/10:** [resolvedor #40060118239](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40060118239) SUCCESS 32/32 com semântica HTTP 404/409; [companion Java #40060021841](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40060021841) SUCCESS (7+3 testes, compilação, pacote e permissões). O cliente Android passou a interpretar o campo `status` no corpo do erro HTTP e a preservar a consulta alternativa sem bypass da autorização. [Última compilação Android #40060106346](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40060106346) em verificação neste registro. Atribuição da Movie of the Night adicionada ao diálogo de fontes conforme termos oficiais. Sem produção/OTA/companion instalados.
 
 **Critério de parada:** não publicar APK, não fazer deploy de Worker, não atualizar companion, não mudar signer/OTA nem fazer merge sem autorização específica e evidência de build/testes. Se o CI falhar, investigar e corrigir somente a causa.
