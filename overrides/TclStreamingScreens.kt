@@ -1680,6 +1680,8 @@ internal fun TclStreamingScreens(
     // The existing public Worker rejects movie/{id}; probe at most once per
     // screen session until its metadata route is separately approved/deployed.
     var movieDetailRouteUnsupported by remember { mutableStateOf(false) }
+    // A nonexistent/invalid ID must not monopolize each later batch of 12.
+    var absentWatchedMovieIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var restoringWatchedMovies by remember { mutableStateOf(false) }
     fun toggleFilmWatched(title: StreamingTitle) {
         val key = title.id.toString()
@@ -1709,18 +1711,25 @@ internal fun TclStreamingScreens(
                 .mapNotNull { restoreTrackedTitle("movie", it) }
             preserveWatchedMovieTitles(locallyRecovered)
             if (!movieDetailRouteUnsupported) {
-                val missing = ids.filter { restoreTrackedTitle("movie", it) == null }
-                    .take(12)
+                val missing = ids.filter {
+                    restoreTrackedTitle("movie", it) == null && it !in absentWatchedMovieIds
+                }.take(12)
                 if (missing.isNotEmpty()) {
                     restoringWatchedMovies = true
+                    val remotelyRecovered = mutableListOf<StreamingTitle>()
                     try {
-                        val remotelyRecovered = mutableListOf<StreamingTitle>()
                         for (id in missing) {
                             val film = try {
                                 StreamingCatalog.lookupMovie(id)
                             } catch (error: java.util.concurrent.CancellationException) {
                                 throw error
                             } catch (error: Exception) {
+                                if (error.message?.contains("(HTTP 404)") == true) {
+                                    // TMDB confirms this ID has no movie detail.
+                                    // Leave the ID marked and continue to valid IDs.
+                                    absentWatchedMovieIds = absentWatchedMovieIds + id
+                                    continue
+                                }
                                 // Old deployments reject the route with HTTP 400.
                                 // Stop after one probe, without flooding the Worker.
                                 if (error.message?.contains("(HTTP 400)") == true)
@@ -1730,9 +1739,12 @@ internal fun TclStreamingScreens(
                                 break
                             }
                             if (film != null) remotelyRecovered.add(film)
+                            else absentWatchedMovieIds = absentWatchedMovieIds + id
                         }
-                        preserveWatchedMovieTitles(remotelyRecovered)
                     } finally {
+                        // Save authentic successes even if the user leaves the
+                        // screen and coroutine cancellation interrupts the batch.
+                        preserveWatchedMovieTitles(remotelyRecovered)
                         restoringWatchedMovies = false
                     }
                 }

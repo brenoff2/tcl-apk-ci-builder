@@ -333,6 +333,35 @@ test("catalog proxy rejects arbitrary paths and regions without contacting TMDB"
   }
 });
 
+test("unknown watched-film IDs return 404 without hiding a valid next movie", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "server-only";
+  const seen = [];
+  const deps = { fetch: async url => {
+    const target = new URL(url).pathname;
+    seen.push(target);
+    if (target === "/3/movie/999999")
+      return response({ status_code: 34, status_message: "Not found" }, 404);
+    if (target === "/3/movie/550")
+      return response({ id: 550, title: "Título verdadeiro", poster_path: "/real.jpg" });
+    if (target === "/3/tv/999999")
+      return response({ status_code: 34 }, 404);
+    throw Error("Unexpected upstream path: " + target);
+  } };
+  const absent = await catalogRequest(request("/v1/catalog/movie/999999"), env, deps);
+  assert.equal(absent.status, 404);
+  assert.deepEqual(await absent.json(), { status: "catalog_not_found" });
+  assert.equal(env._cache.size, 0, "unknown IDs are not persisted as successes");
+  const valid = await catalogRequest(request("/v1/catalog/movie/550?language=pt-BR"), env, deps);
+  assert.equal(valid.status, 200);
+  assert.deepEqual((await valid.json()).title, "Título verdadeiro");
+  assert.equal(env._cache.size, 1, "only real TMDB metadata is cached");
+  const unrelated = await catalogRequest(request("/v1/catalog/tv/999999"), env, deps);
+  assert.equal(unrelated.status, 503, "other routes keep existing upstream failure semantics");
+  assert.equal(unrelated.headers.get("x-anytv-upstream-status"), "404");
+  assert.deepEqual(seen, ["/3/movie/999999", "/3/movie/550", "/3/tv/999999"]);
+});
+
 test("watched-film metadata route reads exact TMDB ID only, caches and rejects unsafe queries", async () => {
   const env = makeEnv();
   env.TMDB_READ_TOKEN = "movie-metadata-token";

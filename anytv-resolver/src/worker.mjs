@@ -267,8 +267,14 @@ export async function catalogRequest(request, env, deps = {}) {
       redirect: "manual",
       signal: AbortSignal.timeout(8000),
     });
-    if (!reply.ok) return asJson({ status: "catalog_unavailable" }, 503,
-      { "x-anytv-upstream-status": String(reply.status) });
+    if (!reply.ok) {
+      // An unknown movie ID is not an outage: let the Android history restore
+      // skip this ID and try the next one, without caching negative responses.
+      if (/^movie\/[1-9][0-9]{0,9}$/.test(route) && reply.status === 404)
+        return asJson({ status: "catalog_not_found" }, 404);
+      return asJson({ status: "catalog_unavailable" }, 503,
+        { "x-anytv-upstream-status": String(reply.status) });
+    }
     diagnosticStage = "upstream_body";
     const payload = await reply.text();
     if (payload.length > 450000) return asJson({ status: "catalog_unavailable" }, 503);

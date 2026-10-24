@@ -761,8 +761,8 @@ class StreamingScreens(unittest.TestCase):
             'if (homeLibrary && librarySection == "watched")',
             'preserveWatchedMovieTitles(locallyRecovered)',
             'if (!movieDetailRouteUnsupported)',
-            'val missing = ids.filter { restoreTrackedTitle("movie", it) == null }',
-            '.take(12)', 'restoringWatchedMovies = true',
+            'restoreTrackedTitle("movie", it) == null && it !in absentWatchedMovieIds',
+            '}.take(12)', 'restoringWatchedMovies = true',
             'StreamingCatalog.lookupMovie(id)',
             'java.util.concurrent.CancellationException',
             'throw error',
@@ -778,6 +778,34 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('IDs TMDB: ', self.screen)
         self.assertNotIn('watchedFilms = watchedFilms -', effect)
         self.assertNotIn('favorites =', effect)
+
+    def test_missing_tmdb_film_does_not_block_later_valid_watched_ids(self):
+        effect = self.screen.split(
+            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection)', 1)[1].split(
+            'var watchedEpisodes by remember', 1)[0]
+        for marker in (
+            'absentWatchedMovieIds by remember',
+            'restoreTrackedTitle("movie", it) == null && it !in absentWatchedMovieIds',
+            'error.message?.contains("(HTTP 404)") == true',
+            'absentWatchedMovieIds = absentWatchedMovieIds + id',
+            'continue',
+            'error.message?.contains("(HTTP 400)") == true',
+            'movieDetailRouteUnsupported = true',
+            'val remotelyRecovered = mutableListOf<StreamingTitle>()',
+            'finally {',
+            'preserveWatchedMovieTitles(remotelyRecovered)',
+        ):
+            if marker == 'absentWatchedMovieIds by remember':
+                self.assertIn(marker, self.screen)
+            else:
+                self.assertIn(marker, effect)
+        self.assertLess(effect.index('error.message?.contains("(HTTP 404)")'),
+                        effect.index('error.message?.contains("(HTTP 400)")'))
+        self.assertLess(effect.index('} finally {'),
+                        effect.index('preserveWatchedMovieTitles(remotelyRecovered)'))
+        self.assertIn('error("Catálogo temporariamente indisponível (HTTP $status).")',
+                      self.screen)
+        self.assertNotIn('watchedFilms = watchedFilms -', effect)
 
     def test_watched_poster_preserves_title_without_favorite_or_cache_ttl(self):
         self.assertIn('fun toggleFilmWatched(title: StreamingTitle)', self.screen)
