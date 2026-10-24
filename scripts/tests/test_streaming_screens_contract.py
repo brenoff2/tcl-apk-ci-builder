@@ -388,7 +388,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('entity-59565a16-d61f-49d1-85d7-1f0f87712748', self.screen)
         self.assertIn('TclTvAppApi.openTitle(host, pairing, packageName,', self.screen)
         self.assertIn('val withoutArticle = normalized.replace(', self.screen)
-        self.assertIn('collected.distinctBy {', self.screen)
+        self.assertIn('collected.filter(::anyTvReleased).distinctBy {', self.screen)
         self.assertIn('successfulRequests == 0', self.screen)
 
     def test_same_32dp_icons_and_system_bars_and_banner_ratio(self):
