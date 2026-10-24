@@ -172,6 +172,10 @@
     {
       "date": "2026-10-24",
       "event": "Candidata AnyTV V2 link-activation recovery aprovada em CI SEM DEPLOY: fontes de producao ce51439e (100%) lidas diretamente em Cloudflare, mode=device, activation_enabled=true, 5 bindings; D1 contem 1 registro P256 autorizado, 1 codigo consumido e 0 codigos disponiveis, ultima prova valida em 21/10. Fonte ce51439e nao inclui /v1/device/status nem videoLink novo. Android codigo candidato 56827283 inclui status assinado, ID local mascarado fora da UI thread, ativacao por codigo unico apenas apos 401, limpando campo e readback 201/200; operador issuer default 365 dias sem quotas. CI Android 40082388480 SUCCESS 39+2 testes, BUILD SUCCESSFUL 4m48, V2 unsigned; resolver 40082285375 SUCCESS; device-proof 40082285396 SUCCESS; companion 40060021841 SUCCESS. Nenhum novo codigo gerado, nenhuma alteracao de D1, deploy, OTA, signer, instalacao na TCL ou merge. Versoes operacionais V2 2.9.22/code51 e Worker ce51439e intactas. Gates F0-F8 NAO_HOMOLOGADO, progresso 7/11=63%. Ver docs/qa/ANYTV_V2_DEVICE_ACTIVATION_RUNBOOK.md e docs/operations/ANYTV_V2_LINK_RELEASE_READINESS_20261024.md."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "USER-AUTHORIZED RELEASE: Worker bd8cafd5-2e9a-4f83-88a8-d557fda9ab82 deployed 100% (deployment 5a1d03cf) with five bindings preserved; catalog Titanic movie 20, Breaking Bad TV 5, /health 200, unsigned status/resolve 401. Signed OTA AnyTV V2 2.9.23/code52 SUCCESS GitHub Actions 40086101046; SHA256 APK 6f3274f488803b0d13659080f09c17cdeed5cca68fdcc6f3f4225814d0226094, blob eb7c13f3295eefd01c7f3533af8b86962e948cad, OTA commit 4831b5e0c91871c136f546c9b19c95c5497f1b6c, byte-to-byte remote readback PASS; signer SHA256 fe8c59e4 unchanged; legacy OTA unchanged. UI reorganized and personal link activation added; no D1 device reprovision, no companion TV update or physical QA. PROGRESS 7/11=63, gates F0-F8 NAO_HOMOLOGADO; next user update and test real device."
     }
   ],
   "discovery_v3": {
@@ -184,34 +188,36 @@
     "note": "CI posterior 39699948020 success (supera falha anterior 39699232465); APK cert2026 assinado versionCode38 sha256 56142e5f3e33d54f1be41c5f702b0d8e1bf00bff206e3c011438a5c2648a2a93, 28347236 bytes; OTA Android current.apk permanece 2.9.8 conforme readback; QA fisica V3 pendente. Atualização 2026-10-23: o registro release_299 nesta seção é HISTÓRICO, não indica OTA atual; para estado operacional consultar operational_checkpoint (OTA 2.9.12)."
   },
   "operational_checkpoint": {
-    "date": "2026-10-23",
-    "handoff": "docs/handoffs/2026-10-23-ANYTV-V2-2922-TRANSICAO-ATUAL.md",
+    "date": "2026-10-24",
+    "handoff": "docs/handoffs/CURRENT_HANDOFF.md",
     "first_message": "docs/handoffs/NEXT_CHAT_FIRST_MESSAGE.md",
     "device_qa": "docs/qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md",
     "note": "Latest state supersedes archived 2.9.12/2.9.13 legacy checkpoint; archived for traceability.",
     "current_v2": {
-      "version": "2.9.22",
-      "versionCode": 51,
+      "version": "2.9.23",
+      "versionCode": 52,
       "package": "com.tclremote.livre.v2",
       "published": true,
-      "workflow_run": 40045953034,
-      "apk_sha256": "44cab69ad0eb6c0110ff4180e6388f042e667d8b86dcd319e39d777973d85d94",
+      "workflow_run": 40086101046,
+      "apk_sha256": "6f3274f488803b0d13659080f09c17cdeed5cca68fdcc6f3f4225814d0226094",
       "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
       "ota_path": "updates/android/v2/current.apk",
-      "apk_git_blob": "39084853e1956f4aaedb3d8443ade9304e497581",
+      "apk_git_blob": "eb7c13f3295eefd01c7f3533af8b86962e948cad",
       "signer_cert_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9"
     },
     "live_worker": {
-      "version": "ce51439e-ca19-40d3-85e8-019c7a3669a5",
-      "deployment": "3298f15b-68d1-455b-bbc1-624925d7ccaf",
+      "version": "bd8cafd5-2e9a-4f83-88a8-d557fda9ab82",
+      "deployment": "5a1d03cf-2525-4619-b34a-22f9d8074506",
       "traffic_percent": 100,
       "limits_monthly": false,
       "limits_per_minute": false,
       "authentication_preserved": true,
       "cache_preserved": true,
       "binding_count": 5,
-      "offline_ci": 40052421285,
-      "live_smoke": 40052526994
+      "offline_ci": 40082285375,
+      "live_smoke": 40052526994,
+      "live_smoke_2026_10_24": "PASS health 200, Titanic film 20, Breaking Bad TV 5, unsigned device status 401",
+      "previous_version_rollback": "ce51439e-ca19-40d3-85e8-019c7a3669a5"
     },
     "legacy_ota_unchanged_git_blob": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
     "technical_progress": {
@@ -220,9 +226,59 @@
       "percent": 63
     },
     "human_gates": "F0-F8 NAO_HOMOLOGADO",
-    "next_action": "Physical device acceptance D01-D12; do not generate another APK just for docs or advance gates without evidence."
+    "next_action": "Usuario atualizar V2 2.9.23/code52 in-place e testar D01-D12, U01-U05 e status de autorizacao de links; preservar gates ate evidencia"
   },
   "v2_current": {
+    "as_of": "2026-10-24",
+    "version": "2.9.23",
+    "versionCode": 52,
+    "package": "com.tclremote.livre.v2",
+    "published": true,
+    "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
+    "ota_path": "updates/android/v2/current.apk",
+    "workflow_run": 40086101046,
+    "workflow_conclusion": "success",
+    "apk_sha256": "6f3274f488803b0d13659080f09c17cdeed5cca68fdcc6f3f4225814d0226094",
+    "apk_git_blob": "eb7c13f3295eefd01c7f3533af8b86962e948cad",
+    "apk_bytes": 28412772,
+    "ota_commit": "4831b5e0c91871c136f546c9b19c95c5497f1b6c",
+    "signer_cert_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9",
+    "legacy_ota_blob_unchanged": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
+    "remote_byte_readback": true,
+    "live_search": "PASS: film Titanic 20 results; TV Breaking Bad 5 results",
+    "genre_paging_live": "PASS movie/tv 20 each, sort options popularity/rating/date/title with strict allowlist via workflow 40045771887",
+    "cloudflare_worker_current": "bd8cafd5-2e9a-4f83-88a8-d557fda9ab82",
+    "cloudflare_100_percent_traffic": true,
+    "cloudflare_deploy": "5a1d03cf-2525-4619-b34a-22f9d8074506",
+    "cloudflare_previous_version_rollback": "ce51439e-ca19-40d3-85e8-019c7a3669a5",
+    "tmdb_200_monthly_quota_removed": true,
+    "physical_qa": "NOT_HOMOLOGATED",
+    "changes": [
+      "Home/genero: linha 1 ano/nota esquerda e assistido/favorito direita; linha 2 F/S + streamings BR confirmados; linha 3 titulo em 3 linhas fixas, sem icone de trailer",
+      "Alternancia icones lista/grade; assistido verde e favorito vermelho quando ativo, cinza inativo; trailer somente no detalhe",
+      "Device status autenticado com prova P-256, ativacao por codigo unico apenas se nao autorizado, sem guardar token/codigo em preferences",
+      "Link resolver com Netflix/Prime formatos oficiais, videoLink seguro, semantica 404/409 correta e fallback TMDB/Wikidata preservado",
+      "Worker bd8cafd5 100% mantem 5 bindings, D1 e segredos, sem quotas internas",
+      "Mesmo pacote V2, mesmo certificado e canal OTA independente; APK signed 2.9.23/code52 e readback HTTPS bytes igual",
+      "Dispositivo/TCL, ativacao da instalacao atual e deeplinks ainda nao homologados"
+    ],
+    "qa_checklist": "docs/qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md",
+    "next_chat_checkpoint": "docs/handoffs/NEXT_CHAT_FIRST_MESSAGE.md",
+    "next_action": "Usuario atualizar V2 2.9.23/code52 in-place e testar D01-D12, U01-U05 e status de autorizacao de links; preservar gates ate evidencia",
+    "last_canonical_continuity_review": "2026-10-24",
+    "no_anytv_owned_usage_caps": true,
+    "monthly_quota_enforced": false,
+    "per_minute_rate_limit_enforced": false,
+    "cache_preserved": true,
+    "worker_provider_auth_preserved": true,
+    "external_provider_plan_limits_unaffected": "Provider-side quotas are independent and cannot be removed in the AnyTV Worker.",
+    "handoff_full": "docs/handoffs/2026-10-23-ANYTV-V2-2922-TRANSICAO-ATUAL.md",
+    "provider_link_upstream": "Movie of the Night (not JustWatch)",
+    "rate_limit_preserved": false,
+    "internal_link_quota_removed": true,
+    "release_evidence": "docs/operations/ANYTV_V2_2923_RELEASE_EVIDENCE_20261024.md"
+  },
+  "v2_previous": {
     "as_of": "2026-10-23",
     "version": "2.9.22",
     "versionCode": 51,
@@ -273,7 +329,37 @@
     "rate_limit_preserved": false,
     "internal_link_quota_removed": true
   },
-  "v2_previous": {
+  "operational_checkpoint_historical_2026_10_23": {
+    "date": "2026-10-23",
+    "handoff": "docs/handoffs/2026-10-23-anytv-full-transition.md",
+    "decision": "docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md",
+    "phone_ota": {
+      "version": "2.9.12",
+      "versionCode": 41,
+      "path": "updates/android/cert2026/current.apk",
+      "branch": "feat/tcl-v22-updates-back-bluetooth",
+      "blob_sha": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
+      "sha256": "28c2881899bc9c6a79fcfd908d66528750534c89c7f334b8cc57096f80cf63f3",
+      "verified_run": 39963760834
+    },
+    "candidate": {
+      "version": "2.9.13",
+      "versionCode": 42,
+      "build_run": 39891891049,
+      "signed_apk_sha256": "fbbc1398465f27b2aadccef1d48be6e08e51af0b729aab694189ca8c06b3c1f5",
+      "published": false,
+      "physical_tcl_qa": "NOT_HOMOLOGATED"
+    },
+    "signing": {
+      "original_cert_sha256": "2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f",
+      "publisher": ".github/workflows/publish-anytv-phone-github-only.yml",
+      "required_actions_secret_name": "ANYTV_RECOVERY_SECRET_2026",
+      "access_gate": "BLOCKED",
+      "failure_run": 39963496459
+    },
+    "progress_unchanged": true
+  },
+  "v2_previous_historical_2026_10_24": {
     "as_of": "2026-10-23",
     "version": "2.9.21",
     "versionCode": 50,
@@ -307,35 +393,5 @@
       "main home remains two-row horizontal scroll with no show more",
       "Cloudflare TMDB search quota unblocked while JustWatch link budget remains separately bounded"
     ]
-  },
-  "operational_checkpoint_historical_2026_10_23": {
-    "date": "2026-10-23",
-    "handoff": "docs/handoffs/2026-10-23-anytv-full-transition.md",
-    "decision": "docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md",
-    "phone_ota": {
-      "version": "2.9.12",
-      "versionCode": 41,
-      "path": "updates/android/cert2026/current.apk",
-      "branch": "feat/tcl-v22-updates-back-bluetooth",
-      "blob_sha": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
-      "sha256": "28c2881899bc9c6a79fcfd908d66528750534c89c7f334b8cc57096f80cf63f3",
-      "verified_run": 39963760834
-    },
-    "candidate": {
-      "version": "2.9.13",
-      "versionCode": 42,
-      "build_run": 39891891049,
-      "signed_apk_sha256": "fbbc1398465f27b2aadccef1d48be6e08e51af0b729aab694189ca8c06b3c1f5",
-      "published": false,
-      "physical_tcl_qa": "NOT_HOMOLOGATED"
-    },
-    "signing": {
-      "original_cert_sha256": "2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f",
-      "publisher": ".github/workflows/publish-anytv-phone-github-only.yml",
-      "required_actions_secret_name": "ANYTV_RECOVERY_SECRET_2026",
-      "access_gate": "BLOCKED",
-      "failure_run": 39963496459
-    },
-    "progress_unchanged": true
   }
 }
