@@ -160,6 +160,10 @@
     {
       "date": "2026-10-23",
       "event": "Handoff 2.9.22/no internal usage caps reconciled with live Cloudflare and latest GitHub; created current 2.9.22 transition plus refreshed next-chat prompt and QA. Archived stale 2.9.12 operational checkpoint; gates 7/11 unchanged."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "Candidata pos-2.9.22 SOMENTE NA BRANCH DEV: reorganizacao dos cartoes na home e genero (ano/nota, assistido/favorito, F/S e provedores, titulo em 3 linhas); icones Lista/Grade; trailer apenas na ficha. Resolvedor com status assinado de autorizacao, mensagem 401/503 e formatos Prime/Netflix, preferencia videoLink; codigo companion alinhado. Testes de contrato atualizados; CI/readback e QA no aparelho/TV NAO COMPROVADOS; APK publico permanece 2.9.22/code51, Worker de producao ce51439e permanece sem deploy, marcos 7/11 gates F0-F8 inalterados. Ver docs/qa/ANYTV_V2_POST_2922_UI_LINKS_CANDIDATE.md."
     }
   ],
   "discovery_v3": {
