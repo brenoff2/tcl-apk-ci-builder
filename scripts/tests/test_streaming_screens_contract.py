@@ -304,6 +304,7 @@ class StreamingScreens(unittest.TestCase):
         for fragment in (
             'AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/resolve/"',
             "validatedLink(", "NotInSubscription", "NoSupportedLink",
+            "ActivationRequired", "ResolverUnavailable", "activationStatus(",
             "com.netflix.ninja", "com.disney.disneyplus",
             "com.apple.atve.androidtv.appletv", "com.wbd.stream",
         ):
@@ -311,6 +312,10 @@ class StreamingScreens(unittest.TestCase):
         identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
         self.assertIn('RESOLVER_BASE = "https://anytv-link-resolver-pilot.brenoff.workers.dev"', identity)
         self.assertIn("AnyTvPersonalLinks.resolve(context, title, packageName)", self.screen)
+        self.assertIn('Text("Verificar autorização de links"', self.screen)
+        self.assertIn('AnyTvPersonalResult.ActivationRequired ->', self.screen)
+        self.assertIn('AnyTvPersonalResult.ResolverUnavailable ->', self.screen)
+        self.assertIn('AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/device/status"', resolver)
         self.assertIn("AnyTvDeviceIdentity.attachProof(context, conn, url.toURI().rawPath)", resolver)
         self.assertIn("overrides/AnyTvDeviceIdentity.kt", preparer)
         self.assertIn("StreamingCatalog.titleDeepLink(token, title, packageName)", self.screen)
@@ -334,7 +339,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('shape = RoundedCornerShape(0.dp)', self.screen)
         self.assertIn('color = MaterialTheme.colorScheme.background', self.screen)
         self.assertIn('horizontalArrangement = Arrangement.End', self.screen)
-        self.assertIn('Icons.Outlined.FavoriteBorder', self.screen)
+        self.assertNotIn('Icons.Outlined.FavoriteBorder', self.screen)
+        self.assertIn('Icon(Icons.Filled.Favorite,', self.screen)
         self.assertIn('TclHeaderAction(Icons.Filled.FilterList', self.screen)
         for text in ('Sua lista está vazia.', 'Você ainda não acompanha nenhuma série.',
                      'Nenhum filme marcado como assistido.'):
@@ -459,6 +465,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('onTrailer =', self.screen)
         self.assertIn('Text("▶ Ver trailer")', self.screen)
         self.assertEqual(self.screen.count('showRating = false'), 3)
+        self.assertIn('val unique = shelf.distinctBy', self.screen)
+        self.assertIn('Keep cards visible when marked', self.screen)
         for marker, until, metadata, offers, title in (
             ('items(genreTitles.chunked(3))',
              'repeat(3 - group.size)', 'AnyTvCardMetaRow(title,',
@@ -500,6 +508,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('query.matches("playableId=', bridge)
         self.assertIn('u.getQueryParameter("playableId")', bridge)
         self.assertIn('"tv.apple.com".equals(host)', bridge)
+        self.assertIn('path.matches("/title/[0-9]{6,9}/?")', bridge)
+        self.assertIn('path.matches("/detail/[0-9A-Z]{10,40}")', bridge)
 
     def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
