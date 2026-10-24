@@ -1321,6 +1321,22 @@ internal fun TclStreamingScreens(
     var globalSearchError by remember { mutableStateOf<String?>(null) }
     var globalSearchResults by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var globalSearchBusy by remember { mutableStateOf(false) }
+    // Store only successful searches in bounded private app storage.
+    var globalSearchHistory by remember(prefs) {
+        mutableStateOf(runCatching {
+            val arr = JSONArray(prefs.getString("anytv_global_search_history_v1", "[]"))
+            (0 until arr.length()).map { arr.optString(it) }
+                .filter { it.length in 3..90 }.distinct().take(10)
+        }.getOrDefault(emptyList<String>()))
+    }
+    fun rememberSuccessfulSearch(term: String) {
+        val name = term.trim().take(90)
+        if (name.length < 3) return
+        globalSearchHistory = (listOf(name) +
+            globalSearchHistory.filterNot { it.equals(name, ignoreCase = true) }).take(10)
+        prefs.edit().putString("anytv_global_search_history_v1",
+            JSONArray(globalSearchHistory).toString()).apply()
+    }
     // Debounced autocomplete: one search after the user pauses, not per keystroke.
     LaunchedEffect(globalSearchDraft) {
         delay(650)
@@ -1474,7 +1490,10 @@ internal fun TclStreamingScreens(
         if (globalSearchTerm.length >= 2) {
             globalSearchBusy = true
             runCatching { StreamingCatalog.searchGlobal(globalSearchTerm) }
-                .onSuccess { globalSearchResults = it }
+                .onSuccess {
+                    globalSearchResults = it
+                    if (it.isNotEmpty()) rememberSuccessfulSearch(globalSearchTerm)
+                }
                 .onFailure {
                     globalSearchError = "Falha ao consultar o catálogo. " +
                         "Confira a conexão e tente novamente."
@@ -1879,125 +1898,6 @@ internal fun TclStreamingScreens(
                             editingGenreIds = preferredGenreIds; showGenreSettings = true
                         }, contentPadding = PaddingValues(horizontal = 5.dp)) {
                             Text("⚙ Listas", fontSize = 11.sp)
-                        }
-                    }
-                    if (showGlobalSearch) {
-                        Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            // Material3 OutlinedTextField has a 56dp intrinsic min height.
-                            // Clamping it to 42dp clipped the baseline below the visible field.
-                            // BasicTextField keeps the caret, placeholder and typed text centered.
-                            BasicTextField(
-                                value = globalSearchDraft,
-                                onValueChange = { globalSearchDraft = it.take(90) },
-                                singleLine = true,
-                                textStyle = TextStyle(fontSize = 14.sp,
-                                    color = MaterialTheme.colorScheme.onSurface),
-                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                modifier = Modifier.weight(1f).height(44.dp)
-                                    .border(1.dp, MaterialTheme.colorScheme.outline,
-                                        RoundedCornerShape(12.dp))
-                                    .padding(horizontal = 12.dp),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                keyboardActions = KeyboardActions(onSearch = {
-                                    globalSearchTerm = globalSearchDraft.trim()
-                                }),
-                                decorationBox = { innerTextField ->
-                                    Box(modifier = Modifier.fillMaxSize(),
-                                        contentAlignment = Alignment.CenterStart) {
-                                        if (globalSearchDraft.isEmpty()) {
-                                            Text("Buscar filme ou série", fontSize = 13.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                        innerTextField()
-                                    }
-                                })
-                            IconButton(onClick = {
-                                globalSearchTerm = globalSearchDraft.trim()
-                            }, enabled = globalSearchDraft.trim().length >= 3,
-                                modifier = Modifier.size(36.dp)) {
-                                Icon(Icons.Filled.Search, contentDescription = "Executar busca",
-                                    modifier = Modifier.size(19.dp))
-                            }
-                            IconButton(onClick = {
-                                globalSearchDraft = ""; globalSearchTerm = ""
-                                globalSearchResults = emptyList(); globalSearchError = null
-                            }, modifier = Modifier.size(32.dp)) { Text("×", fontSize = 18.sp) }
-                        }
-                        if (globalSearchBusy) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                        }
-                        if (globalSearchTerm.isNotBlank() && !globalSearchBusy) {
-                            Text("Resultados: " + globalSearchTerm, fontSize = 11.sp)
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.heightIn(max = 195.dp)) {
-                                items(globalSearchResults) { found ->
-                                    Column(modifier = Modifier.width(108.dp).clickable {
-                                        details = found; detailsPackage = null
-                                    }) {
-                                        AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w185" + found.poster,
-                                            contentDescription = found.name,
-                                            modifier = Modifier.fillMaxWidth().height(138.dp),
-                                            contentScale = ContentScale.Crop)
-                                        Spacer(Modifier.height(5.dp))
-                                        Text(found.name, fontSize = 11.sp, maxLines = 2,
-                                            lineHeight = 14.sp)
-                                        StreamingOfferIcons(found, offerCache, displayed,
-                                                inCinema = found.id in cinemaIds)
-                                    }
-                                }
-                            }
-                            if (globalSearchError != null) {
-                                Text(globalSearchError.orEmpty(), fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.error)
-                            } else if (globalSearchResults.isEmpty() &&
-                                !(globalSearchTerm.contains("amor", ignoreCase = true) &&
-                                  globalSearchTerm.contains("vida", ignoreCase = true))) {
-                                Text("Nenhum resultado encontrado.", fontSize = 12.sp)
-                            }
-                            val loveOfYourLifeQuery =
-                                (globalSearchTerm.contains("amor", ignoreCase = true) &&
-                                    globalSearchTerm.contains("vida", ignoreCase = true)) ||
-                                globalSearchTerm.contains("love of your life", ignoreCase = true)
-                            if (loveOfYourLifeQuery) {
-                                Column(verticalArrangement = Arrangement.spacedBy(2.dp),
-                                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
-                                    Text("O Amor da Sua Vida (2026) · Prime Video",
-                                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                    Text("Ficha oficial confirmada; o catálogo pode usar o título Love of Your Life.",
-                                        fontSize = 10.sp)
-                                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                        TextButton(onClick = {
-                                            val link = Uri.parse(
-                                                "https://www.primevideo.com/detail/0HM3DRN79M0E7QOBLMYTS41IG0")
-                                            runCatching {
-                                                context.startActivity(Intent(Intent.ACTION_VIEW, link)
-                                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                                            }.onFailure {
-                                                globalSearchError = "Não foi possível abrir a ficha oficial."
-                                            }
-                                        }) { Text("Ver ficha oficial", fontSize = 11.sp) }
-                                        val prime = displayed.firstOrNull {
-                                            it.packageName == "com.amazon.amazonvideo.livingroom" ||
-                                            it.packageName == "com.amazon.avod.thirdpartyclient"
-                                        }
-                                        if (prime != null) TextButton(onClick = {
-                                            if (host.isBlank() || pairing.isBlank()) {
-                                                globalSearchError = "Vincule o AnyTV Connect à televisão."
-                                            } else scope.launch {
-                                                runCatching {
-                                                    TclTvAppApi.searchTitle(host, pairing,
-                                                        prime.packageName, "Love of Your Life")
-                                                }.onSuccess {
-                                                    globalSearchError = "Busca enviada ao Prime Video na TV; confira o resultado."
-                                                }.onFailure {
-                                                    globalSearchError = "A TCL não aceitou a pesquisa; abra o Prime Video."
-                                                }
-                                            }
-                                        }) { Text("Buscar na TCL", fontSize = 11.sp) }
-                                    }
-                                }
-                            }
                         }
                     }
                     if (discoveryLoading || (selectedHomeGenre != 0 &&
@@ -2694,6 +2594,195 @@ internal fun TclStreamingScreens(
                     modifier = Modifier.clickable { showCredits = true },
                     fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1)
+            }
+        }
+    }
+    // A full-screen opaque search page overlays the catalogue instead of
+    // pushing its films and series down. The back/close control leaves it intact.
+    if (showGlobalSearch) {
+        Dialog(onDismissRequest = { showGlobalSearch = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(0.dp),
+                color = Color.Black) {
+                Column(modifier = Modifier.fillMaxSize().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text("Buscar filmes e séries", modifier = Modifier.weight(1f),
+                            fontSize = 19.sp, color = Color.White,
+                            fontWeight = FontWeight.Bold)
+                        IconButton(onClick = { showGlobalSearch = false }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Fechar busca",
+                                tint = Color.White)
+                        }
+                    }
+                    Column(modifier = Modifier.fillMaxSize()
+                        .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            // Material3 OutlinedTextField has a 56dp intrinsic min height.
+                            // Clamping it to 42dp clipped the baseline below the visible field.
+                            // BasicTextField keeps the caret, placeholder and typed text centered.
+                            BasicTextField(
+                                value = globalSearchDraft,
+                                onValueChange = { globalSearchDraft = it.take(90) },
+                                singleLine = true,
+                                textStyle = TextStyle(fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                modifier = Modifier.weight(1f).height(44.dp)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline,
+                                        RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 12.dp),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(onSearch = {
+                                    globalSearchTerm = globalSearchDraft.trim()
+                                }),
+                                decorationBox = { innerTextField ->
+                                    Box(modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.CenterStart) {
+                                        if (globalSearchDraft.isEmpty()) {
+                                            Text("Buscar filme ou série", fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        innerTextField()
+                                    }
+                                })
+                            IconButton(onClick = {
+                                globalSearchTerm = globalSearchDraft.trim()
+                            }, enabled = globalSearchDraft.trim().length >= 3,
+                                modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Filled.Search, contentDescription = "Executar busca",
+                                    modifier = Modifier.size(19.dp))
+                            }
+                            IconButton(onClick = {
+                                globalSearchDraft = ""; globalSearchTerm = ""
+                                globalSearchResults = emptyList(); globalSearchError = null
+                            }, modifier = Modifier.size(36.dp)) {
+                                Icon(Icons.Filled.Close, contentDescription = "Limpar texto da busca",
+                                    tint = Color.White)
+                            }
+                        }
+
+                        if (globalSearchDraft.isBlank() && globalSearchHistory.isNotEmpty()) {
+                            Text("Buscas recentes", fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold, color = Color.White)
+                            globalSearchHistory.take(10).forEach { past ->
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .clickable {
+                                        globalSearchDraft = past
+                                        globalSearchTerm = past
+                                    }.padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Filled.Search, contentDescription = null,
+                                        tint = Color.LightGray, modifier = Modifier.size(18.dp))
+                                    Text(past, modifier = Modifier.weight(1f)
+                                        .padding(horizontal = 12.dp),
+                                        fontSize = 13.sp, color = Color.White)
+                                    IconButton(onClick = {
+                                        globalSearchHistory = globalSearchHistory.filterNot {
+                                            it == past
+                                        }
+                                        prefs.edit().putString("anytv_global_search_history_v1",
+                                            JSONArray(globalSearchHistory).toString()).apply()
+                                    }) {
+                                        Icon(Icons.Filled.Close,
+                                            contentDescription = "Remover busca recente",
+                                            tint = Color.LightGray)
+                                    }
+                                }
+                            }
+                            TextButton(onClick = {
+                                globalSearchHistory = emptyList()
+                                prefs.edit().remove("anytv_global_search_history_v1").apply()
+                            }) { Text("Limpar histórico", color = Color.LightGray) }
+                        }
+                        if (globalSearchBusy) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                        }
+                        if (globalSearchTerm.isNotBlank() && !globalSearchBusy) {
+                            Text("Resultados: " + globalSearchTerm, fontSize = 11.sp)
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                globalSearchResults.chunked(2).forEach { pair ->
+                                    Row(modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        pair.forEach { found ->
+                                            Column(modifier = Modifier.weight(1f).clickable {
+                                                details = found; detailsPackage = null
+                                                showGlobalSearch = false
+                                            }) {
+                                                AnyTvPinnedImage(
+                                                    model = "https://image.tmdb.org/t/p/w185" + found.poster,
+                                                    contentDescription = found.name,
+                                                    modifier = Modifier.fillMaxWidth().height(158.dp),
+                                                    contentScale = ContentScale.Crop)
+                                                Text(found.name, color = Color.White,
+                                                    fontSize = 12.sp, maxLines = 2, lineHeight = 15.sp)
+                                                StreamingOfferIcons(found, offerCache, displayed,
+                                                    inCinema = found.id in cinemaIds)
+                                            }
+                                        }
+                                        repeat(2 - pair.size) { Spacer(Modifier.weight(1f)) }
+                                    }
+                                }
+                            }
+                            if (globalSearchError != null) {
+                                Text(globalSearchError.orEmpty(), fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.error)
+                            } else if (globalSearchResults.isEmpty() &&
+                                !(globalSearchTerm.contains("amor", ignoreCase = true) &&
+                                  globalSearchTerm.contains("vida", ignoreCase = true))) {
+                                Text("Nenhum resultado encontrado.", fontSize = 12.sp)
+                            }
+                            val loveOfYourLifeQuery =
+                                (globalSearchTerm.contains("amor", ignoreCase = true) &&
+                                    globalSearchTerm.contains("vida", ignoreCase = true)) ||
+                                globalSearchTerm.contains("love of your life", ignoreCase = true)
+                            if (loveOfYourLifeQuery) {
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(top = 5.dp)) {
+                                    Text("O Amor da Sua Vida (2026) · Prime Video",
+                                        fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Ficha oficial confirmada; o catálogo pode usar o título Love of Your Life.",
+                                        fontSize = 10.sp)
+                                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                        TextButton(onClick = {
+                                            val link = Uri.parse(
+                                                "https://www.primevideo.com/detail/0HM3DRN79M0E7QOBLMYTS41IG0")
+                                            runCatching {
+                                                context.startActivity(Intent(Intent.ACTION_VIEW, link)
+                                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                            }.onFailure {
+                                                globalSearchError = "Não foi possível abrir a ficha oficial."
+                                            }
+                                        }) { Text("Ver ficha oficial", fontSize = 11.sp) }
+                                        val prime = displayed.firstOrNull {
+                                            it.packageName == "com.amazon.amazonvideo.livingroom" ||
+                                            it.packageName == "com.amazon.avod.thirdpartyclient"
+                                        }
+                                        if (prime != null) TextButton(onClick = {
+                                            if (host.isBlank() || pairing.isBlank()) {
+                                                globalSearchError = "Vincule o AnyTV Connect à televisão."
+                                            } else scope.launch {
+                                                runCatching {
+                                                    TclTvAppApi.searchTitle(host, pairing,
+                                                        prime.packageName, "Love of Your Life")
+                                                }.onSuccess {
+                                                    globalSearchError = "Busca enviada ao Prime Video na TV; confira o resultado."
+                                                }.onFailure {
+                                                    globalSearchError = "A TCL não aceitou a pesquisa; abra o Prime Video."
+                                                }
+                                            }
+                                        }) { Text("Buscar na TCL", fontSize = 11.sp) }
+                                    }
+                                }
+                            }
+                        }
+
+                    }
+                }
             }
         }
     }
