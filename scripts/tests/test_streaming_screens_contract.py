@@ -343,12 +343,20 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('linkSourceNotice + (if (offered == null)', screen)
         self.assertIn('AnyTvPersonalResult.NotInSubscription ->', screen)
 
-    def test_unprovisioned_activation_prompt_is_removed(self):
+    def test_one_time_link_activation_is_explicit_and_nonpersistent(self):
         identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
-        for old in ("Ativar links diretos neste dispositivo",
-                    "showDeviceActivation", 'Text("Código de ativação")',
-                    "activationDraft", "AnyTvDeviceIdentity.activate(context, submitted)"):
-            self.assertNotIn(old, self.screen)
+        self.assertIn('linkActivationRequired = state == "unauthorized"', self.screen)
+        self.assertIn('if (linkActivationRequired) {', self.screen)
+        self.assertIn('Text("Código único de ativação")', self.screen)
+        self.assertIn('deviceActivationCode.matches(Regex("[A-Za-z0-9_-]{43}"))', self.screen)
+        self.assertIn('AnyTvDeviceIdentity.activate(context, singleUseCode)', self.screen)
+        self.assertIn('val activated = withContext(Dispatchers.IO)', self.screen)
+        self.assertIn('deviceActivationCode = ""', self.screen)
+        self.assertIn('AnyTvPersonalLinks.activationStatus(context) == "activated"', self.screen)
+        self.assertIn('deviceId(context).takeLast(8)', self.screen)
+        for forbidden in ('activationDraft', 'personalKeyDraft', 'tokenDraft',
+                          'prefs.edit().putString("activation', 'showDeviceActivation'):
+            self.assertNotIn(forbidden, self.screen)
         self.assertIn('connection.responseCode == 201', identity)
         self.assertIn('activationCode.matches(Regex(', identity)
         self.assertNotIn('putString("activation', identity)
