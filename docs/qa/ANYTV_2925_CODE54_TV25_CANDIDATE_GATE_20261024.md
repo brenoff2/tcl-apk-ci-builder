@@ -1,3 +1,7 @@
+> **PROVA ADICIONAL DE PARIDADE TV — 24/10/2026:** comparado o commit do build TV aprovado `339ae5666184e6c4545a06a4ddef8c93d0019f87` com o HEAD DEV após correções Android; blobs SHA de `TvAppBridge.java`, `prepare_companion_safe.py`, `test_safe_tv_companion.py`, `anytv-tv25-compile.yml` e `TclUpdateManager.java` são **idênticos** nos dois commits. O artefato unsigned TV 2.5/code16 do run #40060021841 continua representativo da fonte atual; não existe mudança de protocolo TV que justifique nova compilação. Isto NÃO comprova compatibilidade no hardware ou identidade do companion instalado.
+
+> **FIX CONCRETO DE NAVEGAÇÃO — 24/10/2026:** `LaunchedEffect(openedSection)` agora reinicia `catalogScrollState.scrollToItem(0)` tanto ao abrir quanto ao voltar de página exclusiva pelo botão Ver mais. Antes, reaproveitava a rolagem da capa, podendo exibir uma página vazia se o índice fosse superior à quantidade de linhas disponíveis. Código `03db53481a`, teste `bea4b54582`.
+
 # AnyTV 2.9.25/code54 + AnyTV Connect TV 2.5/code16 — gate de candidato
 
 Data: 24/10/2026. Escopo: provas de desenvolvimento; **nenhum deploy, assinatura ou instalação em dispositivos**.
