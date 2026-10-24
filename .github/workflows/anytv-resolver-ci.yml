@@ -26,13 +26,11 @@ jobs:
           from pathlib import Path
           db = sqlite3.connect(':memory:')
           db.executescript(Path('anytv-resolver/migrations/0001_create_tables.sql').read_text())
-          db.execute('INSERT INTO monthly_quota (month,used) VALUES (?,?)', ('2026-10', 0))
-          r = db.execute('UPDATE monthly_quota SET used=used+1 WHERE month=? AND used<? RETURNING used', ('2026-10', 1)).fetchone()
-          assert r == (1,), r
-          assert db.execute('UPDATE monthly_quota SET used=used+1 WHERE month=? AND used<? RETURNING used', ('2026-10', 1)).fetchone() is None
-          print('SQLITE_QUOTA_ATOMIC_OK')
+          db.execute('INSERT INTO link_cache(cache_key,payload,expires_at) VALUES (?,?,?)', ('test','{}',1750000000))
+          assert db.execute('SELECT payload FROM link_cache WHERE cache_key=?',('test',)).fetchone() == ('{}',)
+          print('SQLITE_CACHE_MIGRATION_OK')
           PY
-      - name: Run security, budget, provider and cache regression tests
+      - name: Run security, provider and unrestricted-usage cache regression tests
         run: node --test anytv-resolver/src/worker.test.mjs
       - name: Cloudflare Worker bundle dry-run (no deployment, no token)
         run: |
