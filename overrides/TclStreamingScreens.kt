@@ -1870,45 +1870,147 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         }
-                        // Genre view: keep the hero carousel above a vertically scrolling
-                        // list. Each explicit tap appends exactly one page (up to 20).
+                        // Genre page: ten-image hero above either a detailed vertical list
+                        // or three-column vertical grid. The upstream TMDB sort is applied
+                        // consistently to page 1 and every user-requested next 20 titles.
                         if (!homeLibrary && selected == null && selectedHomeGenre > 0) {
-                            val genreKey = "$selectedGenreKind:$selectedHomeGenre"
+                            val genreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"
                             val genreTitles = genreShelves[genreKey].orEmpty()
-                                .filterNot { it.media == "movie" &&
-                                    it.id.toString() in watchedFilms }
                                 .distinctBy { "${it.media}:${it.id}" }
                             item {
                                 Text("Filmes e séries · " + (currentGenreList.firstOrNull {
                                     it.id == selectedHomeGenre }?.name ?: "Gênero"),
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(top = 15.dp, bottom = 8.dp))
-                            }
-                            items(genreTitles, key = { "${it.media}:${it.id}" }) { title ->
-                                Row(modifier = Modifier.fillMaxWidth().clickable {
-                                        details = title; detailsPackage = null
-                                    }.padding(vertical = 6.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.Top) {
-                                    AnyTvPinnedImage(
-                                        model = "https://image.tmdb.org/t/p/w185" + title.poster,
-                                        contentDescription = "Cartaz: " + title.name,
-                                        modifier = Modifier.size(width = 86.dp, height = 118.dp),
-                                        contentScale = ContentScale.Crop)
-                                    Column(modifier = Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                        Text(title.name, maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                        if (title.date.isNotBlank()) {
-                                            Text(title.date.take(4), fontSize = 11.sp,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    AnyTvCompactChip("Lista", genreViewMode == "list") {
+                                        genreViewMode = "list"
+                                        prefs.edit().putString("anytv_genre_view_mode", "list").apply()
+                                    }
+                                    AnyTvCompactChip("Grade 3", genreViewMode == "grid") {
+                                        genreViewMode = "grid"
+                                        prefs.edit().putString("anytv_genre_view_mode", "grid").apply()
+                                    }
+                                    Box {
+                                        val sortLabel = when (genreSort) {
+                                            "rating" -> "Melhor nota"
+                                            "recent" -> "Mais recentes"
+                                            "title" -> "Título A–Z"
+                                            else -> "Mais populares"
                                         }
-                                        StreamingOfferIcons(title, offerCache, displayed)
+                                        AnyTvCompactChip("Ordenar: $sortLabel ▾", false) {
+                                            genreSortMenu = true
+                                        }
+                                        DropdownMenu(expanded = genreSortMenu,
+                                            onDismissRequest = { genreSortMenu = false }) {
+                                            listOf("popular" to "Mais populares",
+                                                "rating" to "Melhor nota",
+                                                "recent" to "Mais recentes",
+                                                "title" to "Título A–Z").forEach { (mode, label) ->
+                                                DropdownMenuItem(text = { Text(label) }, onClick = {
+                                                    genreSort = mode
+                                                    genreSortMenu = false
+                                                    prefs.edit().putString("anytv_genre_sort", mode).apply()
+                                                })
+                                            }
+                                        }
                                     }
                                 }
-                                HorizontalDivider(color =
-                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                            }
+                            if (genreViewMode == "grid") {
+                                items(genreTitles.chunked(3)) { group ->
+                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                        verticalAlignment = Alignment.Top) {
+                                        group.forEach { title ->
+                                            Column(modifier = Modifier.weight(1f).clickable {
+                                                details = title; detailsPackage = null
+                                            }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                AnyTvPinnedImage(
+                                                    model = "https://image.tmdb.org/t/p/w185" +
+                                                        title.poster,
+                                                    contentDescription = "Cartaz: " + title.name,
+                                                    modifier = Modifier.fillMaxWidth().height(135.dp),
+                                                    contentScale = ContentScale.Crop)
+                                                Text(title.name, maxLines = 3, lineHeight = 14.sp,
+                                                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                                if (title.date.isNotBlank()) {
+                                                    Text(title.date.take(4), fontSize = 10.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                }
+                                                StreamingOfferIcons(title, offerCache, displayed)
+                                                AnyTvGenreTitleActions(title,
+                                                    favorite = isFavorite(title, "library"),
+                                                    marked = if (title.media == "movie")
+                                                        title.id.toString() in watchedFilms
+                                                    else title.id.toString() in trackedSeries,
+                                                    compact = true,
+                                                    onFavorite = { toggleFavorite(title, "library") },
+                                                    onMarked = {
+                                                        if (title.media == "movie")
+                                                            toggleFilmWatched(title.id)
+                                                        else toggleSeriesTracking(title.id)
+                                                    },
+                                                    onTrailer = { openGenreTrailer(title) })
+                                            }
+                                        }
+                                        repeat(3 - group.size) {
+                                            Spacer(Modifier.weight(1f))
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(genreTitles, key = { "${it.media}:${it.id}" }) { title ->
+                                    Row(modifier = Modifier.fillMaxWidth().clickable {
+                                            details = title; detailsPackage = null
+                                        }.padding(vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.Top) {
+                                        AnyTvPinnedImage(
+                                            model = "https://image.tmdb.org/t/p/w185" + title.poster,
+                                            contentDescription = "Cartaz: " + title.name,
+                                            modifier = Modifier.size(width = 92.dp, height = 132.dp),
+                                            contentScale = ContentScale.Crop)
+                                        Column(modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(title.name, maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                                            if (title.date.isNotBlank()) {
+                                                Text(title.date.take(4), fontSize = 11.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                            StreamingOfferIcons(title, offerCache, displayed)
+                                            Text(
+                                                if (title.overview.isBlank()) "Sinopse indisponível."
+                                                else title.overview.take(160).trimEnd() +
+                                                    if (title.overview.length > 160) "…" else "",
+                                                fontSize = 11.sp, lineHeight = 15.sp,
+                                                maxLines = 3, overflow = TextOverflow.Ellipsis,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            AnyTvGenreTitleActions(title,
+                                                favorite = isFavorite(title, "library"),
+                                                marked = if (title.media == "movie")
+                                                    title.id.toString() in watchedFilms
+                                                else title.id.toString() in trackedSeries,
+                                                compact = false,
+                                                onFavorite = { toggleFavorite(title, "library") },
+                                                onMarked = {
+                                                    if (title.media == "movie")
+                                                        toggleFilmWatched(title.id)
+                                                    else toggleSeriesTracking(title.id)
+                                                },
+                                                onTrailer = { openGenreTrailer(title) })
+                                        }
+                                    }
+                                    HorizontalDivider(color =
+                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                                }
                             }
                             item {
                                 if (genreMore[genreKey] == true) {
@@ -1916,11 +2018,14 @@ internal fun TclStreamingScreens(
                                         onClick = {
                                             if (genreLoading[genreKey] != true) {
                                                 genreLoading[genreKey] = true
+                                                val pageGenreId = selectedHomeGenre
+                                                val pageMedia = selectedGenreKind
+                                                val pageSort = genreSort
                                                 scope.launch {
                                                     val next = (genrePage[genreKey] ?: 1) + 1
                                                     runCatching {
                                                         StreamingCatalog.discoveryGenrePage(
-                                                            selectedHomeGenre, selectedGenreKind, next)
+                                                            pageGenreId, pageMedia, next, pageSort)
                                                     }.onSuccess { result ->
                                                         genreShelves[genreKey] =
                                                             (genreShelves[genreKey].orEmpty() +
