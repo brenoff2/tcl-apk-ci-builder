@@ -71,8 +71,9 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertNotIn("TclBottomTabs(", self.skin)
         self.assertNotIn("darkColorScheme(", self.skin)
         self.assertNotIn("bottomBar = {", self.skin)
-        self.assertIn("MaterialTheme.colorScheme.background", self.skin)
-        self.assertIn("MaterialTheme.colorScheme.primary", self.skin)
+        # Main remote alone uses the screenshot's dark graphite/red palette.
+        self.assertIn('private val TclBg = Color(0xFF08090D)', self.skin)
+        self.assertIn('private val TclBlue = Color(0xFFE9003B)', self.skin)
         self.assertIn("windowInsetsPadding(WindowInsets.safeDrawing)", self.skin)
 
     def test_keyboard_buffered_text_without_virtual_ok_click(self):
@@ -99,14 +100,58 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('putString("favorites:$host", serialized)', catalog)
 
     def test_volume_and_channel_icons_fit_without_fake_tv_meter(self):
-        self.assertIn('modifier = Modifier.size(17.dp).clickable(onClick = onHeader)',
+        self.assertIn('contentDescription = if (label == "Volume") "Silenciar" else "TV"',
                       self.skin)
+        self.assertIn('modifier = Modifier.size(17.dp)', self.skin)
         self.assertIn('modifier = Modifier.size(24.dp)', self.skin)
         self.assertIn('padding(vertical = 12.dp, horizontal = 3.dp)', self.skin)
         self.assertNotIn('TclLiquidFill(', self.skin)
         self.assertNotIn('fluidLevel = sessionState.volumeFraction', self.skin)
         self.assertIn('if (isConnected) onVolumeUp() else onOpenDiscovery()', self.skin)
         self.assertIn('if (isConnected) onVolumeDown() else onOpenDiscovery()', self.skin)
+
+    def test_2026_reference_main_home_minimal_graphite_remote(self):
+        pad = (KOTLIN / "TclResponsivePad.kt").read_text()
+        apps = (KOTLIN / "TclInstalledApps.kt").read_text()
+        playback = (KOTLIN / "PlaybackTransportBar.kt").read_text()
+        streaming = (KOTLIN / "TclStreamingScreens.kt").read_text()
+        for fragment in (
+            'private val TclBg = Color(0xFF08090D)',
+            'private val TclSurface = Color(0xFF0F1117)',
+            'private val TclBlue = Color(0xFFE9003B)',
+            'val systemBg = TclBg',
+            'TclApprovedHeader(',
+            'Text(deviceBrand, color = TclMuted',
+            'modifier = Modifier.size(38.dp)',
+            'verticalArrangement = Arrangement.spacedBy(6.dp)',
+            'TclResponsivePad(',
+            '.coerceAtLeast(0.dp).coerceAtMost(304.dp)',
+            '// Decorative unfilled rail, not a claimed TV volume/channel level.',
+            'TclQuickAction("Início", Icons.Filled.Home',
+            'TclQuickAction("Microfone", Icons.Filled.Mic',
+        ):
+            with self.subTest(component=fragment):
+                self.assertIn(fragment, self.skin)
+        self.assertNotIn('TclLiquidFill(', self.skin)
+        self.assertNotIn('fluidLevel = sessionState.volumeFraction', self.skin)
+        for fragment in (
+            'val accent = Color(0xFFE9003B)',
+            'modifier = Modifier.size(size * .28f)',
+            '.border(2.5.dp, accent, CircleShape)',
+            'onHoldStart = onHoldStart',
+            'onHoldEnd = onHoldEnd',
+        ):
+            self.assertIn(fragment, pad)
+        self.assertNotIn('.border(1.dp, accent.copy(alpha = 0.45f)', pad)
+        self.assertIn('allApps.take(6)', apps)
+        self.assertIn('OfficialTvIcon(app = app, size = 52.dp)', apps)
+        self.assertIn('Brush.horizontalGradient(listOf(', streaming)
+        self.assertIn('modifier = Modifier.fillMaxWidth().height(92.dp)', streaming)
+        self.assertIn('color = Color(0xFF181A20)', playback)
+        self.assertIn('KEYCODE_MEDIA_PLAY', playback)
+        self.assertIn('KEYCODE_MEDIA_PAUSE', playback)
+        self.assertIn('KEYCODE_MEDIA_STOP', playback)
+        self.assertNotIn('KEYCODE_MEDIA_PREVIOUS', playback)
 
     def test_headphones_use_companion_not_remote_red_key(self):
         self.assertIn("TclTvAppApi.headphones(host, code)", self.skin)
