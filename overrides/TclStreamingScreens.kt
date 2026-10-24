@@ -2554,9 +2554,20 @@ internal fun TclStreamingScreens(
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                         OutlinedButton(onClick = {
+                            // Official movie pages expose venues and sessions per
+                            // selected city; this is navigation, not invented showtimes.
+                            val slug = Normalizer.normalize(
+                                title.name.lowercase(java.util.Locale.ROOT),
+                                Normalizer.Form.NFD)
+                                .replace(Regex("\\p{Mn}+"), "")
+                                .replace(Regex("[^a-z0-9]+"), "-")
+                                .trim('-').take(100)
+                            val target = if (slug.isNotBlank())
+                                "https://www.ingresso.com/filme/" + slug
+                            else "https://www.ingresso.com/"
                             runCatching {
                                 context.startActivity(Intent(Intent.ACTION_VIEW,
-                                    Uri.parse("https://www.ingresso.com/")))
+                                    Uri.parse(target)))
                             }.onFailure {
                                 titleActionFeedback = "Não foi possível abrir a programação dos cinemas."
                             }
