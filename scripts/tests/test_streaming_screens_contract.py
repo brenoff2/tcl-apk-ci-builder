@@ -592,7 +592,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('AnyTvGenreTitleActions(', self.screen)
         self.assertNotIn('onTrailer =', self.screen)
         self.assertIn('Text("▶ Ver trailer")', self.screen)
-        self.assertEqual(self.screen.count('showRating = false'), 5)
+        self.assertEqual(self.screen.count('showRating = false'), 4)
         self.assertIn('val unique = shelf.filter { title ->', self.screen)
         self.assertIn('Keep cards visible when marked', self.screen)
         for marker, until, metadata, offers, title in (
