@@ -252,6 +252,10 @@
     {
       "date": "2026-10-24",
       "event": "AnyTV DEV upcoming streaming pagination: Android c1ba0c10 (source future movies+series paged, BR flatrate verified, next 24, overflow of initial batch retained, content filters preserved) and test fix c8bbbb04. CI first #40124990171 FAILED solely outdated old source variable contract; CI rerun #40125105465 COMPLETED/SUCCESS (62 contratos Streaming + 2 credenciais + 11 visuais; Gradle BUILD SUCCESSFUL 3m35s; identity V2/code54; unsigned artifact #12572691383), isolated proof #40125105419 SUCCESS. OTA published 2.9.25/code54 unchanged; PR #3 draft no merge or deploy; physical Android/TCL untested; gates F0-F8 NAO_HOMOLOGADO, progress 7/11=63%. QA docs/qa/ANYTV_20261024_UPCOMING_STREAMING_PAGINATION.md."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "DEV AnyTV: ef73ec03 corrige Em breve Streaming sem titulo BR na primeira pagina (ainda navegavel pelas paginas 2-50, sem falsos resultados), mensagens explicitas, e consistencia dos filtros de genero movie/TV para home, provedor, Ver mais e paginas seguintes. Teste textual legado corrigido isoladamente em 229b7567. Primeiro CI #40127722728 FAILED (expectativa de uma linha obsoleta); novo CI #40127825662 COMPLETED/SUCCESS (64 testes Streaming + 2 credenciais + 11 visuais; Gradle BUILD SUCCESSFUL 4m41s; identidade V2/code54; artefato unsigned #12574245289), prova isolada #40127825663 COMPLETED/SUCCESS. QA docs/qa/ANYTV_20261024_EMPTY_FUTURE_PROVIDER_GENRES.md. Somente DEV/PR #3 DRAFT. OTA oficial 2.9.25/code54 intocada. Android/TCL fisicos NAO_TESTADOS, P0 7/11=63%, F0-F8 NAO_HOMOLOGADO."
     }
   ],
   "discovery_v3": {
