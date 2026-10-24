@@ -1253,7 +1253,11 @@ internal fun TclStreamingScreens(
     var homeLibrary by remember { mutableStateOf(false) }
     var openedSection by remember { mutableStateOf<String?>(null) }
     var sectionVisibleCount by remember { mutableIntStateOf(ANYTV_LIST_BATCH) }
-    LaunchedEffect(openedSection) { sectionVisibleCount = ANYTV_LIST_BATCH }
+    LaunchedEffect(openedSection) {
+        sectionVisibleCount = ANYTV_LIST_BATCH
+        // A dedicated shelf is a new page, not an expansion at the old scroll position.
+        catalogScrollState.scrollToItem(0)
+    }
     var trackedSeries by remember {
         mutableStateOf(prefs.getString("anytv_tracking_series", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
