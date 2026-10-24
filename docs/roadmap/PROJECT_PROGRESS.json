@@ -156,6 +156,10 @@
     {
       "date": "2026-10-23",
       "event": "AnyTV personal-use unblock: removed 200/month Movie of the Night link cap, 20/min Cloudflare per-IP throttles for catalog/link/activation, deleted local rate-limit binding and quota var; deployed Worker ce51439e 100% via 3298f15b, five essential bindings + all three modules preserved. Offline CI 40052197666, 40052197671, 40052421243, 40052421285 success, each includes unlimited-use and security regression. Worker code readback has no internal quota/rate-limit code, app remains V2 2.9.22 code51 (no APK update), physical QA remains pending. Provider plan limits external unchanged."
+    },
+    {
+      "date": "2026-10-23",
+      "event": "Handoff 2.9.22/no internal usage caps reconciled with live Cloudflare and latest GitHub; created current 2.9.22 transition plus refreshed next-chat prompt and QA. Archived stale 2.9.12 operational checkpoint; gates 7/11 unchanged."
     }
   ],
   "discovery_v3": {
@@ -169,33 +173,42 @@
   },
   "operational_checkpoint": {
     "date": "2026-10-23",
-    "handoff": "docs/handoffs/2026-10-23-anytv-full-transition.md",
-    "decision": "docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md",
-    "phone_ota": {
-      "version": "2.9.12",
-      "versionCode": 41,
-      "path": "updates/android/cert2026/current.apk",
-      "branch": "feat/tcl-v22-updates-back-bluetooth",
-      "blob_sha": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
-      "sha256": "28c2881899bc9c6a79fcfd908d66528750534c89c7f334b8cc57096f80cf63f3",
-      "verified_run": 39963760834
+    "handoff": "docs/handoffs/2026-10-23-ANYTV-V2-2922-TRANSICAO-ATUAL.md",
+    "first_message": "docs/handoffs/NEXT_CHAT_FIRST_MESSAGE.md",
+    "device_qa": "docs/qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md",
+    "note": "Latest state supersedes archived 2.9.12/2.9.13 legacy checkpoint; archived for traceability.",
+    "current_v2": {
+      "version": "2.9.22",
+      "versionCode": 51,
+      "package": "com.tclremote.livre.v2",
+      "published": true,
+      "workflow_run": 40045953034,
+      "apk_sha256": "44cab69ad0eb6c0110ff4180e6388f042e667d8b86dcd319e39d777973d85d94",
+      "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
+      "ota_path": "updates/android/v2/current.apk",
+      "apk_git_blob": "39084853e1956f4aaedb3d8443ade9304e497581",
+      "signer_cert_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9"
     },
-    "candidate": {
-      "version": "2.9.13",
-      "versionCode": 42,
-      "build_run": 39891891049,
-      "signed_apk_sha256": "fbbc1398465f27b2aadccef1d48be6e08e51af0b729aab694189ca8c06b3c1f5",
-      "published": false,
-      "physical_tcl_qa": "NOT_HOMOLOGATED"
+    "live_worker": {
+      "version": "ce51439e-ca19-40d3-85e8-019c7a3669a5",
+      "deployment": "3298f15b-68d1-455b-bbc1-624925d7ccaf",
+      "traffic_percent": 100,
+      "limits_monthly": false,
+      "limits_per_minute": false,
+      "authentication_preserved": true,
+      "cache_preserved": true,
+      "binding_count": 5,
+      "offline_ci": 40052421285,
+      "live_smoke": 40052526994
     },
-    "signing": {
-      "original_cert_sha256": "2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f",
-      "publisher": ".github/workflows/publish-anytv-phone-github-only.yml",
-      "required_actions_secret_name": "ANYTV_RECOVERY_SECRET_2026",
-      "access_gate": "BLOCKED",
-      "failure_run": 39963496459
+    "legacy_ota_unchanged_git_blob": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
+    "technical_progress": {
+      "accepted": 7,
+      "total": 11,
+      "percent": 63
     },
-    "progress_unchanged": true
+    "human_gates": "F0-F8 NAO_HOMOLOGADO",
+    "next_action": "Physical device acceptance D01-D12; do not generate another APK just for docs or advance gates without evidence."
   },
   "v2_current": {
     "as_of": "2026-10-23",
@@ -221,8 +234,6 @@
     "cloudflare_deploy": "3298f15b-68d1-455b-bbc1-624925d7ccaf",
     "cloudflare_previous_version_rollback": "12a70da8-9275-4083-802c-fe38df8a6586",
     "tmdb_200_monthly_quota_removed": true,
-    "justwatch_link_limit_200_separate": false,
-    "rate_limit_and_cache_preserved": false,
     "physical_qa": "NOT_HOMOLOGATED",
     "changes": [
       "Genre page list with year, rating and Brazilian provider logos, synopsis max 160 characters/3 lines and actions for favorite, watched/series tracking and on-demand YouTube trailer",
@@ -231,7 +242,7 @@
       "Home compact banner 10 slides, title centered in reserved box, Ver fixed bottom in light grey with provider icon when available",
       "Search field fixed baseline by 44dp BasicTextField vertically centered placeholder, text and cursor",
       "Maintains 3-line fixed horizontal home rail card alignment and no show more in home",
-      "Worker strict TMDB discover sort allowlist deployed, 200/month link-only budget separated, all seven Worker bindings and device modules preserved",
+      "Historical transition: sorted TMDB discover allowlist; earlier link-only 200/month budget has now been removed. Current Worker has five essential bindings and three preserved modules.",
       "Existing V2 signer/package, OTA channel and unrelated old cert2026 APK unchanged",
       "No AnyTV app-imposed quotas or throttles: monthly 200-call link quota, Cloudflare 20/min IP limiter, and activation limiter all removed in live Worker; credential/URL verification remains."
     ],
@@ -244,7 +255,11 @@
     "per_minute_rate_limit_enforced": false,
     "cache_preserved": true,
     "worker_provider_auth_preserved": true,
-    "external_provider_plan_limits_unaffected": "Provider-side quotas are independent and cannot be removed in the AnyTV Worker."
+    "external_provider_plan_limits_unaffected": "Provider-side quotas are independent and cannot be removed in the AnyTV Worker.",
+    "handoff_full": "docs/handoffs/2026-10-23-ANYTV-V2-2922-TRANSICAO-ATUAL.md",
+    "provider_link_upstream": "Movie of the Night (not JustWatch)",
+    "rate_limit_preserved": false,
+    "internal_link_quota_removed": true
   },
   "v2_previous": {
     "as_of": "2026-10-23",
@@ -280,5 +295,35 @@
       "main home remains two-row horizontal scroll with no show more",
       "Cloudflare TMDB search quota unblocked while JustWatch link budget remains separately bounded"
     ]
+  },
+  "operational_checkpoint_historical_2026_10_23": {
+    "date": "2026-10-23",
+    "handoff": "docs/handoffs/2026-10-23-anytv-full-transition.md",
+    "decision": "docs/decisions/ADR-0003-ANDROID-CERT2026-GITHUB-ONLY.md",
+    "phone_ota": {
+      "version": "2.9.12",
+      "versionCode": 41,
+      "path": "updates/android/cert2026/current.apk",
+      "branch": "feat/tcl-v22-updates-back-bluetooth",
+      "blob_sha": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
+      "sha256": "28c2881899bc9c6a79fcfd908d66528750534c89c7f334b8cc57096f80cf63f3",
+      "verified_run": 39963760834
+    },
+    "candidate": {
+      "version": "2.9.13",
+      "versionCode": 42,
+      "build_run": 39891891049,
+      "signed_apk_sha256": "fbbc1398465f27b2aadccef1d48be6e08e51af0b729aab694189ca8c06b3c1f5",
+      "published": false,
+      "physical_tcl_qa": "NOT_HOMOLOGATED"
+    },
+    "signing": {
+      "original_cert_sha256": "2f14e43f7653a75f878c4d59a4a8ad462ade17c52bde23e802c8c6ed43ade95f",
+      "publisher": ".github/workflows/publish-anytv-phone-github-only.yml",
+      "required_actions_secret_name": "ANYTV_RECOVERY_SECRET_2026",
+      "access_gate": "BLOCKED",
+      "failure_run": 39963496459
+    },
+    "progress_unchanged": true
   }
 }
