@@ -1082,6 +1082,7 @@ internal fun TclStreamingScreens(
     var detailsPackage by remember { mutableStateOf<String?>(null) }
     var titleActionPending by remember { mutableStateOf(false) }
     var titleActionFeedback by remember { mutableStateOf<String?>(null) }
+    var deviceLinkStatus by remember { mutableStateOf<String?>(null) }
     var favorites by remember {
         mutableStateOf(runCatching {
             val arr = JSONArray(prefs.getString("streaming_favorites", "[]"))
@@ -1431,6 +1432,20 @@ internal fun TclStreamingScreens(
                         titleActionFeedback = "A fonte de streaming não confirma este título " +
                             "na assinatura selecionada no Brasil. " +
                             "Aluguel e canais adicionais não são assinatura básica."
+                        return@launch
+                    }
+                    AnyTvPersonalResult.ActivationRequired -> {
+                        titleActionFeedback = "Links diretos não autorizados neste celular. " +
+                            "A ativação individual precisa estar registrada no servidor."
+                        return@launch
+                    }
+                    AnyTvPersonalResult.ResolverUnavailable -> {
+                        val mode = TclTvAppApi.searchTitle(host, pairing,
+                            packageName, title.name)
+                        titleActionFeedback = if (mode == "search")
+                            "Resolvedor temporariamente indisponível; busca enviada à TCL."
+                        else "Resolvedor temporariamente indisponível; aplicativo aberto. " +
+                            "Pesquise pelo título na TV."
                         return@launch
                     }
                     AnyTvPersonalResult.NoSupportedLink -> {
@@ -2298,11 +2313,11 @@ internal fun TclStreamingScreens(
                         contentDescription = if (isFavorite(title, pkg))
                             "Remover da minha lista" else "Adicionar à minha lista"
                     }) {
-                        Icon(if (isFavorite(title, pkg)) Icons.Filled.Favorite
-                            else Icons.Outlined.FavoriteBorder,
+                        Icon(Icons.Filled.Favorite,
                             contentDescription = if (isFavorite(title, pkg))
                                 "Remover da minha lista" else "Adicionar à minha lista",
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = if (isFavorite(title, pkg)) Color(0xFFE04B57)
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp))
                     }
                     IconButton(onClick = {
@@ -2320,10 +2335,12 @@ internal fun TclStreamingScreens(
                         val marked = if (title.media == "movie")
                             title.id.toString() in watchedFilms
                         else title.id.toString() in trackedSeries
-                        Text(if (marked) "✓" else "○",
-                            color = if (marked) Color(0xFF1CB96B)
+                        Icon(Icons.Filled.CheckCircle,
+                            contentDescription = if (marked) "Assistido ou acompanhando"
+                                else "Marcar assistido ou acompanhar",
+                            tint = if (marked) Color(0xFF1CB96B)
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                            modifier = Modifier.size(24.dp))
                     }
                 }
             },
@@ -2333,6 +2350,21 @@ internal fun TclStreamingScreens(
                     verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     if (titleActionFeedback != null) {
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = {
+                        scope.launch {
+                            deviceLinkStatus = when (AnyTvPersonalLinks.activationStatus(context)) {
+                                "activated" -> "Links autorizados neste celular."
+                                "unauthorized" -> "Este celular ainda não está ativado para links diretos."
+                                else -> "Não foi possível verificar a autorização dos links."
+                            }
+                        }
+                    }, contentPadding = PaddingValues(0.dp)) {
+                        Text("Verificar autorização de links", fontSize = 11.sp)
+                    }
+                    if (deviceLinkStatus != null) {
+                        Text(deviceLinkStatus.orEmpty(), fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     val releasedYear = title.date.take(4).takeIf {
