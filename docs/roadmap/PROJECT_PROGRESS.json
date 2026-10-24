@@ -184,6 +184,10 @@
     {
       "date": "2026-10-24",
       "event": "READBACK FINAL CI DE CONTINUIDADE: Android candidato DEV head funcional 91a2b84, run 40097870978 SUCCESS, 42 testes interface/links + 2 credenciais + 9 adicionais, Gradle BUILD SUCCESSFUL 4m37s, APK V2 unsigned verificado; device proof run 40097871008 SUCCESS. NENHUMA assinatura/OTA 2.9.25-code54 realizada: workflow protegido ainda code53. Publicada segue AnyTV V2 2.9.24/code53, Worker 58fe4b33 100%; QA física e companion TCL pendentes, 7/11=63%, F0-F8 NAO_HOMOLOGADO. Handoff docs/handoffs/2026-10-24-ANYTV-TRANSICAO-INTEGRAL-2924-2925.md atualizado."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "UI Cinema/Em breve/controle V2 candidata revisada na DEV c9c9da17: top logo streaming removida, Cinema na home com hero/duas previas/lista BR, genero com carrossel futuro uma linha, Cinema internacional editorial separado, lancamentos futuros excluidos de prateleiras comuns, badge Cinema no banner da capa, rockers reduzidos sem medidor de volume nao verificado. Testes de contratos no run 40099926982 PASS; build Gradle e identidade unsigned aguardam conclusao. Device proof run 40099926956 SUCCESS. Sem assinatura code54, OTA, Worker, TV companion, QA fisica ou merge. QA docs/qa/ANYTV_V2_2925_CINEMA_PREMIERE_REMOTE_20261024.md. Progresso 7/11, gates F0-F8 inalterados."
     }
   ],
   "discovery_v3": {
