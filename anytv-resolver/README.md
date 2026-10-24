@@ -2,9 +2,11 @@
 
 # AnyTV — catálogo TMDB e resolvedor de links (Worker ativo)
 
-**Atualização:** 23/10/2026  
+**Atualização:** 24/10/2026  
 **Branch canônica:** `feat/anytv-p0-device-proof-verifier-20261020`  
-**Status:** Worker `anytv-link-resolver-pilot` ativo na Cloudflare, versão `ce51439e-ca19-40d3-85e8-019c7a3669a5`, deployment `3298f15b-68d1-455b-bbc1-624925d7ccaf`, 100% do tráfego. AnyTV V2 permanece na versão `2.9.22` (code 51); a mudança de backend não exige novo APK.
+**Status:** Worker `anytv-link-resolver-pilot` ativo na Cloudflare, versão `ce51439e-ca19-40d3-85e8-019c7a3669a5`, deployment `3298f15b-68d1-455b-bbc1-624925d7ccaf`, 100% do tráfego. AnyTV V2 publicada permanece na versão `2.9.22` (code 51); **a nova interface de status/ativação exige um APK candidato novo**, mas a alteração antiga das quotas não exigiu.
+
+**Readback de produção 24/10/2026:** cinco bindings presentes (D1, segredos Movie of the Night/TMDB e duas flags em modo `device` + ativação habilitada); 1 identidade de dispositivo P-256 autorizada no banco D1 (não necessariamente pertence à instalação V2), 1 código de ativação já consumido, nenhum código válido pendente. O código **atualmente implantado** não contém `/v1/device/status` nem `videoLink` priorizado. A publicação coordenada do Worker e V2 exige autorização e readback: [fluxo de ativação](../docs/qa/ANYTV_V2_DEVICE_ACTIVATION_RUNBOOK.md) e [portas de liberação](../docs/operations/ANYTV_V2_LINK_RELEASE_READINESS_20261024.md). Não modificar D1 antigo nem remover autorização por inferência.
 
 ## Escopo do módulo
 
@@ -38,11 +40,11 @@ Os resultados `not_available`, `no_supported_link`, `ambiguous` e `resolver_unav
 ## Garantias implementadas
 
 - Segredos `ANYTV_MOVIE_API_KEY` (somente na avaliação do GitHub) e `ANYTV_MOVIE_API_KEY` no Worker **não têm carregamento automático entre GitHub e Cloudflare**. No Worker o nome escolhido é `ANYTV_MOVIE_API_KEY`; jamais colocar valores em `vars`, repositório, APK ou respostas.
-- `ANYTV_CLIENT_TOKEN` é um token de administrador para **piloto servidor-a-servidor**, não um mecanismo de contas comerciais. Não distribuir esse token fixo no APK.
+- `ANYTV_CLIENT_TOKEN` é **legado do piloto servidor-a-servidor** e não está nas cinco bindings da implantação atual. Produção usa `ANYTV_RESOLVER_AUTH_MODE=device` e `ANYTV_DEVICE_ACTIVATION_ENABLED=true`; não distribuir tokens fixos em APK.
 - **Sem teto de uso do AnyTV:** removidos os bloqueios internos de 200 consultas por mês e 20 consultas por minuto para catálogo, resolvedor e ativação; nenhuma vinculação `RATE_LIMIT` nem variável `MAX_*_CALLS_MONTH` permanece no Worker.
 - `DB`: D1 usado para cache e para ativação/autorização do dispositivo. A tabela legada `monthly_quota` ainda existe para rollback histórico, mas não é consultada ou atualizada pelo Worker.
 - Cache global via D1: resultado positivo por 6 horas; ausente/ambíguo por 30 minutos. Não se armazenam imagens, payloads globais ou dados pessoais.
-- URLs HTTPS apenas nos domínios e formatos próprios dos streamings; Apple TV+ aceita `playableId` controlado, Prime exige um `gti` válido. Removem-se parâmetros de publicidade.
+- URLs HTTPS apenas nos domínios e formatos próprios dos streamings; Apple TV+ aceita `playableId` controlado. **Na candidata DEV**, Prime aceita `gti` válido ou ID de catálogo oficial; Netflix aceita barra final normalizada. Removem-se parâmetros de publicidade.
 - Filtros: oferta de assinatura ou gratuita, no Brasil, sem canal adicional. Aluguel/compra não equivalem à assinatura.
 - Uma falha ou inconsistência retorna erro seguro, sem revelar chaves nem dados de outros títulos.
 
