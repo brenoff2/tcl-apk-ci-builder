@@ -2324,14 +2324,14 @@ internal fun TclStreamingScreens(
                                     AnyTvOneRowPreview(
                                         if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                             "Em breve · Cinema" else "Em breve · Streaming",
-                                        previews) posterCard)
+                                        previews, posterCard)
                                 }
                             }
                             if (selectedHomeGenre == ANYTV_CINEMA_FILTER &&
                                 cinemaWorldwide.isNotEmpty()) {
                                 item {
                                     AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
-                                        cinemaWorldwide) posterCard)
+                                        cinemaWorldwide, posterCard)
                                 }
                             }
                         }
@@ -2591,13 +2591,13 @@ internal fun TclStreamingScreens(
                                 if (cinemaWorldwide.isNotEmpty()) {
                                     item {
                                         AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
-                                            cinemaWorldwide) posterCard)
+                                            cinemaWorldwide, posterCard)
                                     }
                                 }
                                 if (cinemaComingSoon.isNotEmpty()) {
                                     item {
                                         AnyTvOneRowPreview("Em breve · Cinema",
-                                            cinemaComingSoon) posterCard)
+                                            cinemaComingSoon, posterCard)
                                     }
                                 }
                             }
