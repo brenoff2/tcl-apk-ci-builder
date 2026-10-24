@@ -677,6 +677,7 @@ class StreamingScreens(unittest.TestCase):
         search_page = self.screen[start:end]
         self.assertIn('Surface(modifier = Modifier.fillMaxSize()', search_page)
         self.assertIn('color = Color.Black', search_page)
+        self.assertIn('contentColor = Color.White', search_page)
         self.assertNotIn('expandedHomeShelf', self.screen)
 
     def test_search_live_suggestions_and_clear_button(self):
