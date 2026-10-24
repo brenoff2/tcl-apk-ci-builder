@@ -200,6 +200,10 @@
     {
       "date": "2026-10-24",
       "event": "READBACK FINAL 24 TITULOS E NAVEGACAO: GitHub Actions Android unsigned candidate 40101131043 SUCCESS para código funcional f3b02151, testes UI/links/segurança SUCCESS, Gradle assembleRelease SUCCESS, identidade APK V2 unsigned SUCCESS; device-proof 40101131025 SUCCESS. Cartoes de genero normalizados 158dp, Ver mais navega a genero/Cinema/secao, 24 por lote com paginação TMDB 20->24 sem cortes e biblioteca preservada. Ultima OTA assinada 2.9.24/code53; ainda NAO e release code54, workflow oficial protegido inalterado. TV real, signer/OTA code54, companion e QA fisica pendentes. P0 7/11=63%, F0-F8 NAO_HOMOLOGADO. QA docs/qa/ANYTV_V2_2925_CARDS_NAVIGATION_PAGINATION24_20261024.md"
+    },
+    {
+      "date": "2026-10-24",
+      "event": "2.9.25/code54 CANDIDATA unsigned REAL COMPILADA: workflow DEV 37184150 alterado legalmente sem tocar signer/OTA, GitHub Actions 40102037540 SUCCESS em UI/links/security, Gradle, aapt badge name=com.tclremote.livre.v2 code=54 versionName=2.9.25-AnyTV e upload artifact 12563422151 (ZIP 23261948 bytes). APK unsigned SHA256 extraído e conferido independentemente: 36193ba7405c66b3cab44c03fb8fa6fac696e5443021318af441c1eb2dc90894. Fix Ver mais scrollToItem(0) código 03db5348 e teste bea4b545. TV 2.5/code16 build 40060021841 SUCCESS, artefato unsigned 12546823342; cinco arquivos TV atuais iguais por SHA à fonte do build aprovado, não necessita rebuild sem mudança. Última OTA assinada permanece V2 2.9.24/code53, workflow assinado protegido ainda code53 e sem autorização para produção. Nenhum merge, D1, Worker, assinatura, OTA ou TV instalada alterados. M08/M09 IN_QA, M10/M11 BACKLOG. Progresso 7/11=63%, gates F0-F8 NAO_HOMOLOGADO. docs/qa/ANYTV_2925_CODE54_TV25_CANDIDATE_GATE_20261024.md"
     }
   ],
   "discovery_v3": {
