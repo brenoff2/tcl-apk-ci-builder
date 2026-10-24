@@ -40,4 +40,4 @@ Para falhas visuais, guardar **um print do estado afetado**, informando versão,
 - `40045953034`: build/IME/busca real/assinatura/publicação/readback **PASS**, mesmo signer V2.
 - `40045771887`: consulta TMDB filme/série e ordenação/paginação **PASS**.
 - OTA legado `updates/android/cert2026/current.apk` preservado (Git blob `44c766b433ddb370f4589b87843f1edfd9cd7b7a`).
-- Conta de 200/mês aplicada **somente a links/JustWatch**, não a busca/catálogo TMDB; rate-limit por IP/cache preservados.
+- Conta interna de 200/mês aplicada **somente à API de links Movie of the Night (`api.movieofthenight.com/v4`)**, não a busca/catálogo TMDB; rate-limit por IP/cache preservados.
