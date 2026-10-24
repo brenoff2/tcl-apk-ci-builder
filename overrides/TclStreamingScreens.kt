@@ -1273,10 +1273,6 @@ internal fun TclStreamingScreens(
     var homeContentType by remember { mutableStateOf("all") }
     var librarySection by remember { mutableStateOf("saved") }
     var selectedHomeGenre by remember { mutableIntStateOf(0) }
-    var genreViewMode by remember(prefs) {
-        mutableStateOf(prefs.getString("anytv_genre_view_mode", "list")
-            ?.takeIf { it in setOf("list", "grid") } ?: "list")
-    }
     var genreSort by remember(prefs) {
         mutableStateOf(prefs.getString("anytv_genre_sort", "popular")
             ?.takeIf { it in setOf("popular", "rating", "recent", "title") } ?: "popular")
@@ -2170,34 +2166,8 @@ internal fun TclStreamingScreens(
                                     horizontalArrangement = Arrangement.spacedBy(9.dp),
                                     verticalAlignment = Alignment.Top) {
                                     group.forEach { title ->
-                                        Column(modifier = Modifier.weight(1f).clickable {
-                                            details = title; detailsPackage = null
-                                        }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            AnyTvPinnedImage(
-                                                model = "https://image.tmdb.org/t/p/w185" + title.poster,
-                                                contentDescription = "Cartaz: " + title.name,
-                                                modifier = Modifier.fillMaxWidth().height(158.dp),
-                                                contentScale = ContentScale.Crop)
-                                            AnyTvCardMetaRow(title,
-                                                favorite = isFavorite(title, "library"),
-                                                marked = if (title.media == "movie")
-                                                    title.id.toString() in watchedFilms
-                                                else title.id.toString() in trackedSeries,
-                                                compact = true,
-                                                onMarked = {
-                                                    if (title.media == "movie")
-                                                        toggleFilmWatched(title.id)
-                                                    else toggleSeriesTracking(title)
-                                                },
-                                                onFavorite = { toggleFavorite(title, "library") })
-                                            StreamingOfferIcons(title, offerCache, displayed,
-                                                showRating = false,
-                                                inCinema = title.id in cinemaIds)
-                                            Text(title.name, maxLines = 3, lineHeight = 14.sp,
-                                                modifier = Modifier.fillMaxWidth().height(42.dp),
-                                                overflow = TextOverflow.Ellipsis,
-                                                fontSize = 11.sp)
-                                        }
+                                        posterCard(title, Modifier.weight(1f),
+                                            sectionTitle == ANYTV_CINEMA_SHELF)
                                     }
                                     repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
                                 }
@@ -2353,16 +2323,7 @@ internal fun TclStreamingScreens(
                                     .horizontalScroll(rememberScrollState()),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    AnyTvGenreViewIcon(Icons.Filled.ViewList, "Lista",
-                                        genreViewMode == "list") {
-                                        genreViewMode = "list"
-                                        prefs.edit().putString("anytv_genre_view_mode", "list").apply()
-                                    }
-                                    AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade de três colunas",
-                                        genreViewMode == "grid") {
-                                        genreViewMode = "grid"
-                                        prefs.edit().putString("anytv_genre_view_mode", "grid").apply()
-                                    }
+                                    // All streaming pages follow the three-column master grid.
                                     if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                                         Text("Em cartaz · Brasil · TMDB", fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2392,94 +2353,15 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                             }
-                            if (genreViewMode == "grid") {
-                                items(genreTitles.chunked(3)) { group ->
-                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(9.dp),
-                                        verticalAlignment = Alignment.Top) {
-                                        group.forEach { title ->
-                                            Column(modifier = Modifier.weight(1f).clickable {
-                                                details = title; detailsPackage = null
-                                            }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                AnyTvPinnedImage(
-                                                    model = "https://image.tmdb.org/t/p/w185" +
-                                                        title.poster,
-                                                    contentDescription = "Cartaz: " + title.name,
-                                                    modifier = Modifier.fillMaxWidth().height(158.dp),
-                                                    contentScale = ContentScale.Crop)
-                                                AnyTvCardMetaRow(title,
-                                                    favorite = isFavorite(title, "library"),
-                                                    marked = if (title.media == "movie")
-                                                        title.id.toString() in watchedFilms
-                                                    else title.id.toString() in trackedSeries,
-                                                    compact = true,
-                                                    onMarked = {
-                                                        if (title.media == "movie")
-                                                            toggleFilmWatched(title.id)
-                                                        else toggleSeriesTracking(title)
-                                                    },
-                                                    onFavorite = { toggleFavorite(title, "library") })
-                                                StreamingOfferIcons(title, offerCache, displayed,
-                                                    showRating = false,
-                                                    inCinema = title.id in cinemaIds)
-                                                // Keep three lines reserved, even for short titles.
-                                                Spacer(Modifier.height(6.dp))
-                                                Text(title.name, maxLines = 3, lineHeight = 14.sp,
-                                                    modifier = Modifier.fillMaxWidth().height(42.dp),
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                            }
-                                        }
-                                        repeat(3 - group.size) {
-                                            Spacer(Modifier.weight(1f))
-                                        }
+                            items(genreTitles.chunked(3)) { group ->
+                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                    verticalAlignment = Alignment.Top) {
+                                    group.forEach { title ->
+                                        posterCard(title, Modifier.weight(1f),
+                                            selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                     }
-                                }
-                            } else {
-                                items(genreTitles, key = { "${it.media}:${it.id}" }) { title ->
-                                    Row(modifier = Modifier.fillMaxWidth().clickable {
-                                            details = title; detailsPackage = null
-                                        }.padding(vertical = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalAlignment = Alignment.Top) {
-                                        AnyTvPinnedImage(
-                                            model = "https://image.tmdb.org/t/p/w185" + title.poster,
-                                            contentDescription = "Cartaz: " + title.name,
-                                            modifier = Modifier.size(width = 116.dp, height = 158.dp),
-                                            contentScale = ContentScale.Crop)
-                                        Column(modifier = Modifier.weight(1f),
-                                            verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            AnyTvCardMetaRow(title,
-                                                favorite = isFavorite(title, "library"),
-                                                marked = if (title.media == "movie")
-                                                    title.id.toString() in watchedFilms
-                                                else title.id.toString() in trackedSeries,
-                                                compact = false,
-                                                onMarked = {
-                                                    if (title.media == "movie")
-                                                        toggleFilmWatched(title.id)
-                                                    else toggleSeriesTracking(title)
-                                                },
-                                                onFavorite = { toggleFavorite(title, "library") })
-                                            StreamingOfferIcons(title, offerCache, displayed,
-                                                showRating = false,
-                                                inCinema = title.id in cinemaIds)
-                                            Spacer(Modifier.height(6.dp))
-                                            Text(title.name, maxLines = 3, lineHeight = 14.sp,
-                                                modifier = Modifier.fillMaxWidth().height(42.dp),
-                                                overflow = TextOverflow.Ellipsis,
-                                                fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                                            Text(
-                                                if (title.overview.isBlank()) "Sinopse indisponível."
-                                                else title.overview.take(160).trimEnd() +
-                                                    if (title.overview.length > 160) "…" else "",
-                                                fontSize = 11.sp, lineHeight = 15.sp,
-                                                maxLines = 3, overflow = TextOverflow.Ellipsis,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
-                                    }
-                                    HorizontalDivider(color =
-                                        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                                    repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
                             item {
