@@ -98,6 +98,16 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn("TclTvAppApi.apps(host, code)", catalog)
         self.assertIn('putString("favorites:$host", serialized)', catalog)
 
+    def test_volume_and_channel_icons_fit_without_fake_tv_meter(self):
+        self.assertIn('modifier = Modifier.size(17.dp).clickable(onClick = onHeader)',
+                      self.skin)
+        self.assertIn('modifier = Modifier.size(24.dp)', self.skin)
+        self.assertIn('padding(vertical = 12.dp, horizontal = 3.dp)', self.skin)
+        self.assertNotIn('TclLiquidFill(', self.skin)
+        self.assertNotIn('fluidLevel = sessionState.volumeFraction', self.skin)
+        self.assertIn('if (isConnected) onVolumeUp() else onOpenDiscovery()', self.skin)
+        self.assertIn('if (isConnected) onVolumeDown() else onOpenDiscovery()', self.skin)
+
     def test_headphones_use_companion_not_remote_red_key(self):
         self.assertIn("TclTvAppApi.headphones(host, code)", self.skin)
         self.assertNotIn("KEYCODE_PROG_RED", self.skin)
