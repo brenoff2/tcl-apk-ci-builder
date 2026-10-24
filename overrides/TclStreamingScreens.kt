@@ -732,6 +732,8 @@ private object StreamingCatalog {
         val poster = entry.optString("poster_path").takeIf { it.startsWith("/") }.orEmpty()
         val backdrop = entry.optString("backdrop_path").takeIf { it.startsWith("/") }.orEmpty()
         StreamingTitle(id, name, entry.optString("overview"), poster, "tv",
+            rating = entry.optDouble("vote_average", 0.0),
+            votes = entry.optInt("vote_count", 0),
             backdrop = backdrop, date = entry.optString("first_air_date"), genreIds = genreIds)
     }
 
@@ -3159,18 +3161,12 @@ internal fun TclStreamingScreens(
                     }
                     if (relatedTitles.isNotEmpty()) {
                         Text("Você também pode gostar", fontWeight = FontWeight.SemiBold)
-                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            relatedTitles.forEach { suggested ->
-                                Column(modifier = Modifier.width(100.dp).clickable {
-                                    details = suggested
-                                    detailsPackage = null
-                                }) {
-                                    AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w185" + suggested.poster,
-                                        contentDescription = suggested.name,
-                                        modifier = Modifier.fillMaxWidth().height(120.dp),
-                                        contentScale = ContentScale.Crop)
-                                    Text(suggested.name, fontSize = 11.sp, maxLines = 2)
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val cardWidth = (maxWidth - 18.dp) / 3f
+                            Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                relatedTitles.take(ANYTV_LIST_BATCH).forEach { suggested ->
+                                    posterCard(suggested, Modifier.width(cardWidth), false)
                                 }
                             }
                         }
