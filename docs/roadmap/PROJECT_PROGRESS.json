@@ -240,6 +240,10 @@
     {
       "date": "2026-10-24",
       "event": "QA residual final: código DEV 9ac3529f, GitHub Actions unsigned #40119630330 COMPLETED/SUCCESS, 53 contratos Streaming+2 credenciais+11 visuais PASS, Gradle BUILD SUCCESSFUL 4m41s, pacote V2 code54 verificado, artefato unsigned #12570905996. Prova isolada #40119630288 SUCCESS. PR #3 continua draft/sem merge; OTA assinada 2.9.25/code54 permanece publicada, sem nova assinatura/distribuicao, sem testes fisicos; progresso 7/11 (63%), F0-F8 NAO_HOMOLOGADO."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "QA visual residual: codigo DEV 08cd4807 (hero Streaming nome/ano/nota/gradiente/sombra e barra responsiva + genero provedor) e 8d479b5a (hero Cinema BR ano real + selo azul) compilacoes unsigned, sem assinatura ou OTA. CI 40121432431 SUCCESS (56+2+11, Gradle); CI final 40121842745 COMPLETED/SUCCESS (57+2+11 testes, Gradle BUILD SUCCESSFUL 5m27s, artifact unsigned 12571029713); proof 40121842751 SUCCESS. PR #3 draft, OTA assinada continua 2.9.25/code54, sem testes fisicos, progresso 7/11=63%, F0-F8 NAO_HOMOLOGADO. QA docs/qa/ANYTV_20261024_HERO_RESPONSIVE_CINEMA.md."
     }
   ],
   "discovery_v3": {
