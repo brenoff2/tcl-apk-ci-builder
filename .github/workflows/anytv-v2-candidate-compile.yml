@@ -5,6 +5,8 @@ on:
     paths:
       - '.github/workflows/anytv-v2-candidate-compile.yml'
       - 'overrides/TclStreamingScreens.kt'
+      - 'overrides/TclApprovedHomeScreen.kt'
+      - 'overrides/TclResponsivePad.kt'
       - 'overrides/TclInstalledApps.kt'
       - 'overrides/PlaybackTransportBar.kt'
       - 'overrides/AnyTvSplashScreen.kt'
