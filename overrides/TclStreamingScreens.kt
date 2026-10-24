@@ -1262,12 +1262,46 @@ internal fun TclStreamingScreens(
         mutableStateOf(prefs.getString("anytv_tracking_series", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
     }
-    fun toggleSeriesTracking(id: Int) {
+    // Keep in-progress series independent of an evictable editorial cache.
+    var watchingTitles by remember(prefs) {
+        mutableStateOf(runCatching {
+            val stored = JSONArray(prefs.getString("anytv_watching_titles_v1", "[]"))
+            (0 until stored.length()).mapNotNull { index ->
+                val entry = stored.optJSONObject(index) ?: return@mapNotNull null
+                val id = entry.optInt("id")
+                val name = entry.optString("name")
+                if (id <= 0 || name.isBlank()) null
+                else StreamingTitle(id, name, entry.optString("overview"),
+                    entry.optString("poster"), "tv",
+                    backdrop = entry.optString("backdrop"),
+                    date = entry.optString("date"),
+                    genreIds = entry.optJSONArray("genres")?.let { genres ->
+                        (0 until genres.length()).map { genres.optInt(it) }.filter { it > 0 }
+                    } ?: emptyList())
+            }.associateBy { it.id }
+        }.getOrDefault(emptyMap<Int, StreamingTitle>()))
+    }
+    fun rememberWatchingTitle(title: StreamingTitle) {
+        if (title.media != "tv" || title.id <= 0) return
+        watchingTitles = watchingTitles + (title.id to title)
+        val stored = JSONArray()
+        watchingTitles.values.forEach { item ->
+            stored.put(JSONObject().put("id", item.id).put("name", item.name)
+                .put("overview", item.overview).put("poster", item.poster)
+                .put("backdrop", item.backdrop).put("date", item.date)
+                .put("genres", JSONArray(item.genreIds)))
+        }
+        prefs.edit().putString("anytv_watching_titles_v1", stored.toString()).apply()
+    }
+    fun toggleSeriesTracking(title: StreamingTitle) {
+        val id = title.id
+        rememberWatchingTitle(title)
         trackedSeries = if (id.toString() in trackedSeries)
             trackedSeries - id.toString() else trackedSeries + id.toString()
         prefs.edit().putString("anytv_tracking_series",
             trackedSeries.sorted().joinToString(",")).apply()
     }
+    var watchingQuery by remember { mutableStateOf("") }
     var showGlobalSearch by remember { mutableStateOf(false) }
     val initialGenreIds = remember(prefs) {
         prefs.getString("anytv_home_genres", null)?.split(",")
@@ -1360,6 +1394,7 @@ internal fun TclStreamingScreens(
     }
     // Watched history survives removing a heart: it is independent of favorites.
     fun restoreTrackedTitle(media: String, id: Int): StreamingTitle? {
+        if (media == "tv") watchingTitles[id]?.let { return it }
         favorites.firstOrNull { it.title.id == id && it.title.media == media }
             ?.title?.let { return it }
         val cached = StreamingDiskCache.previousTitle(media, id) ?: return null
@@ -1423,8 +1458,9 @@ internal fun TclStreamingScreens(
         mutableStateOf(prefs.getString("anytv_watched_episodes", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
     }
-    fun toggleWatched(id: Int, season: Int, episode: Int) {
-        val key = "$id:$season:$episode"
+    fun toggleWatched(title: StreamingTitle, season: Int, episode: Int) {
+        rememberWatchingTitle(title)
+        val key = "${title.id}:$season:$episode"
         watchedEpisodes = if (key in watchedEpisodes) watchedEpisodes - key
             else watchedEpisodes + key
         prefs.edit().putString("anytv_watched_episodes",
@@ -2154,7 +2190,7 @@ internal fun TclStreamingScreens(
                                                 onMarked = {
                                                     if (title.media == "movie")
                                                         toggleFilmWatched(title.id)
-                                                    else toggleSeriesTracking(title.id)
+                                                    else toggleSeriesTracking(title)
                                                 },
                                                 onFavorite = { toggleFavorite(title, "library") })
                                             StreamingOfferIcons(title, offerCache, displayed,
@@ -2371,7 +2407,7 @@ internal fun TclStreamingScreens(
                                                     onMarked = {
                                                         if (title.media == "movie")
                                                             toggleFilmWatched(title.id)
-                                                        else toggleSeriesTracking(title.id)
+                                                        else toggleSeriesTracking(title)
                                                     },
                                                     onFavorite = { toggleFavorite(title, "library") })
                                                 StreamingOfferIcons(title, offerCache, displayed,
@@ -2413,7 +2449,7 @@ internal fun TclStreamingScreens(
                                                 onMarked = {
                                                     if (title.media == "movie")
                                                         toggleFilmWatched(title.id)
-                                                    else toggleSeriesTracking(title.id)
+                                                    else toggleSeriesTracking(title)
                                                 },
                                                 onFavorite = { toggleFavorite(title, "library") })
                                             StreamingOfferIcons(title, offerCache, displayed,
@@ -2781,7 +2817,7 @@ internal fun TclStreamingScreens(
                             toggleFilmWatched(title.id)
                         } else {
                             if (!isFavorite(title, pkg)) toggleFavorite(title, pkg)
-                            toggleSeriesTracking(title.id)
+                            toggleSeriesTracking(title)
                         }
                     }, modifier = Modifier.size(36.dp).semantics {
                         contentDescription = if (title.media == "movie")
@@ -2938,11 +2974,11 @@ internal fun TclStreamingScreens(
                             seasonEpisodes.forEach { episode ->
                                 val marked = "${title.id}:${selectedSeriesSeason}:${episode.number}" in watchedEpisodes
                                 Row(modifier = Modifier.fillMaxWidth().clickable {
-                                    toggleWatched(title.id, selectedSeriesSeason, episode.number)
+                                    toggleWatched(title, selectedSeriesSeason, episode.number)
                                 }, verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     Checkbox(checked = marked, onCheckedChange = {
-                                        toggleWatched(title.id, selectedSeriesSeason, episode.number)
+                                        toggleWatched(title, selectedSeriesSeason, episode.number)
                                     })
                                     Column {
                                         Text("${episode.number}. ${episode.name}",
