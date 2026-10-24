@@ -980,13 +980,32 @@ private fun AnyTvCinemaHero(
                     contentDescription = "Cinema: " + film.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize())
-                Text(film.name,
-                    modifier = Modifier.align(Alignment.BottomStart)
-                        .background(Color.Black.copy(alpha = 0.70f),
-                            RoundedCornerShape(topEnd = 8.dp))
-                        .padding(horizontal = 11.dp, vertical = 6.dp),
-                    fontWeight = FontWeight.SemiBold, fontSize = 12.sp,
-                    maxLines = 2, color = Color.White)
+                Column(modifier = Modifier.align(Alignment.BottomStart)
+                    .background(Color.Black.copy(alpha = 0.70f),
+                        RoundedCornerShape(topEnd = 8.dp))
+                    .padding(horizontal = 11.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Text(film.name, fontWeight = FontWeight.SemiBold,
+                        fontSize = 12.sp, maxLines = 2, color = Color.White,
+                        overflow = TextOverflow.Ellipsis,
+                        style = TextStyle(shadow = Shadow(
+                            color = Color.Black.copy(alpha = 0.90f),
+                            offset = Offset(0f, 2f), blurRadius = 4f)))
+                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        val year = film.date.take(4)
+                            .takeIf { it.matches(Regex("[0-9]{4}")) }
+                        if (year != null) {
+                            Text(year, fontSize = 10.sp, color = Color.White)
+                        }
+                        Text("Cinema", modifier = Modifier
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(Color(0xFF1769E0))
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                            fontSize = 9.sp, color = Color.White,
+                            fontWeight = FontWeight.SemiBold)
+                    }
+                }
             }
         }
     }

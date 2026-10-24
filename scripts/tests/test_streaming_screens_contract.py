@@ -455,6 +455,16 @@ class StreamingScreens(unittest.TestCase):
             'Modifier.size(width = 116.dp, height = 158.dp)',
         ):
             self.assertNotIn(forbidden, self.screen)
+    def test_cinema_br_hero_retains_real_year_and_blue_cinema_label(self):
+        cinema = self.screen.split('private fun AnyTvCinemaHero(', 1)[1].split(
+            '/**\n * The one poster/card specification', 1)[0]
+        self.assertIn('val year = film.date.take(4)', cinema)
+        self.assertIn('if (year != null)', cinema)
+        self.assertIn('Text("Cinema", modifier = Modifier', cinema)
+        self.assertIn('.background(Color(0xFF1769E0))', cinema)
+        self.assertIn('style = TextStyle(shadow = Shadow(', cinema)
+        self.assertIn('contentScale = ContentScale.Crop', cinema)
+
     def test_hero_overlays_title_year_rating_verified_cinema_and_small_progress(self):
         hero = self.screen.split('val current = heroTitles[pageIndex]', 1)[1].split(
             '// Two single-row preview rails', 1)[0]
