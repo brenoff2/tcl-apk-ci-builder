@@ -91,28 +91,21 @@ import com.hari.androidtvremote.androidLib.remote.Remotemessage
 import com.hari.androidtvremote.utils.Constant
 
 /**
- * The approved 19:52 screenshot is the visual reference for this layout.
+ * The 2026-10-24 graphite/red screenshot is the reference for this remote layout.
  * It deliberately reuses the same remote callbacks, playback component,
  * IPTV/Bluetooth companion support, and existing shortcuts preferences.
  *
  * Preview uses a DIFFERENT applicationId to avoid replacing an installed
  * 1.7 APK whose private signing key is not currently available.
  */
-// The same Material theme powers settings and the remote; no dark override.
-private val TclBg: Color
-    @Composable get() = MaterialTheme.colorScheme.background
-private val TclSurface: Color
-    @Composable get() = MaterialTheme.colorScheme.surfaceContainer
-private val TclSurfaceHigh: Color
-    @Composable get() = MaterialTheme.colorScheme.surfaceContainerHigh
-private val TclOutline: Color
-    @Composable get() = MaterialTheme.colorScheme.outlineVariant
-private val TclText: Color
-    @Composable get() = MaterialTheme.colorScheme.onBackground
-private val TclMuted: Color
-    @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
-private val TclBlue: Color
-    @Composable get() = MaterialTheme.colorScheme.primary
+// Scoped visual palette; settings and other screens retain their own theme.
+private val TclBg = Color(0xFF08090D)
+private val TclSurface = Color(0xFF0F1117)
+private val TclSurfaceHigh = Color(0xFF1C1E25)
+private val TclOutline = Color(0xFF2A2C32)
+private val TclText = Color(0xFFF9F9FB)
+private val TclMuted = Color(0xFFA6A7AF)
+private val TclBlue = Color(0xFFE9003B)
 
 @Composable
 fun TclApprovedHomeScreen(
@@ -219,7 +212,7 @@ fun TclApprovedHomeScreen(
 
     // Draw the theme background under system insets, instead of leaving white bars.
     val systemView = LocalView.current
-    val systemBg = MaterialTheme.colorScheme.background
+    val systemBg = TclBg
     SideEffect {
         (systemView.context as? android.app.Activity)?.window?.let { window ->
             @Suppress("DEPRECATION")
@@ -237,7 +230,7 @@ fun TclApprovedHomeScreen(
     }
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(TclSurface, TclBg, TclBg)))
+            .background(Brush.verticalGradient(listOf(Color(0xFF11141B), TclBg, TclBg)))
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
         val compactHeight = maxHeight < 760.dp
@@ -247,11 +240,11 @@ fun TclApprovedHomeScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(
-                    horizontal = if (maxWidth < 360.dp) 8.dp else 12.dp,
-                    vertical = if (tightHeight) 4.dp else 8.dp
+                    horizontal = if (maxWidth < 360.dp) 10.dp else 14.dp,
+                    vertical = if (tightHeight) 6.dp else 12.dp
                 ),
             verticalArrangement = Arrangement.spacedBy(
-                if (tightHeight) 6.dp else if (compactHeight) 8.dp else 10.dp
+                if (tightHeight) 9.dp else if (compactHeight) 13.dp else 17.dp
             )
         ) {
                     TclApprovedHeader(
@@ -271,14 +264,8 @@ fun TclApprovedHomeScreen(
                     )
 
                     Column(
-                        modifier = Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(
-                                Brush.verticalGradient(listOf(TclSurfaceHigh, TclSurface))
-                            )
-                            .border(1.dp, TclOutline.copy(alpha = .75f), RoundedCornerShape(20.dp))
-                            .padding(if (compactHeight) 7.dp else 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // Keep all actions: 10 s, play/pause/stop, speeds,
                         // restart episode, episode guide and headphones.
@@ -316,9 +303,9 @@ fun TclApprovedHomeScreen(
                         // space below it, and clipped the fourth numeric row.
                         // Same footprint in D-pad, pointer and 4-row numeric mode.
                         val gap = if (maxWidth < 340.dp) 5.dp else 8.dp
-                        val rockerWidth = if (maxWidth < 340.dp) 46.dp else 57.dp
+                        val rockerWidth = if (maxWidth < 340.dp) 48.dp else 54.dp
                         val padWidth = (maxWidth - rockerWidth * 2 - gap * 2)
-                            .coerceAtLeast(0.dp).coerceAtMost(280.dp)
+                            .coerceAtLeast(0.dp).coerceAtMost(304.dp)
                         val padHeight = padWidth
                         Row(
                             modifier = Modifier.fillMaxWidth().height(padHeight),
@@ -379,7 +366,7 @@ fun TclApprovedHomeScreen(
 
                     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
                         val buttonDiameter = ((maxWidth - 8.dp * 4) / 5)
-                            .coerceAtMost(if (compactHeight) 49.dp else 62.dp)
+                            .coerceAtMost(if (compactHeight) 56.dp else 64.dp)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -475,40 +462,25 @@ private fun TclApprovedHeader(
     onCast: () -> Unit,
     onSettings: () -> Unit
 ) {
-    // Connected TV manufacturer is inferred from the discovered name, never edited.
+    // Connection identity on two lines: status and title, then Android TV.
     val deviceBrand = remember(tvName) {
         listOf("TCL", "Sony", "Philips", "Hisense", "Xiaomi", "Google TV",
             "Android TV", "Samsung", "LG").firstOrNull {
             tvName.contains(it, ignoreCase = true)
         } ?: "Android TV"
     }
-    // A slim toolbar, not a second oversized connected-status card.
-    Row(
-        modifier = Modifier.fillMaxWidth()
-            .padding(horizontal = 1.dp, vertical = 2.dp),
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(5.dp)
-    ) {
-        Row(
-            modifier = if (isConnected) Modifier.weight(1f)
-                else Modifier.weight(1f).clickable(onClick = onChooseTv),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
-        ) {
-            Box(Modifier.size(7.dp).clip(CircleShape)
-                .background(if (isConnected) Color(0xFF17DE68) else Color(0xFFFFA427)))
-            Text(tvName, color = TclText, fontWeight = FontWeight.Medium,
-                fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false))
-            if (!isConnected) {
-                Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Selecionar televisão manualmente",
-                    tint = TclMuted, modifier = Modifier.size(13.dp))
-            }
+        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        Box(Modifier.size(9.dp).clip(CircleShape)
+            .background(if (isConnected) Color(0xFF00E979) else Color(0xFFFFB043)))
+        Column(modifier = Modifier.weight(1f).clickable(onClick = onChooseTv),
+            verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(tvName, color = TclText, fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(deviceBrand, color = TclMuted, fontSize = 11.sp, maxLines = 1)
         }
-        Text(deviceBrand, color = TclText, fontSize = 10.sp, maxLines = 1,
-            fontWeight = FontWeight.Medium, modifier = Modifier.padding(end = 3.dp))
-        TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar",
-            Color(0xFFFF4775), onPower)
+        TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar", TclBlue, onPower)
         TclHeaderAction(Icons.Filled.Cast, "Transmitir", TclBlue, onCast)
         TclHeaderAction(Icons.Filled.Settings, "Configurações", TclText, onSettings)
     }
@@ -522,17 +494,17 @@ internal fun TclHeaderAction(
     onClick: () -> Unit
 ) {
     Box(
-        modifier = Modifier.size(32.dp)
+        modifier = Modifier.size(38.dp)
             .clip(CircleShape)
             .background(Brush.verticalGradient(
-                listOf(TclSurfaceHigh, TclSurface)
+                listOf(Color(0xFF202229), Color(0xFF111319))
             ))
-            .border(1.dp, TclOutline.copy(alpha = .9f), CircleShape)
+            .border(1.dp, Color.White.copy(alpha = 0.055f), CircleShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(23.dp))
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(21.dp))
     }
 }
 
@@ -596,9 +568,8 @@ private fun TclQuickAction(
             modifier = Modifier.size(diameter)
                 .clip(CircleShape)
                 .background(Brush.verticalGradient(
-                    listOf(TclSurfaceHigh, TclSurface)
+                    listOf(Color(0xFF22242C), Color(0xFF12141B))
                 ))
-                .border(1.dp, TclOutline, CircleShape)
                 .clickable(onClick = onClick)
                 .semantics { contentDescription = title },
             contentAlignment = Alignment.Center
@@ -606,7 +577,7 @@ private fun TclQuickAction(
             Icon(icon, contentDescription = null, tint = TclText,
                 modifier = Modifier.size(if (diameter < 54.dp) 22.dp else 27.dp))
         }
-        Text(title, color = TclMuted, fontSize = 11.sp, maxLines = 1,
+        Text(title, color = TclText, fontSize = 11.sp, maxLines = 1,
             textAlign = TextAlign.Center)
     }
 }
