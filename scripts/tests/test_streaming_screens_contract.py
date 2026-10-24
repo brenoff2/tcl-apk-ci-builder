@@ -490,6 +490,26 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Box(modifier = Modifier.size(14.dp)', self.screen)
         self.assertIn('R.drawable.anytv_horizontal', self.screen)
 
+    def test_cinema_is_based_on_tmdb_br_now_playing_not_missing_streaming(self):
+        self.assertIn('private const val ANYTV_CINEMA_FILTER = -1', self.screen)
+        self.assertIn('"movie/now_playing?language=pt-BR&region=BR&page=$page"', self.screen)
+        self.assertIn('Triple(ANYTV_CINEMA_SHELF, "movie/now_playing", "movie")',
+                      self.screen)
+        self.assertIn('val suffix = if (route == "movie/now_playing") "&region=BR"', self.screen)
+        self.assertIn('StreamingCatalog.discoveryCinemaPage(next)', self.screen)
+        self.assertIn('AnyTvCompactChip("Cinema", selectedHomeGenre == ANYTV_CINEMA_FILTER)',
+                      self.screen)
+        self.assertIn('Text("Cinema", modifier = Modifier', self.screen)
+        self.assertIn('background(Color(0xFF1769E0))', self.screen)
+        self.assertEqual(self.screen.count('inCinema = '), 6)
+        self.assertIn('if (item.media == "movie" && inCinema)', self.screen)
+        self.assertIn('"Cinema · Filmes em cartaz no Brasil"', self.screen)
+        self.assertIn('"Em cartaz · Brasil · TMDB"', self.screen)
+        self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()', self.screen)
+        self.assertIn('if (kind == "movie" && selectedHomeGenre > 0)', self.screen)
+        self.assertIn('if (pageGenreId == ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertNotIn('inCinema = offerings.isEmpty()', self.screen)
+
     def test_three_row_cards_and_icon_only_genre_selector(self):
         self.assertIn('AnyTvGenreViewIcon(Icons.Filled.ViewList, "Lista",', self.screen)
         self.assertIn('AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade de três colunas",',
