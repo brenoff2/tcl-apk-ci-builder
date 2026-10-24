@@ -188,6 +188,10 @@
     {
       "date": "2026-10-24",
       "event": "UI Cinema/Em breve/controle V2 candidata revisada na DEV c9c9da17: top logo streaming removida, Cinema na home com hero/duas previas/lista BR, genero com carrossel futuro uma linha, Cinema internacional editorial separado, lancamentos futuros excluidos de prateleiras comuns, badge Cinema no banner da capa, rockers reduzidos sem medidor de volume nao verificado. Testes de contratos no run 40099926982 PASS; build Gradle e identidade unsigned aguardam conclusao. Device proof run 40099926956 SUCCESS. Sem assinatura code54, OTA, Worker, TV companion, QA fisica ou merge. QA docs/qa/ANYTV_V2_2925_CINEMA_PREMIERE_REMOTE_20261024.md. Progresso 7/11, gates F0-F8 inalterados."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "READBACK FINAL UI Cinema/Em breve/rockers: source funcional c9c9da17 validada por CI Android 40099926982 SUCCESS (contratos UI/links/safety, Gradle assembleRelease e identidade V2 unsigned/code53) e device proof 40099926956 SUCCESS. Nenhuma assinatura ou publicacao 2.9.25/code54, workflow oficial protegido mantido; nenhuma atualizacao companion TCL, QA fisica ou merge; ultima OTA segue 2.9.24/code53, Worker inalterado. Progresso 7/11=63%, gates F0-F8 NAO_HOMOLOGADO; QA docs/qa/ANYTV_V2_2925_CINEMA_PREMIERE_REMOTE_20261024.md."
     }
   ],
   "discovery_v3": {
