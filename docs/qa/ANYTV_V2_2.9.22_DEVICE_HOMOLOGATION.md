@@ -6,7 +6,7 @@
 **Testes TMDB de ordenação:** [40045771887](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40045771887), `success`.  
 **APK SHA256:** `44cab69ad0eb6c0110ff4180e6388f042e667d8b86dcd319e39d777973d85d94`.  
 **Distribuição OTA:** `feat/tcl-v22-updates-back-bluetooth:updates/android/v2/current.apk`, blob Git `39084853e1956f4aaedb3d8443ade9304e497581`.  
-**Cloudflare catálogo:** Worker `a6747819-e4da-422c-9766-a40151b87cd3` implantado para 100% do tráfego.
+**Cloudflare vigente (confirmado em produção):** Worker `ce51439e-ca19-40d3-85e8-019c7a3669a5`, deployment `3298f15b-68d1-455b-bbc1-624925d7ccaf`, 100% do tráfego, sem quotas internas mensais nem limitação interna por minuto; autenticação e cache preservados.
 
 > **Estado atual: AINDA NÃO HOMOLOGADO EM APARELHO.** CI, testes de contrato, assinatura e readback são evidência de entrega técnica, não de interação física. Não declarar PASS para F0–F8 nem aumentar o progresso de 7/11 sem evidências de homologação.
 
@@ -40,4 +40,4 @@ Para falhas visuais, guardar **um print do estado afetado**, informando versão,
 - `40045953034`: build/IME/busca real/assinatura/publicação/readback **PASS**, mesmo signer V2.
 - `40045771887`: consulta TMDB filme/série e ordenação/paginação **PASS**.
 - OTA legado `updates/android/cert2026/current.apk` preservado (Git blob `44c766b433ddb370f4589b87843f1edfd9cd7b7a`).
-- Conta interna de 200/mês aplicada **somente à API de links Movie of the Night (`api.movieofthenight.com/v4`)**, não a busca/catálogo TMDB; rate-limit por IP/cache preservados.
+- **Atualização posterior à publicação do APK:** removido também o antigo limite de 200/mês da API de links Movie of the Night e o rate-limit Cloudflare por IP/ativação; removidos os bindings `MAX_UPSTREAM_CALLS_MONTH` e `RATE_LIMIT` em produção. Nenhum limite próprio do AnyTV permanece. Autenticação, cache, validação de links e permissões foram preservados. Limites contratuais dos fornecedores externos independem dessa mudança. Worker atual `ce51439e-ca19-40d3-85e8-019c7a3669a5`; offline CI `40052421285` e smoke real `40052526994`: SUCCESS.
