@@ -87,6 +87,11 @@ internal data class StreamingTitle(val id: Int, val name: String, val overview: 
 private const val ANYTV_CINEMA_FILTER = -1
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
 private const val ANYTV_LIST_BATCH = 24
+/** Movie genres drive 'All'; TV genres drive the 'Series' tab. */
+private fun anyTvProviderGenre(media: String, contentType: String, selectedGenre: Int): Int =
+    if (selectedGenre > 0 &&
+        ((contentType == "tv" && media == "tv") ||
+         (contentType != "tv" && media == "movie"))) selectedGenre else 0
 private fun anyTvToday(): String =
     java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 private fun anyTvHasDate(item: StreamingTitle): Boolean =
@@ -1779,8 +1784,7 @@ internal fun TclStreamingScreens(
                 homeContentType == "all" || it == homeContentType
             }
             for (kind in kinds) {
-                val chosenGenre = if (kind == "movie" && selectedHomeGenre > 0)
-                    selectedHomeGenre else 0
+                val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)
                 val key = name + ":" + kind + ":" + chosenGenre
                 if (key !in myServiceShelves) {
                     runCatching {
@@ -1792,16 +1796,17 @@ internal fun TclStreamingScreens(
     }
 
     // Provider pages reuse the home carousel, loading real provider results.
-    LaunchedEffect(selected?.packageName, homeContentType) {
+    LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre) {
         val app = selected ?: return@LaunchedEffect
         val kinds = listOf("movie", "tv").filter {
             homeContentType == "all" || it == homeContentType
         }
         for (kind in kinds) {
-            val key = app.name + ":" + kind + ":0"
+            val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)
+            val key = app.name + ":" + kind + ":" + chosenGenre
             if (key !in myServiceShelves) {
                 runCatching {
-                    StreamingCatalog.discover(token, app.name, kind, 1, 0, "")
+                    StreamingCatalog.discover(token, app.name, kind, 1, chosenGenre, "")
                 }.onSuccess { myServiceShelves[key] = it.titles }
             }
         }
@@ -2108,7 +2113,8 @@ internal fun TclStreamingScreens(
                                 homeContentType == "all" || it == homeContentType
                             }
                             kinds.forEach { kind ->
-                                val key = app.name + ":" + kind + ":" + selectedHomeGenre
+                                val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)
+                                val key = app.name + ":" + kind + ":" + chosenGenre
                                 myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
                                     put(if (kind == "tv") "Séries · " + app.name
                                         else "Filmes · " + app.name, it)
@@ -2173,7 +2179,9 @@ internal fun TclStreamingScreens(
                             val future = upcomingStreaming.filter {
                                 homeContentType == "all" || it.media == homeContentType
                             }
-                            if (future.isNotEmpty()) put("Em breve · Streaming", future)
+                            // Even if page one has no BR offers, later source pages can.
+                            if (future.isNotEmpty() || upcomingStreamingMore)
+                                put("Em breve · Streaming", future)
                             if (homeContentType != "tv") {
                                 discoveryShelves[ANYTV_CINEMA_SHELF]?.let { cinema ->
                                     if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)
@@ -2194,8 +2202,7 @@ internal fun TclStreamingScreens(
                                     homeContentType == "all" || it == homeContentType
                                 }
                                 kinds.forEach { kind ->
-                                    val chosenGenre = if (kind == "movie" && selectedHomeGenre > 0)
-                    selectedHomeGenre else 0
+                                    val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)
                                     val key = name + ":" + kind + ":" + chosenGenre
                                     myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
                                         put("Destaques " + name +
@@ -2245,8 +2252,11 @@ internal fun TclStreamingScreens(
                                     (title.media != "movie" || title.id !in cinemaIds)
                             }
                         }.distinctBy { "${it.media}:${it.id}" }
-                        if (unique.isEmpty()) null else heading to
-                            if (homeLibrary) unique else unique.take(ANYTV_LIST_BATCH)
+                        if (unique.isEmpty() &&
+                            !(heading == "Em breve · Streaming" && upcomingStreamingMore))
+                            null
+                        else heading to (if (homeLibrary) unique
+                            else unique.take(ANYTV_LIST_BATCH))
                     }
                     LazyColumn(state = catalogScrollState,
                         modifier = Modifier.weight(1f)) {
@@ -2263,6 +2273,7 @@ internal fun TclStreamingScreens(
                             val sectionAll = (sectionBase + sectionExtra)
                                 .distinctBy { "${it.media}:${it.id}" }
                             val sectionTitles = sectionAll.take(sectionVisibleCount)
+                            val sectionPageLimit = if (sectionTitle == "Em breve · Streaming") 50 else 42
                             val editorialRoute = when (sectionTitle) {
                                 "Em alta nesta semana" -> "trending/movie/week" to "movie"
                                 "Mais bem avaliados no TMDB" -> "movie/top_rated" to "movie"
@@ -2316,9 +2327,21 @@ internal fun TclStreamingScreens(
                                     repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
+                            if (sectionTitle == "Em breve · Streaming" && sectionAll.isEmpty()) {
+                                item {
+                                    Text(if (sectionMore)
+                                        "Nenhuma assinatura BR confirmada nesta seleção. " +
+                                            "Mostrar mais 24 consulta as próximas páginas."
+                                    else "Nenhum lançamento futuro com assinatura BR confirmada.",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp)
+                                }
+                            }
                             if (sectionAll.size > sectionVisibleCount ||
                                 (!homeLibrary && sectionCanPage && sectionMore &&
-                                    sectionPage < 42 && sectionAll.isNotEmpty())) {
+                                    sectionPage < sectionPageLimit &&
+                                    (sectionAll.isNotEmpty() ||
+                                        sectionTitle == "Em breve · Streaming"))) {
                                 item {
                                     TextButton(
                                         enabled = !sectionLoading,
@@ -2326,7 +2349,7 @@ internal fun TclStreamingScreens(
                                             if (sectionAll.size > sectionVisibleCount) {
                                                 sectionVisibleCount += ANYTV_LIST_BATCH
                                             } else if (!sectionLoading && sectionCanPage &&
-                                                sectionPage < 42) {
+                                                sectionPage < sectionPageLimit) {
                                                 sectionLoading = true
                                                 sectionError = null
                                                 val next = sectionPage + 1
@@ -2345,7 +2368,8 @@ internal fun TclStreamingScreens(
                                                                     selectedProvider.second, next,
                                                                     if (sectionTitle.startsWith(
                                                                             "Em destaque ·")) genre
-                                                                    else selectedHomeGenre.coerceAtLeast(0),
+                                                                    else anyTvProviderGenre(selectedProvider.second,
+                                                                        homeContentType, selectedHomeGenre),
                                                                     if (sectionTitle.startsWith(
                                                                             "Em destaque ·")) searchTerm else "")
                                                             selectedGenreProvider != null ->
@@ -2358,8 +2382,8 @@ internal fun TclStreamingScreens(
                                                                 // source is unfiltered, even in movie genre.
                                                                 val homeKind = if (sectionTitle.endsWith("· Séries"))
                                                                     "tv" else "movie"
-                                                                val homeGenre = if (homeKind == "movie")
-                                                                    selectedHomeGenre.coerceAtLeast(0) else 0
+                                                                val homeGenre = anyTvProviderGenre(
+                                                                    homeKind, homeContentType, selectedHomeGenre)
                                                                 StreamingCatalog.discover(token,
                                                                     homeProvider, homeKind, next,
                                                                     homeGenre, "")
@@ -2799,6 +2823,13 @@ internal fun TclStreamingScreens(
                                             modifier = Modifier.fillMaxWidth()
                                         ) { Text("Mostrar mais 24") }
                                     }
+                                }
+                            } else if (shelf.isEmpty() && heading == "Em breve · Streaming") {
+                                item {
+                                    Text("Nenhuma oferta BR confirmada na primeira página. " +
+                                        "Ver mais consulta as próximas páginas.",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else {
                                 // One horizontal shelf, three visible cards; all metadata

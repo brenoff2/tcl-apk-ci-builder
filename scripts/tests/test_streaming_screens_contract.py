@@ -422,7 +422,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
         self.assertIn('Text(selected?.name ?: "Início"', self.screen)
         self.assertIn('if (selected != null && !homeLibrary)', self.screen)
-        self.assertIn('LaunchedEffect(selected?.packageName, homeContentType)', self.screen)
+        self.assertIn('LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre)', self.screen)
         self.assertIn('myServiceShelves[key] = it.titles', self.screen)
         self.assertIn('HorizontalPager(', self.screen)
         self.assertIn('Modifier.fillMaxWidth().padding(top = 12.dp)', self.screen)
@@ -503,24 +503,38 @@ class StreamingScreens(unittest.TestCase):
         self.assertEqual(nav.count('TclHeaderAction(Icons.Filled.'), 6)
 
     def test_provider_ver_mais_uses_same_media_genre_as_initial_shelf(self):
-        # Home provider movie shelves use the selected movie genre, but TV
-        # shelves always use 0. Page 2 must not accidentally apply movie IDs
-        # to TMDB discover/tv and silently empty the series section.
+        # Movies filter by movie genre on All/Movies; TV filters by TV genre
+        # only on Series. Every shelf and its next page share this decision.
+        helper = self.screen.split('private fun anyTvProviderGenre(', 1)[1].split(
+            'private fun anyTvToday()', 1)[0]
+        for part in (
+            'selectedGenre > 0',
+            'contentType == "tv" && media == "tv"',
+            'contentType != "tv" && media == "movie"',
+            'selectedGenre else 0',
+        ):
+            self.assertIn(part, helper)
         source = self.screen.split('LaunchedEffect(activeServiceNames,', 1)[1].split(
             '// Provider pages reuse the home carousel', 1)[0]
-        self.assertIn('if (kind == "movie" && selectedHomeGenre > 0)', source)
-        self.assertIn('selectedHomeGenre else 0', source)
-        page = self.screen.split('homeProvider != null -> {', 1)[1].split(
+        self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', source)
+        first_page = self.screen.split(
+            '// Provider pages reuse the home carousel', 1)[1].split(
+            'LaunchedEffect(token) {', 1)[0]
+        self.assertIn('selectedHomeGenre)', first_page)
+        self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', first_page)
+        self.assertIn('StreamingCatalog.discover(token, app.name, kind, 1, chosenGenre, "")',
+                      first_page)
+        next_page = self.screen.split('homeProvider != null -> {', 1)[1].split(
             'else -> StreamingResults(emptyList(), false)', 1)[0]
-        self.assertIn('val homeKind = if (sectionTitle.endsWith("· Séries"))', page)
-        self.assertIn('val homeGenre = if (homeKind == "movie")', page)
-        self.assertIn('selectedHomeGenre.coerceAtLeast(0) else 0', page)
-        self.assertIn('homeProvider, homeKind, next,', page)
-        self.assertIn('homeGenre, "")', page)
-        self.assertNotIn('selectedHomeGenre.coerceAtLeast(0), "")', page)
-        # Provider-specific "Em destaque" remains tied to the current
-        # provider search and genre, not the home provider fallback.
-        self.assertIn('else selectedHomeGenre.coerceAtLeast(0),', self.screen)
+        self.assertIn('val homeKind = if (sectionTitle.endsWith("· Séries"))', next_page)
+        self.assertIn('anyTvProviderGenre(', next_page)
+        self.assertIn('homeKind, homeContentType, selectedHomeGenre)', next_page)
+        self.assertIn('homeProvider, homeKind, next,', next_page)
+        self.assertIn('homeGenre, "")', next_page)
+        self.assertIn('else anyTvProviderGenre(selectedProvider.second,', self.screen)
+        self.assertIn('homeContentType, selectedHomeGenre),', self.screen)
+        # "Em destaque" still honors the provider-specific search.
+        self.assertIn('"Em destaque ·")) genre', self.screen)
         self.assertIn('searchTerm else "")', self.screen)
 
     def test_international_and_future_rails_never_invent_cinema_br(self):
@@ -586,6 +600,45 @@ class StreamingScreens(unittest.TestCase):
         # than 24, and the section must retain it for subsequent reveal clicks.
         self.assertNotIn('.take(ANYTV_LIST_BATCH)', impl)
 
+    def test_future_streaming_empty_first_page_can_browse_later_source_pages(self):
+        # A verified-but-empty first page is not the end of the real catalogue.
+        # The user must still be able to open this section and request page 2.
+        for value in (
+            'if (future.isNotEmpty() || upcomingStreamingMore)',
+            'put("Em breve · Streaming", future)',
+            'if (unique.isEmpty() &&',
+            '!(heading == "Em breve · Streaming" && upcomingStreamingMore)',
+            'val sectionPageLimit = if (sectionTitle == "Em breve · Streaming") 50 else 42',
+            'sectionPage < sectionPageLimit &&',
+            'sectionAll.isNotEmpty() ||',
+            'sectionTitle == "Em breve · Streaming")))',
+            'sectionPage < sectionPageLimit) {',
+            'sectionTitle == "Em breve · Streaming" && sectionAll.isEmpty()',
+            'Nenhuma assinatura BR confirmada nesta seleção.',
+            'Mostrar mais 24 consulta as próximas páginas.',
+            'shelf.isEmpty() && heading == "Em breve · Streaming"',
+            'Ver mais consulta as próximas páginas.',
+        ):
+            with self.subTest(value=value):
+                self.assertIn(value, self.screen)
+        self.assertNotIn('sectionPage < 42 && sectionAll.isNotEmpty()', self.screen)
+        # A zero-verified-results page must not be counted as a 24-card shelf;
+        # source continuation is a separate, explicit state.
+        self.assertIn('sectionMore = result.more', self.screen)
+        self.assertIn('upcomingStreamingMore = streamingFuture.more', self.screen)
+
+    def test_selected_provider_uses_genre_keys_consistent_with_tv_tab(self):
+        provider = self.screen.split('if (selected != null && !homeLibrary) {', 1)[1].split(
+            '} else if (homeLibrary)', 1)[0]
+        self.assertIn('val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)',
+                      provider)
+        self.assertIn('val key = app.name + ":" + kind + ":" + chosenGenre', provider)
+        home = self.screen.split('if (!homeLibrary && selected == null) {', 1)[1].split(
+            'if (selectedHomeGenre != 0 &&', 1)[0]
+        self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', home)
+        self.assertNotIn('if (kind == "movie" && selectedHomeGenre > 0)', self.screen)
+        self.assertNotIn('selectedHomeGenre.coerceAtLeast(0)', self.screen)
+
     def test_upcoming_streaming_ver_mais_preserves_overflow_and_future_filter(self):
         for piece in (
             'var upcomingStreamingMore by remember',
@@ -619,7 +672,7 @@ class StreamingScreens(unittest.TestCase):
             'StreamingCatalog.discoveryShelfPage(',
             'StreamingCatalog.discover(token,',
             'sectionPage = next',
-            'sectionPage < 42 && sectionAll.isNotEmpty()',
+            'sectionPage < sectionPageLimit &&',
             'sectionMore = result.more',
             'sectionVisibleCount += ANYTV_LIST_BATCH',
             'sectionError = "Não foi possível carregar mais títulos."',
@@ -655,7 +708,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_cinema_and_future_are_not_mixed_into_regular_streaming(self):
         self.assertIn('if (heading != ANYTV_CINEMA_SHELF)', self.screen)
-        self.assertIn('if (future.isNotEmpty()) put("Em breve · Streaming", future)', self.screen)
+        self.assertIn('if (future.isNotEmpty() || upcomingStreamingMore)', self.screen)
         self.assertIn('if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)', self.screen)
         self.assertIn('anyTvReleased(title)', self.screen)
         self.assertIn('anyTvUpcoming(title)', self.screen)
@@ -769,7 +822,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('"Cinema · Filmes em cartaz no Brasil"', self.screen)
         self.assertIn('"Em cartaz · Brasil · TMDB"', self.screen)
         self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()', self.screen)
-        self.assertIn('if (kind == "movie" && selectedHomeGenre > 0)', self.screen)
+        self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', self.screen)
         self.assertIn('if (pageGenreId == ANYTV_CINEMA_FILTER)', self.screen)
         self.assertIn('cinemaIds = cinemaIds + result.titles.map { it.id }', self.screen)
         self.assertNotIn('inCinema = offerings.isEmpty()', self.screen)
