@@ -455,6 +455,34 @@ class StreamingScreens(unittest.TestCase):
             'Modifier.size(width = 116.dp, height = 158.dp)',
         ):
             self.assertNotIn(forbidden, self.screen)
+    def test_ver_mais_editorial_and_provider_pages_fetch_next_24(self):
+        for snippet in (
+            'suspend fun discoveryShelfPage(route: String, media: String, page: Int)',
+            'discoveryShelfPage(route, media, 1).titles',
+            'val sectionAll = (sectionBase + sectionExtra)',
+            'val next = sectionPage + 1',
+            'StreamingCatalog.discoveryShelfPage(',
+            'StreamingCatalog.discover(token,',
+            'sectionPage = next',
+            'sectionMore = result.more',
+            'sectionVisibleCount += ANYTV_LIST_BATCH',
+            'sectionError = "Não foi possível carregar mais títulos."',
+        ):
+            self.assertIn(snippet, self.screen)
+        self.assertNotIn(
+            'if (homeLibrary && sectionAll.size > sectionVisibleCount)',
+            self.screen)
+
+    def test_watched_poster_preserves_title_without_favorite_or_cache_ttl(self):
+        self.assertIn('fun toggleFilmWatched(title: StreamingTitle)', self.screen)
+        self.assertIn('StreamingDiskCache.rememberTitle("movie", title.id,',
+                      self.screen)
+        self.assertIn('.put("rating", title.rating)', self.screen)
+        self.assertIn('.put("votes", title.votes)', self.screen)
+        self.assertEqual(self.screen.count('toggleFilmWatched(title)'), 2)
+        self.assertNotIn('toggleFilmWatched(title.id)', self.screen)
+        self.assertIn('!it.name.startsWith("saved_title_")', self.screen)
+
     def test_home_more_reminder_and_brand_are_real(self):
         self.assertIn('OutlinedButton(', self.screen)
         self.assertIn('"Ver mais ›"', self.screen)

@@ -523,12 +523,16 @@ private object StreamingCatalog {
 
     /** Global editorial shelves independent of the TV's installed providers. */
     suspend fun discoveryShelf(route: String, media: String): List<StreamingTitle> =
+        discoveryShelfPage(route, media, 1).titles
+
+    /** Stable 24-title pages for dedicated editorial sections. */
+    suspend fun discoveryShelfPage(route: String, media: String, page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
             require(route in setOf("trending/movie/week", "trending/tv/week",
                 "movie/now_playing", "movie/top_rated", "tv/on_the_air",
                 "movie/upcoming", "movie/popular"))
             val suffix = if (route == "movie/now_playing") "&region=BR" else ""
-            catalogPage24(1) { sourcePage ->
+            catalogPage24(page) { sourcePage ->
                 val payload = get("backend",
                     route + "?language=pt-BR" + suffix + "&page=$sourcePage")
                 val titles = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
@@ -538,7 +542,7 @@ private object StreamingCatalog {
                     else -> titles.filter(::anyTvReleased)
                 }
                 StreamingResults(matching, sourcePage < payload.optInt("total_pages", sourcePage))
-            }.titles
+            }
         }
 
     /** Future streaming titles require a confirmed BR subscription offer. */
@@ -1309,8 +1313,18 @@ internal fun TclStreamingScreens(
     var homeLibrary by remember { mutableStateOf(false) }
     var openedSection by remember { mutableStateOf<String?>(null) }
     var sectionVisibleCount by remember { mutableIntStateOf(ANYTV_LIST_BATCH) }
+    var sectionExtra by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    var sectionPage by remember { mutableIntStateOf(1) }
+    var sectionMore by remember { mutableStateOf(true) }
+    var sectionLoading by remember { mutableStateOf(false) }
+    var sectionError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(openedSection) {
         sectionVisibleCount = ANYTV_LIST_BATCH
+        sectionExtra = emptyList()
+        sectionPage = 1
+        sectionMore = true
+        sectionLoading = false
+        sectionError = null
         // A dedicated shelf is a new page, not an expansion at the old scroll position.
         catalogScrollState.scrollToItem(0)
     }
@@ -1539,8 +1553,16 @@ internal fun TclStreamingScreens(
         mutableStateOf(prefs.getString("anytv_watched_movies", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
     }
-    fun toggleFilmWatched(id: Int) {
-        val key = id.toString()
+    fun toggleFilmWatched(title: StreamingTitle) {
+        val key = title.id.toString()
+        if (key !in watchedFilms) {
+            // A check directly on a poster must survive catalog-cache expiry and restart.
+            StreamingDiskCache.rememberTitle("movie", title.id,
+                JSONObject().put("name", title.name).put("overview", title.overview)
+                    .put("poster", title.poster).put("backdrop", title.backdrop)
+                    .put("date", title.date).put("rating", title.rating)
+                    .put("votes", title.votes).put("genres", JSONArray(title.genreIds)))
+        }
         watchedFilms = if (key in watchedFilms) watchedFilms - key else watchedFilms + key
         prefs.edit().putString("anytv_watched_movies",
             watchedFilms.sorted().joinToString(",")).apply()
@@ -1925,7 +1947,7 @@ internal fun TclStreamingScreens(
                     }
                 },
                 onMarked = {
-                    if (title.media == "movie") toggleFilmWatched(title.id)
+                    if (title.media == "movie") toggleFilmWatched(title)
                     else toggleSeriesTracking(title)
                 },
                 onFavorite = { toggleFavorite(title, "library") })
@@ -2169,10 +2191,34 @@ internal fun TclStreamingScreens(
                         modifier = Modifier.weight(1f)) {
                         if (openedSection != null) {
                             val sectionTitle = openedSection.orEmpty()
-                            val sectionAll = uniqueShelves.firstOrNull {
+                            val sectionBase = uniqueShelves.firstOrNull {
                                 it.first == sectionTitle
                             }?.second.orEmpty()
+                            val sectionAll = (sectionBase + sectionExtra)
+                                .distinctBy { "${it.media}:${it.id}" }
                             val sectionTitles = sectionAll.take(sectionVisibleCount)
+                            val editorialRoute = when (sectionTitle) {
+                                "Em alta nesta semana" -> "trending/movie/week" to "movie"
+                                "Mais bem avaliados no TMDB" -> "movie/top_rated" to "movie"
+                                "Séries em destaque" -> "trending/tv/week" to "tv"
+                                "Novidades em séries" -> "tv/on_the_air" to "tv"
+                                "Populares no TMDB" -> "movie/popular" to "movie"
+                                else -> null
+                            }
+                            val selectedProvider = selected?.let { app ->
+                                when (sectionTitle) {
+                                    "Filmes · ${app.name}" -> app to "movie"
+                                    "Séries · ${app.name}" -> app to "tv"
+                                    "Em destaque · ${app.name}" -> app to media
+                                    else -> null
+                                }
+                            }
+                            val homeProvider = activeServiceNames.firstOrNull { name ->
+                                sectionTitle == "Destaques $name · Filmes" ||
+                                    sectionTitle == "Destaques $name · Séries"
+                            }
+                            val sectionCanPage = editorialRoute != null ||
+                                selectedProvider != null || homeProvider != null
                             item {
                                 TextButton(onClick = { openedSection = null }) {
                                     Text("‹ Voltar às seções")
@@ -2191,12 +2237,74 @@ internal fun TclStreamingScreens(
                                     repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
-                            if (homeLibrary && sectionAll.size > sectionVisibleCount) {
+                            if (sectionAll.size > sectionVisibleCount ||
+                                (!homeLibrary && sectionCanPage && sectionMore &&
+                                    sectionPage < 42 && sectionAll.size >= ANYTV_LIST_BATCH)) {
                                 item {
                                     TextButton(
-                                        onClick = { sectionVisibleCount += ANYTV_LIST_BATCH },
+                                        enabled = !sectionLoading,
+                                        onClick = {
+                                            if (sectionAll.size > sectionVisibleCount) {
+                                                sectionVisibleCount += ANYTV_LIST_BATCH
+                                            } else if (!sectionLoading && sectionCanPage &&
+                                                sectionPage < 42) {
+                                                sectionLoading = true
+                                                sectionError = null
+                                                val next = sectionPage + 1
+                                                scope.launch {
+                                                    runCatching {
+                                                        when {
+                                                            editorialRoute != null ->
+                                                                StreamingCatalog.discoveryShelfPage(
+                                                                    editorialRoute.first,
+                                                                    editorialRoute.second, next)
+                                                            selectedProvider != null ->
+                                                                StreamingCatalog.discover(
+                                                                    token, selectedProvider.first.name,
+                                                                    selectedProvider.second, next,
+                                                                    if (sectionTitle.startsWith(
+                                                                            "Em destaque ·")) genre else 0,
+                                                                    if (sectionTitle.startsWith(
+                                                                            "Em destaque ·")) searchTerm else "")
+                                                            homeProvider != null ->
+                                                                StreamingCatalog.discover(token,
+                                                                    homeProvider,
+                                                                    if (sectionTitle.endsWith("· Séries"))
+                                                                        "tv" else "movie", next, 0, "")
+                                                            else -> StreamingResults(emptyList(), false)
+                                                        }
+                                                    }.onSuccess { result ->
+                                                        if (openedSection != sectionTitle) return@onSuccess
+                                                        val released = result.titles.filter {
+                                                            anyTvReleased(it) &&
+                                                                (it.media != "movie" ||
+                                                                    it.id !in cinemaIds)
+                                                        }
+                                                        sectionExtra = (sectionExtra + released)
+                                                            .distinctBy { "${it.media}:${it.id}" }
+                                                        sectionPage = next
+                                                        sectionMore = result.more
+                                                        sectionVisibleCount += ANYTV_LIST_BATCH
+                                                    }.onFailure {
+                                                        if (openedSection == sectionTitle)
+                                                            sectionError = "Não foi possível carregar mais títulos."
+                                                    }
+                                                    if (openedSection == sectionTitle)
+                                                        sectionLoading = false
+                                                }
+                                            }
+                                        },
                                         modifier = Modifier.fillMaxWidth()
-                                    ) { Text("Mostrar mais 24") }
+                                    ) {
+                                        Text(if (sectionLoading) "Carregando…"
+                                            else "Mostrar mais 24")
+                                    }
+                                }
+                            }
+                            sectionError?.let { error ->
+                                item {
+                                    Text(error, color = MaterialTheme.colorScheme.error,
+                                        fontSize = 12.sp)
                                 }
                             }
                         } else {
@@ -2935,7 +3043,7 @@ internal fun TclStreamingScreens(
                     IconButton(onClick = {
                         if (title.media == "movie") {
                             if (!isFavorite(title, pkg)) toggleFavorite(title, pkg)
-                            toggleFilmWatched(title.id)
+                            toggleFilmWatched(title)
                         } else {
                             if (!isFavorite(title, pkg)) toggleFavorite(title, pkg)
                             toggleSeriesTracking(title)
