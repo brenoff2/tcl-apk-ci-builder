@@ -1201,7 +1201,7 @@ private fun AnyTvStreamNavBar(
                 if (!library && contentType == "all") primary else neutral, onHome)
             TclHeaderAction(Icons.Filled.Favorite, "Minha lista",
                 if (library && section == "saved") primary else neutral, onList)
-            TclHeaderAction(Icons.Filled.PlayCircleFilled, "Em andamento",
+            TclHeaderAction(Icons.Filled.PlayCircleFilled, "Continuando",
                 if (library && section == "watching") primary else neutral, onWatching)
             TclHeaderAction(Icons.Filled.CheckCircle, "Assistidos",
                 if (library && section == "watched") primary else neutral, onWatched)
@@ -1627,7 +1627,7 @@ internal fun TclStreamingScreens(
             .getOrDefault(emptyList())
     }
     // Fetch each genre shelf only once per screen, preserving user-selected order.
-    LaunchedEffect(selectedHomeGenre, genreSort, genreViewMode) {
+    LaunchedEffect(selectedHomeGenre, genreSort) {
         catalogScrollState.scrollToItem(0)
     }
     LaunchedEffect(selectedHomeGenre, selected?.packageName, homeLibrary, homeContentType) {
@@ -2043,7 +2043,7 @@ internal fun TclStreamingScreens(
                                 if (unseen.isNotEmpty()) put("Filmes para assistir", unseen)
                                 if (series.isNotEmpty()) put("Minhas séries", series)
                             } else if (librarySection == "watching") {
-                                if (watching.isNotEmpty()) put("Séries em andamento", watching)
+                                if (watching.isNotEmpty()) put("Continuando", watching)
                             } else if (librarySection == "watched") {
                                 if (history.isNotEmpty()) put("Filmes já assistidos", history)
                             }
@@ -2191,7 +2191,7 @@ internal fun TclStreamingScreens(
                         if (homeLibrary) {
                             item {
                                 Text(when (librarySection) {
-                                    "watching" -> "Em andamento"
+                                    "watching" -> "Continuando"
                                     "watched" -> "Assistidos"
                                     else -> "Minha lista"
                                 }, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
@@ -2201,7 +2201,12 @@ internal fun TclStreamingScreens(
                                         onValueChange = { watchingQuery = it.take(90) },
                                         modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
                                         singleLine = true,
-                                        label = { Text("Buscar nas minhas séries em andamento") },
+                                        placeholder = { Text("Buscar nas minhas séries") },
+                                        leadingIcon = {
+                                            Icon(Icons.Filled.Search,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp))
+                                        },
                                         trailingIcon = {
                                             if (watchingQuery.isNotEmpty()) {
                                                 IconButton(onClick = { watchingQuery = "" }) {
@@ -2423,33 +2428,15 @@ internal fun TclStreamingScreens(
                                         modifier = Modifier.padding(vertical = 16.dp))
                                 }
                             }
-                            items(inProgress.take(sectionVisibleCount).chunked(2)) { pair ->
+                            items(inProgress.take(sectionVisibleCount).chunked(3)) { group ->
                                 Row(modifier = Modifier.fillMaxWidth()
-                                    .padding(vertical = 9.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    .padding(vertical = 7.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(9.dp),
                                     verticalAlignment = Alignment.Top) {
-                                    pair.forEach { series ->
-                                        Column(modifier = Modifier.weight(1f).clickable {
-                                            details = series; detailsPackage = null
-                                        }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            AnyTvPinnedImage(
-                                                model = "https://image.tmdb.org/t/p/w185" + series.poster,
-                                                contentDescription = "Série em andamento: " + series.name,
-                                                modifier = Modifier.fillMaxWidth().height(158.dp),
-                                                contentScale = ContentScale.Crop)
-                                            AnyTvCardMetaRow(series,
-                                                favorite = isFavorite(series, "library"),
-                                                marked = series.id.toString() in trackedSeries,
-                                                compact = true,
-                                                onMarked = { toggleSeriesTracking(series) },
-                                                onFavorite = { toggleFavorite(series, "library") })
-                                            Text(series.name, fontSize = 12.sp, maxLines = 3,
-                                                lineHeight = 15.sp,
-                                                overflow = TextOverflow.Ellipsis,
-                                                fontWeight = FontWeight.SemiBold)
-                                        }
+                                    group.forEach { series ->
+                                        posterCard(series, Modifier.weight(1f), false)
                                     }
-                                    repeat(2 - pair.size) { Spacer(Modifier.weight(1f)) }
+                                    repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
                             if (inProgress.size > sectionVisibleCount) {
