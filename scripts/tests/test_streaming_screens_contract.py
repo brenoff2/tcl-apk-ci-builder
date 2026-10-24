@@ -112,7 +112,7 @@ class StreamingScreens(unittest.TestCase):
             'if (showGlobalSearch)',
             'OfficialTvIcon(app, 56.dp)',
             'suspend fun discoveryGenre(id: Int)',
-            'with_genres=$id&page=$page',
+            'with_genres=$id&page=$sourcePage',
             'StreamingCatalog.genres(token, "movie")',
             'selectedHomeGenre = kind.id',
             'Text("⚙ Listas", fontSize = 11.sp)',
@@ -431,13 +431,13 @@ class StreamingScreens(unittest.TestCase):
     def test_double_row_real_pagination_and_mixed_highlights(self):
         for snippet in (
             'suspend fun discoveryGenrePage(id: Int, media: String, page: Int,',
-            'page < payload.optInt("total_pages", page)',
+            'sourcePage < payload.optInt("total_pages", sourcePage)',
             'genreMore[key] = it.more',
             'items(shelf.chunked(2))',
             'StreamingCatalog.discoveryGenrePage(',
             'items(genreTitles, key =',
             'if (!homeLibrary && selected == null && selectedHomeGenre != 0)',
-            '"Mostrar mais 20"',
+            '"Mostrar mais 24"',
             'genreShelves[genreKey] =',
             'val films = discoveryShelves["Em alta nesta semana"]',
             'val shows = discoveryShelves["Séries em destaque"]',
@@ -445,7 +445,7 @@ class StreamingScreens(unittest.TestCase):
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
             'StreamingCatalog.discoveryUpcomingStreaming()',
             'Text(if (item.media == "tv") "S" else "F"',
-            'expandedHomeShelf = if (expandedHomeShelf == heading)',
+            'openedSection = heading',
             'class AnyTvReleaseReminderReceiver',
         ):
             with self.subTest(snippet=snippet):
@@ -472,7 +472,7 @@ class StreamingScreens(unittest.TestCase):
             'toggleFilmWatched(title.id)',
             'toggleSeriesTracking(title.id)',
             'val sorting = when (sort)',
-            '"&sort_by=$sorting&with_genres=$id&page=$page"',
+            '"&sort_by=$sorting&with_genres=$id&page=$sourcePage"',
             'val genreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"',
             'Text(if (genreLoading[genreKey] == true)',
             '}.take(10)',
@@ -487,8 +487,8 @@ class StreamingScreens(unittest.TestCase):
     def test_home_more_reminder_and_brand_are_real(self):
         self.assertIn('OutlinedButton(', self.screen)
         self.assertIn('"Ver mais ›"', self.screen)
-        self.assertIn('expandedHomeShelf = if (expandedHomeShelf == heading)', self.screen)
-        self.assertIn('shelf.chunked(3).forEach { group ->', self.screen)
+        self.assertIn('openedSection = heading', self.screen)
+        self.assertIn('items(sectionTitles.chunked(3)) { group ->', self.screen)
         self.assertNotIn('Text(if (enabled) "Lembrar ✓" else "Lembrar"', self.screen)
         self.assertIn('Spacer(Modifier.height(6.dp))', self.screen)
         self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
@@ -528,9 +528,40 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('.filter(::anyTvUpcoming)', self.screen)
         self.assertIn('title.takeIf { confirmed }', self.screen)
 
+    def test_24_item_batches_and_stable_filtered_pagination(self):
+        for part in (
+            'private const val ANYTV_LIST_BATCH = 24',
+            'private suspend fun catalogPage24(',
+            'val through = page * ANYTV_LIST_BATCH',
+            'for (sourcePage in 1..50)',
+            'seen.add("${title.media}:${title.id}")',
+            'collected.drop(through - ANYTV_LIST_BATCH).take(ANYTV_LIST_BATCH)',
+            'catalogPage24(page) { sourcePage ->',
+            'catalogPage24(1) { sourcePage ->',
+            '"Mostrar mais 24"',
+        ):
+            self.assertIn(part, self.screen)
+        self.assertNotIn('"Mostrar mais 20"', self.screen)
+
+    def test_ver_mais_opens_genre_or_separate_page(self):
+        self.assertIn('val targetGenre = if (heading.startsWith("Por gênero: "))', self.screen)
+        self.assertIn('selectedHomeGenre = targetGenre.id', self.screen)
+        self.assertIn('selectedHomeGenre = ANYTV_CINEMA_FILTER', self.screen)
+        self.assertIn('else -> openedSection = heading', self.screen)
+        self.assertIn('items(sectionTitles.chunked(3))', self.screen)
+        self.assertIn('Text("‹ Voltar às seções")', self.screen)
+        self.assertNotIn('expandedHomeShelf', self.screen)
+        self.assertNotIn('shelf.chunked(3).forEach', self.screen)
+
+    def test_genre_cards_restore_same_poster_height_as_home(self):
+        self.assertNotIn('Modifier.fillMaxWidth().height(135.dp)', self.screen)
+        self.assertNotIn('Modifier.size(width = 92.dp, height = 132.dp)', self.screen)
+        self.assertIn('Modifier.size(width = 116.dp, height = 158.dp)', self.screen)
+        self.assertGreaterEqual(self.screen.count('modifier = Modifier.fillMaxWidth().height(158.dp)'), 3)
+
     def test_cinema_is_based_on_tmdb_br_now_playing_not_missing_streaming(self):
         self.assertIn('private const val ANYTV_CINEMA_FILTER = -1', self.screen)
-        self.assertIn('"movie/now_playing?language=pt-BR&region=BR&page=$page"', self.screen)
+        self.assertIn('"movie/now_playing?language=pt-BR&region=BR&page=$sourcePage"', self.screen)
         self.assertIn('Triple(ANYTV_CINEMA_SHELF, "movie/now_playing", "movie")',
                       self.screen)
         self.assertIn('val suffix = if (route == "movie/now_playing") "&region=BR"', self.screen)
@@ -561,7 +592,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('AnyTvGenreTitleActions(', self.screen)
         self.assertNotIn('onTrailer =', self.screen)
         self.assertIn('Text("▶ Ver trailer")', self.screen)
-        self.assertEqual(self.screen.count('showRating = false'), 4)
+        self.assertEqual(self.screen.count('showRating = false'), 5)
         self.assertIn('val unique = shelf.filter { title ->', self.screen)
         self.assertIn('Keep cards visible when marked', self.screen)
         for marker, until, metadata, offers, title in (
