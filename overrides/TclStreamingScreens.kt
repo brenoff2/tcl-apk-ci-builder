@@ -2271,8 +2271,21 @@ internal fun TclStreamingScreens(
     if (showCredits) {
         AlertDialog(onDismissRequest = { showCredits = false },
             title = { Text("Fontes do catálogo") },
-            text = { Text("Disponibilidade no Brasil: TMDB / JustWatch. " +
-                "Este produto usa a API TMDB, mas não é endossado ou certificado pelo TMDB.") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text("Disponibilidade no Brasil: TMDB / JustWatch. " +
+                        "Este produto usa a API TMDB, mas não é endossado ou certificado pelo TMDB.")
+                    Text("Links fornecidos pela Streaming Availability API by Movie of the Night.")
+                    Text("www.movieofthenight.com/about/api",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW,
+                                    Uri.parse("https://www.movieofthenight.com/about/api")))
+                            }
+                        })
+                }
+            },
             confirmButton = {
                 TextButton(onClick = { showCredits = false }) { Text("Fechar") }
             })
