@@ -2121,6 +2121,9 @@ internal fun TclStreamingScreens(
                                                         else StreamingCatalog.discoveryGenrePage(
                                                             pageGenreId, pageMedia, next, pageSort)
                                                     }.onSuccess { result ->
+                                                        if (pageGenreId == ANYTV_CINEMA_FILTER) {
+                                                            cinemaIds = cinemaIds + result.titles.map { it.id }
+                                                        }
                                                         genreShelves[genreKey] =
                                                             (genreShelves[genreKey].orEmpty() +
                                                                 result.titles).distinctBy {
