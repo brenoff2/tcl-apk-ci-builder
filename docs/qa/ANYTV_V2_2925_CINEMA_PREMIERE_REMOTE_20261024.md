@@ -1,3 +1,5 @@
+> **READBACK CI CONFIRMADO — 24/10/2026:** [Actions #40099926982](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40099926982) terminou **SUCCESS** para o código funcional `c9c9da17407f202710caebd9db4efb08323dd92f`: (1) contratos UI/links/segurança SUCCESS; (2) compilação Gradle Android V2 SUCCESS; (3) identidade do APK de auditoria unsigned SUCCESS. Este workflow ainda identifica o APK como **2.9.24/code53**, mesmo incorporando o código candidato da futura 2.9.25; portanto **NÃO assinado, NÃO publicado OTA, NÃO instalado ou homologado na TCL**. Teste de device-proof [#40099926956](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40099926956) SUCCESS. Branch de continuidade inclui commits documentais posteriores, sem alteração de código após `c9c9da17`.
+
 # AnyTV V2 2.9.25 — nova rodada de UI Cinema, Em breve e controle (24/10/2026)
 
 **Estado:** mudanças em DEV/PR #3, sem assinatura/OTA/homologação de dispositivo. Registro de implementação, não aceite final.
