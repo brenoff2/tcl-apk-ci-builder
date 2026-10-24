@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 52,
+  "expected_version_code": 53,
   "preserve_legacy_ota": true,
-  "source": "UI reorganizada e resolvedor com autorizacao individual, preservando pacote com.tclremote.livre.v2 e signer original",
+  "source": "AnyTV V2 codigo real: marca vermelha/preta, splash/icone, grade Ver mais, removidos botoes sem funcionalidade, cache dos icones da TCL, Cinema BR TMDB",
   "new_install_only": false,
-  "release_version": "2.9.23-AnyTV",
-  "release_scope": "2.9.23/code52: cartoes home/genero ano+nota e assistido/favorito na linha 1, F/S+streamings na linha 2, titulo com tres linhas fixas na linha 3; seletores lista/grade iconicos, trailer apenas na ficha. Links: diagnostico de status assinando a identidade do celular, ativacao unica se nao autorizado, fallback seguro, links oficiais validados Netflix/Prime e videoLink; Worker versao bd8cafd5 implantada 100% e smoke 200/401. Preservar V2 signer, pacote com.tclremote.livre.v2, dados e canal OTA legado. Build, tests, assinatura, live catalog, SHA e readback obrigatorios. QA fisica TCL pendente.",
-  "ci_revision": 9
+  "release_version": "2.9.24-AnyTV",
+  "release_scope": "AnyTV V2 2.9.24/code53: corrigir marca/icone/splash/tema, botao Ver mais funcional, espacos/cartoes, remover Lembrar e 3 controles inoperantes, cache de aplicativos TV; NOVO Cinema BR com filtro TMDB now_playing region=BR paginado e selo azul F Cinema em titulos confirmados, SEM assumir cinema se nao houver streaming; Worker regional 58a1c0c3 em producao, cinco bindings originais e auth device sem mudancas; manter package com.tclremote.livre.v2, signer V2 original, dados do usuario, canal OTA V2 e backup legado; gates unitarios, Kotlin/IME, tmdb live, assinatura SHA256 e remote byte readback obrigatorios; QA fisica TCL ainda pendente.",
+  "ci_revision": 10
 }
