@@ -25,12 +25,16 @@ class PhoneUpdatesAndBack(unittest.TestCase):
 
     def test_updated_remote_ui_is_not_stretched(self):
         self.assertIn("val padHeight = padWidth", self.skin)
-        self.assertIn("val rockerWidth = if (maxWidth < 340.dp) 46.dp else 57.dp", self.skin)
+        self.assertIn("val rockerWidth = if (maxWidth < 340.dp) 48.dp else 54.dp", self.skin)
+        self.assertIn("coerceAtMost(stageHeight)", self.skin)
         self.assertNotIn('Text("Reprodução"', self.skin)
-        self.assertIn("fun TclLiquidFill(", self.skin)
-        self.assertIn("fluidLevel = sessionState.volumeFraction", self.skin)
-        self.assertIn("sessionState.isMuted", self.skin)
-        self.assertIn("A slim toolbar", self.skin)
+        # Approved graphite/red design: decorative rail, never bogus TV telemetry.
+        self.assertNotIn("fun TclLiquidFill(", self.skin)
+        self.assertNotIn("fluidLevel = sessionState.volumeFraction", self.skin)
+        self.assertIn("Decorative unfilled rail", self.skin)
+        self.assertIn("if (isConnected) onVolumeUp() else onOpenDiscovery()", self.skin)
+        self.assertIn("if (isConnected) onVolumeDown() else onOpenDiscovery()", self.skin)
+        self.assertIn("Text(deviceBrand, color = TclMuted", self.skin)
 
     def test_update_button_and_signed_install(self):
         self.assertIn('title = "Buscar atualizações"', self.settings)
@@ -52,7 +56,8 @@ class PhoneUpdatesAndBack(unittest.TestCase):
 
     def test_centered_stage_small_ok_and_keyboard_send(self):
         stage = (UI / "TclResponsivePad.kt").read_text()
-        self.assertIn("Modifier.size(size * .19f)", stage)
+        self.assertIn("Modifier.size(size * .28f)", stage)
+        self.assertIn(".border(2.5.dp, accent, CircleShape)", stage)
         self.assertIn("modifier = Modifier.weight(1f).fillMaxWidth()", self.skin)
         self.assertIn("coerceAtMost(stageHeight)", self.skin)
         self.assertNotIn("var liveTyping by", self.skin)
