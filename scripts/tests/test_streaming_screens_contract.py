@@ -362,7 +362,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('StreamingCatalog.appHasOffer(it, listOf(offer))', self.screen)
         self.assertIn('https://image.tmdb.org/t/p/w92', self.screen)
         self.assertIn('Text("Ver cinemas e sessões · Ingresso.com"', self.screen)
-        self.assertIn('Uri.parse("https://www.ingresso.com/")', self.screen)
+        self.assertIn('"https://www.ingresso.com/filme/" + slug', self.screen)
+        self.assertIn('Uri.parse(target)', self.screen)
         self.assertNotIn('offerings.take(visible)', self.screen)
 
     def test_full_screen_visual_consistency_and_empty_pages(self):
