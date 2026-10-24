@@ -13,8 +13,8 @@ Data: 24/10/2026. Repositório: `brenoff2/tcl-apk-ci-builder`. Branch DEV: `feat
 
 - Candidato original pós-unificação, [CI #40114130735](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40114130735): SUCCESS no código `b4fecc63`; não cobre as correções residuais.
 - Primeira rodada de ajustes, [CI #40119408922](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40119408922): FAILURE em contrato textual legado `toggleFilmWatched(id: Int)`, atualizado ao tipo `StreamingTitle`. Os demais 52 testes dessa etapa passaram. Não confundir com erro Gradle.
-- Nova execução para revisão `9ac3529f`: [CI unsigned #40119630330](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40119630330) **RESULTADO EM VERIFICACAO**, com contratos e compile Gradle, **SEM ASSINAR/PUBLICAR**. Prova isolada [#40119630288](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40119630288): SUCCESS.
-- Testes estáticos de regressão acrescidos em `scripts/tests/test_streaming_screens_contract.py`; resultado de compilação do commit final só vale após readback do workflow #40119630330.
+- Nova execução para revisão `9ac3529f`: [CI unsigned #40119630330](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40119630330) **COMPLETED/SUCCESS: 53 contratos Streaming, 2 de credenciais, 11 visuais e Gradle BUILD SUCCESSFUL (4m41s)**, com contratos e compile Gradle, **SEM ASSINAR/PUBLICAR**. Prova isolada [#40119630288](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40119630288): SUCCESS.
+- Testes de regressão em `scripts/tests/test_streaming_screens_contract.py` PASS. CI #40119630330 confirmou `assembleRelease` SUCCESS, package `com.tclremote.livre.v2`, versionCode 54, versionName `2.9.25-AnyTV`; artefato **unsigned** `anytv-v2-2925-code54-unsigned-audit` ID **12570905996**. Sem assinatura e sem OTA nova.
 
 ## Matriz de homologação física (não executada)
 
@@ -31,3 +31,9 @@ Data: 24/10/2026. Repositório: `brenoff2/tcl-apk-ci-builder`. Branch DEV: `feat
 | Pareamento, TLS, IME, apps e abertura TCL | integração não modificada neste lote | **NAO_TESTADO** |
 
 **Gates**: F0–F8 = NAO_HOMOLOGADO; M08/M09 = IN_QA; M10/M11 = BACKLOG; progresso 7/11 = 63%. Nenhum novo release/signer/OTA/merge autorizado ou realizado. Próxima release futura só com autorização expressa, fluxo oficial e versionCode maior que 54.
+
+## Readback final — 24/10/2026
+
+- [CI #40119630330](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40119630330) COMPLETED/SUCCESS: 53+2+11 testes PASS; Gradle SUCCESS 4m41s; identidade code54 e upload artifact #12570905996 verificados.
+- [Prova isolada #40119630288](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40119630288) SUCCESS.
+- Documentação posterior não alterou o código compilado. Celular/TCL seguem **NAO_TESTADO**, F0–F8 NAO_HOMOLOGADO. OTA assinada 2.9.25/code54 permanece vigente.

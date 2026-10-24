@@ -236,6 +236,10 @@
     {
       "date": "2026-10-24",
       "event": "Retomada pos-release 2.9.25/code54: PR #3 aberto/draft, SHA codigo DEV 9ac3529f. Corrigidos Ver mais com paginacao de 24 em secoes editoriais/provedores, acesso as paginas seguintes quando filtro reduz pagina inicial, e snapshot duravel para filme marcado assistido sem favorito. CI unsigned novo 40119630330 disparado, resultado em confirmacao; device proof 40119630288 SUCCESS. Nenhuma assinatura/OTA/Worker/companion/merge; QA fisica NAO_TESTADA; 7/11=63%, gates F0-F8 NAO_HOMOLOGADO. QA docs/qa/ANYTV_20261024_REVIEW_RESIDUAL_POST_CODE54.md."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "QA residual final: código DEV 9ac3529f, GitHub Actions unsigned #40119630330 COMPLETED/SUCCESS, 53 contratos Streaming+2 credenciais+11 visuais PASS, Gradle BUILD SUCCESSFUL 4m41s, pacote V2 code54 verificado, artefato unsigned #12570905996. Prova isolada #40119630288 SUCCESS. PR #3 continua draft/sem merge; OTA assinada 2.9.25/code54 permanece publicada, sem nova assinatura/distribuicao, sem testes fisicos; progresso 7/11 (63%), F0-F8 NAO_HOMOLOGADO."
     }
   ],
   "discovery_v3": {
