@@ -533,6 +533,15 @@ private object StreamingCatalog {
             }
         }
 
+    /** International cinema preview: TMDB default now-playing region.
+     * This is an international selection, not a complete worldwide census. */
+    suspend fun discoveryCinemaInternational(): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+            val payload = get("backend", "movie/now_playing?language=pt-BR")
+            mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", 0)
+                .filter(::anyTvReleased)
+        }
+
     /** TMDB theatrical listing for BR; no guessing from absent provider logos. */
     suspend fun discoveryCinemaPage(page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
@@ -1184,6 +1193,20 @@ internal fun TclStreamingScreens(
     }
     var discoveryLoading by remember { mutableStateOf(false) }
     var discoveryError by remember { mutableStateOf<String?>(null) }
+    var upcomingStreaming by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    var cinemaComingSoon by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    var cinemaWorldwide by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    LaunchedEffect(token) {
+        upcomingStreaming = runCatching {
+            StreamingCatalog.discoveryUpcomingStreaming()
+        }.getOrDefault(emptyList())
+        cinemaComingSoon = runCatching {
+            StreamingCatalog.discoveryShelf("movie/upcoming", "movie")
+        }.getOrDefault(emptyList()).filter(::anyTvUpcoming)
+        cinemaWorldwide = runCatching {
+            StreamingCatalog.discoveryCinemaInternational()
+        }.getOrDefault(emptyList())
+    }
     // Only positive matches in Brazil's now-playing feed receive the Cinema badge.
     var cinemaIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     LaunchedEffect(token) {
@@ -1461,8 +1484,7 @@ internal fun TclStreamingScreens(
             Triple("Mais bem avaliados no TMDB", "movie/top_rated", "movie"),
             Triple("Séries em destaque", "trending/tv/week", "tv"),
             Triple("Novidades em séries", "tv/on_the_air", "tv"),
-            Triple("Populares no TMDB", "movie/popular", "movie"),
-            Triple("Em breve · Filmes", "movie/upcoming", "movie")
+            Triple("Populares no TMDB", "movie/popular", "movie")
         )) {
             runCatching { StreamingCatalog.discoveryShelf(route, kind) }
                 .onSuccess { if (it.isNotEmpty()) shelves[name] = it }
@@ -1642,12 +1664,6 @@ internal fun TclStreamingScreens(
             color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Image(
-                    painter = painterResource(R.drawable.anytv_horizontal),
-                    contentDescription = "AnyTV",
-                    contentScale = ContentScale.Fit,
-                    modifier = Modifier.width(170.dp).height(38.dp)
-                )
                 AnyTvStreamNavBar(
                     library = homeLibrary && selected == null,
                     section = librarySection,
@@ -1897,9 +1913,22 @@ internal fun TclStreamingScreens(
                         } else {
                             if (selectedHomeGenre == 0 && activeServiceNames.isEmpty()) {
                                 discoveryShelves.forEach { (heading, titles) ->
-                                    val selectedTitles = titles.filter { homeContentType == "all" ||
-                                        it.media == homeContentType }
-                                    if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
+                                    if (heading != ANYTV_CINEMA_SHELF) {
+                                        val selectedTitles = titles.filter {
+                                            (homeContentType == "all" || it.media == homeContentType) &&
+                                            anyTvReleased(it)
+                                        }
+                                        if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
+                                    }
+                                }
+                                val future = upcomingStreaming.filter {
+                                    homeContentType == "all" || it.media == homeContentType
+                                }
+                                if (future.isNotEmpty()) put("Em breve · Streaming", future)
+                                if (homeContentType != "tv") {
+                                    discoveryShelves[ANYTV_CINEMA_SHELF]?.let { cinema ->
+                                        if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)
+                                    }
                                 }
                             } else {
                                 val kind = currentGenreList.firstOrNull { it.id == selectedHomeGenre }
@@ -1954,14 +1983,27 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         } else filteredShelves.values.flatMap { it }
-                        mixed.distinctBy { "${it.media}:${it.id}" }.filterNot {
+                        mixed.distinctBy { "${it.media}:${it.id}" }.filter {
+                            if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                it.media == "movie" && it.id in cinemaIds
+                            else anyTvReleased(it) &&
+                                (it.media != "movie" || it.id !in cinemaIds)
+                        }.filterNot {
                             it.media == "movie" && it.id.toString() in watchedFilms
                         }.take(10)
                     }
                     val uniqueShelves = filteredShelves.mapNotNull { (heading, shelf) ->
                         // Keep cards visible when marked so the green check reflects
                         // the new state immediately; Assistidos keeps its own view.
-                        val unique = shelf.distinctBy { "${it.media}:${it.id}" }
+                        val unique = shelf.filter { title ->
+                            when {
+                                heading == ANYTV_CINEMA_SHELF ->
+                                    title.media == "movie" && title.id in cinemaIds
+                                heading.startsWith("Em breve") -> anyTvUpcoming(title)
+                                else -> anyTvReleased(title) &&
+                                    (title.media != "movie" || title.id !in cinemaIds)
+                            }
+                        }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty()) null else heading to unique
                     }
                     LazyColumn(state = catalogScrollState,
@@ -2041,6 +2083,34 @@ internal fun TclStreamingScreens(
                                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                                         StreamingOfferIcons(current, offerCache, displayed, expanded = true,
                                             inCinema = current.id in cinemaIds)
+                                    }
+                                }
+                            }
+                        }
+                        // Two single-row preview rails follow the main hero, while
+                        // the paginated list below contains only the selected genre.
+                        if (!homeLibrary && selected == null && selectedHomeGenre != 0) {
+                            val previews = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                cinemaComingSoon else upcomingStreaming.filter { candidate ->
+                                    (homeContentType == "all" || candidate.media == homeContentType) &&
+                                    selectedHomeGenre in candidate.genreIds
+                                }
+                            if (previews.isNotEmpty()) {
+                                item {
+                                    AnyTvOneRowPreview(
+                                        if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                            "Em breve · Cinema" else "Em breve · Streaming",
+                                        previews) { chosen ->
+                                        details = chosen; detailsPackage = null
+                                    }
+                                }
+                            }
+                            if (selectedHomeGenre == ANYTV_CINEMA_FILTER &&
+                                cinemaWorldwide.isNotEmpty()) {
+                                item {
+                                    AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
+                                        cinemaWorldwide) { chosen ->
+                                        details = chosen; detailsPackage = null
                                     }
                                 }
                             }
