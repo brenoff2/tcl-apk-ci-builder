@@ -4,7 +4,7 @@ import { verifyDeviceProof } from "./device-proof.mjs";
  * AnyTV commercial resolver pilot.
  * Never deploy credentials or a permanent client token in an APK.
  * A server-issued pilot token protects this read-only endpoint; real customer
- * identity, entitlements and per-account quotas are required before launch.
+ * identity and authorization still matter for exposing provider API credentials.
  */
 const ORIGIN = "https://api.movieofthenight.com/v4";
 const ALLOWED = new Set(["netflix", "disney", "prime", "apple", "hbo"]);
@@ -45,12 +45,6 @@ function safeEqual(a, b) {
     diff |= (aa[i] || 0) ^ (bb[i] || 0);
   }
   return diff === 0;
-}
-
-// The limited Movie of the Night link-resolver budget is NOT the TMDB catalog budget.
-function linkMonthlyCap(env) {
-  const n = Number(env.MAX_LINK_CALLS_MONTH || env.MAX_UPSTREAM_CALLS_MONTH || "200");
-  return Number.isSafeInteger(n) && n > 0 && n <= 10000 ? n : null;
 }
 
 /** Return canonical URL or null; refuse unknown hosts, params and schemes. */
@@ -128,18 +122,6 @@ async function useCached(env, key, now) {
   return result;
 }
 
-async function reserveLinkQuota(env, now) {
-  // Separate the link budget from the historical shared counter, already full.
-  const month = new Date(now * 1000).toISOString().slice(0, 7) + ":links";
-  await env.DB.prepare(
-    "INSERT OR IGNORE INTO monthly_quota (month, used) VALUES (?, 0)"
-  ).bind(month).run();
-  const reserved = await env.DB.prepare(
-    "UPDATE monthly_quota SET used = used + 1 WHERE month = ? AND used < ? RETURNING used"
-  ).bind(month, linkMonthlyCap(env)).first();
-  return reserved !== null;
-}
-
 async function remember(env, key, result, now) {
   const lifetime = result.status === "link_candidate" ? 6 * 3600 : 30 * 60;
   await env.DB.prepare(
@@ -166,7 +148,7 @@ function report(result, fromCache) {
  * with TMDB_READ_TOKEN configured as a Cloudflare Worker Secret.
  */
 export async function catalogRequest(request, env, deps = {}) {
-  if (!env?.TMDB_READ_TOKEN || !env?.RATE_LIMIT || !env?.DB) {
+  if (!env?.TMDB_READ_TOKEN || !env?.DB) {
     return asJson({ status: "catalog_not_configured" }, 503);
   }
   const parsed = new URL(request.url);
@@ -231,12 +213,8 @@ export async function catalogRequest(request, env, deps = {}) {
       !discoverSorts.has(sort)) {
     return asJson({ status: "bad_request" }, 400);
   }
-  let diagnosticStage = "rate_limit";
+  let diagnosticStage = "cache_read";
   try {
-    const ip = request.headers.get("cf-connecting-ip") || "unknown";
-    if (!(await env.RATE_LIMIT.limit({ key: "catalog:" + ip })).success) {
-      return asJson({ status: "rate_limited" }, 429);
-    }
     const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
     const upstream = new URL("https://api.themoviedb.org/3/" + route);
     for (const [k, v] of parsed.searchParams) upstream.searchParams.set(k, v);
@@ -253,7 +231,7 @@ export async function catalogRequest(request, env, deps = {}) {
       return asJson(JSON.parse(cached.payload), 200, { "x-anytv-cache": "hit" });
     }
     // TMDB metadata is not charged against the separate Movie of the Night link budget.
-    // Public requests remain rate-limited by IP, allowlisted, validated and cached.
+    // Requests remain path-allowlisted, validated and cached without user-usage caps.
     // TMDB offers either a v4 Read Access Token (Bearer) or a 32-char v3 API key.
     // Both stay exclusively in Cloudflare Secrets; no credential reaches the app.
     const credential = String(env.TMDB_READ_TOKEN).trim().replace(/^Bearer\s+/i, "").replace(/\s+/g, "");
@@ -330,8 +308,7 @@ export async function handleRequest(request, env, deps = {}) {
   if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
   if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
   if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
-  if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB || !env?.RATE_LIMIT ||
-      linkMonthlyCap(env) === null ||
+  if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB ||
       ((env.ANYTV_RESOLVER_AUTH_MODE || "pilot") === "pilot" &&
        !env.ANYTV_CLIENT_TOKEN)) {
     return asJson({ status: "not_configured" }, 503);
@@ -358,17 +335,11 @@ export async function handleRequest(request, env, deps = {}) {
     return asJson({ status: "bad_request" }, 400);
   }
   const [, media, id, provider] = match;
-  const ip = request.headers.get("cf-connecting-ip") || "unknown";
   try {
-    const limit = await env.RATE_LIMIT.limit({ key: ip });
-    if (!limit.success) return asJson({ status: "rate_limited" }, 429);
     const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
     const key = media + ":" + id + ":" + provider + ":br";
     const cached = await useCached(env, key, now);
     if (cached) return report(cached, true);
-    if (!(await reserveLinkQuota(env, now))) {
-      return asJson({ status: "monthly_quota_exhausted" }, 429);
-    }
     const sourceUrl = new URL(ORIGIN + "/shows/" + media + "%2F" + id);
     sourceUrl.searchParams.set("country", "br");
     sourceUrl.searchParams.set("series_granularity", "show");
