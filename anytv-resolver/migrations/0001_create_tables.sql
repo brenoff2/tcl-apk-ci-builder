@@ -1,4 +1,5 @@
--- Private AnyTV resolver; only aggregated quota and safe, short-lived URL candidates.
+-- Private AnyTV resolver; cache plus legacy monthly_quota table kept only for rollback.
+-- No Worker code consults or writes monthly_quota: application usage is uncapped.
 CREATE TABLE IF NOT EXISTS monthly_quota (
   month TEXT PRIMARY KEY,
   used INTEGER NOT NULL DEFAULT 0 CHECK(used >= 0)
