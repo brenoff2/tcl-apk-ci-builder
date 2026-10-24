@@ -685,6 +685,55 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('sectionPage < 42 && sectionAll.size >= ANYTV_LIST_BATCH',
                          self.screen)
 
+    def test_watched_film_uses_independent_prefs_snapshot_and_legacy_cache_migration(self):
+        block = self.screen.split('var watchedMovieTitles by remember(prefs)', 1)[1].split(
+            'fun isFavorite(title: StreamingTitle', 1)[0]
+        for token in (
+            '"anytv_watched_movie_titles_v1"',
+            'fun preserveWatchedMovieTitles(titlesToSave: Collection<StreamingTitle>)',
+            'watchedMovieTitles = watchedMovieTitles + valid.associateBy { it.id }',
+            'if (id <= 0 || name.isBlank())',
+            '.put("poster", item.poster)',
+            '.put("backdrop", item.backdrop)',
+            '.put("genres", JSONArray(item.genreIds))',
+            'prefs.edit().putString("anytv_watched_movie_titles_v1"',
+            'if (media == "movie") watchedMovieTitles[id]?.let { return it }',
+            'StreamingDiskCache.previousTitle(media, id)',
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, block)
+        self.assertIn('preserveWatchedMovieTitles(listOf(title))', self.screen)
+        migration = self.screen.split(
+            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection)', 1)[1].split(
+            'var watchedEpisodes by remember', 1)[0]
+        self.assertIn('watchedFilms.mapNotNull(String::toIntOrNull).distinct()', migration)
+        self.assertIn('.filter { it !in watchedMovieTitles }', migration)
+        self.assertIn('restoreTrackedTitle("movie", it)', migration)
+        self.assertIn('preserveWatchedMovieTitles(recovered)', migration)
+        self.assertNotIn('StreamingCatalog.lookupMovie', migration)
+        self.assertNotIn('movie/$id', migration)
+
+    def test_legacy_watched_ids_remain_visible_without_invented_movie_metadata(self):
+        library = self.screen.split(
+            'if (homeLibrary && librarySection == "watched") {\n'
+            '                            // Old releases stored only TMDB IDs', 1)[1].split(
+            'uniqueShelves.forEach', 1)[0]
+        for token in (
+            'val missingIds = watchedFilms.mapNotNull(String::toIntOrNull)',
+            'restoreTrackedTitle("movie", it) == null',
+            'if (missingIds.isNotEmpty())',
+            'IDs TMDB: ',
+            'missingIds.take(12).joinToString(", ")',
+            'registros antigos permanecem ',
+            'sem nome/cartaz ',
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, library)
+        # The poster card keeps its 2:3 aspect and draws only real titles.
+        self.assertIn('items(shelf.take(sectionVisibleCount).chunked(3))', self.screen)
+        self.assertNotIn('StreamingTitle(id, "Filme', library)
+        self.assertNotIn('https://image.tmdb.org/t/p/w342" + id', library)
+
     def test_watched_poster_preserves_title_without_favorite_or_cache_ttl(self):
         self.assertIn('fun toggleFilmWatched(title: StreamingTitle)', self.screen)
         self.assertIn('StreamingDiskCache.rememberTitle("movie", title.id,',

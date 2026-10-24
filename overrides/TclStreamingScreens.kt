@@ -1560,11 +1560,49 @@ internal fun TclStreamingScreens(
             }
         }.getOrDefault(emptyList<StreamingFavorite>()))
     }
+    // In addition to the non-expiring title cache, preserve watched-film metadata
+    // with the user's history preferences, as already done for tracked series.
+    var watchedMovieTitles by remember(prefs) {
+        mutableStateOf(runCatching {
+            val records = JSONArray(prefs.getString("anytv_watched_movie_titles_v1", "[]"))
+            (0 until records.length()).mapNotNull { index ->
+                val entry = records.optJSONObject(index) ?: return@mapNotNull null
+                val id = entry.optInt("id")
+                val name = entry.optString("name")
+                if (id <= 0 || name.isBlank()) return@mapNotNull null
+                StreamingTitle(id, name, entry.optString("overview"),
+                    entry.optString("poster"), "movie",
+                    rating = entry.optDouble("rating", 0.0),
+                    votes = entry.optInt("votes", 0),
+                    backdrop = entry.optString("backdrop"),
+                    date = entry.optString("date"),
+                    genreIds = entry.optJSONArray("genres")?.let { genres ->
+                        (0 until genres.length()).map { genres.optInt(it) }.filter { it > 0 }
+                    } ?: emptyList())
+            }.associateBy { it.id }
+        }.getOrDefault(emptyMap<Int, StreamingTitle>()))
+    }
+    fun preserveWatchedMovieTitles(titlesToSave: Collection<StreamingTitle>) {
+        val valid = titlesToSave.filter { it.id > 0 && it.media == "movie" && it.name.isNotBlank() }
+        if (valid.isEmpty()) return
+        watchedMovieTitles = watchedMovieTitles + valid.associateBy { it.id }
+        val records = JSONArray()
+        watchedMovieTitles.values.forEach { item ->
+            records.put(JSONObject().put("id", item.id).put("name", item.name)
+                .put("overview", item.overview).put("poster", item.poster)
+                .put("backdrop", item.backdrop).put("date", item.date)
+                .put("rating", item.rating).put("votes", item.votes)
+                .put("genres", JSONArray(item.genreIds)))
+        }
+        prefs.edit().putString("anytv_watched_movie_titles_v1", records.toString()).apply()
+    }
     // Watched history survives removing a heart: it is independent of favorites.
     fun restoreTrackedTitle(media: String, id: Int): StreamingTitle? {
         if (media == "tv") watchingTitles[id]?.let { return it }
-        favorites.firstOrNull { it.title.id == id && it.title.media == media }
+        favorites.firstOrNull { it.title.id == id && it.title.media == media &&
+                it.title.name.isNotBlank() }
             ?.title?.let { return it }
+        if (media == "movie") watchedMovieTitles[id]?.let { return it }
         val cached = StreamingDiskCache.previousTitle(media, id) ?: return null
         val titleName = cached.optString("name")
         if (titleName.isBlank()) return null
@@ -1622,6 +1660,9 @@ internal fun TclStreamingScreens(
     fun toggleFilmWatched(title: StreamingTitle) {
         val key = title.id.toString()
         if (key !in watchedFilms) {
+            // Redundant user-history snapshot: prefs survive even if the
+            // catalogue folder is removed, without inventing any metadata.
+            preserveWatchedMovieTitles(listOf(title))
             // A check directly on a poster must survive catalog-cache expiry and restart.
             StreamingDiskCache.rememberTitle("movie", title.id,
                 JSONObject().put("name", title.name).put("overview", title.overview)
@@ -1632,6 +1673,16 @@ internal fun TclStreamingScreens(
         watchedFilms = if (key in watchedFilms) watchedFilms - key else watchedFilms + key
         prefs.edit().putString("anytv_watched_movies",
             watchedFilms.sorted().joinToString(",")).apply()
+    }
+    // Migrates legacy ID-only records when matching names/artwork already exist
+    // in favorites or the local TMDB snapshot cache. No Worker movie/{id} request.
+    LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection) {
+        if (homeLibrary && librarySection == "watched") {
+            val recovered = watchedFilms.mapNotNull(String::toIntOrNull).distinct()
+                .filter { it !in watchedMovieTitles }
+                .mapNotNull { restoreTrackedTitle("movie", it) }
+            preserveWatchedMovieTitles(recovered)
+        }
     }
     var watchedEpisodes by remember {
         mutableStateOf(prefs.getString("anytv_watched_episodes", "")
@@ -2737,6 +2788,26 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         } else {
+                        if (homeLibrary && librarySection == "watched") {
+                            // Old releases stored only TMDB IDs for some watched films.
+                            // Retain visible evidence even when no real title metadata
+                            // is available locally; do not fabricate a poster or name.
+                            val missingIds = watchedFilms.mapNotNull(String::toIntOrNull)
+                                .distinct().filter { restoreTrackedTitle("movie", it) == null }
+                                .sorted()
+                            if (missingIds.isNotEmpty()) {
+                                item {
+                                    Text("${missingIds.size} registros antigos permanecem " +
+                                        "marcados como assistidos, mas sem nome/cartaz " +
+                                        "disponível neste aparelho. IDs TMDB: " +
+                                        missingIds.take(12).joinToString(", ") +
+                                        (if (missingIds.size > 12)
+                                            " (+${missingIds.size - 12} outros)" else ""),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp)
+                                }
+                            }
+                        }
                         uniqueShelves.forEach { (heading, shelf) ->
                             if (heading == ANYTV_CINEMA_SHELF && selected == null &&
                                 selectedHomeGenre == 0) {
