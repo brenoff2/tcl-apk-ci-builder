@@ -53,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -921,7 +923,10 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
                         Text(movie.name, fontSize = 15.sp, lineHeight = 18.sp,
                             color = Color.White, maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
-                            fontWeight = FontWeight.SemiBold)
+                            fontWeight = FontWeight.SemiBold,
+                            style = TextStyle(shadow = Shadow(
+                                color = Color.Black.copy(alpha = 0.90f),
+                                offset = Offset(0f, 2f), blurRadius = 5f)))
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("Ver ›", fontSize = 12.sp,
@@ -1192,8 +1197,8 @@ private fun AnyTvStreamNavBar(
 ) {
     val primary = MaterialTheme.colorScheme.primary
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween) {
+    val actionScroll = rememberScrollState()
+    val chips: @Composable () -> Unit = {
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically) {
             AnyTvCompactChip("Filmes", !library && contentType == "movie") {
@@ -1203,9 +1208,12 @@ private fun AnyTvStreamNavBar(
                 onContentType(if (contentType == "tv") "all" else "tv")
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp),
+    }
+    val actions: @Composable () -> Unit = {
+        Row(modifier = Modifier.horizontalScroll(actionScroll),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            // Use EXACTLY the home-screen circular header component.
+            // Reuse the approved home-screen icons, tint and click handlers.
             TclHeaderAction(Icons.Filled.Home, "Início: filmes e séries",
                 if (!library && contentType == "all") primary else neutral, onHome)
             TclHeaderAction(Icons.Filled.Favorite, "Minha lista",
@@ -1217,6 +1225,23 @@ private fun AnyTvStreamNavBar(
             TclHeaderAction(Icons.Filled.FilterList, "Filtrar streamings e gêneros",
                 if (filtersActive) primary else neutral, onFilters)
             TclHeaderAction(Icons.Filled.Close, "Fechar streaming", neutral, onDismiss)
+        }
+    }
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        // Six 38dp actions plus the content chips exceed a narrow phone width.
+        if (maxWidth < 390.dp) {
+            Column(modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                chips()
+                actions()
+            }
+        } else {
+            Row(modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween) {
+                chips()
+                actions()
+            }
         }
     }
 }
@@ -2263,14 +2288,16 @@ internal fun TclStreamingScreens(
                                                                     token, selectedProvider.first.name,
                                                                     selectedProvider.second, next,
                                                                     if (sectionTitle.startsWith(
-                                                                            "Em destaque ·")) genre else 0,
+                                                                            "Em destaque ·")) genre
+                                                                    else selectedHomeGenre.coerceAtLeast(0),
                                                                     if (sectionTitle.startsWith(
                                                                             "Em destaque ·")) searchTerm else "")
                                                             homeProvider != null ->
                                                                 StreamingCatalog.discover(token,
                                                                     homeProvider,
                                                                     if (sectionTitle.endsWith("· Séries"))
-                                                                        "tv" else "movie", next, 0, "")
+                                                                        "tv" else "movie", next,
+                                                                    selectedHomeGenre.coerceAtLeast(0), "")
                                                             else -> StreamingResults(emptyList(), false)
                                                         }
                                                     }.onSuccess { result ->
@@ -2376,32 +2403,72 @@ internal fun TclStreamingScreens(
                                         details = current
                                         detailsPackage = null
                                     }) {
-                                        Box(modifier = Modifier.fillMaxWidth().height(150.dp)) {
+                                        Box(modifier = Modifier.fillMaxWidth().height(150.dp)
+                                            .clip(RoundedCornerShape(12.dp))) {
                                             AnyTvPinnedImage(
                                                 model = "https://image.tmdb.org/t/p/w780" +
                                                     current.backdrop.ifBlank { current.poster },
                                                 contentDescription = "Destaque: " + current.name,
                                                 contentScale = ContentScale.Crop,
                                                 modifier = Modifier.fillMaxSize())
+                                            Box(modifier = Modifier.fillMaxSize().background(
+                                                Brush.verticalGradient(listOf(
+                                                    Color.Transparent,
+                                                    Color.Black.copy(alpha = 0.15f),
+                                                    Color.Black.copy(alpha = 0.86f)
+                                                ))))
+                                            Column(modifier = Modifier.align(Alignment.BottomStart)
+                                                .fillMaxWidth()
+                                                .padding(start = 12.dp, end = 12.dp, bottom = 22.dp),
+                                                verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                                Text(current.name, fontWeight = FontWeight.Bold,
+                                                    fontSize = 16.sp, lineHeight = 19.sp,
+                                                    maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                                    color = Color.White,
+                                                    style = TextStyle(shadow = Shadow(
+                                                        color = Color.Black.copy(alpha = 0.94f),
+                                                        offset = Offset(0f, 2f), blurRadius = 6f)))
+                                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically) {
+                                                    val year = current.date.take(4)
+                                                        .takeIf { it.matches(Regex("[0-9]{4}")) }
+                                                    if (year != null) {
+                                                        Text(year, fontSize = 11.sp, color = Color.White)
+                                                    }
+                                                    if (current.votes > 0) {
+                                                        Text(String.format(java.util.Locale.US,
+                                                            "%.1f", current.rating),
+                                                            fontSize = 11.sp, color = Color.White)
+                                                    }
+                                                    if (current.media == "movie" &&
+                                                        current.id in cinemaIds) {
+                                                        Text("Cinema", modifier = Modifier
+                                                            .clip(RoundedCornerShape(3.dp))
+                                                            .background(Color(0xFF1769E0))
+                                                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                                                            fontSize = 9.sp, color = Color.White,
+                                                            fontWeight = FontWeight.SemiBold)
+                                                    }
+                                                }
+                                            }
+                                            // Minimal progress bars; no large text dots on artwork.
                                             Row(modifier = Modifier.align(Alignment.BottomCenter)
-                                                .padding(bottom = 7.dp)
-                                                .background(Color.Black.copy(alpha = 0.62f),
-                                                    RoundedCornerShape(12.dp))
-                                                .padding(horizontal = 7.dp, vertical = 2.dp),
+                                                .padding(bottom = 8.dp),
                                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                                                 verticalAlignment = Alignment.CenterVertically) {
                                                 repeat(heroTitles.size) { dot ->
-                                                    Text(if (pagerState.currentPage == dot) "●" else "•",
-                                                        fontSize = if (pagerState.currentPage == dot)
-                                                            11.sp else 9.sp,
-                                                        color = if (pagerState.currentPage == dot)
-                                                            Color.White else Color(0xFFB7BCC5))
+                                                    Box(modifier = Modifier
+                                                        .width(if (pagerState.currentPage == dot)
+                                                            12.dp else 4.dp)
+                                                        .height(3.dp)
+                                                        .clip(RoundedCornerShape(2.dp))
+                                                        .background(if (pagerState.currentPage == dot)
+                                                            Color.White else
+                                                            Color.White.copy(alpha = 0.45f)))
                                                 }
                                             }
                                         }
-                                        Spacer(Modifier.height(5.dp))
-                                        Text(current.name, fontWeight = FontWeight.Bold,
-                                            maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        Spacer(Modifier.height(4.dp))
                                         StreamingOfferIcons(current, offerCache, displayed, expanded = true,
                                             inCinema = current.id in cinemaIds)
                                     }

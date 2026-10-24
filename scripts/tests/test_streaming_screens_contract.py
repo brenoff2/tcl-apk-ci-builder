@@ -203,7 +203,7 @@ class StreamingScreens(unittest.TestCase):
     def test_same_home_app_icons_year_and_readable_spacing(self):
         self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
         self.assertIn('lineHeight = 14.sp', self.screen)
-        self.assertIn('Spacer(Modifier.height(5.dp))', self.screen)
+        self.assertIn('Brush.verticalGradient(listOf(', self.screen)
         self.assertIn('first_air_date', self.screen)
         self.assertIn('release_date', self.screen)
         self.assertIn('val releasedYear = title.date.take(4)', self.screen)
@@ -455,6 +455,47 @@ class StreamingScreens(unittest.TestCase):
             'Modifier.size(width = 116.dp, height = 158.dp)',
         ):
             self.assertNotIn(forbidden, self.screen)
+    def test_hero_overlays_title_year_rating_verified_cinema_and_small_progress(self):
+        hero = self.screen.split('val current = heroTitles[pageIndex]', 1)[1].split(
+            '// Two single-row preview rails', 1)[0]
+        self.assertLess(hero.index('AnyTvPinnedImage('),
+                        hero.index('Brush.verticalGradient(listOf('))
+        self.assertLess(hero.index('Brush.verticalGradient(listOf('),
+                        hero.index('Text(current.name,'))
+        self.assertLess(hero.index('Text(current.name,'),
+                        hero.index('StreamingOfferIcons(current,'))
+        for value in (
+            'style = TextStyle(shadow = Shadow(',
+            'Offset(0f, 2f), blurRadius = 6f',
+            'val year = current.date.take(4)',
+            'if (current.votes > 0)',
+            'current.id in cinemaIds',
+            'Text("Cinema", modifier = Modifier',
+            'repeat(heroTitles.size) { dot ->',
+            '.width(if (pagerState.currentPage == dot)',
+        ):
+            self.assertIn(value, hero)
+        self.assertNotIn('Text(if (pagerState.currentPage == dot)', hero)
+
+    def test_streaming_navigation_wraps_only_on_narrow_screens(self):
+        nav = self.screen.split('private fun AnyTvStreamNavBar(', 1)[1].split(
+            'private fun AnyTvCompactChip(', 1)[0]
+        for value in (
+            'BoxWithConstraints(modifier = Modifier.fillMaxWidth())',
+            'if (maxWidth < 390.dp)',
+            'val chips: @Composable () -> Unit = {',
+            'val actions: @Composable () -> Unit = {',
+            'Modifier.horizontalScroll(actionScroll)',
+            'chips()',
+            'actions()',
+        ):
+            self.assertIn(value, nav)
+        self.assertEqual(nav.count('TclHeaderAction(Icons.Filled.'), 6)
+
+    def test_provider_ver_mais_preserves_active_genre_in_next_batch(self):
+        self.assertIn('else selectedHomeGenre.coerceAtLeast(0),', self.screen)
+        self.assertIn('"tv" else "movie", next,', self.screen)
+
     def test_ver_mais_editorial_and_provider_pages_fetch_next_24(self):
         for snippet in (
             'suspend fun discoveryShelfPage(route: String, media: String, page: Int)',
