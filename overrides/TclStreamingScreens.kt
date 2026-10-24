@@ -2046,6 +2046,7 @@ internal fun TclStreamingScreens(
                             val watching = trackedIds.mapNotNull { key ->
                                 key.toIntOrNull()?.let { restoreTrackedTitle("tv", it) }
                             }.distinctBy { it.id }
+                                .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
                             if (librarySection == "saved") {
                                 if (unseen.isNotEmpty()) put("Filmes para assistir", unseen)
                                 if (series.isNotEmpty()) put("Minhas séries", series)
@@ -2228,6 +2229,21 @@ internal fun TclStreamingScreens(
                                     "watched" -> "Assistidos"
                                     else -> "Minha lista"
                                 }, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                                if (librarySection == "watching") {
+                                    OutlinedTextField(
+                                        value = watchingQuery,
+                                        onValueChange = { watchingQuery = it.take(90) },
+                                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                                        singleLine = true,
+                                        label = { Text("Buscar nas minhas séries em andamento") },
+                                        trailingIcon = {
+                                            if (watchingQuery.isNotEmpty()) {
+                                                IconButton(onClick = { watchingQuery = "" }) {
+                                                    Icon(Icons.Filled.Close, "Limpar busca em andamento")
+                                                }
+                                            }
+                                        })
+                                }
                                 if (visibleShelves.isEmpty()) {
                                     Spacer(Modifier.height(16.dp))
                                     Text(when (librarySection) {
@@ -2519,6 +2535,49 @@ internal fun TclStreamingScreens(
                                         fontSize = 12.sp)
                                 }
                             }
+                        } else if (homeLibrary && librarySection == "watching") {
+                            val inProgress = uniqueShelves.flatMap { it.second }
+                                .filter { watchingQuery.isBlank() ||
+                                    it.name.contains(watchingQuery.trim(), ignoreCase = true) }
+                                .distinctBy { it.id }
+                            items(inProgress.take(sectionVisibleCount).chunked(2)) { pair ->
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .padding(vertical = 9.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.Top) {
+                                    pair.forEach { series ->
+                                        Column(modifier = Modifier.weight(1f).clickable {
+                                            details = series; detailsPackage = null
+                                        }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            AnyTvPinnedImage(
+                                                model = "https://image.tmdb.org/t/p/w185" + series.poster,
+                                                contentDescription = "Série em andamento: " + series.name,
+                                                modifier = Modifier.fillMaxWidth().height(158.dp),
+                                                contentScale = ContentScale.Crop)
+                                            AnyTvCardMetaRow(series,
+                                                favorite = isFavorite(series, "library"),
+                                                marked = series.id.toString() in trackedSeries,
+                                                compact = true,
+                                                onMarked = { toggleSeriesTracking(series) },
+                                                onFavorite = { toggleFavorite(series, "library") })
+                                            Text(series.name, fontSize = 12.sp, maxLines = 3,
+                                                lineHeight = 15.sp,
+                                                overflow = TextOverflow.Ellipsis,
+                                                fontWeight = FontWeight.SemiBold)
+                                        }
+                                    }
+                                    repeat(2 - pair.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                            if (inProgress.size > sectionVisibleCount) {
+                                item {
+                                    TextButton(onClick = {
+                                        sectionVisibleCount += ANYTV_LIST_BATCH
+                                    }, modifier = Modifier.fillMaxWidth()) {
+                                        Text("Mostrar mais 24")
+                                    }
+                                }
+                            }
                         } else {
                         uniqueShelves.forEach { (heading, shelf) ->
                             if (heading == ANYTV_CINEMA_SHELF && selected == null &&
@@ -2607,7 +2666,7 @@ internal fun TclStreamingScreens(
                                                             onMarked = {
                                                                 if (item.media == "movie")
                                                                     toggleFilmWatched(item.id)
-                                                                else toggleSeriesTracking(item.id)
+                                                                else toggleSeriesTracking(item)
                                                             },
                                                             onFavorite = { toggleFavorite(item, "library") })
                                                         StreamingOfferIcons(item, offerCache, displayed,
@@ -3016,7 +3075,7 @@ internal fun TclStreamingScreens(
                             val epNum = manualEpisode.toIntOrNull()
                             TextButton(onClick = {
                                 if (seasonNum != null && epNum != null)
-                                    toggleWatched(title.id, seasonNum, epNum)
+                                    toggleWatched(title, seasonNum, epNum)
                             }, enabled = seasonNum != null && seasonNum in 1..999 &&
                                 epNum != null && epNum in 1..999) {
                                 Text("Marcar/desmarcar episódio")
@@ -3032,7 +3091,7 @@ internal fun TclStreamingScreens(
                                     } else null
                                 }.sortedWith(compareBy({ it.first }, { it.second }))
                                 .forEach { (sn, en) ->
-                                    TextButton(onClick = { toggleWatched(title.id, sn, en) }) {
+                                    TextButton(onClick = { toggleWatched(title, sn, en) }) {
                                         Text("✓ T$sn · E$en   ×", fontSize = 11.sp)
                                     }
                                 }
