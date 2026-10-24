@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 51,
+  "expected_version_code": 52,
   "preserve_legacy_ota": true,
-  "source": "2.9.13 RSA TLS candidate with Android applicationId com.tclremote.livre.v2",
+  "source": "UI reorganizada e resolvedor com autorizacao individual, preservando pacote com.tclremote.livre.v2 e signer original",
   "new_install_only": false,
-  "release_version": "2.9.22-AnyTV",
-  "release_scope": "2.9.22 code51 approved V2 OTA UI update. Genre filtered page retains hero with at most 10 titles and dots over image. Detailed vertical list shows year, TMDB rating, BR provider icons, synopsis capped at 160 chars/3 lines, trailer button (on-demand validated YouTube URL), persisted favorite and watched/series tracking actions. Switch list/grid with three poster columns and fixed three title lines, choose server-side popularity/rating/newest/title ascending sort persisted in local preferences and applied to all 20-item pages. Main home banner limits to 10 film titles, fixes centered 2-line title inside reserved area, keeps Ver bottom-aligned in light gray and shows confirmed provider logo adjacent where available (never invent providers). Search typed text and cursor now visible centered in 44dp BasicTextField instead of clipped 42dp Material3 OutlinedTextField (intrinsic 56dp). Backend Cloudflare a6747819-e4da-422c-9766-a40151b87cd3 deployed and live smoke 40045771887 SUCCESS sorted movie/TV requests and 400 invalid sort; link-only monthly cap remains separate. Preserve V2 package/signing, legacy cert2026 OTA. Mandatory release compile, unit/IME, live search, signing and byte readback, no bypass or automatic rollback of production. Device visual QA pending. Retry after updating two stale streaming UI contract test anchors for LazyColumn state and banner weight; require all regression steps green.",
-  "ci_revision": 8
+  "release_version": "2.9.23-AnyTV",
+  "release_scope": "2.9.23/code52: cartoes home/genero ano+nota e assistido/favorito na linha 1, F/S+streamings na linha 2, titulo com tres linhas fixas na linha 3; seletores lista/grade iconicos, trailer apenas na ficha. Links: diagnostico de status assinando a identidade do celular, ativacao unica se nao autorizado, fallback seguro, links oficiais validados Netflix/Prime e videoLink; Worker versao bd8cafd5 implantada 100% e smoke 200/401. Preservar V2 signer, pacote com.tclremote.livre.v2, dados e canal OTA legado. Build, tests, assinatura, live catalog, SHA e readback obrigatorios. QA fisica TCL pendente.",
+  "ci_revision": 9
 }
