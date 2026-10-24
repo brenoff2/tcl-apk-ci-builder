@@ -1252,6 +1252,8 @@ internal fun TclStreamingScreens(
     }
     var homeLibrary by remember { mutableStateOf(false) }
     var openedSection by remember { mutableStateOf<String?>(null) }
+    var sectionVisibleCount by remember { mutableIntStateOf(ANYTV_LIST_BATCH) }
+    LaunchedEffect(openedSection) { sectionVisibleCount = ANYTV_LIST_BATCH }
     var trackedSeries by remember {
         mutableStateOf(prefs.getString("anytv_tracking_series", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
@@ -2100,22 +2102,25 @@ internal fun TclStreamingScreens(
                         // the new state immediately; Assistidos keeps its own view.
                         val unique = shelf.filter { title ->
                             when {
+                                homeLibrary -> true // Saved/watched records survive missing TMDB dates.
                                 heading == ANYTV_CINEMA_SHELF ->
                                     title.media == "movie" // Source is now_playing BR
                                 heading.startsWith("Em breve") -> anyTvUpcoming(title)
                                 else -> anyTvReleased(title) &&
                                     (title.media != "movie" || title.id !in cinemaIds)
                             }
-                        }.distinctBy { "${it.media}:${it.id}" }.take(ANYTV_LIST_BATCH)
-                        if (unique.isEmpty()) null else heading to unique
+                        }.distinctBy { "${it.media}:${it.id}" }
+                        if (unique.isEmpty()) null else heading to
+                            if (homeLibrary) unique else unique.take(ANYTV_LIST_BATCH)
                     }
                     LazyColumn(state = catalogScrollState,
                         modifier = Modifier.weight(1f)) {
                         if (openedSection != null) {
                             val sectionTitle = openedSection.orEmpty()
-                            val sectionTitles = uniqueShelves.firstOrNull {
+                            val sectionAll = uniqueShelves.firstOrNull {
                                 it.first == sectionTitle
-                            }?.second.orEmpty().take(ANYTV_LIST_BATCH)
+                            }?.second.orEmpty()
+                            val sectionTitles = sectionAll.take(sectionVisibleCount)
                             item {
                                 TextButton(onClick = { openedSection = null }) {
                                     Text("‹ Voltar às seções")
@@ -2158,6 +2163,14 @@ internal fun TclStreamingScreens(
                                         }
                                     }
                                     repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                            if (homeLibrary && sectionAll.size > sectionVisibleCount) {
+                                item {
+                                    TextButton(
+                                        onClick = { sectionVisibleCount += ANYTV_LIST_BATCH },
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) { Text("Mostrar mais 24") }
                                 }
                             }
                         } else {
@@ -2531,7 +2544,7 @@ internal fun TclStreamingScreens(
                                     }
                                     // Keep the approved horizontal two-row rail by default.
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                        items(shelf.chunked(2)) { pair ->
+                                        items(shelf.take(ANYTV_LIST_BATCH).chunked(2)) { pair ->
                                             Column(verticalArrangement = Arrangement.spacedBy(11.dp),
                                                 modifier = Modifier.width(116.dp)) {
                                                 pair.forEach { item ->
