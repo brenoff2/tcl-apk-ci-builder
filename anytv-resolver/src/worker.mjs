@@ -182,7 +182,7 @@ export async function catalogRequest(request, env, deps = {}) {
   const allowed = new Set([
     "language", "watch_region", "with_watch_providers",
     "with_watch_monetization_types", "include_adult",
-    "sort_by", "page", "query", "with_genres",
+    "sort_by", "page", "query", "with_genres", "region",
   ]);
   const keys = [...parsed.searchParams.keys()];
   if (keys.length > 9 || keys.some(k => !allowed.has(k)) ||
@@ -203,6 +203,10 @@ export async function catalogRequest(request, env, deps = {}) {
   }
   const query = parsed.searchParams.get("query");
   if (query !== null && (query.length < 1 || query.length > 90)) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const region = parsed.searchParams.get("region");
+  if (region !== null && (route !== "movie/now_playing" || region !== "BR")) {
     return asJson({ status: "bad_request" }, 400);
   }
   const lang = parsed.searchParams.get("language") || "pt-BR";
