@@ -862,6 +862,50 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
     }
 }
 
+/** Cinema has its own theatrical hero, independent of the streaming hero. */
+@Composable
+private fun AnyTvCinemaHero(
+    titles: List<StreamingTitle>,
+    onOpen: (StreamingTitle) -> Unit
+) {
+    val movies = titles.filter { it.media == "movie" }
+        .distinctBy { it.id }.take(10)
+    if (movies.isEmpty()) return
+    val pager = rememberPagerState(pageCount = { movies.size })
+    LaunchedEffect(pager, movies.map { it.id }) {
+        while (movies.size > 1) {
+            delay(3000)
+            if (!pager.isScrollInProgress) {
+                pager.animateScrollToPage((pager.currentPage + 1) % movies.size)
+            }
+        }
+    }
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Cinema · Em cartaz no Brasil", fontWeight = FontWeight.Bold,
+            fontSize = 16.sp)
+        HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { index ->
+            val film = movies[index]
+            Box(modifier = Modifier.fillMaxWidth().height(155.dp)
+                .clip(RoundedCornerShape(12.dp)).clickable { onOpen(film) }) {
+                AnyTvPinnedImage(
+                    model = "https://image.tmdb.org/t/p/w780" +
+                        film.backdrop.ifBlank { film.poster },
+                    contentDescription = "Cinema: " + film.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize())
+                Text(film.name,
+                    modifier = Modifier.align(Alignment.BottomStart)
+                        .background(Color.Black.copy(alpha = 0.70f),
+                            RoundedCornerShape(topEnd = 8.dp))
+                        .padding(horizontal = 11.dp, vertical = 6.dp),
+                    fontWeight = FontWeight.SemiBold, fontSize = 12.sp,
+                    maxLines = 2, color = Color.White)
+            }
+        }
+    }
+}
+
 /** Single-row secondary carousel, separate from the paginated catalogue. */
 @Composable
 private fun AnyTvOneRowPreview(
@@ -2317,6 +2361,30 @@ internal fun TclStreamingScreens(
                             }
                         } else {
                         uniqueShelves.forEach { (heading, shelf) ->
+                            if (heading == ANYTV_CINEMA_SHELF && selected == null &&
+                                selectedHomeGenre == 0) {
+                                item {
+                                    AnyTvCinemaHero(shelf) { chosen ->
+                                        details = chosen; detailsPackage = null
+                                    }
+                                }
+                                if (cinemaWorldwide.isNotEmpty()) {
+                                    item {
+                                        AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
+                                            cinemaWorldwide) { chosen ->
+                                            details = chosen; detailsPackage = null
+                                        }
+                                    }
+                                }
+                                if (cinemaComingSoon.isNotEmpty()) {
+                                    item {
+                                        AnyTvOneRowPreview("Em breve · Cinema",
+                                            cinemaComingSoon) { chosen ->
+                                            details = chosen; detailsPackage = null
+                                        }
+                                    }
+                                }
+                            }
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
