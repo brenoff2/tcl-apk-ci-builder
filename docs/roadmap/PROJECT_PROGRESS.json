@@ -168,6 +168,10 @@
     {
       "date": "2026-10-24",
       "event": "Candidata tecnica AnyTV pos-2.9.22 VALIDADA EM CI sem publicacao: source funcional head cadb886 (resolucao de 404 not_available versus no_supported_link e 409 ambiguous, fallback 401/5xx com TMDB/Wikidata preservado), app UI cartoes ano/nota + assistido/favorito, F/S+streamings e titulo 3 linhas; Movie of the Night atribuido. Android #40060106346 SUCCESS 39 testes de UI/links + 2 credenciais, Gradle 3m28 e pacote V2; Worker #40060118239 SUCCESS 32/32 e dry-run sem deploy; companion #40060021841 SUCCESS 7+3, Gradle, permissoes sem Acessibilidade. Compilacoes de auditoria NAO ASSINADAS; sem instalacao, OTA, deploy Worker, alteracao signer ou merge. Versao publicada 2.9.22/code51, Worker ce51439e; progresso 7/11=63%, F0-F8 NAO_HOMOLOGADO. Evidencia: docs/qa/ANYTV_V2_POST_2922_UI_LINKS_CANDIDATE.md."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "Candidata AnyTV V2 link-activation recovery aprovada em CI SEM DEPLOY: fontes de producao ce51439e (100%) lidas diretamente em Cloudflare, mode=device, activation_enabled=true, 5 bindings; D1 contem 1 registro P256 autorizado, 1 codigo consumido e 0 codigos disponiveis, ultima prova valida em 21/10. Fonte ce51439e nao inclui /v1/device/status nem videoLink novo. Android codigo candidato 56827283 inclui status assinado, ID local mascarado fora da UI thread, ativacao por codigo unico apenas apos 401, limpando campo e readback 201/200; operador issuer default 365 dias sem quotas. CI Android 40082388480 SUCCESS 39+2 testes, BUILD SUCCESSFUL 4m48, V2 unsigned; resolver 40082285375 SUCCESS; device-proof 40082285396 SUCCESS; companion 40060021841 SUCCESS. Nenhum novo codigo gerado, nenhuma alteracao de D1, deploy, OTA, signer, instalacao na TCL ou merge. Versoes operacionais V2 2.9.22/code51 e Worker ce51439e intactas. Gates F0-F8 NAO_HOMOLOGADO, progresso 7/11=63%. Ver docs/qa/ANYTV_V2_DEVICE_ACTIVATION_RUNBOOK.md e docs/operations/ANYTV_V2_LINK_RELEASE_READINESS_20261024.md."
     }
   ],
   "discovery_v3": {
