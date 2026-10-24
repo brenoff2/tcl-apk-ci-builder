@@ -10,9 +10,8 @@ const FIX = Object.freeze({
   hbo: "https://play.hbomax.com/show/a0a085b8-6657-46ca-9476-6af0070b9cce?utm_source=universal_search",
 });
 
-function makeEnv(cap = 2) {
+function makeEnv() {
   const cache = new Map();
-  const months = new Map();
   const db = {
     prepare(sql) {
       return {
@@ -23,19 +22,9 @@ function makeEnv(cap = 2) {
                 const hit = cache.get(params[0]);
                 return hit ? { ...hit } : null;
               }
-              if (sql.startsWith("UPDATE monthly_quota")) {
-                const old = months.get(params[0]) || 0;
-                if (old >= params[1]) return null;
-                months.set(params[0], old + 1);
-                return { used: old + 1 };
-              }
               throw Error("Unexpected first query: " + sql);
             },
             async run() {
-              if (sql.startsWith("INSERT OR IGNORE INTO monthly_quota")) {
-                if (!months.has(params[0])) months.set(params[0], 0);
-                return { success: true };
-              }
               if (sql.startsWith("INSERT INTO link_cache")) {
                 cache.set(params[0], { payload: params[1], expires_at: params[2] });
                 return { success: true };
@@ -50,11 +39,8 @@ function makeEnv(cap = 2) {
   return {
     ANYTV_CLIENT_TOKEN: "private-pilot-access",
     ANYTV_MOVIE_API_KEY: "never-expose-provider-key",
-    MAX_UPSTREAM_CALLS_MONTH: String(cap),
-    RATE_LIMIT: { limit: async () => ({ success: true }) },
     DB: db,
     _cache: cache,
-    _months: months,
   };
 }
 
@@ -163,18 +149,24 @@ test("fetches a Brazilian subscription, sends key as header and caches it", asyn
   body = await b.json();
   assert.equal(body.cached, true);
   assert.equal(fetches, 1);
-  assert.equal(env._months.get("2026-10:links"), 1);
+  assert.equal(env._cache.size, 1);
 });
 
-test("respects separate monthly JustWatch link budget across titles", async () => {
-  const env = makeEnv(1);
+test("link resolver has no monthly or per-minute usage caps across 225 distinct titles", async () => {
+  const env = makeEnv();
+  let fetches = 0;
   const deps = { now: () => Date.parse("2026-10-15T12:00:00Z"),
-    fetch: async () => response(show("movie/329", [mockOffer("prime", FIX.prime)])) };
-  const first = await handleRequest(request("/v1/resolve/movie/329/prime"), env, deps);
-  assert.equal(first.status, 200);
-  const second = await handleRequest(request("/v1/resolve/movie/398978/netflix"), env, deps);
-  assert.equal(second.status, 429);
-  assert.equal((await second.json()).status, "monthly_quota_exhausted");
+    fetch: async url => {
+      fetches++;
+      const id = decodeURIComponent(new URL(url).pathname.split("/").pop()).split("/")[1];
+      return response(show("movie/" + id, [mockOffer("prime", FIX.prime)]));
+    } };
+  for (let id = 1; id <= 225; id++) {
+    const result = await handleRequest(request("/v1/resolve/movie/" + id + "/prime"), env, deps);
+    assert.equal(result.status, 200, "title " + id + " should not be blocked");
+  }
+  assert.equal(fetches, 225);
+  assert.equal(env._cache.size, 225);
 });
 
 test("validates query path and blocks arbitrary upstream URLs", async () => {
@@ -192,22 +184,22 @@ test("validates query path and blocks arbitrary upstream URLs", async () => {
   }
 });
 
-test("rate limit fails without spending external API credits", async () => {
+test("no rate-limit binding is required for authenticated link lookups", async () => {
   const env = makeEnv();
-  env.RATE_LIMIT = { limit: async () => ({ success: false }) };
-  const r = await handleRequest(request("/v1/resolve/movie/329/prime"), env);
-  assert.equal(r.status, 429);
-  assert.equal(env._months.size, 0);
+  const deps = { fetch: async () =>
+    response(show("movie/329", [mockOffer("prime", FIX.prime)])) };
+  const result = await handleRequest(request("/v1/resolve/movie/329/prime"), env, deps);
+  assert.equal(result.status, 200);
 });
 
-test("remote errors return generic status and consume at most reserved credits", async () => {
+test("remote errors return generic status without consuming any local usage budget", async () => {
   const env = makeEnv();
   const r = await handleRequest(request("/v1/resolve/movie/329/prime"), env,
     { fetch: async () => response({ error: "provider contains secret" }, 500) });
   const body = await r.json();
   assert.equal(r.status, 503);
   assert.equal(JSON.stringify(body).includes("provider contains secret"), false);
-  assert.equal(env._months.get(new Date().toISOString().slice(0, 7) + ":links"), 1);
+  assert.equal(env._cache.size, 0);
 });
 
 test("non-subscription title is a safe, cacheable non-availability response", async () => {
@@ -226,8 +218,8 @@ test("missing BR country means unavailable, not an API transport failure", () =>
     { status: "not_available" });
 });
 
-test("short lived cache expires and makes another explicitly budgeted lookup", async () => {
-  const env = makeEnv(2);
+test("link cache expiry permits unrestricted refreshed and new queries", async () => {
+  const env = makeEnv();
   let calls = 0;
   let timestamp = Date.parse("2026-10-15T12:00:00Z");
   const deps = {
@@ -243,9 +235,13 @@ test("short lived cache expires and makes another explicitly budgeted lookup", a
   const b = await handleRequest(request("/v1/resolve/movie/329/prime"), env, deps);
   assert.equal(b.status, 200);
   assert.equal(calls, 2);
-  assert.equal(env._months.get("2026-10:links"), 2);
-  const c = await handleRequest(request("/v1/resolve/movie/398978/netflix"), env, deps);
-  assert.equal(c.status, 429);
+  const c = await handleRequest(request("/v1/resolve/movie/398978/netflix"), env,
+    { ...deps, fetch: async () => {
+      calls++;
+      return response(show("movie/398978", [mockOffer("netflix", FIX.netflix)]));
+    } });
+  assert.equal(c.status, 200);
+  assert.equal(calls, 3);
 });
 
 test("health probe does not reveal private configuration", async () => {
@@ -258,14 +254,14 @@ test("health probe does not reveal private configuration", async () => {
 test("catalog proxy refuses to run without Cloudflare secret", async () => {
   const response = await catalogRequest(
     new Request("https://anytv.invalid/v1/catalog/genre/movie/list"),
-    { RATE_LIMIT: { limit: async () => ({ success: true }) }, DB: {} }
+    { DB: {} }
   );
   assert.equal(response.status, 503);
   assert.equal((await response.json()).status, "catalog_not_configured");
 });
 
 test("catalog proxy rejects arbitrary paths and regions without contacting TMDB", async () => {
-  const env = { TMDB_READ_TOKEN: "server-only", DB: {}, RATE_LIMIT: { limit: async () => ({ success: true }) } };
+  const env = { TMDB_READ_TOKEN: "server-only", DB: {} };
   for (const url of [
     "/v1/catalog/evil/host",
     "/v1/catalog/search/movie?language=en-US&query=x",
@@ -299,8 +295,25 @@ test("catalog proxy keeps TMDB secret on server and caches read-only responses",
   assert.equal(calls, 1);
 });
 
-test("catalog search remains cached then refreshes even with exhausted link budget", async () => {
-  const env = makeEnv(1);
+test("catalog requests are not throttled after 225 distinct uncached searches", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "server-only";
+  let count = 0;
+  const deps = { now: () => Date.parse("2026-10-23T00:00:00Z"),
+    fetch: async () => {
+      count++;
+      return response({ results: [{ id: count, title: "OK" }] });
+    } };
+  for (let i = 1; i <= 225; i++) {
+    const u = new Request("https://anytv.invalid/v1/catalog/search/movie?query=film" + i);
+    assert.equal((await catalogRequest(u, env, deps)).status, 200, "search "+i);
+  }
+  assert.equal(count, 225);
+  assert.equal(env._cache.size, 225);
+});
+
+test("catalog search remains cached then refreshes without usage cap", async () => {
+  const env = makeEnv();
   env.TMDB_READ_TOKEN = "server-only";
   let calls = 0;
   let now = Date.parse("2026-10-15T12:00:00Z");
@@ -315,17 +328,14 @@ test("catalog search remains cached then refreshes even with exhausted link budg
   assert.equal((await catalogRequest(req, env, deps)).status, 200);
   assert.equal(calls, 1, "2-hour cache hit must not fetch upstream");
   now += 23 * 3600 * 1000;
-  // Even a spent link budget cannot disable global movie/series search.
-  env._months.set("2026-10:links", 1);
-  env._months.set("2026-10", 200);
   const expired = await catalogRequest(req, env, deps);
   assert.equal(expired.status, 200);
   assert.equal(calls, 2);
-  assert.equal(env._months.get("2026-10:links"), 1);
+  assert.equal(env._cache.size, 1);
 });
 
-test("catalog TMDB discovery is not blocked by exhausted 200-call legacy budget", async () => {
-  const env = makeEnv(1);
+test("catalog TMDB discovery has no monthly usage cap", async () => {
+  const env = makeEnv();
   env.TMDB_READ_TOKEN = "server-only";
   let calls = 0;
   const dependencies = { now: () => Date.parse("2026-10-15T12:00:00Z"), fetch: async () => {
@@ -337,8 +347,6 @@ test("catalog TMDB discovery is not blocked by exhausted 200-call legacy budget"
   const next = await catalogRequest(
     new Request("https://anytv.invalid/v1/catalog/discover/movie?page=2"), env, dependencies);
   assert.equal(first.status, 200);
-  env._months.set("2026-10", 200);
-  env._months.set("2026-10:links", 1);
   assert.equal(next.status, 200);
   assert.equal(calls, 2);
 });
@@ -374,7 +382,7 @@ test("TMDB upstream error reports status without exposing credentials",async()=>
 
 
 test("discovery endpoints are allowlisted and cached without exposing TMDB token", async () => {
-  const env = makeEnv(50);
+  const env = makeEnv();
   env.TMDB_READ_TOKEN = "secret-server-only";
   let calls = 0;
   const deps = { now: () => Date.parse("2026-10-21T12:00:00Z"),
@@ -438,7 +446,7 @@ test("genre sorting is server-side, validated by media and cached per sort key",
 });
 
 test("English metadata is permitted only for trailer videos", async () => {
-  const env = { TMDB_READ_TOKEN: "server-only", DB: {}, RATE_LIMIT: { limit: async () => ({ success: true }) } };
+  const env = { TMDB_READ_TOKEN: "server-only", DB: {} };
   for (const url of [
     "/v1/catalog/discover/movie?language=en-US",
     "/v1/catalog/trending/movie/week?language=en-US",
@@ -446,7 +454,7 @@ test("English metadata is permitted only for trailer videos", async () => {
   ]) {
     assert.equal((await catalogRequest(new Request("https://anytv.invalid" + url), env)).status, 400);
   }
-  const operational = makeEnv(10);
+  const operational = makeEnv();
   operational.TMDB_READ_TOKEN = "secret-server-only";
   let upstream = "";
   const response = await catalogRequest(
