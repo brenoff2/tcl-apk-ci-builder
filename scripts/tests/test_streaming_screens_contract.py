@@ -461,7 +461,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('openedSection = heading', self.screen)
         self.assertIn('items(sectionTitles.chunked(3)) { group ->', self.screen)
         self.assertNotIn('Text(if (enabled) "Lembrar ✓" else "Lembrar"', self.screen)
-        self.assertIn('Spacer(Modifier.height(6.dp))', self.screen)
+        self.assertIn('verticalArrangement = Arrangement.spacedBy(4.dp)', self.screen)
         self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
         self.assertIn('Box(modifier = Modifier.size(14.dp)', self.screen)
         self.assertNotIn('painterResource(R.drawable.anytv_horizontal)', self.screen)
