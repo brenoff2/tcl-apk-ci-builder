@@ -852,18 +852,19 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
                 (it.backdrop.isNotBlank() || it.poster.isNotBlank()) }.take(10)
     }
     Surface(
-        modifier = Modifier.fillMaxWidth().height(75.dp)
+        modifier = Modifier.fillMaxWidth().height(92.dp)
             .clickable(onClick = onOpenStreaming)
             .semantics { contentDescription = "Abrir destaques de filmes e séries" },
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFF171A21)
     ) {
         if (previews.isEmpty()) {
             Row(modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Text("Destaques de filmes e séries", modifier = Modifier.weight(1f),
-                    maxLines = 1, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                Text("Ver ›", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+                    color = Color.White, maxLines = 1, fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold)
+                Text("Ver ›", color = Color(0xFFCDD0D7), fontSize = 12.sp)
             }
         } else {
             val pager = rememberPagerState(pageCount = { previews.size })
@@ -884,46 +885,48 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
                         }.getOrNull()
                     }
                 }
-                Row(modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.fillMaxHeight().weight(0.3f)
-                        .padding(start = 12.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
+                // Real TMDB art fills the hero, fading into the graphite text side.
+                Box(modifier = Modifier.fillMaxSize()) {
+                    AnyTvPinnedImage(
+                        model = "https://image.tmdb.org/t/p/w500" +
+                            movie.backdrop.ifBlank { movie.poster },
+                        contentDescription = "Destaque: " + movie.name,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Box(modifier = Modifier.fillMaxSize().background(
+                        Brush.horizontalGradient(listOf(
+                            Color(0xFF101216), Color(0xF0101216),
+                            Color(0x80101216), Color.Transparent
+                        ))
+                    ))
+                    Column(modifier = Modifier.fillMaxHeight().fillMaxWidth(0.7f)
+                        .padding(start = 15.dp, end = 8.dp, top = 11.dp, bottom = 10.dp),
                         verticalArrangement = Arrangement.SpaceBetween) {
                         Text(if (movie.id in bannerCinemaIds) "F · CINEMA"
-                             else "EM DESTAQUE", fontSize = 9.sp,
+                             else "EM DESTAQUE", fontSize = 10.sp,
                             color = if (movie.id in bannerCinemaIds) Color(0xFF74ADFF)
                                     else Color(0xFFB7BCC5),
-                            fontWeight = FontWeight.Bold)
-                        Box(modifier = Modifier.weight(1f).fillMaxWidth(),
-                            contentAlignment = Alignment.CenterStart) {
-                            Text(movie.name, fontSize = 12.sp, lineHeight = 14.sp,
-                                maxLines = 2, overflow = TextOverflow.Ellipsis,
-                                fontWeight = FontWeight.SemiBold)
-                        }
+                            fontWeight = FontWeight.Medium)
+                        Text(movie.name, fontSize = 15.sp, lineHeight = 18.sp,
+                            color = Color.White, maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            fontWeight = FontWeight.SemiBold)
                         Row(verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            modifier = Modifier.height(16.dp)) {
-                            Text("Ver ›", fontSize = 10.sp,
-                                color = Color(0xFFB7BCC5), maxLines = 1)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Ver ›", fontSize = 12.sp,
+                                color = Color(0xFFCED0D6), maxLines = 1)
                             previewProviders[movie.id]?.let { offer ->
                                 if (offer.logo.isNotBlank()) {
                                     AnyTvPinnedImage(
                                         model = "https://image.tmdb.org/t/p/w92" + offer.logo,
                                         contentDescription = "Canal: " + offer.name,
-                                        modifier = Modifier.size(15.dp),
+                                        modifier = Modifier.size(14.dp),
                                         contentScale = ContentScale.Fit)
                                 }
                             }
                         }
                     }
-                    AnyTvPinnedImage(
-                        model = "https://image.tmdb.org/t/p/w500" +
-                            movie.backdrop.ifBlank { movie.poster },
-                        contentDescription = "Destaque: " + movie.name,
-                        modifier = Modifier.fillMaxHeight().weight(0.7f)
-                            .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)),
-                        contentScale = ContentScale.Crop
-                    )
                 }
             }
         }
