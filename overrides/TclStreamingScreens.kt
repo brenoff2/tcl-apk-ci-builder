@@ -978,6 +978,42 @@ private fun AnyTvCinemaHero(
     }
 }
 
+/**
+ * The one poster/card specification for every streaming page and shelf.
+ * Preserve the complete 2:3 artwork instead of clipping the bottom of posters
+ * into a fixed 158dp rectangle. Provider icons are the original AnyTV icons.
+ */
+@Composable
+private fun AnyTvPosterCard(
+    title: StreamingTitle,
+    modifier: Modifier = Modifier,
+    offerCache: MutableMap<String, List<StreamingOffer>>,
+    apps: List<TvOfficialApp>,
+    favorite: Boolean,
+    marked: Boolean,
+    inCinema: Boolean,
+    onOpen: () -> Unit,
+    onMarked: () -> Unit,
+    onFavorite: () -> Unit
+) {
+    Column(modifier = modifier.clickable(onClick = onOpen),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        AnyTvPinnedImage(
+            model = "https://image.tmdb.org/t/p/w342" + title.poster,
+            contentDescription = "Cartaz: " + title.name,
+            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)
+                .clip(RoundedCornerShape(5.dp)).background(Color.Black),
+            contentScale = ContentScale.Fit)
+        AnyTvCardMetaRow(title, favorite = favorite, marked = marked,
+            compact = true, onMarked = onMarked, onFavorite = onFavorite)
+        Text(title.name, modifier = Modifier.fillMaxWidth().height(42.dp),
+            fontSize = 11.sp, lineHeight = 14.sp, maxLines = 3,
+            overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+        StreamingOfferIcons(title, offerCache, apps, showRating = false,
+            inCinema = inCinema)
+    }
+}
+
 /** Single-row secondary carousel, separate from the paginated catalogue. */
 @Composable
 private fun AnyTvOneRowPreview(
@@ -1865,6 +1901,24 @@ internal fun TclStreamingScreens(
             }
         }
     }
+
+    val posterCard: @Composable (StreamingTitle, Modifier, Boolean) -> Unit =
+        { title, cardModifier, cinemaSection ->
+            AnyTvPosterCard(
+                title = title, modifier = cardModifier,
+                offerCache = offerCache, apps = displayed,
+                favorite = isFavorite(title, "library"),
+                marked = if (title.media == "movie")
+                    title.id.toString() in watchedFilms
+                else title.id.toString() in trackedSeries,
+                inCinema = cinemaSection || title.id in cinemaIds,
+                onOpen = { details = title; detailsPackage = null },
+                onMarked = {
+                    if (title.media == "movie") toggleFilmWatched(title.id)
+                    else toggleSeriesTracking(title)
+                },
+                onFavorite = { toggleFavorite(title, "library") })
+        }
 
     Dialog(onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
