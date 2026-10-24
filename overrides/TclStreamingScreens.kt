@@ -838,6 +838,70 @@ private fun StreamingOfferIcons(
         }
 }
 
+/** Reuses the existing persisted favorite/watched state; trailer is fetched only on tap. */
+@Composable
+private fun AnyTvGenreTitleActions(
+    title: StreamingTitle,
+    favorite: Boolean,
+    marked: Boolean,
+    compact: Boolean,
+    onFavorite: () -> Unit,
+    onMarked: () -> Unit,
+    onTrailer: () -> Unit
+) {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(if (compact) 3.dp else 7.dp)) {
+        if (compact) {
+            IconButton(onClick = onFavorite, modifier = Modifier.size(29.dp)) {
+                Icon(if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = if (favorite) "Remover dos favoritos" else "Favoritar",
+                    tint = if (favorite) Color(0xFFE04B57) else color,
+                    modifier = Modifier.size(18.dp))
+            }
+            IconButton(onClick = onMarked, modifier = Modifier.size(29.dp)) {
+                Icon(Icons.Filled.CheckCircle,
+                    contentDescription = if (title.media == "movie")
+                        "Alternar assistido" else "Alternar acompanhamento",
+                    tint = if (marked) Color(0xFF1CB96B) else color,
+                    modifier = Modifier.size(18.dp))
+            }
+            IconButton(onClick = onTrailer, modifier = Modifier.size(29.dp)) {
+                Icon(Icons.Filled.PlayCircleFilled, contentDescription = "Ver trailer",
+                    tint = color, modifier = Modifier.size(18.dp))
+            }
+        } else {
+            TextButton(onClick = onFavorite, contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.height(30.dp)) {
+                Icon(if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    contentDescription = null, modifier = Modifier.size(14.dp),
+                    tint = if (favorite) Color(0xFFE04B57) else color)
+                Spacer(Modifier.width(3.dp))
+                Text(if (favorite) "Na lista" else "Favorito", fontSize = 11.sp, maxLines = 1)
+            }
+            TextButton(onClick = onMarked, contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.height(30.dp)) {
+                Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = if (marked) Color(0xFF1CB96B) else color)
+                Spacer(Modifier.width(3.dp))
+                Text(if (title.media == "tv") {
+                    if (marked) "Acompanhando" else "Acompanhar"
+                } else {
+                    if (marked) "Assistido" else "Assistir"
+                }, fontSize = 11.sp, maxLines = 1)
+            }
+            TextButton(onClick = onTrailer, contentPadding = PaddingValues(0.dp),
+                modifier = Modifier.height(30.dp)) {
+                Icon(Icons.Filled.PlayCircleFilled, contentDescription = null,
+                    modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(3.dp))
+                Text("Trailer", fontSize = 11.sp, maxLines = 1)
+            }
+        }
+    }
+}
+
 /** Same one-row navigation across catalogue and individual provider views. */
 @Composable
 private fun AnyTvStreamNavBar(
@@ -1775,24 +1839,33 @@ internal fun TclStreamingScreens(
                                         details = current
                                         detailsPackage = null
                                     }) {
-                                        AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w780" +
-                                            current.backdrop.ifBlank { current.poster },
-                                            contentDescription = "Destaque: " + current.name,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.fillMaxWidth().height(150.dp))
+                                        Box(modifier = Modifier.fillMaxWidth().height(150.dp)) {
+                                            AnyTvPinnedImage(
+                                                model = "https://image.tmdb.org/t/p/w780" +
+                                                    current.backdrop.ifBlank { current.poster },
+                                                contentDescription = "Destaque: " + current.name,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.fillMaxSize())
+                                            Row(modifier = Modifier.align(Alignment.BottomCenter)
+                                                .padding(bottom = 7.dp)
+                                                .background(Color.Black.copy(alpha = 0.62f),
+                                                    RoundedCornerShape(12.dp))
+                                                .padding(horizontal = 7.dp, vertical = 2.dp),
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                                verticalAlignment = Alignment.CenterVertically) {
+                                                repeat(heroTitles.size) { dot ->
+                                                    Text(if (pagerState.currentPage == dot) "●" else "•",
+                                                        fontSize = if (pagerState.currentPage == dot)
+                                                            11.sp else 9.sp,
+                                                        color = if (pagerState.currentPage == dot)
+                                                            Color.White else Color(0xFFB7BCC5))
+                                                }
+                                            }
+                                        }
                                         Spacer(Modifier.height(5.dp))
                                         Text(current.name, fontWeight = FontWeight.Bold,
                                             maxLines = 2, overflow = TextOverflow.Ellipsis)
                                         StreamingOfferIcons(current, offerCache, displayed, expanded = true)
-                                    }
-                                }
-                                // Small noninteractive position dots: no previous/next buttons.
-                                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 9.dp),
-                                    horizontalArrangement = Arrangement.Center) {
-                                    repeat(heroTitles.size) { dot ->
-                                        Text(if (pagerState.currentPage == dot) "●" else "○",
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
                             }
