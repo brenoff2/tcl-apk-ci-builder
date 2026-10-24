@@ -40,7 +40,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.outlined.FavoriteBorder
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
