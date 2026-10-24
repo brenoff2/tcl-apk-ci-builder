@@ -2144,7 +2144,12 @@ internal fun TclStreamingScreens(
                             val previews = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                 cinemaComingSoon else upcomingStreaming.filter { candidate ->
                                     (homeContentType == "all" || candidate.media == homeContentType) &&
-                                    selectedHomeGenre in candidate.genreIds
+                                    (selectedHomeGenre in candidate.genreIds ||
+                                        (candidate.media == "tv" && tvGenres.any { tv ->
+                                            tv.id in candidate.genreIds && mainGenres.any { film ->
+                                                film.id == selectedHomeGenre && film.name == tv.name
+                                            }
+                                        }))
                                 }
                             if (previews.isNotEmpty()) {
                                 item {
