@@ -443,7 +443,7 @@ class StreamingScreens(unittest.TestCase):
             'val shows = discoveryShelves["Séries em destaque"]',
             'for (i in 0 until 10)',
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
-            'Triple("Em breve · Filmes", "movie/upcoming", "movie")',
+            'StreamingCatalog.discoveryUpcomingStreaming()',
             'Text(if (item.media == "tv") "S" else "F"',
             'expandedHomeShelf = if (expandedHomeShelf == heading)',
             'class AnyTvReleaseReminderReceiver',
@@ -493,7 +493,40 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Spacer(Modifier.height(6.dp))', self.screen)
         self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
         self.assertIn('Box(modifier = Modifier.size(14.dp)', self.screen)
-        self.assertIn('R.drawable.anytv_horizontal', self.screen)
+        self.assertNotIn('painterResource(R.drawable.anytv_horizontal)', self.screen)
+
+    def test_cinema_and_future_are_not_mixed_into_regular_streaming(self):
+        self.assertIn('if (heading != ANYTV_CINEMA_SHELF)', self.screen)
+        self.assertIn('if (future.isNotEmpty()) put("Em breve · Streaming", future)', self.screen)
+        self.assertIn('if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)', self.screen)
+        self.assertIn('anyTvReleased(title)', self.screen)
+        self.assertIn('anyTvUpcoming(title)', self.screen)
+        self.assertIn('else -> titles.filter(::anyTvReleased)', self.screen)
+        self.assertIn('.filter(::anyTvReleased)', self.screen)
+        self.assertIn('collected.filter(::anyTvReleased)', self.screen)
+        self.assertIn('val unique = shelf.filter { title ->', self.screen)
+        self.assertNotIn('Triple("Em breve · Filmes", "movie/upcoming", "movie")',
+                         self.screen)
+        self.assertNotIn('painterResource(R.drawable.anytv_horizontal)', self.screen)
+
+    def test_genre_and_cinema_one_row_previews_precede_results(self):
+        self.assertIn('private fun AnyTvOneRowPreview(', self.screen)
+        self.assertIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
+        self.assertIn('"Em breve · Cinema" else "Em breve · Streaming"', self.screen)
+        self.assertIn('StreamingCatalog.discoveryCinemaInternational()', self.screen)
+        self.assertIn('StreamingCatalog.discoveryShelf("movie/upcoming", "movie")',
+                      self.screen)
+        self.assertIn('if (movie.id in bannerCinemaIds) "F · CINEMA"', self.screen)
+        self.assertLess(self.screen.index('if (previews.isNotEmpty()) {'),
+                        self.screen.index('// Genre page: ten-image hero above'))
+
+    def test_future_streaming_rejects_unverified_theatrical_titles(self):
+        self.assertIn('suspend fun discoveryUpcomingStreaming()', self.screen)
+        self.assertIn('offersInBrazil(title).isNotEmpty()', self.screen)
+        self.assertIn('mapTitles(payload.optJSONArray("results") ?: JSONArray(), "tv", 0)',
+                      self.screen)
+        self.assertIn('.filter(::anyTvUpcoming)', self.screen)
+        self.assertIn('title.takeIf { confirmed }', self.screen)
 
     def test_cinema_is_based_on_tmdb_br_now_playing_not_missing_streaming(self):
         self.assertIn('private const val ANYTV_CINEMA_FILTER = -1', self.screen)
@@ -529,7 +562,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('onTrailer =', self.screen)
         self.assertIn('Text("▶ Ver trailer")', self.screen)
         self.assertEqual(self.screen.count('showRating = false'), 4)
-        self.assertIn('val unique = shelf.distinctBy', self.screen)
+        self.assertIn('val unique = shelf.filter { title ->', self.screen)
         self.assertIn('Keep cards visible when marked', self.screen)
         for marker, until, metadata, offers, title in (
             ('items(genreTitles.chunked(3))',
