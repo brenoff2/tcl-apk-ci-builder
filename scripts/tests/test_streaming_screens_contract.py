@@ -324,6 +324,18 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn("tokenDraft", self.screen)
         self.assertNotIn("personalKeyDraft", self.screen)
 
+    def test_link_auth_errors_keep_official_secondary_provider_lookup(self):
+        screen = self.screen.split('fun searchOnTv(title: StreamingTitle, packageName: String)', 1)[1]
+        for state in ('ActivationRequired', 'ResolverUnavailable', 'NoSupportedLink'):
+            block = screen.split('AnyTvPersonalResult.' + state + ' -> {', 1)[1].split('}', 1)[0]
+            self.assertIn('linkSourceNotice =', block, state)
+            self.assertNotIn('return@launch', block, state)
+            self.assertNotIn('TclTvAppApi.searchTitle(', block, state)
+        self.assertIn('StreamingCatalog.titleAvailableInBrazil(', screen)
+        self.assertIn('StreamingCatalog.titleDeepLink(token, title, packageName)', screen)
+        self.assertIn('linkSourceNotice + (if (offered == null)', screen)
+        self.assertIn('AnyTvPersonalResult.NotInSubscription ->', screen)
+
     def test_unprovisioned_activation_prompt_is_removed(self):
         identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
         for old in ("Ativar links diretos neste dispositivo",
