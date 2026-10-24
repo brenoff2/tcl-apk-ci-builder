@@ -392,7 +392,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_double_row_real_pagination_and_mixed_highlights(self):
         for snippet in (
-            'suspend fun discoveryGenrePage(id: Int, media: String, page: Int)',
+            'suspend fun discoveryGenrePage(id: Int, media: String, page: Int,',
             'page < payload.optInt("total_pages", page)',
             'genreMore[key] = it.more',
             'items(shelf.chunked(2))',
@@ -423,12 +423,39 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('if (item.votes > 0 || offerings.isNotEmpty())', self.screen)
         self.assertIn('modifier = Modifier.width(116.dp)', self.screen)
         self.assertNotIn('Text("★ "', self.screen)
+        for snippet in (
+            'genreViewMode == "list"',
+            'genreViewMode == "grid"',
+            'items(genreTitles.chunked(3))',
+            'title.overview.take(160)',
+            'Text("Trailer", fontSize = 11.sp',
+            'fun openGenreTrailer(title: StreamingTitle)',
+            'fun toggleFavorite(title: StreamingTitle, packageName: String)',
+            'toggleFilmWatched(title.id)',
+            'toggleSeriesTracking(title.id)',
+            'val sorting = when (sort)',
+            '"&sort_by=$sorting&with_genres=$id&page=$page"',
+            'val genreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"',
+            'Text(if (genreLoading[genreKey] == true)',
+            '}.take(10)',
+            'previewProviders[movie.id]',
+            'contentDescription = "Canal: " + offer.name',
+            'color = Color(0xFFB7BCC5)',
+            'contentAlignment = Alignment.CenterStart',
+        ):
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, self.screen)
 
     def test_search_live_suggestions_and_clear_button(self):
         self.assertIn('LaunchedEffect(globalSearchDraft)', self.screen)
         self.assertIn('delay(650)', self.screen)
         self.assertIn('globalSearchTerm = globalSearchDraft.trim()', self.screen)
-        self.assertIn('modifier = Modifier.weight(1f).height(42.dp)', self.screen)
+        self.assertIn('BasicTextField(', self.screen)
+        self.assertIn('modifier = Modifier.weight(1f).height(44.dp)', self.screen)
+        self.assertIn('decorationBox = { innerTextField ->', self.screen)
+        self.assertIn('Text("Buscar filme ou série", fontSize = 13.sp', self.screen)
+        self.assertIn('innerTextField()', self.screen)
+        self.assertNotIn('OutlinedTextField(\n                                value = globalSearchDraft', self.screen)
         self.assertIn('Icon(Icons.Filled.Search, contentDescription = "Executar busca"', self.screen)
         self.assertIn('globalSearchResults = emptyList(); globalSearchError = null', self.screen)
         self.assertNotIn('showGlobalSearch = false\\n', self.screen.split('globalSearchDraft = ""; globalSearchTerm = ""')[1].split('}',1)[0])
