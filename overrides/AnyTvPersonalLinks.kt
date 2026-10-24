@@ -14,6 +14,8 @@ internal sealed class AnyTvPersonalResult {
     data class Direct(val url: String) : AnyTvPersonalResult()
     data object NotInSubscription : AnyTvPersonalResult()
     data object NoSupportedLink : AnyTvPersonalResult()
+    data object ActivationRequired : AnyTvPersonalResult()
+    data object ResolverUnavailable : AnyTvPersonalResult()
 }
 
 internal object AnyTvPersonalLinks {
@@ -42,12 +44,15 @@ internal object AnyTvPersonalLinks {
         val query = uri.rawQuery
         return when (provider) {
             "netflix" -> if (host == "www.netflix.com" &&
-                path.matches(Regex("/title/[0-9]{6,9}")) && query == null)
-                    "https://www.netflix.com" + path else null
+                path.matches(Regex("/title/[0-9]{6,9}/?")) && query == null)
+                    "https://www.netflix.com" + path.removeSuffix("/") else null
             "disney" -> if (host == "www.disneyplus.com" &&
                 disneyPattern.matches(path) && query == null)
                     "https://www.disneyplus.com" + path else null
             "prime" -> {
+                if (host == "www.primevideo.com" && query == null &&
+                    path.matches(Regex("/detail/[A-Z0-9]{10,40}")))
+                    return "https://www.primevideo.com" + path
                 if (host != "app.primevideo.com" || path != "/detail" ||
                     query == null || !query.startsWith("gti=")) return null
                 val id = query.removePrefix("gti=")
@@ -78,6 +83,27 @@ internal object AnyTvPersonalLinks {
         }
     }
 
+    /** Signed, read-only check: never treats a catalog response as activation proof. */
+    suspend fun activationStatus(context: Context): String = withContext(Dispatchers.IO) {
+        val url = URL(AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/device/status")
+        val connection = url.openConnection() as HttpURLConnection
+        try {
+            connection.connectTimeout = 5000
+            connection.readTimeout = 8000
+            connection.setRequestProperty("Accept", "application/json")
+            AnyTvDeviceIdentity.attachProof(context, connection, url.toURI().rawPath)
+            when (connection.responseCode) {
+                200 -> "activated"
+                401 -> "unauthorized"
+                else -> "unavailable"
+            }
+        } catch (_: Exception) {
+            "unavailable"
+        } finally {
+            connection.disconnect()
+        }
+    }
+
     /** Resolve official title link through the AnyTV backend. No client API key. */
     suspend fun resolve(context: Context, title: StreamingTitle, packageName: String):
         AnyTvPersonalResult? = withContext(Dispatchers.IO) {
@@ -95,6 +121,8 @@ internal object AnyTvPersonalLinks {
             conn.setRequestProperty("User-Agent", "AnyTV/2.9.8 (Android; streaming catalog client)")
             AnyTvDeviceIdentity.attachProof(context, conn, url.toURI().rawPath)
             val status = conn.responseCode
+            if (status == 401) return@withContext AnyTvPersonalResult.ActivationRequired
+            if (status == 503) return@withContext AnyTvPersonalResult.ResolverUnavailable
             if (status == 404) return@withContext AnyTvPersonalResult.NotInSubscription
             if (status == 409) return@withContext AnyTvPersonalResult.NoSupportedLink
             if (status !in 200..299) return@withContext null
