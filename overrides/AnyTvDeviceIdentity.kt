@@ -68,6 +68,40 @@ internal object AnyTvDeviceIdentity {
         }
     }
 
+    /** Register this installation's public key for operator approval, not auto-activate. */
+    fun requestApproval(context: Context): String {
+        val id = deviceId(context)
+        val key = publicKey()
+        val nonce = ByteArray(24).also(random::nextBytes)
+            .joinToString("") { "%02x".format(it) }
+        val signature = Signature.getInstance("SHA256withECDSA")
+        signature.initSign(keyStore().getKey(ALIAS, null) as java.security.PrivateKey)
+        signature.update(listOf("ANYTV-REQUEST1", id, key, nonce)
+            .joinToString("\n").toByteArray(StandardCharsets.UTF_8))
+        val proof = base64url(derToRaw(signature.sign()))
+        val json = JSONObject().put("device_id", id).put("public_key", key)
+            .put("nonce", nonce).put("proof", proof)
+        val conn = URL("$RESOLVER_BASE/v1/device/request")
+            .openConnection() as HttpURLConnection
+        return try {
+            conn.requestMethod = "POST"
+            conn.connectTimeout = 5000
+            conn.readTimeout = 8000
+            conn.doOutput = true
+            conn.setRequestProperty("Content-Type", "application/json")
+            conn.outputStream.use {
+                it.write(json.toString().toByteArray(StandardCharsets.UTF_8))
+            }
+            when (conn.responseCode) {
+                200 -> "activated"
+                202 -> "pending"
+                else -> "unavailable"
+            }
+        } finally {
+            conn.disconnect()
+        }
+    }
+
     /** Only call following an explicit, trusted operator activation flow. */
     fun activate(context: Context, activationCode: String): Boolean {
         require(activationCode.matches(Regex("[A-Za-z0-9_-]{43}")))
