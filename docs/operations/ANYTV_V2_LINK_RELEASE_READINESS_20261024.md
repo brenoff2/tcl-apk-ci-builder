@@ -1,3 +1,5 @@
+> **RELEASE EXECUTADO COM AUTORIZAÇÃO DO USUÁRIO — 24/10/2026:** Worker bd8cafd5 (deploy 5a1d03cf, 100%) e APK V2 2.9.23/code52 (run #40086101046, signer/OTA/readback PASS) estão PUBLICADOS. Nenhum código de ativação novo nem mudança de identidade D1. QA física ainda pendente: 7/11=63%, F0–F8 não homologados. A sequência abaixo é o preflight HISTÓRICO; ver [evidência final de produção](ANYTV_V2_2923_RELEASE_EVIDENCE_20261024.md).
+
 # AnyTV V2 — liberação coordenada dos links (pré-produção)
 
 **Data:** 2026-10-24. **Decisão:** ADAPT o resolvedor e a ativação existentes; NÃO criar novo serviço nem eliminar autenticação. **Estado:** PR #3 draft, homologação física pendente, execução de produção **não autorizada neste ciclo**.

@@ -1,3 +1,5 @@
+> **24/10/2026 — PRODUÇÃO ATUALIZADA:** Worker **bd8cafd5**, com `/v1/device/status` e `videoLink`, está em produção 100%; AnyTV V2 **2.9.23/code52** assinada e publicada. Banco D1 continuou com único dispositivo antigo autorizado e único código utilizado; **nenhuma nova ativação foi emitida**, a instalação V2 ainda exige QA física. Ver [relatório de publicação](../operations/ANYTV_V2_2923_RELEASE_EVIDENCE_20261024.md). Os estados antigos de "não publicado" abaixo são históricos.
+
 # AnyTV V2 — ativação individual dos links, sem repetir o cadastro antigo
 
 **Data de readback:** 24/10/2026. **Estado:** diagnóstico real somente leitura; interface de ativação na branch DEV; **sem nova ativação ou deploy**.

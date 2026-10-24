@@ -1,3 +1,5 @@
+> **ESTADO ATUAL 24/10/2026:** candidata pós-2.9.22 promovida à **AnyTV V2 2.9.23/code52 assinado e publicado**, [Actions #40086101046](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40086101046) SUCCESS + readback OTA PASS; Worker **bd8cafd5** deploy 5a1d03cf 100%, mantendo 5 bindings e D1. Interface e fluxos de links disponíveis para atualização, mas **homologação física U01-U05, D01-D12, ativação V2 e abertura real TCL pendentes**; manter 7/11=63%, F0-F8 sem promoção. [Relatório de release](../operations/ANYTV_V2_2923_RELEASE_EVIDENCE_20261024.md). A análise de código candidato abaixo é histórica.
+
 # AnyTV V2 — UI de cartões e links diretos (candidata após 2.9.22)
 
 **Data:** 2026-10-24  
