@@ -381,7 +381,7 @@ public final class TvAppBridge {
                 case "com.netflix.ninja":
                 case "com.netflix.mediaclient":
                     return u.getQuery() == null && "www.netflix.com".equals(host)
-                        && path.matches("/title/[0-9]{6,9}");
+                        && path.matches("/title/[0-9]{6,9}/?");
                 case "com.disney.disneyplus":
                     return u.getQuery() == null && validDisneyTitleLink(pkg, url);
                 case "com.amazon.amazonvideo.livingroom":
@@ -394,7 +394,7 @@ public final class TvAppBridge {
                             query.matches("gti=amzn[0-9]\\.dv\\.gti\\.[a-f0-9-]{36}");
                     }
                     return u.getQuery() == null && "www.primevideo.com".equals(host)
-                        && path.matches("/detail/B[0-9A-Z]{9}");
+                        && path.matches("/detail/[0-9A-Z]{10,40}");
                 case "com.apple.atve.androidtv.appletv":
                     // Apple TV+ links returned for Brazil have /br/movie/slug/umc...
                     // and may require a single playableId. Never accept arbitrary params.
