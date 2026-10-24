@@ -431,7 +431,7 @@ class StreamingScreens(unittest.TestCase):
             'items(shelf.chunked(2))',
             'StreamingCatalog.discoveryGenrePage(',
             'items(genreTitles, key =',
-            'if (!homeLibrary && selected == null && selectedHomeGenre > 0)',
+            'if (!homeLibrary && selected == null && selectedHomeGenre != 0)',
             '"Mostrar mais 20"',
             'genreShelves[genreKey] =',
             'val films = discoveryShelves["Em alta nesta semana"]',
