@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -484,14 +485,22 @@ private object StreamingCatalog {
     suspend fun discoveryGenre(id: Int, media: String): List<StreamingTitle> =
         discoveryGenrePage(id, media, 1).titles
 
-    suspend fun discoveryGenrePage(id: Int, media: String, page: Int): StreamingResults =
+    suspend fun discoveryGenrePage(id: Int, media: String, page: Int,
+        sort: String = "popular"): StreamingResults =
         withContext(Dispatchers.IO) {
             require(media == "movie" || media == "tv")
             require(page in 1..50)
             require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14,
                 10759, 80, 10765, 10766, 10768, 10762))
+            val sorting = when (sort) {
+                "rating" -> "vote_average.desc"
+                "recent" -> if (media == "tv") "first_air_date.desc"
+                    else "primary_release_date.desc"
+                "title" -> if (media == "tv") "name.asc" else "title.asc"
+                else -> "popularity.desc"
+            }
             val route = "discover/$media?language=pt-BR&include_adult=false" +
-                "&sort_by=popularity.desc&with_genres=$id&page=$page"
+                "&sort_by=$sorting&with_genres=$id&page=$page"
             val payload = get("backend", route)
             StreamingResults(
                 mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id),
@@ -677,13 +686,14 @@ internal fun AnyTvPinnedImage(
 internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
     val context = LocalContext.current
     var previews by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    val previewProviders = remember { mutableStateMapOf<Int, StreamingOffer?>() }
     LaunchedEffect(Unit) {
         StreamingCatalog.configure(context)
         // discoveryShelf appends language itself: never pass a duplicate query.
         previews = runCatching {
             StreamingCatalog.discoveryShelf("trending/movie/week", "movie")
         }.getOrDefault(emptyList())
-            .filter { it.backdrop.isNotBlank() || it.poster.isNotBlank() }.take(12)
+            .filter { it.backdrop.isNotBlank() || it.poster.isNotBlank() }.take(10)
     }
     Surface(
         modifier = Modifier.fillMaxWidth().height(75.dp)
@@ -711,19 +721,41 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
             HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(),
                 userScrollEnabled = true) { index ->
                 val movie = previews[index]
+                LaunchedEffect(movie.id) {
+                    if (movie.id !in previewProviders) {
+                        previewProviders[movie.id] = runCatching {
+                            StreamingCatalog.offersInBrazil(movie).firstOrNull()
+                        }.getOrNull()
+                    }
+                }
                 Row(modifier = Modifier.fillMaxSize(),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(0.3f)
-                        .padding(start = 12.dp, end = 5.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Column(modifier = Modifier.fillMaxHeight().weight(0.3f)
+                        .padding(start = 12.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
+                        verticalArrangement = Arrangement.SpaceBetween) {
                         Text("EM DESTAQUE", fontSize = 9.sp,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold)
-                        Text(movie.name, fontSize = 12.sp, lineHeight = 14.sp,
-                            maxLines = 2, overflow = TextOverflow.Ellipsis,
-                            fontWeight = FontWeight.SemiBold)
-                        Text("Ver ›", fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.primary)
+                            color = Color(0xFFB7BCC5), fontWeight = FontWeight.Bold)
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentAlignment = Alignment.CenterStart) {
+                            Text(movie.name, fontSize = 12.sp, lineHeight = 14.sp,
+                                maxLines = 2, overflow = TextOverflow.Ellipsis,
+                                fontWeight = FontWeight.SemiBold)
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            modifier = Modifier.height(16.dp)) {
+                            Text("Ver ›", fontSize = 10.sp,
+                                color = Color(0xFFB7BCC5), maxLines = 1)
+                            previewProviders[movie.id]?.let { offer ->
+                                if (offer.logo.isNotBlank()) {
+                                    AnyTvPinnedImage(
+                                        model = "https://image.tmdb.org/t/p/w92" + offer.logo,
+                                        contentDescription = "Canal: " + offer.name,
+                                        modifier = Modifier.size(15.dp),
+                                        contentScale = ContentScale.Fit)
+                                }
+                            }
+                        }
                     }
                     AnyTvPinnedImage(
                         model = "https://image.tmdb.org/t/p/w500" +
@@ -879,6 +911,22 @@ internal fun TclStreamingScreens(
         context.getSharedPreferences("anytv_streaming_catalog", Context.MODE_PRIVATE)
     }
     val scope = rememberCoroutineScope()
+    fun openGenreTrailer(title: StreamingTitle) {
+        scope.launch {
+            val video = runCatching { StreamingCatalog.trailer(title.media, title.id) }.getOrNull()
+            if (video.isNullOrBlank()) {
+                android.widget.Toast.makeText(context, "Trailer indisponível para este título.",
+                    android.widget.Toast.LENGTH_SHORT).show()
+            } else {
+                runCatching {
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(video)))
+                }.onFailure {
+                    android.widget.Toast.makeText(context, "Não foi possível abrir o trailer.",
+                        android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
     // The client never requires user-supplied API credentials.
     val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
@@ -890,6 +938,16 @@ internal fun TclStreamingScreens(
     var homeContentType by remember { mutableStateOf("all") }
     var librarySection by remember { mutableStateOf("saved") }
     var selectedHomeGenre by remember { mutableIntStateOf(0) }
+    var genreViewMode by remember(prefs) {
+        mutableStateOf(prefs.getString("anytv_genre_view_mode", "list")
+            ?.takeIf { it in setOf("list", "grid") } ?: "list")
+    }
+    var genreSort by remember(prefs) {
+        mutableStateOf(prefs.getString("anytv_genre_sort", "popular")
+            ?.takeIf { it in setOf("popular", "rating", "recent", "title") } ?: "popular")
+    }
+    var genreSortMenu by remember { mutableStateOf(false) }
+    val catalogScrollState = rememberLazyListState()
     var showGenreSettings by remember { mutableStateOf(false) }
     var showMyStreamingSettings by remember { mutableStateOf(false) }
     val subscriptionNames = remember { listOf("Netflix", "Prime Video", "Disney+", "Max", "Paramount+", "Apple TV+", "Globoplay", "Crunchyroll", "Mubi", "Telecine", "Looke", "Claro Video") }
@@ -1125,7 +1183,11 @@ internal fun TclStreamingScreens(
             .getOrDefault(emptyList())
     }
     // Fetch each genre shelf only once per screen, preserving user-selected order.
-    LaunchedEffect(mainGenres, tvGenres, filterGenreIds, selectedHomeGenre, homeContentType) {
+    LaunchedEffect(selectedHomeGenre, genreSort, genreViewMode) {
+        catalogScrollState.scrollToItem(0)
+    }
+    LaunchedEffect(mainGenres, tvGenres, filterGenreIds, selectedHomeGenre,
+        homeContentType, genreSort) {
         val mediaKind = if (homeContentType == "tv") "tv" else "movie"
         val choices = if (mediaKind == "tv") tvGenres else mainGenres
         val requested = if (selectedHomeGenre == 0) {
@@ -1134,9 +1196,13 @@ internal fun TclStreamingScreens(
                 .map { it.id }
         } else listOf(selectedHomeGenre)
         for (id in requested) {
-            val key = "$mediaKind:$id"
+            val key = "$mediaKind:$id" +
+                if (selectedHomeGenre > 0) ":$genreSort" else ""
             if (key !in genreShelves) {
-                runCatching { StreamingCatalog.discoveryGenrePage(id, mediaKind, 1) }
+                runCatching {
+                    StreamingCatalog.discoveryGenrePage(id, mediaKind, 1,
+                        if (selectedHomeGenre > 0) genreSort else "popular")
+                }
                     .onSuccess {
                         genreShelves[key] = it.titles
                         genrePage[key] = 1
@@ -1537,7 +1603,7 @@ internal fun TclStreamingScreens(
                         }
                     }
                     if (discoveryLoading || (selectedHomeGenre != 0 &&
-                            "$selectedGenreKind:$selectedHomeGenre" !in genreShelves)) {
+                            "$selectedGenreKind:$selectedHomeGenre:$genreSort" !in genreShelves)) {
                         CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     }
                     if (discoveryError != null && selectedHomeGenre == 0) {
@@ -1599,7 +1665,7 @@ internal fun TclStreamingScreens(
                                 }
                             } else {
                                 val kind = currentGenreList.firstOrNull { it.id == selectedHomeGenre }
-                                genreShelves["$selectedGenreKind:$selectedHomeGenre"]
+                                genreShelves["$selectedGenreKind:$selectedHomeGenre:$genreSort"]
                                     ?.takeIf { it.isNotEmpty() }?.let {
                                         put("Em destaque: " + (kind?.name ?: "Gênero"), it)
                                     }
@@ -1631,7 +1697,8 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
-                    if (selectedHomeGenre != 0 && "$selectedGenreKind:$selectedHomeGenre" in genreShelves &&
+                    if (selectedHomeGenre != 0 &&
+                        "$selectedGenreKind:$selectedHomeGenre:$genreSort" in genreShelves &&
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
@@ -1650,7 +1717,7 @@ internal fun TclStreamingScreens(
                         } else filteredShelves.values.flatMap { it }
                         mixed.distinctBy { "${it.media}:${it.id}" }.filterNot {
                             it.media == "movie" && it.id.toString() in watchedFilms
-                        }.take(20)
+                        }.take(10)
                     }
                     val uniqueShelves = filteredShelves.mapNotNull { (heading, shelf) ->
                         val unique = shelf.filter {
@@ -1659,7 +1726,8 @@ internal fun TclStreamingScreens(
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty()) null else heading to unique
                     }
-                    LazyColumn(modifier = Modifier.weight(1f)) {
+                    LazyColumn(state = catalogScrollState,
+                        modifier = Modifier.weight(1f)) {
                         if (!homeLibrary) {
                             item {
                                 Text(selected?.name ?: "Início", fontSize = 17.sp,
