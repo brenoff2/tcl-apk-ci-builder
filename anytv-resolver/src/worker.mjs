@@ -47,7 +47,7 @@ function safeEqual(a, b) {
   return diff === 0;
 }
 
-// The limited JustWatch/link-resolver budget is NOT the TMDB catalog budget.
+// The limited Movie of the Night link-resolver budget is NOT the TMDB catalog budget.
 function linkMonthlyCap(env) {
   const n = Number(env.MAX_LINK_CALLS_MONTH || env.MAX_UPSTREAM_CALLS_MONTH || "200");
   return Number.isSafeInteger(n) && n > 0 && n <= 10000 ? n : null;
@@ -252,7 +252,7 @@ export async function catalogRequest(request, env, deps = {}) {
     if (cached && cached.expires_at > now) {
       return asJson(JSON.parse(cached.payload), 200, { "x-anytv-cache": "hit" });
     }
-    // TMDB metadata is not charged against the separate JustWatch link budget.
+    // TMDB metadata is not charged against the separate Movie of the Night link budget.
     // Public requests remain rate-limited by IP, allowlisted, validated and cached.
     // TMDB offers either a v4 Read Access Token (Bearer) or a 32-char v3 API key.
     // Both stay exclusively in Cloudflare Secrets; no credential reaches the app.
