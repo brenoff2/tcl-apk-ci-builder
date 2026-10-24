@@ -127,7 +127,9 @@ class TclV21Contract(unittest.TestCase):
         self.assertIn("PlaybackTransportBar(", self.screen)
         self.assertIn("TclTvAppApi.headphones(host, code)", self.screen)
         self.assertIn("onTabSelected(HomeTab.Cast)", self.screen)
-        self.assertIn("MaterialTheme.colorScheme.primary", self.screen)
+        # Home remote is deliberately graphite/red; other app themes are unchanged.
+        self.assertIn("private val TclBlue = Color(0xFFE9003B)", self.screen)
+        self.assertIn("TclHeaderAction(Icons.Filled.PowerSettingsNew", self.screen)
 
 
 if __name__ == "__main__":
