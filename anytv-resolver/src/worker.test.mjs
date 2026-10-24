@@ -400,6 +400,43 @@ test("discovery endpoints are allowlisted and cached without exposing TMDB token
   }
 });
 
+test("genre sorting is server-side, validated by media and cached per sort key", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "secret-server-only";
+  const calls = [];
+  const deps = { now: () => Date.parse("2026-10-23T15:00:00Z"),
+    fetch: async url => {
+      calls.push(new URL(url));
+      return new Response(JSON.stringify({ results: [{ id: 123, title: "Teste" }],
+        total_pages: 9 }), {status: 200});
+    }
+  };
+  for (const [media, sorts] of [
+    ["movie", ["popularity.desc", "vote_average.desc", "primary_release_date.desc", "title.asc"]],
+    ["tv", ["popularity.desc", "vote_average.desc", "first_air_date.desc", "name.asc"]]
+  ]) {
+    for (const sort of sorts) {
+      const url = "https://anytv.invalid/v1/catalog/discover/" + media
+        + "?language=pt-BR&with_genres=28&page=2&sort_by=" + sort;
+      assert.equal((await catalogRequest(new Request(url), env, deps)).status, 200, url);
+      assert.equal((await catalogRequest(new Request(url), env, deps)).status, 200, url);
+    }
+  }
+  assert.equal(calls.length, 8, "each of eight legal sort keys fetched exactly once");
+  assert(calls.every(url => url.searchParams.get("with_genres") === "28"));
+  assert(calls.every(url => url.searchParams.get("page") === "2"));
+  for (const url of [
+    "/v1/catalog/discover/movie?sort_by=first_air_date.desc",
+    "/v1/catalog/discover/tv?sort_by=title.asc",
+    "/v1/catalog/discover/movie?sort_by=popularity.asc",
+    "/v1/catalog/search/movie?sort_by=vote_average.desc&query=test",
+    "/v1/catalog/discover/movie?sort_by=popularity.desc&sort_by=title.asc",
+  ]) {
+    assert.equal((await catalogRequest(new Request("https://anytv.invalid" + url), env)).status,
+      400, url);
+  }
+});
+
 test("English metadata is permitted only for trailer videos", async () => {
   const env = { TMDB_READ_TOKEN: "server-only", DB: {}, RATE_LIMIT: { limit: async () => ({ success: true }) } };
   for (const url of [
