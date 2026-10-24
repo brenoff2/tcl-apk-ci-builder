@@ -2471,81 +2471,75 @@ internal fun TclStreamingScreens(
                                 }
                             }
                             item {
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically) {
-                                        Text(heading, fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.weight(1f))
-                                        if (shelf.size > 6) {
-                                            OutlinedButton(
-                                                onClick = {
-                                                    val genreName = heading.removePrefix("Por gênero: ")
-                                                    val targetGenre = if (heading.startsWith("Por gênero: "))
-                                                        currentGenreList.firstOrNull { it.name == genreName }
-                                                    else null
-                                                    when {
-                                                        heading == ANYTV_CINEMA_SHELF -> {
-                                                            selected = null
-                                                            homeContentType = "movie"
-                                                            selectedHomeGenre = ANYTV_CINEMA_FILTER
-                                                            openedSection = null
-                                                        }
-                                                        targetGenre != null -> {
-                                                            selected = null
-                                                            selectedHomeGenre = targetGenre.id
-                                                            openedSection = null
-                                                        }
-                                                        else -> openedSection = heading
+                                Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Text(heading, fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f))
+                                    if (!homeLibrary && shelf.size > 6) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                val genreName = heading.removePrefix("Por gênero: ")
+                                                val targetGenre = if (heading.startsWith("Por gênero: "))
+                                                    currentGenreList.firstOrNull { it.name == genreName }
+                                                else null
+                                                when {
+                                                    heading == ANYTV_CINEMA_SHELF -> {
+                                                        selected = null
+                                                        homeContentType = "movie"
+                                                        selectedHomeGenre = ANYTV_CINEMA_FILTER
+                                                        openedSection = null
                                                     }
-                                                },
-                                                modifier = Modifier.height(34.dp),
-                                                shape = RoundedCornerShape(21.dp),
-                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
-                                            ) {
-                                                Text("Ver mais ›", fontSize = 11.sp)
-                                            }
+                                                    targetGenre != null -> {
+                                                        selected = null
+                                                        selectedHomeGenre = targetGenre.id
+                                                        openedSection = null
+                                                    }
+                                                    else -> openedSection = heading
+                                                }
+                                            },
+                                            modifier = Modifier.height(34.dp),
+                                            shape = RoundedCornerShape(21.dp),
+                                            contentPadding = PaddingValues(
+                                                horizontal = 10.dp, vertical = 0.dp)
+                                        ) { Text("Ver mais ›", fontSize = 11.sp) }
+                                    }
+                                }
+                            }
+                            if (homeLibrary) {
+                                // Saved and watched pages share the exact home card.
+                                items(shelf.take(sectionVisibleCount).chunked(3)) { group ->
+                                    Row(modifier = Modifier.fillMaxWidth()
+                                        .padding(vertical = 7.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                        verticalAlignment = Alignment.Top) {
+                                        group.forEach { title ->
+                                            posterCard(title, Modifier.weight(1f), false)
+                                        }
+                                        repeat(3 - group.size) {
+                                            Spacer(Modifier.weight(1f))
                                         }
                                     }
-                                    // Keep the approved horizontal two-row rail by default.
-                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                        items(shelf.take(ANYTV_LIST_BATCH).chunked(2)) { pair ->
-                                            Column(verticalArrangement = Arrangement.spacedBy(11.dp),
-                                                modifier = Modifier.width(116.dp)) {
-                                                pair.forEach { item ->
-                                                    Column(modifier = Modifier.fillMaxWidth().clickable {
-                                                        details = item
-                                                        detailsPackage = null
-                                                    }) {
-                                                        AnyTvPinnedImage(
-                                                            model = "https://image.tmdb.org/t/p/w185" + item.poster,
-                                                            contentDescription = "Cartaz: " + item.name,
-                                                            modifier = Modifier.fillMaxWidth().height(158.dp),
-                                                            contentScale = ContentScale.Crop)
-                                                        Spacer(Modifier.height(5.dp))
-                                                        AnyTvCardMetaRow(item,
-                                                            favorite = isFavorite(item, "library"),
-                                                            marked = if (item.media == "movie")
-                                                                item.id.toString() in watchedFilms
-                                                            else item.id.toString() in trackedSeries,
-                                                            compact = true,
-                                                            onMarked = {
-                                                                if (item.media == "movie")
-                                                                    toggleFilmWatched(item.id)
-                                                                else toggleSeriesTracking(item)
-                                                            },
-                                                            onFavorite = { toggleFavorite(item, "library") })
-                                                        StreamingOfferIcons(item, offerCache, displayed,
-                                                            showRating = false,
-                                                            inCinema = item.id in cinemaIds)
-                                                        // Fixed three-line titles keep both rows aligned.
-                                                        Spacer(Modifier.height(6.dp))
-                                                        Text(item.name, maxLines = 3, lineHeight = 14.sp,
-                                                            modifier = Modifier.fillMaxWidth().height(42.dp),
-                                                            overflow = TextOverflow.Ellipsis,
-                                                            fontSize = 11.sp)
-                                                    }
-                                                }
+                                }
+                                if (shelf.size > sectionVisibleCount) {
+                                    item {
+                                        TextButton(
+                                            onClick = { sectionVisibleCount += ANYTV_LIST_BATCH },
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) { Text("Mostrar mais 24") }
+                                    }
+                                }
+                            } else {
+                                // One horizontal shelf, three visible cards; all metadata
+                                // and service icons match the vertical grids.
+                                item {
+                                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                        val cardWidth = (maxWidth - 18.dp) / 3f
+                                        LazyRow(horizontalArrangement =
+                                            Arrangement.spacedBy(9.dp)) {
+                                            items(shelf.take(ANYTV_LIST_BATCH)) { title ->
+                                                posterCard(title, Modifier.width(cardWidth),
+                                                    heading == ANYTV_CINEMA_SHELF)
                                             }
                                         }
                                     }
