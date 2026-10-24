@@ -229,8 +229,8 @@ internal fun OfficialTvIcon(app: TvOfficialApp, size: Dp) {
         } catch (_: Exception) { null }
     }
     Box(
-        modifier = Modifier.size(size).clip(RoundedCornerShape(11.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+        modifier = Modifier.size(size).clip(RoundedCornerShape(15.dp))
+            .background(Color(0xFF1C1E25)),
         contentAlignment = Alignment.Center
     ) {
         if (bitmap != null) {
@@ -388,14 +388,14 @@ fun TclInstalledAppsBar(
         val byPackage = remember(allApps) { allApps.associateBy { it.packageName } }
         // First connection: show only packages actually reported by this TV.
         // The user chooses favorites; never invent Netflix/Prime/etc placeholders.
-        val selectedApps = if (!hasUserFavorites) allApps.take(7)
+        val selectedApps = if (!hasUserFavorites) allApps.take(6)
             else favorites.mapNotNull { byPackage[it] }
         if (selectedApps.isNotEmpty()) {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                horizontalArrangement = Arrangement.End) {
+                horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 selectedApps.forEach { app ->
                     Column(
-                        modifier = Modifier.width(62.dp).clickable {
+                        modifier = Modifier.width(56.dp).clickable {
                             if (pairing.isBlank()) {
                                 showPair = true
                             } else scope.launch {
@@ -411,14 +411,14 @@ fun TclInstalledAppsBar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
-                        OfficialTvIcon(app = app, size = 56.dp)
+                        OfficialTvIcon(app = app, size = 52.dp)
                         Text(app.name, fontSize = 10.sp, maxLines = 1, color = androidx.compose.ui.graphics.Color.White,
                             textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Box(
-                    modifier = Modifier.size(56.dp).clip(RoundedCornerShape(11.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    modifier = Modifier.size(52.dp).clip(RoundedCornerShape(15.dp))
+                        .background(Color(0xFF1C1E25))
                         .clickable { showManager = true },
                     contentAlignment = Alignment.Center
                 ) { Text("+", color = MaterialTheme.colorScheme.primary, fontSize = 23.sp) }
