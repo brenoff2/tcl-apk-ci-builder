@@ -141,6 +141,32 @@ test("rejects several distinct destination links for one service", () => {
   assert.equal(result.status, "ambiguous");
 });
 
+test("HTTP 404/409 retain distinct semantic statuses for Android fallback", async () => {
+  const resolve = async (provider, offers) => {
+    const env = makeEnv();
+    const url = "/v1/resolve/movie/329/" + provider;
+    const deps = { fetch: async () => response(show("movie/329", offers)) };
+    const answer = await handleRequest(request(url), env, deps);
+    return { http: answer.status, json: await answer.json() };
+  };
+  const absent = await resolve("prime", []);
+  assert.equal(absent.http, 404);
+  assert.equal(absent.json.status, "not_available");
+
+  const unsupported = await resolve("prime", [
+    mockOffer("prime", "https://unknown.example/detail/wrong")
+  ]);
+  assert.equal(unsupported.http, 404);
+  assert.equal(unsupported.json.status, "no_supported_link");
+
+  const ambiguous = await resolve("netflix", [
+    mockOffer("netflix", FIX.netflix),
+    mockOffer("netflix", "https://www.netflix.com/title/81309354")
+  ]);
+  assert.equal(ambiguous.http, 409);
+  assert.equal(ambiguous.json.status, "ambiguous");
+});
+
 test("never fetches provider data before authentication", async () => {
   const env = makeEnv();
   let calls = 0;
