@@ -204,6 +204,10 @@
     {
       "date": "2026-10-24",
       "event": "2.9.25/code54 CANDIDATA unsigned REAL COMPILADA: workflow DEV 37184150 alterado legalmente sem tocar signer/OTA, GitHub Actions 40102037540 SUCCESS em UI/links/security, Gradle, aapt badge name=com.tclremote.livre.v2 code=54 versionName=2.9.25-AnyTV e upload artifact 12563422151 (ZIP 23261948 bytes). APK unsigned SHA256 extraído e conferido independentemente: 36193ba7405c66b3cab44c03fb8fa6fac696e5443021318af441c1eb2dc90894. Fix Ver mais scrollToItem(0) código 03db5348 e teste bea4b545. TV 2.5/code16 build 40060021841 SUCCESS, artefato unsigned 12546823342; cinco arquivos TV atuais iguais por SHA à fonte do build aprovado, não necessita rebuild sem mudança. Última OTA assinada permanece V2 2.9.24/code53, workflow assinado protegido ainda code53 e sem autorização para produção. Nenhum merge, D1, Worker, assinatura, OTA ou TV instalada alterados. M08/M09 IN_QA, M10/M11 BACKLOG. Progresso 7/11=63%, gates F0-F8 NAO_HOMOLOGADO. docs/qa/ANYTV_2925_CODE54_TV25_CANDIDATE_GATE_20261024.md"
+    },
+    {
+      "date": "2026-10-24",
+      "event": "Nova rodada UX AnyTV 2.9.25 DEV: corrigido desaparecimento intermitente em Séries em andamento com metadados próprios anytv_watching_titles_v1, lookup TV para dados legados e proteção saved_title_*.json contra evicção do catálogo; grade 2 colunas, busca local, ordenação estável, reset de scroll por aba/consulta. Busca global agora Dialog tela cheia preta com botões separados Fechar/Limpar, rolagem vertical de resultados, histórico local limitado 10 consultas explícitas e exclusão. Commits de código ece07158 0e307755 40526a9c c3ccdec0 67643c8b d7b0aaf9; testes 7d77ef03; CI candidato unsigned code54 run 40103094753 contratos SUCCESS, Gradle ainda em execução no último readback. QA docs/qa/ANYTV_2925_WATCHING_SEARCH_OVERLAY_20261024.md. Nenhuma atualização OTA signer/Worker/TV/merge. P0 7/11=63%, gates F0-F8 NAO_HOMOLOGADO."
     }
   ],
   "discovery_v3": {
