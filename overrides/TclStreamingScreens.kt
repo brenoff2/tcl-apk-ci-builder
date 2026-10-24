@@ -1413,6 +1413,7 @@ internal fun TclStreamingScreens(
                 val personalLookup = runCatching {
                     AnyTvPersonalLinks.resolve(context, title, packageName)
                 }
+                var linkSourceNotice = ""
                 when (val direct = personalLookup?.getOrNull()) {
                     is AnyTvPersonalResult.Direct -> {
                         val mode = TclTvAppApi.openTitle(
@@ -1434,33 +1435,15 @@ internal fun TclStreamingScreens(
                         return@launch
                     }
                     AnyTvPersonalResult.ActivationRequired -> {
-                        val mode = TclTvAppApi.searchTitle(host, pairing,
-                            packageName, title.name)
-                        titleActionFeedback = "Links diretos ainda não autorizados neste celular. " +
-                            (if (mode == "search") "Busca enviada à TCL."
-                             else "Aplicativo aberto; pesquise o título na TV.")
-                        return@launch
+                        linkSourceNotice = "Links diretos não autorizados neste celular. "
                     }
                     AnyTvPersonalResult.ResolverUnavailable -> {
-                        val mode = TclTvAppApi.searchTitle(host, pairing,
-                            packageName, title.name)
-                        titleActionFeedback = if (mode == "search")
-                            "Resolvedor temporariamente indisponível; busca enviada à TCL."
-                        else "Resolvedor temporariamente indisponível; aplicativo aberto. " +
-                            "Pesquise pelo título na TV."
-                        return@launch
+                        linkSourceNotice = "Resolvedor temporariamente indisponível. "
                     }
                     AnyTvPersonalResult.NoSupportedLink -> {
-                        val mode = TclTvAppApi.searchTitle(
-                            host, pairing, packageName, title.name)
-                        titleActionFeedback = if (mode == "search")
-                            "A fonte confirmou a assinatura, mas não forneceu um link " +
-                                "compatível; a busca foi solicitada na TV."
-                            else "A ficha direta não é compatível com a TCL. " +
-                                "Abra a busca no aplicativo."
-                        return@launch
+                        linkSourceNotice = "Fonte de links sem URL compatível. "
                     }
-                    else -> Unit // No personal key or a temporary API error: existing fallback.
+                    else -> Unit // Preserve the existing verified TMDB/Wikidata fallback.
                 }
                 // Provider IDs are worldwide; subscription rights are regional.
                 // Fail closed when the TMDB BR availability check is negative or unknown.
@@ -1469,7 +1452,8 @@ internal fun TclStreamingScreens(
                 val offered = StreamingCatalog.titleAvailableInBrazil(
                     token, title, appName)
                 if (offered == false) {
-                    titleActionFeedback = "Segundo o catálogo TMDB/JustWatch, este título não está " +
+                    titleActionFeedback = linkSourceNotice +
+                        "Segundo o catálogo TMDB/JustWatch, este título não está " +
                         "confirmado na assinatura de " + appName + " no Brasil. " +
                         "Confira 'Onde assistir e links disponíveis' antes de abrir."
                     return@launch
@@ -1483,7 +1467,7 @@ internal fun TclStreamingScreens(
                 val mode = if (link != null)
                     TclTvAppApi.openTitle(host, pairing, packageName, link, title.name)
                 else TclTvAppApi.searchTitle(host, pairing, packageName, title.name)
-                titleActionFeedback = if (offered == null) {
+                titleActionFeedback = linkSourceNotice + (if (offered == null) {
                     "Não foi possível confirmar a disponibilidade no Brasil. " +
                         "Busca convencional solicitada ao streaming; confirme o resultado na TCL."
                 } else when (mode) {
@@ -1493,7 +1477,7 @@ internal fun TclStreamingScreens(
                         "não conseguiu abrir a ficha exata deste título; faça a busca no serviço."
                     else -> "O aplicativo não pôde ser aberto. Confira se o serviço está instalado " +
                         "e se o AnyTV Connect está vinculado."
-                }
+                })
             } catch (error: Exception) {
                 titleActionFeedback = error.message?.let { "Não foi possível abrir: " + it }
                     ?: "Não foi possível abrir o serviço na TCL."
