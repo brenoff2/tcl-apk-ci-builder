@@ -495,7 +495,7 @@ private object StreamingCatalog {
         page: Int,
         fetch: suspend (Int) -> StreamingResults
     ): StreamingResults {
-        require(page in 1..41)
+        require(page in 1..42)
         val through = page * ANYTV_LIST_BATCH
         val collected = ArrayList<StreamingTitle>(through + 1)
         val seen = HashSet<String>()
@@ -561,7 +561,7 @@ private object StreamingCatalog {
                         }
                         title.takeIf { confirmed }
                     }
-                }.awaitAll().filterNotNull()
+                }.awaitAll().filterNotNull().take(ANYTV_LIST_BATCH)
             }
         }
 
@@ -569,15 +569,20 @@ private object StreamingCatalog {
      * This is an international selection, not a complete worldwide census. */
     suspend fun discoveryCinemaInternational(): List<StreamingTitle> =
         withContext(Dispatchers.IO) {
-            val payload = get("backend", "movie/now_playing?language=pt-BR")
-            mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", 0)
-                .filter(::anyTvReleased)
+            catalogPage24(1) { sourcePage ->
+                val payload = get("backend",
+                    "movie/now_playing?language=pt-BR&page=$sourcePage")
+                StreamingResults(
+                    mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", 0)
+                        .filter(::anyTvReleased),
+                    sourcePage < payload.optInt("total_pages", sourcePage))
+            }.titles
         }
 
     /** TMDB theatrical listing for BR; no guessing from absent provider logos. */
     suspend fun discoveryCinemaPage(page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
-            require(page in 1..50)
+            require(page in 1..42)
             catalogPage24(page) { sourcePage ->
                 val payload = get("backend",
                     "movie/now_playing?language=pt-BR&region=BR&page=$sourcePage")
@@ -597,7 +602,7 @@ private object StreamingCatalog {
         sort: String = "popular"): StreamingResults =
         withContext(Dispatchers.IO) {
             require(media == "movie" || media == "tv")
-            require(page in 1..41)
+            require(page in 1..42)
             require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14,
                 10759, 80, 10765, 10766, 10768, 10762))
             val sorting = when (sort) {
@@ -686,7 +691,7 @@ private object StreamingCatalog {
                 norm(it.name) == norm(withoutArticle) || norm(it.name) == identity ||
                     (identity.contains("amor") && identity.contains("vida") &&
                         norm(it.name) == "loveofyourlife")
-            }.thenByDescending { it.votes }).take(30)
+            }.thenByDescending { it.votes }).take(ANYTV_LIST_BATCH)
     }
 
     suspend fun trailer(media: String, id: Int): String? = withContext(Dispatchers.IO) {
@@ -708,9 +713,14 @@ private object StreamingCatalog {
     }
 
     suspend fun related(media: String, id: Int): List<StreamingTitle> = withContext(Dispatchers.IO) {
-        val response = get("backend", "$media/$id/recommendations?language=pt-BR")
-        mapTitles(response.optJSONArray("results") ?: JSONArray(), media, 0)
-            .filter(::anyTvReleased).take(12)
+        catalogPage24(1) { sourcePage ->
+            val response = get("backend",
+                "$media/$id/recommendations?language=pt-BR&page=$sourcePage")
+            StreamingResults(
+                mapTitles(response.optJSONArray("results") ?: JSONArray(), media, 0)
+                    .filter(::anyTvReleased),
+                sourcePage < response.optInt("total_pages", sourcePage))
+        }.titles
     }
 
     suspend fun discover(
