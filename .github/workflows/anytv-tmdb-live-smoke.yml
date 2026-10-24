@@ -20,9 +20,13 @@ jobs:
               ("search/tv", {"language":"pt-BR","query":"Breaking Bad"}),
               ("discover/movie", {"language":"pt-BR","with_genres":"28","page":"1"}),
               ("discover/movie", {"language":"pt-BR","with_genres":"28","page":"2"}),
+              ("discover/movie", {"language":"pt-BR","with_genres":"28","page":"1","sort_by":"vote_average.desc"}),
+              ("discover/movie", {"language":"pt-BR","with_genres":"28","page":"2","sort_by":"primary_release_date.desc"}),
+              ("discover/tv", {"language":"pt-BR","with_genres":"18","page":"1","sort_by":"first_air_date.desc"}),
+              ("discover/tv", {"language":"pt-BR","with_genres":"18","page":"2","sort_by":"name.asc"}),
           ):
               request = urllib.request.Request(base + route + "?" + urllib.parse.urlencode(query),
-                  headers={"Accept":"application/json", "User-Agent":"AnyTV/2.9.21 smoke"})
+                  headers={"Accept":"application/json", "User-Agent":"AnyTV/2.9.22 smoke"})
               try:
                   with urllib.request.urlopen(request, timeout=20) as response:
                       data=json.load(response)
@@ -34,4 +38,13 @@ jobs:
                   print("ANYTV_TMDB_LIVE_FAIL",route,err.code,
                         err.read(150).decode("utf-8",errors="replace"))
                   raise
+          # Invalid sort expressions must be rejected before reaching TMDB.
+          invalid = urllib.request.Request(base +
+              "discover/movie?language=pt-BR&with_genres=28&sort_by=first_air_date.desc")
+          try:
+              urllib.request.urlopen(invalid, timeout=15)
+              raise AssertionError("unsupported sort unexpectedly accepted")
+          except urllib.error.HTTPError as exc:
+              assert exc.code == 400, exc.code
+              print("ANYTV_TMDB_SORT_VALIDATION_OK", exc.code)
           PY
