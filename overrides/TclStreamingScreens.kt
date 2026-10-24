@@ -2655,7 +2655,8 @@ internal fun TclStreamingScreens(
             properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(modifier = Modifier.fillMaxSize(),
                 shape = RoundedCornerShape(0.dp),
-                color = Color.Black) {
+                color = Color.Black,
+                contentColor = Color.White) {
                 Column(modifier = Modifier.fillMaxSize().padding(14.dp),
                     verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(),
