@@ -797,7 +797,8 @@ private fun StreamingOfferIcons(
     known: MutableMap<String, List<StreamingOffer>>,
     apps: List<TvOfficialApp>,
     expanded: Boolean = false,
-    showRating: Boolean = true
+    showRating: Boolean = true,
+    inCinema: Boolean = false
 ) {
     val key = "${item.media}:${item.id}"
     LaunchedEffect(key) {
@@ -823,6 +824,14 @@ private fun StreamingOfferIcons(
                     style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(
                         includeFontPadding = false)),
                     fontWeight = FontWeight.Bold, color = Color.White)
+            }
+            if (item.media == "movie" && inCinema) {
+                Text("Cinema", modifier = Modifier
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color(0xFF1769E0))
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    fontSize = 9.sp, lineHeight = 10.sp, maxLines = 1,
+                    color = Color.White, fontWeight = FontWeight.SemiBold)
             }
             if (showRating && item.votes > 0) {
                 Text(String.format(java.util.Locale.US, "%.1f", item.rating),
@@ -1607,6 +1616,12 @@ internal fun TclStreamingScreens(
                         AnyTvCompactChip("Todos", selectedHomeGenre == 0) {
                             selectedHomeGenre = 0; homeLibrary = false
                         }
+                        if (homeContentType != "tv") {
+                            AnyTvCompactChip("Cinema", selectedHomeGenre == ANYTV_CINEMA_FILTER) {
+                                selected = null; homeContentType = "movie"
+                                selectedHomeGenre = ANYTV_CINEMA_FILTER; homeLibrary = false
+                            }
+                        }
                         currentGenreList.forEach { kind ->
                             AnyTvCompactChip(kind.name, selectedHomeGenre == kind.id) {
                                 selectedHomeGenre = kind.id; homeLibrary = false
@@ -1679,7 +1694,8 @@ internal fun TclStreamingScreens(
                                         Spacer(Modifier.height(5.dp))
                                         Text(found.name, fontSize = 11.sp, maxLines = 2,
                                             lineHeight = 14.sp)
-                                        StreamingOfferIcons(found, offerCache, displayed)
+                                        StreamingOfferIcons(found, offerCache, displayed,
+                                                inCinema = found.id in cinemaIds)
                                     }
                                 }
                             }
@@ -1935,7 +1951,8 @@ internal fun TclStreamingScreens(
                                         Spacer(Modifier.height(5.dp))
                                         Text(current.name, fontWeight = FontWeight.Bold,
                                             maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                        StreamingOfferIcons(current, offerCache, displayed, expanded = true)
+                                        StreamingOfferIcons(current, offerCache, displayed, expanded = true,
+                                            inCinema = current.id in cinemaIds)
                                     }
                                 }
                             }
@@ -1943,12 +1960,14 @@ internal fun TclStreamingScreens(
                         // Genre page: ten-image hero above either a detailed vertical list
                         // or three-column vertical grid. The upstream TMDB sort is applied
                         // consistently to page 1 and every user-requested next 20 titles.
-                        if (!homeLibrary && selected == null && selectedHomeGenre > 0) {
+                        if (!homeLibrary && selected == null && selectedHomeGenre != 0) {
                             val genreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"
                             val genreTitles = genreShelves[genreKey].orEmpty()
                                 .distinctBy { "${it.media}:${it.id}" }
                             item {
-                                Text("Filmes e séries · " + (currentGenreList.firstOrNull {
+                                Text(if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                    "Cinema · Filmes em cartaz no Brasil"
+                                else "Filmes e séries · " + (currentGenreList.firstOrNull {
                                     it.id == selectedHomeGenre }?.name ?: "Gênero"),
                                     fontWeight = FontWeight.SemiBold,
                                     modifier = Modifier.padding(top = 15.dp, bottom = 8.dp))
@@ -1966,7 +1985,10 @@ internal fun TclStreamingScreens(
                                         genreViewMode = "grid"
                                         prefs.edit().putString("anytv_genre_view_mode", "grid").apply()
                                     }
-                                    Box {
+                                    if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
+                                        Text("Em cartaz · Brasil · TMDB", fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    } else Box {
                                         val sortLabel = when (genreSort) {
                                             "rating" -> "Melhor nota"
                                             "recent" -> "Mais recentes"
@@ -2020,7 +2042,8 @@ internal fun TclStreamingScreens(
                                                     },
                                                     onFavorite = { toggleFavorite(title, "library") })
                                                 StreamingOfferIcons(title, offerCache, displayed,
-                                                    showRating = false)
+                                                    showRating = false,
+                                                    inCinema = title.id in cinemaIds)
                                                 // Keep three lines reserved, even for short titles.
                                                 Spacer(Modifier.height(6.dp))
                                                 Text(title.name, maxLines = 3, lineHeight = 14.sp,
@@ -2061,7 +2084,8 @@ internal fun TclStreamingScreens(
                                                 },
                                                 onFavorite = { toggleFavorite(title, "library") })
                                             StreamingOfferIcons(title, offerCache, displayed,
-                                                showRating = false)
+                                                showRating = false,
+                                                inCinema = title.id in cinemaIds)
                                             Spacer(Modifier.height(6.dp))
                                             Text(title.name, maxLines = 3, lineHeight = 14.sp,
                                                 modifier = Modifier.fillMaxWidth().height(42.dp),
@@ -2092,7 +2116,9 @@ internal fun TclStreamingScreens(
                                                 scope.launch {
                                                     val next = (genrePage[genreKey] ?: 1) + 1
                                                     runCatching {
-                                                        StreamingCatalog.discoveryGenrePage(
+                                                        if (pageGenreId == ANYTV_CINEMA_FILTER)
+                                                            StreamingCatalog.discoveryCinemaPage(next)
+                                                        else StreamingCatalog.discoveryGenrePage(
                                                             pageGenreId, pageMedia, next, pageSort)
                                                     }.onSuccess { result ->
                                                         genreShelves[genreKey] =
@@ -2174,7 +2200,8 @@ internal fun TclStreamingScreens(
                                                                 },
                                                                 onFavorite = { toggleFavorite(item, "library") })
                                                             StreamingOfferIcons(item, offerCache, displayed,
-                                                                showRating = false)
+                                                                showRating = false,
+                                                                inCinema = item.id in cinemaIds)
                                                             Spacer(Modifier.height(6.dp))
                                                             Text(item.name, maxLines = 3, lineHeight = 14.sp,
                                                                 modifier = Modifier.fillMaxWidth().height(42.dp),
@@ -2215,7 +2242,8 @@ internal fun TclStreamingScreens(
                                                             },
                                                             onFavorite = { toggleFavorite(item, "library") })
                                                         StreamingOfferIcons(item, offerCache, displayed,
-                                                            showRating = false)
+                                                            showRating = false,
+                                                            inCinema = item.id in cinemaIds)
                                                         // Fixed three-line titles keep both rows aligned.
                                                         Spacer(Modifier.height(6.dp))
                                                         Text(item.name, maxLines = 3, lineHeight = 14.sp,
