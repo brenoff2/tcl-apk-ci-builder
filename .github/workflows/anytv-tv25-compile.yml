@@ -2,7 +2,7 @@ name: AnyTV Connect 2.5 cert2026 unsigned TV build
 on:
   push:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
-    paths: ['.github/workflows/anytv-tv25-compile.yml']
+    paths: ['.github/workflows/anytv-tv25-compile.yml', 'overrides/tv_safe/TvAppBridge.java', 'scripts/tests/test_safe_tv_companion.py']
   workflow_dispatch:
 permissions:
   contents: read
