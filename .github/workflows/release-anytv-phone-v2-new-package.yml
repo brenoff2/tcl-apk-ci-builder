@@ -24,7 +24,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          jq -e '.schema == 1 and .intent == "release-independent-phone-v2" and .expected_version_code == 53 and .preserve_legacy_ota == true' .github/anytv-phone-v2-build-request.json >/dev/null
+          jq -e '.schema == 1 and .intent == "release-independent-phone-v2" and .expected_version_code == 54 and .preserve_legacy_ota == true' .github/anytv-phone-v2-build-request.json >/dev/null
           test -s signing-recovery/v2/phone-signer.aesgcm
           test -s signing-recovery/v2/phone-cert.pem
           test -s signing-recovery/v2/identity.json
@@ -109,7 +109,7 @@ jobs:
         run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
       - name: Validar troca opt-in de endpoint somente em staging
         run: python3 -m unittest discover -s scripts/tests -p 'test_anytv_staging_endpoint.py' -v
-      - name: Versionar nova atualização como AnyTV V2 2.9.24 (code 53)
+      - name: Versionar nova atualização como AnyTV V2 2.9.25 (code 54)
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -118,7 +118,7 @@ jobs:
           s=p.read_text()
           assert s.count('versionCode = 39') == 1
           assert s.count('versionName = "2.9.10-AnyTV"') == 1
-          p.write_text(s.replace('versionCode = 39','versionCode = 53').replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.24-AnyTV"'))
+          p.write_text(s.replace('versionCode = 39','versionCode = 54').replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.25-AnyTV"'))
           PY
       - name: Gate - restaurar literalmente codigo de conexao validado na 2.9.8
         run: |
@@ -155,7 +155,7 @@ jobs:
               query = urllib.parse.urlencode({"language": "pt-BR", "query": title})
               request = urllib.request.Request(
                   base + "search/" + kind + "?" + query,
-                  headers={"Accept": "application/json", "User-Agent": "AnyTV/2.9.24 QA"})
+                  headers={"Accept": "application/json", "User-Agent": "AnyTV/2.9.25 QA"})
               try:
                   with urllib.request.urlopen(request, timeout=15) as response:
                       assert response.status == 200, (kind, response.status)
@@ -179,11 +179,11 @@ jobs:
           APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
           "$BT/aapt" dump badging "$APK" > output/identidade.txt
           "$BT/aapt" dump xmltree "$APK" AndroidManifest.xml > output/manifesto.txt
-          grep -q "name='com.tclremote.livre.v2' versionCode='53'" output/identidade.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='54'" output/identidade.txt
           ! grep -q 'com.tclremote.livre.preview' output/identidade.txt
-          "$BT/zipalign" -f 4 "$APK" output/AnyTV_2_9_24_RELEASE_UNSIGNED.apk
-          "$BT/zipalign" -c 4 output/AnyTV_2_9_24_RELEASE_UNSIGNED.apk
-          sha256sum output/AnyTV_2_9_24_RELEASE_UNSIGNED.apk > output/SHA256.txt
+          "$BT/zipalign" -f 4 "$APK" output/AnyTV_2_9_25_RELEASE_UNSIGNED.apk
+          "$BT/zipalign" -c 4 output/AnyTV_2_9_25_RELEASE_UNSIGNED.apk
+          sha256sum output/AnyTV_2_9_25_RELEASE_UNSIGNED.apk > output/SHA256.txt
           echo 'App AnyTV V2 separado: nao atualiza a instalacao antiga cert2026; preserva o AnyTV existente.' > output/LEIA.txt
       - name: Recover new V2 signer from encrypted GitHub backup and sign APK
         shell: bash
@@ -225,15 +225,15 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
             --ks signing-v2-private/phone.p12 --ks-type PKCS12 \
             --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD \
-            --out signed-v2/AnyTV_V2_2.9.24_UPDATE.apk output/AnyTV_2_9_24_RELEASE_UNSIGNED.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs signed-v2/AnyTV_V2_2.9.24_UPDATE.apk > signed-v2/audit.txt
+            --out signed-v2/AnyTV_V2_2.9.25_UPDATE.apk output/AnyTV_2_9_25_RELEASE_UNSIGNED.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs signed-v2/AnyTV_V2_2.9.25_UPDATE.apk > signed-v2/audit.txt
           EXPECTED_CERT="$(jq -r .certificate_sha256 signing-recovery/v2/identity.json)"
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-v2/audit.txt
           grep -qi "$EXPECTED_CERT" signed-v2/audit.txt
-          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c 4 signed-v2/AnyTV_V2_2.9.24_UPDATE.apk
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging signed-v2/AnyTV_V2_2.9.24_UPDATE.apk > signed-v2/badging.txt
-          grep -q "package: name='com.tclremote.livre.v2' versionCode='53'" signed-v2/badging.txt
-          echo "ANYTV_V2_SIGNER_VALIDATED_$(sha256sum signed-v2/AnyTV_V2_2.9.24_UPDATE.apk | cut -d ' ' -f1)"
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c 4 signed-v2/AnyTV_V2_2.9.25_UPDATE.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging signed-v2/AnyTV_V2_2.9.25_UPDATE.apk > signed-v2/badging.txt
+          grep -q "package: name='com.tclremote.livre.v2' versionCode='54'" signed-v2/badging.txt
+          echo "ANYTV_V2_SIGNER_VALIDATED_$(sha256sum signed-v2/AnyTV_V2_2.9.25_UPDATE.apk | cut -d ' ' -f1)"
       - name: Publish V2 APK to independent GitHub channel, preserve old OTA
         shell: bash
         run: |
@@ -243,18 +243,18 @@ jobs:
           test -s ota-v2/updates/android/cert2026/current.apk
           if test -e ota-v2/updates/android/v2/current.apk; then
             oldcode="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging ota-v2/updates/android/v2/current.apk | sed -nE "s/.*versionCode='([0-9]+)'.*/\1/p" | head -1)"
-            test -n "$oldcode" && test "$oldcode" -lt 53
+            test -n "$oldcode" && test "$oldcode" -lt 54
           fi
           mkdir -p ota-v2/updates/android/v2
-          cp signed-v2/AnyTV_V2_2.9.24_UPDATE.apk ota-v2/updates/android/v2/current.apk
-          (cd ota-v2 && git config user.name 'github-actions[bot]' && git config user.email '41898282+github-actions[bot]@users.noreply.github.com' && git add -f updates/android/v2/current.apk && git diff --cached --check && git commit -m 'release(anytv-v2): verified signed V2 2.9.24 OTA update' && git push origin HEAD:feat/tcl-v22-updates-back-bluetooth)
+          cp signed-v2/AnyTV_V2_2.9.25_UPDATE.apk ota-v2/updates/android/v2/current.apk
+          (cd ota-v2 && git config user.name 'github-actions[bot]' && git config user.email '41898282+github-actions[bot]@users.noreply.github.com' && git add -f updates/android/v2/current.apk && git diff --cached --check && git commit -m 'release(anytv-v2): verified signed V2 2.9.25 OTA update' && git push origin HEAD:feat/tcl-v22-updates-back-bluetooth)
       - name: Verify published V2 APK bytes through GitHub HTTPS
         shell: bash
         run: |
           set -euo pipefail
           for attempt in 1 2 3 4 5 6 7 8; do
             curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/v2/current.apk?check=$attempt" -o signed-v2/remote.apk || true
-            if test -s signed-v2/remote.apk && cmp -s signed-v2/remote.apk signed-v2/AnyTV_V2_2.9.24_UPDATE.apk; then
+            if test -s signed-v2/remote.apk && cmp -s signed-v2/remote.apk signed-v2/AnyTV_V2_2.9.25_UPDATE.apk; then
               echo 'ANYTV_V2_GITHUB_OTA_BYTE_READBACK_SUCCESS'
               exit 0
             fi
@@ -265,9 +265,9 @@ jobs:
       - name: Audit signed V2 app as independent artifact
         uses: actions/upload-artifact@v4
         with:
-          name: anytv-v2-2924-signed-update
+          name: anytv-v2-2925-signed-update
           path: |
-            signed-v2/AnyTV_V2_2.9.24_UPDATE.apk
+            signed-v2/AnyTV_V2_2.9.25_UPDATE.apk
             signed-v2/badging.txt
           if-no-files-found: error
           retention-days: 30
