@@ -216,6 +216,10 @@
     {
       "date": "2026-10-24",
       "event": "READBACK FINAL NOVA PROPOSTA VISUAL: source funcional/testes fdced7c359072f7d8fc23cb40479f8160c3b63f7 compilado via GitHub Actions unsigned code54 40104547392 SUCCESS. Prepare upstream + sticky layout PASS, contratos UI/link/security PASS, Gradle assembleRelease PASS, aapt identity com.tclremote.livre.v2 versionCode54 versionName2.9.25-AnyTV PASS, artifact 12564042182 uploaded. ZIP conferido: APK sha256 recalculado 617e6e25cb6c768254e01beb7a9d4ac7758efca870826e4443aee72026de46b7 bate candidate-sha256.txt. Relatório docs/qa/ANYTV_2925_REMOTE_VISUAL_20261024.md. Artefato UNSIGNED exclusivamente QA, NÃO instalar sobre assinado. Última OTA assinada segue 2.9.24/code53; zero alteração no fluxo oficial assinado, signer, Worker, D1, companion TV e merge. Homologação física pendente, P0 7/11=63%, gates F0-F8 NAO_HOMOLOGADO."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "RELEASE ASSINADA OFICIAL V2 2.9.25/code54 AUTORIZADA pelo usuário e publicada via GitHub Actions #40106161667 SUCCESS; HEAD request 3e916e7c, workflow official bffb0256 preservou signer, assinatura v2, antigas conexões/IME/catalogo live e byte-readback HTTPS. Signed APK com.tclremote.livre.v2 code54 versionName 2.9.25-AnyTV SHA256 c53596d8f8210bf0a12769481796481a851d00da4c52f544120b85367dd17fe0; certificado SHA256 fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9; artifact 12564414706. OTA branch feat/tcl-v22-updates-back-bluetooth commit dcc51bad5561e66462ab6e1eb2f1d3fd24ee5112, updates/android/v2/current.apk. Legacy cert2026 blob 44c766b433ddb370f4589b87843f1edfd9cd7b7a imutavel. Rollback anterior commit 75aa42dff1e8745ba8721fbc0f87c5b8e539cf23. Download assinado e updater disponiveis; instalacao no celular e TCL nao comprovadas. Apenas telefone atualizado; companion TV, Worker e D1 intactos. QA docs/qa/ANYTV_2925_CODE54_SIGNED_OTA_RELEASE_20261024.md. Gate físico F0-F8 NAO_HOMOLOGADO; progresso 7/11=63%."
     }
   ],
   "discovery_v3": {
