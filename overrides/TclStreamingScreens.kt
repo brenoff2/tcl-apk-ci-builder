@@ -38,6 +38,8 @@ import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.ViewList
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.outlined.FavoriteBorder
 
 import androidx.compose.runtime.*
@@ -778,7 +780,8 @@ private fun StreamingOfferIcons(
     item: StreamingTitle,
     known: MutableMap<String, List<StreamingOffer>>,
     apps: List<TvOfficialApp>,
-    expanded: Boolean = false
+    expanded: Boolean = false,
+    showRating: Boolean = true
 ) {
     val key = "${item.media}:${item.id}"
     LaunchedEffect(key) {
@@ -788,8 +791,8 @@ private fun StreamingOfferIcons(
         }
     }
     val offerings = known[key].orEmpty()
-    // Always reserve a metadata row: label, optional rating and verified offers.
-    // No row jumps when a title has no vote or its provider lookup is unavailable.
+    // Reserve a category/provider row, with rating only on legacy highlight cards.
+    // No row jumps while provider details are loading.
     Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
@@ -805,7 +808,7 @@ private fun StreamingOfferIcons(
                         includeFontPadding = false)),
                     fontWeight = FontWeight.Bold, color = Color.White)
             }
-            if (item.votes > 0) {
+            if (showRating && item.votes > 0) {
                 Text(String.format(java.util.Locale.US, "%.1f", item.rating),
                     fontSize = 11.sp, maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -839,67 +842,49 @@ private fun StreamingOfferIcons(
         }
 }
 
-/** Reuses the existing persisted favorite/watched state; trailer is fetched only on tap. */
+/** Shared card metadata: left year/score, right watched and favorite controls. */
 @Composable
-private fun AnyTvGenreTitleActions(
-    title: StreamingTitle,
+private fun AnyTvCardMetaRow(
+    item: StreamingTitle,
     favorite: Boolean,
     marked: Boolean,
     compact: Boolean,
-    onFavorite: () -> Unit,
     onMarked: () -> Unit,
-    onTrailer: () -> Unit
+    onFavorite: () -> Unit
 ) {
-    val color = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(modifier = if (compact) Modifier else Modifier.horizontalScroll(rememberScrollState()),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(if (compact) 3.dp else 7.dp)) {
-        if (compact) {
-            IconButton(onClick = onFavorite, modifier = Modifier.size(29.dp)) {
-                Icon(if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = if (favorite) "Remover dos favoritos" else "Favoritar",
-                    tint = if (favorite) Color(0xFFE04B57) else color,
-                    modifier = Modifier.size(18.dp))
+    val neutral = MaterialTheme.colorScheme.onSurfaceVariant
+    val buttonSize = if (compact) 27.dp else 31.dp
+    Row(modifier = Modifier.fillMaxWidth().height(31.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            val year = item.date.take(4).takeIf { it.matches(Regex("[0-9]{4}")) }
+            if (year != null) {
+                Text(year, fontSize = if (compact) 9.sp else 11.sp,
+                    maxLines = 1, softWrap = false, color = neutral)
             }
-            IconButton(onClick = onMarked, modifier = Modifier.size(29.dp)) {
-                Icon(Icons.Filled.CheckCircle,
-                    contentDescription = if (title.media == "movie")
-                        "Alternar assistido" else "Alternar acompanhamento",
-                    tint = if (marked) Color(0xFF1CB96B) else color,
-                    modifier = Modifier.size(18.dp))
+            if (item.votes > 0) {
+                if (year != null) Text("·", fontSize = 10.sp, color = neutral)
+                Text(String.format(java.util.Locale.US, "%.1f", item.rating),
+                    fontSize = if (compact) 9.sp else 11.sp,
+                    maxLines = 1, softWrap = false, color = neutral)
             }
-            IconButton(onClick = onTrailer, modifier = Modifier.size(29.dp)) {
-                Icon(Icons.Filled.PlayCircleFilled, contentDescription = "Ver trailer",
-                    tint = color, modifier = Modifier.size(18.dp))
-            }
-        } else {
-            TextButton(onClick = onFavorite, contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.heightIn(min = 40.dp)) {
-                Icon(if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = null, modifier = Modifier.size(14.dp),
-                    tint = if (favorite) Color(0xFFE04B57) else color)
-                Spacer(Modifier.width(3.dp))
-                Text(if (favorite) "Na lista" else "Favorito", fontSize = 11.sp, maxLines = 1)
-            }
-            TextButton(onClick = onMarked, contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.heightIn(min = 40.dp)) {
-                Icon(Icons.Filled.CheckCircle, contentDescription = null,
-                    modifier = Modifier.size(14.dp),
-                    tint = if (marked) Color(0xFF1CB96B) else color)
-                Spacer(Modifier.width(3.dp))
-                Text(if (title.media == "tv") {
-                    if (marked) "Acompanhando" else "Acompanhar"
-                } else {
-                    if (marked) "Assistido" else "Assistir"
-                }, fontSize = 11.sp, maxLines = 1)
-            }
-            TextButton(onClick = onTrailer, contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.heightIn(min = 40.dp)) {
-                Icon(Icons.Filled.PlayCircleFilled, contentDescription = null,
-                    modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(3.dp))
-                Text("Trailer", fontSize = 11.sp, maxLines = 1)
-            }
+        }
+        IconButton(onClick = onMarked, modifier = Modifier.size(buttonSize)) {
+            Icon(Icons.Filled.CheckCircle,
+                contentDescription = if (item.media == "movie")
+                    (if (marked) "Desmarcar assistido" else "Marcar assistido")
+                else (if (marked) "Parar de acompanhar" else "Acompanhar série"),
+                tint = if (marked) Color(0xFF1CB96B) else neutral,
+                modifier = Modifier.size(18.dp))
+        }
+        IconButton(onClick = onFavorite, modifier = Modifier.size(buttonSize)) {
+            Icon(Icons.Filled.Favorite,
+                contentDescription = if (favorite) "Remover dos favoritos" else "Favoritar",
+                tint = if (favorite) Color(0xFFE04B57) else neutral,
+                modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -966,6 +951,29 @@ private fun AnyTvCompactChip(label: String, selected: Boolean, onClick: () -> Un
     }
 }
 
+/** Compact icon-only selector for the genre list/three-column grid. */
+@Composable
+private fun AnyTvGenreViewIcon(
+    image: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(12.dp)
+    Box(modifier = Modifier.size(34.dp)
+        .clip(shape)
+        .background(if (selected) MaterialTheme.colorScheme.primaryContainer
+                    else MaterialTheme.colorScheme.surfaceContainerLow)
+        .border(1.dp, if (selected) MaterialTheme.colorScheme.primary
+               else MaterialTheme.colorScheme.outlineVariant, shape)
+        .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center) {
+        Icon(image, contentDescription = label,
+            tint = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.size(19.dp))
+    }
+}
+
 @Composable
 internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String,
@@ -977,22 +985,6 @@ internal fun TclStreamingScreens(
         context.getSharedPreferences("anytv_streaming_catalog", Context.MODE_PRIVATE)
     }
     val scope = rememberCoroutineScope()
-    fun openGenreTrailer(title: StreamingTitle) {
-        scope.launch {
-            val video = runCatching { StreamingCatalog.trailer(title.media, title.id) }.getOrNull()
-            if (video.isNullOrBlank()) {
-                android.widget.Toast.makeText(context, "Trailer indisponível para este título.",
-                    android.widget.Toast.LENGTH_SHORT).show()
-            } else {
-                runCatching {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(video)))
-                }.onFailure {
-                    android.widget.Toast.makeText(context, "Não foi possível abrir o trailer.",
-                        android.widget.Toast.LENGTH_SHORT).show()
-                }
-            }
-        }
-    }
     // The client never requires user-supplied API credentials.
     val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
@@ -1906,11 +1898,13 @@ internal fun TclStreamingScreens(
                                     .horizontalScroll(rememberScrollState()),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    AnyTvCompactChip("Lista", genreViewMode == "list") {
+                                    AnyTvGenreViewIcon(Icons.Filled.ViewList, "Lista",
+                                        genreViewMode == "list") {
                                         genreViewMode = "list"
                                         prefs.edit().putString("anytv_genre_view_mode", "list").apply()
                                     }
-                                    AnyTvCompactChip("Grade 3", genreViewMode == "grid") {
+                                    AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade de três colunas",
+                                        genreViewMode == "grid") {
                                         genreViewMode = "grid"
                                         prefs.edit().putString("anytv_genre_view_mode", "grid").apply()
                                     }
@@ -1955,28 +1949,25 @@ internal fun TclStreamingScreens(
                                                     contentDescription = "Cartaz: " + title.name,
                                                     modifier = Modifier.fillMaxWidth().height(135.dp),
                                                     contentScale = ContentScale.Crop)
-                                                Text(title.name, maxLines = 3, lineHeight = 14.sp,
-                                                    modifier = Modifier.fillMaxWidth().height(42.dp),
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                                if (title.date.isNotBlank()) {
-                                                    Text(title.date.take(4), fontSize = 10.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                }
-                                                StreamingOfferIcons(title, offerCache, displayed)
-                                                AnyTvGenreTitleActions(title,
+                                                AnyTvCardMetaRow(title,
                                                     favorite = isFavorite(title, "library"),
                                                     marked = if (title.media == "movie")
                                                         title.id.toString() in watchedFilms
                                                     else title.id.toString() in trackedSeries,
                                                     compact = true,
-                                                    onFavorite = { toggleFavorite(title, "library") },
                                                     onMarked = {
                                                         if (title.media == "movie")
                                                             toggleFilmWatched(title.id)
                                                         else toggleSeriesTracking(title.id)
                                                     },
-                                                    onTrailer = { openGenreTrailer(title) })
+                                                    onFavorite = { toggleFavorite(title, "library") })
+                                                StreamingOfferIcons(title, offerCache, displayed,
+                                                    showRating = false)
+                                                // Keep three lines reserved, even for short titles.
+                                                Text(title.name, maxLines = 3, lineHeight = 14.sp,
+                                                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                             }
                                         }
                                         repeat(3 - group.size) {
@@ -1998,14 +1989,24 @@ internal fun TclStreamingScreens(
                                             contentScale = ContentScale.Crop)
                                         Column(modifier = Modifier.weight(1f),
                                             verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            Text(title.name, maxLines = 2,
+                                            AnyTvCardMetaRow(title,
+                                                favorite = isFavorite(title, "library"),
+                                                marked = if (title.media == "movie")
+                                                    title.id.toString() in watchedFilms
+                                                else title.id.toString() in trackedSeries,
+                                                compact = false,
+                                                onMarked = {
+                                                    if (title.media == "movie")
+                                                        toggleFilmWatched(title.id)
+                                                    else toggleSeriesTracking(title.id)
+                                                },
+                                                onFavorite = { toggleFavorite(title, "library") })
+                                            StreamingOfferIcons(title, offerCache, displayed,
+                                                showRating = false)
+                                            Text(title.name, maxLines = 3, lineHeight = 14.sp,
+                                                modifier = Modifier.fillMaxWidth().height(42.dp),
                                                 overflow = TextOverflow.Ellipsis,
-                                                fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                                            if (title.date.isNotBlank()) {
-                                                Text(title.date.take(4), fontSize = 11.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                            StreamingOfferIcons(title, offerCache, displayed)
+                                                fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                                             Text(
                                                 if (title.overview.isBlank()) "Sinopse indisponível."
                                                 else title.overview.take(160).trimEnd() +
@@ -2013,19 +2014,6 @@ internal fun TclStreamingScreens(
                                                 fontSize = 11.sp, lineHeight = 15.sp,
                                                 maxLines = 3, overflow = TextOverflow.Ellipsis,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            AnyTvGenreTitleActions(title,
-                                                favorite = isFavorite(title, "library"),
-                                                marked = if (title.media == "movie")
-                                                    title.id.toString() in watchedFilms
-                                                else title.id.toString() in trackedSeries,
-                                                compact = false,
-                                                onFavorite = { toggleFavorite(title, "library") },
-                                                onMarked = {
-                                                    if (title.media == "movie")
-                                                        toggleFilmWatched(title.id)
-                                                    else toggleSeriesTracking(title.id)
-                                                },
-                                                onTrailer = { openGenreTrailer(title) })
                                         }
                                     }
                                     HorizontalDivider(color =
@@ -2095,13 +2083,25 @@ internal fun TclStreamingScreens(
                                                             modifier = Modifier.fillMaxWidth().height(158.dp),
                                                             contentScale = ContentScale.Crop)
                                                         Spacer(Modifier.height(5.dp))
-                                                        // Three full title lines are reserved for EVERY tile,
-                                                        // including single-line names, so row 2 never shifts.
+                                                        AnyTvCardMetaRow(item,
+                                                            favorite = isFavorite(item, "library"),
+                                                            marked = if (item.media == "movie")
+                                                                item.id.toString() in watchedFilms
+                                                            else item.id.toString() in trackedSeries,
+                                                            compact = true,
+                                                            onMarked = {
+                                                                if (item.media == "movie")
+                                                                    toggleFilmWatched(item.id)
+                                                                else toggleSeriesTracking(item.id)
+                                                            },
+                                                            onFavorite = { toggleFavorite(item, "library") })
+                                                        StreamingOfferIcons(item, offerCache, displayed,
+                                                            showRating = false)
+                                                        // Fixed three-line titles keep both rows aligned.
                                                         Text(item.name, maxLines = 3, lineHeight = 14.sp,
                                                             modifier = Modifier.fillMaxWidth().height(42.dp),
                                                             overflow = TextOverflow.Ellipsis,
                                                             fontSize = 11.sp)
-                                                        StreamingOfferIcons(item, offerCache, displayed)
                                                         if (heading.startsWith("Em breve")) {
                                                             val reminderId = "movie:" + item.id
                                                             val enabled = premiereReminders[reminderId]
