@@ -312,7 +312,7 @@ class StreamingScreens(unittest.TestCase):
         identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
         self.assertIn('RESOLVER_BASE = "https://anytv-link-resolver-pilot.brenoff.workers.dev"', identity)
         self.assertIn("AnyTvPersonalLinks.resolve(context, title, packageName)", self.screen)
-        self.assertIn('Text("Verificar autorização de links"', self.screen)
+        self.assertIn('Text("Verificar acesso aos links"', self.screen)
         self.assertIn('Streaming Availability API by Movie of the Night', self.screen)
         self.assertIn('https://www.movieofthenight.com/about/api', self.screen)
         self.assertIn('AnyTvPersonalResult.ActivationRequired ->', self.screen)
@@ -343,23 +343,27 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('linkSourceNotice + (if (offered == null)', screen)
         self.assertIn('AnyTvPersonalResult.NotInSubscription ->', screen)
 
-    def test_one_time_link_activation_is_explicit_and_nonpersistent(self):
+    def test_device_approval_is_requested_without_visible_secret(self):
         identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
         self.assertIn('linkActivationRequired = state == "unauthorized"', self.screen)
-        self.assertIn('if (linkActivationRequired) {', self.screen)
-        self.assertIn('Text("Código único de ativação")', self.screen)
-        self.assertIn('deviceActivationCode.matches(Regex("[A-Za-z0-9_-]{43}"))', self.screen)
-        self.assertIn('AnyTvDeviceIdentity.activate(context, singleUseCode)', self.screen)
-        self.assertIn('val activated = withContext(Dispatchers.IO)', self.screen)
-        self.assertIn('deviceActivationCode = ""', self.screen)
-        self.assertIn('AnyTvPersonalLinks.activationStatus(context) == "activated"', self.screen)
+        self.assertIn('Text("Solicitar liberação")', self.screen)
+        self.assertIn('AnyTvDeviceIdentity.requestApproval(context)', self.screen)
+        self.assertIn('AnyTvPersonalLinks.activationStatus(context)', self.screen)
         self.assertIn('deviceId(context).takeLast(8)', self.screen)
-        for forbidden in ('activationDraft', 'personalKeyDraft', 'tokenDraft',
-                          'prefs.edit().putString("activation', 'showDeviceActivation'):
-            self.assertNotIn(forbidden, self.screen)
-        self.assertIn('connection.responseCode == 201', identity)
-        self.assertIn('activationCode.matches(Regex(', identity)
+        self.assertNotIn('deviceActivationCode', self.screen)
+        self.assertNotIn('Código único de ativação', self.screen)
+        self.assertNotIn('AnyTvDeviceIdentity.activate(context', self.screen)
+        self.assertIn('ANYTV-REQUEST1', identity)
+        self.assertIn('"/v1/device/request"', identity)
         self.assertNotIn('putString("activation', identity)
+
+    def test_streaming_service_icons_and_cinema_sessions(self):
+        self.assertIn('offerings.distinctBy { it.id }.forEach', self.screen)
+        self.assertIn('StreamingCatalog.appHasOffer(it, listOf(offer))', self.screen)
+        self.assertIn('https://image.tmdb.org/t/p/w92', self.screen)
+        self.assertIn('Text("Ver cinemas e sessões · Ingresso.com"', self.screen)
+        self.assertIn('Uri.parse("https://www.ingresso.com/")', self.screen)
+        self.assertNotIn('offerings.take(visible)', self.screen)
 
     def test_full_screen_visual_consistency_and_empty_pages(self):
         self.assertIn('Surface(modifier = Modifier.fillMaxSize()', self.screen)
