@@ -192,6 +192,10 @@
     {
       "date": "2026-10-24",
       "event": "READBACK FINAL UI Cinema/Em breve/rockers: source funcional c9c9da17 validada por CI Android 40099926982 SUCCESS (contratos UI/links/safety, Gradle assembleRelease e identidade V2 unsigned/code53) e device proof 40099926956 SUCCESS. Nenhuma assinatura ou publicacao 2.9.25/code54, workflow oficial protegido mantido; nenhuma atualizacao companion TCL, QA fisica ou merge; ultima OTA segue 2.9.24/code53, Worker inalterado. Progresso 7/11=63%, gates F0-F8 NAO_HOMOLOGADO; QA docs/qa/ANYTV_V2_2925_CINEMA_PREMIERE_REMOTE_20261024.md."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "NOVA RODADA DEV 2.9.25 24 TITULOS: grade genero poster 158dp como home, lista 116x158dp; Ver mais navega para pagina real genero/Cinema e pagina dedicada de secao sem expansao; pagina logica 24 recortada de fonte TMDB 20 com dedup/filtragem segura, Mostrar mais 24, homepage 24, library paginada sem apagar favoritos. CI 40101131043 contrato SUCCESS, Gradle em andamento no ultimo readback; proof 40101131025 SUCCESS. Checklist docs/qa/ANYTV_V2_2925_CARDS_NAVIGATION_PAGINATION24_20261024.md. Nenhum signer/OTA/Worker/D1/TV companion/merge alterado. P0 7/11 e F0-F8 inalterados."
     }
   ],
   "discovery_v3": {
