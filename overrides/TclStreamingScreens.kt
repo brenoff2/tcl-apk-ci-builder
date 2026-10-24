@@ -1241,7 +1241,7 @@ internal fun TclStreamingScreens(
             .filter { StreamingCatalog.supportsSubscription(it) }.distinct().take(12)
     }
     var homeLibrary by remember { mutableStateOf(false) }
-    var expandedHomeShelf by remember { mutableStateOf<String?>(null) }
+    var openedSection by remember { mutableStateOf<String?>(null) }
     var trackedSeries by remember {
         mutableStateOf(prefs.getString("anytv_tracking_series", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
@@ -1484,6 +1484,9 @@ internal fun TclStreamingScreens(
     // Fetch each genre shelf only once per screen, preserving user-selected order.
     LaunchedEffect(selectedHomeGenre, genreSort, genreViewMode) {
         catalogScrollState.scrollToItem(0)
+    }
+    LaunchedEffect(selectedHomeGenre, selected?.packageName, homeLibrary, homeContentType) {
+        openedSection = null
     }
     LaunchedEffect(mainGenres, tvGenres, filterGenreIds, selectedHomeGenre,
         homeContentType, genreSort) {
@@ -2093,11 +2096,61 @@ internal fun TclStreamingScreens(
                                 else -> anyTvReleased(title) &&
                                     (title.media != "movie" || title.id !in cinemaIds)
                             }
-                        }.distinctBy { "${it.media}:${it.id}" }
+                        }.distinctBy { "${it.media}:${it.id}" }.take(ANYTV_LIST_BATCH)
                         if (unique.isEmpty()) null else heading to unique
                     }
                     LazyColumn(state = catalogScrollState,
                         modifier = Modifier.weight(1f)) {
+                        if (openedSection != null) {
+                            val sectionTitle = openedSection.orEmpty()
+                            val sectionTitles = uniqueShelves.firstOrNull {
+                                it.first == sectionTitle
+                            }?.second.orEmpty().take(ANYTV_LIST_BATCH)
+                            item {
+                                TextButton(onClick = { openedSection = null }) {
+                                    Text("‹ Voltar às seções")
+                                }
+                                Text(sectionTitle, fontSize = 17.sp,
+                                    fontWeight = FontWeight.SemiBold)
+                            }
+                            items(sectionTitles.chunked(3)) { group ->
+                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                    verticalAlignment = Alignment.Top) {
+                                    group.forEach { title ->
+                                        Column(modifier = Modifier.weight(1f).clickable {
+                                            details = title; detailsPackage = null
+                                        }, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            AnyTvPinnedImage(
+                                                model = "https://image.tmdb.org/t/p/w185" + title.poster,
+                                                contentDescription = "Cartaz: " + title.name,
+                                                modifier = Modifier.fillMaxWidth().height(158.dp),
+                                                contentScale = ContentScale.Crop)
+                                            AnyTvCardMetaRow(title,
+                                                favorite = isFavorite(title, "library"),
+                                                marked = if (title.media == "movie")
+                                                    title.id.toString() in watchedFilms
+                                                else title.id.toString() in trackedSeries,
+                                                compact = true,
+                                                onMarked = {
+                                                    if (title.media == "movie")
+                                                        toggleFilmWatched(title.id)
+                                                    else toggleSeriesTracking(title.id)
+                                                },
+                                                onFavorite = { toggleFavorite(title, "library") })
+                                            StreamingOfferIcons(title, offerCache, displayed,
+                                                showRating = false,
+                                                inCinema = title.id in cinemaIds)
+                                            Text(title.name, maxLines = 3, lineHeight = 14.sp,
+                                                modifier = Modifier.fillMaxWidth().height(42.dp),
+                                                overflow = TextOverflow.Ellipsis,
+                                                fontSize = 11.sp)
+                                        }
+                                    }
+                                    repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                        } else {
                         if (!homeLibrary) {
                             item {
                                 Text(selected?.name ?: "Início", fontSize = 17.sp,
@@ -2280,7 +2333,7 @@ internal fun TclStreamingScreens(
                                                     model = "https://image.tmdb.org/t/p/w185" +
                                                         title.poster,
                                                     contentDescription = "Cartaz: " + title.name,
-                                                    modifier = Modifier.fillMaxWidth().height(135.dp),
+                                                    modifier = Modifier.fillMaxWidth().height(158.dp),
                                                     contentScale = ContentScale.Crop)
                                                 AnyTvCardMetaRow(title,
                                                     favorite = isFavorite(title, "library"),
@@ -2320,7 +2373,7 @@ internal fun TclStreamingScreens(
                                         AnyTvPinnedImage(
                                             model = "https://image.tmdb.org/t/p/w185" + title.poster,
                                             contentDescription = "Cartaz: " + title.name,
-                                            modifier = Modifier.size(width = 92.dp, height = 132.dp),
+                                            modifier = Modifier.size(width = 116.dp, height = 158.dp),
                                             contentScale = ContentScale.Crop)
                                         Column(modifier = Modifier.weight(1f),
                                             verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -2439,60 +2492,33 @@ internal fun TclStreamingScreens(
                                         if (shelf.size > 6) {
                                             OutlinedButton(
                                                 onClick = {
-                                                    expandedHomeShelf = if (expandedHomeShelf == heading)
-                                                        null else heading
+                                                    val genreName = heading.removePrefix("Por gênero: ")
+                                                    val targetGenre = if (heading.startsWith("Por gênero: "))
+                                                        currentGenreList.firstOrNull { it.name == genreName }
+                                                    else null
+                                                    when {
+                                                        heading == ANYTV_CINEMA_SHELF -> {
+                                                            selected = null
+                                                            homeContentType = "movie"
+                                                            selectedHomeGenre = ANYTV_CINEMA_FILTER
+                                                            openedSection = null
+                                                        }
+                                                        targetGenre != null -> {
+                                                            selected = null
+                                                            selectedHomeGenre = targetGenre.id
+                                                            openedSection = null
+                                                        }
+                                                        else -> openedSection = heading
+                                                    }
                                                 },
                                                 modifier = Modifier.height(34.dp),
                                                 shape = RoundedCornerShape(21.dp),
                                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
                                             ) {
-                                                Text(if (expandedHomeShelf == heading) "Voltar"
-                                                     else "Ver mais ›", fontSize = 11.sp)
+                                                Text("Ver mais ›", fontSize = 11.sp)
                                             }
                                         }
                                     }
-                                    if (expandedHomeShelf == heading) {
-                                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                            shelf.chunked(3).forEach { group ->
-                                                Row(modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(9.dp),
-                                                    verticalAlignment = Alignment.Top) {
-                                                    group.forEach { item ->
-                                                        Column(modifier = Modifier.weight(1f).clickable {
-                                                            details = item; detailsPackage = null
-                                                        }) {
-                                                            AnyTvPinnedImage(
-                                                                model = "https://image.tmdb.org/t/p/w185" + item.poster,
-                                                                contentDescription = "Cartaz: " + item.name,
-                                                                modifier = Modifier.fillMaxWidth().height(158.dp),
-                                                                contentScale = ContentScale.Crop)
-                                                            Spacer(Modifier.height(5.dp))
-                                                            AnyTvCardMetaRow(item,
-                                                                favorite = isFavorite(item, "library"),
-                                                                marked = if (item.media == "movie")
-                                                                    item.id.toString() in watchedFilms
-                                                                else item.id.toString() in trackedSeries,
-                                                                compact = true,
-                                                                onMarked = {
-                                                                    if (item.media == "movie")
-                                                                        toggleFilmWatched(item.id)
-                                                                    else toggleSeriesTracking(item.id)
-                                                                },
-                                                                onFavorite = { toggleFavorite(item, "library") })
-                                                            StreamingOfferIcons(item, offerCache, displayed,
-                                                                showRating = false,
-                                                                inCinema = item.id in cinemaIds)
-                                                            Spacer(Modifier.height(6.dp))
-                                                            Text(item.name, maxLines = 3, lineHeight = 14.sp,
-                                                                modifier = Modifier.fillMaxWidth().height(42.dp),
-                                                                overflow = TextOverflow.Ellipsis, fontSize = 11.sp)
-                                                        }
-                                                    }
-                                                    repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
-                                                }
-                                            }
-                                        }
-                                    } else {
                                     // Keep the approved horizontal two-row rail by default.
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                                         items(shelf.chunked(2)) { pair ->
@@ -2535,11 +2561,11 @@ internal fun TclStreamingScreens(
                                             }
                                         }
                                     }
-                                    }
                                 }
                             }
                         }
                         }
+                        } // standalone section or main catalogue
                     }
                 // Links oficiais são mostrados quando disponíveis; nenhum código é exigido.
                 Text("ⓘ Fontes: TMDB / JustWatch",
