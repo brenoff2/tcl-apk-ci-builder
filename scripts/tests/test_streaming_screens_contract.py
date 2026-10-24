@@ -220,11 +220,11 @@ class StreamingScreens(unittest.TestCase):
 
     def test_banner_is_below_tv_icons_and_uses_valid_trending_route(self):
         self.assertNotIn('discoveryShelf("trending/movie/week?language=pt-BR"', self.screen)
-        self.assertIn('modifier = Modifier.fillMaxWidth().height(75.dp)', self.screen)
-        self.assertIn('Text(movie.name, fontSize = 12.sp', self.screen)
-        self.assertIn('Text("Ver ›", fontSize = 10.sp', self.screen)
+        self.assertIn('modifier = Modifier.fillMaxWidth().height(92.dp)', self.screen)
+        self.assertIn('Text(movie.name, fontSize = 15.sp', self.screen)
+        self.assertIn('Text("Ver ›", fontSize = 12.sp', self.screen)
         self.assertLess(
-            self.apps.index('OfficialTvIcon(app = app, size = 56.dp)'),
+            self.apps.index('OfficialTvIcon(app = app, size = 52.dp)'),
             self.apps.index('AnyTvHomeFilmBanner(onOpenStreaming = { showStreaming = true })')
         )
 
@@ -391,10 +391,10 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('collected.filter(::anyTvReleased).distinctBy {', self.screen)
         self.assertIn('successfulRequests == 0', self.screen)
 
-    def test_same_32dp_icons_and_system_bars_and_banner_ratio(self):
+    def test_screenshot_38dp_icons_system_bars_and_full_bleed_banner(self):
         home = Path("overrides/TclApprovedHomeScreen.kt").read_text(encoding="utf-8")
         self.assertIn('internal fun TclHeaderAction(', home)
-        self.assertIn('modifier = Modifier.size(32.dp)', home)
+        self.assertIn('modifier = Modifier.size(38.dp)', home)
         self.assertIn('TclHeaderAction(Icons.Filled.FilterList', self.screen)
         self.assertIn('val deviceBrand = remember(tvName)', home)
         self.assertIn('Text(deviceBrand', home)
@@ -402,8 +402,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('window.navigationBarColor = systemBg.toArgb()', home)
         self.assertIn('window.statusBarColor = systemBg.toArgb()', home)
         self.assertIn('window.navigationBarColor = systemBg.toArgb()', home)
-        self.assertIn('Modifier.fillMaxHeight().weight(0.3f)', self.screen)
-        self.assertIn('Modifier.fillMaxHeight().weight(0.7f)', self.screen)
+        self.assertIn('Brush.horizontalGradient(listOf(', self.screen)
+        self.assertIn('color = Color.White, maxLines = 2', self.screen)
         self.assertNotIn('Canal não informado', self.screen)
 
     def test_search_retries_global_names_without_false_empty_result(self):
@@ -478,7 +478,7 @@ class StreamingScreens(unittest.TestCase):
             '}.take(10)',
             'previewProviders[movie.id]',
             'contentDescription = "Canal: " + offer.name',
-            'color = Color(0xFFB7BCC5)',
+            'color = Color(0xFFCED0D6)',
             'contentAlignment = Alignment.CenterStart',
         ):
             with self.subTest(snippet=snippet):
