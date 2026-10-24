@@ -1,3 +1,5 @@
+> **READBACK FINAL DA RODADA (24/10/2026):** [Actions #40101131043](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40101131043) **SUCCESS** para código funcional `f3b021519b8a42cf5472bdd5982fc06254b71f20`: (1) contratos de UI/links/segurança SUCCESS, (2) Gradle assembleRelease SUCCESS, (3) identidade do APK V2 unsigned SUCCESS. [Device-proof #40101131025](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40101131025) SUCCESS. O workflow de auditoria continua produzindo **code53 unsigned**, não uma release 2.9.25/code54. **Sem assinatura, OTA, atualização do companion, teste físico ou merge.** Última OTA assinada permanece 2.9.24/code53. Progresso 7/11 (63%), gates F0–F8 NAO_HOMOLOGADO.
+
 # AnyTV 2.9.25 candidata — cartões, "Ver mais" e 24 títulos por lote
 
 **Data:** 2026-10-24. **Escopo:** somente cliente Android AnyTV V2 na branch DEV do PR #3. **Publicação:** nenhuma.
