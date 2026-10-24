@@ -43,10 +43,12 @@ Preservar o intervalo entre cartões, colunas da home de 116dp/9dp, duas fileira
 | U03 | Home em duas fileiras, estado vermelho/verde persistente e sem trailer nos cartões | NAO_TESTADO_EM_APARELHO |
 | U04 | Alternância ícones lista/grade, ordenação e paginação sem regressão | NAO_TESTADO_EM_APARELHO |
 | U05 | Trailer presente e funcional somente na ficha | NAO_TESTADO_EM_APARELHO |
-| L01 | Node tests: normalização Netflix/Prime, `videoLink` seguro, 401/503 e replay | CI_SEM_READBACK |
-| L02 | Kotlin/Python contratos e Gradle `assembleRelease` para V2 candidata | CI_SEM_READBACK |
+| L01 | Node tests: normalização Netflix/Prime, `videoLink` seguro, 401/503 e replay | PASS (31/31) #40058621968 |
+| L02 | Kotlin/Python contratos e Gradle `assembleRelease` para V2 candidata | CONTRATOS_PASS; GRADLE_PENDENTE #40058791096 |
 | L03 | Dispositivo real ativado: status 200; não ativado: 401 com mensagem correta | NAO_TESTADO_EM_APARELHO |
 | L04 | Prime, Netflix, Disney, Apple e Max: ficha / busca / app aberto (registrar separadamente) | NAO_TESTADO_NA_TCL |
 | L05 | Assinatura V2/OTA e preservação dos dados após eventual release autorizada | NAO_EXECUTADO |
+
+**Evidência nova (readback 24/10):** [resolver offline #40058621968](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058621968) SUCCESS, 31/31 testes, zero falhas; [prova de dispositivo #40058631392](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058631392) SUCCESS. [Compilação V2 sem assinatura #40058791096](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058791096) iniciou; testes de contrato passaram, conclusão Gradle ainda não verificada neste registro. Nenhum deploy ou OTA.
 
 **Critério de parada:** não publicar APK, não fazer deploy de Worker, não atualizar companion, não mudar signer/OTA nem fazer merge sem autorização específica e evidência de build/testes. Se o CI falhar, investigar e corrigir somente a causa.
