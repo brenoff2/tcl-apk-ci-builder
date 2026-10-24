@@ -179,7 +179,7 @@ class StreamingScreens(unittest.TestCase):
             'packageName.ifBlank { "library" }',
             'fun toggleFilmWatched(id: Int)',
             '"anytv_watched_movies"', '"anytv_watched_episodes"',
-            'fun toggleWatched(id: Int, season: Int, episode: Int)',
+            'fun toggleWatched(title: StreamingTitle, season: Int, episode: Int)',
             '"Filmes para assistir"', '"Séries em andamento"',
             '"Filmes já assistidos"', 'val filteredShelves',
             'val uniqueShelves', 'it.media}:',
@@ -470,7 +470,7 @@ class StreamingScreens(unittest.TestCase):
             'private fun AnyTvCardMetaRow(',
             'fun toggleFavorite(title: StreamingTitle, packageName: String)',
             'toggleFilmWatched(title.id)',
-            'toggleSeriesTracking(title.id)',
+            'toggleSeriesTracking(title)',
             'val sorting = when (sort)',
             '"&sort_by=$sorting&with_genres=$id&page=$sourcePage"',
             'val genreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"',
@@ -623,6 +623,54 @@ class StreamingScreens(unittest.TestCase):
             self.assertTrue(0 <= portion.find(metadata) < portion.find(offers) <
                             portion.find(title), marker)
         self.assertIn('modifier = Modifier.fillMaxWidth().height(42.dp)', self.screen)
+
+    def test_watching_series_stay_persisted_and_visible_in_two_columns(self):
+        for snippet in (
+            '"anytv_watching_titles_v1"',
+            'fun rememberWatchingTitle(title: StreamingTitle)',
+            'if (media == "tv") watchingTitles[id]?.let { return it }',
+            'fun toggleSeriesTracking(title: StreamingTitle)',
+            'fun toggleWatched(title: StreamingTitle, season: Int, episode: Int)',
+            'watchingTitles = watchingTitles + (title.id to title)',
+            'suspend fun lookupSeries(id: Int): StreamingTitle?',
+            'val restored = runCatching { StreamingCatalog.lookupSeries(id) }.getOrNull()',
+            '!it.name.startsWith("saved_title_")',
+            'librarySection == "watching"',
+            'items(inProgress.take(sectionVisibleCount).chunked(2))',
+            'sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })',
+            'value = watchingQuery',
+            'label = { Text("Buscar nas minhas séries em andamento") }',
+            'Text("Mostrar mais 24")',
+        ):
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, self.screen)
+
+    def test_global_search_is_full_black_overlay_with_independent_history(self):
+        for snippet in (
+            'if (showGlobalSearch) {',
+            'Dialog(onDismissRequest = { showGlobalSearch = false }',
+            'color = Color.Black',
+            'contentDescription = "Fechar busca"',
+            'contentDescription = "Limpar texto da busca"',
+            '"anytv_global_search_history_v1"',
+            'fun rememberSuccessfulSearch(term: String)',
+            'if (it.isNotEmpty()) rememberSuccessfulSearch(globalSearchTerm)',
+            'Text("Buscas recentes"',
+            'Text("Limpar histórico"',
+            'globalSearchHistory.take(10).forEach { past ->',
+            'globalSearchResults.chunked(2).forEach { pair ->',
+            '.verticalScroll(rememberScrollState())',
+            'globalSearchResults = emptyList(); globalSearchError = null',
+        ):
+            with self.subTest(snippet=snippet):
+                self.assertIn(snippet, self.screen)
+        # The search UI no longer occupies a row in the page's catalogue layout.
+        start = self.screen.index('    if (showGlobalSearch) {')
+        end = self.screen.index('    if (showMyStreamingSettings) {', start)
+        search_page = self.screen[start:end]
+        self.assertIn('Surface(modifier = Modifier.fillMaxSize()', search_page)
+        self.assertIn('color = Color.Black', search_page)
+        self.assertNotIn('expandedHomeShelf', self.screen)
 
     def test_search_live_suggestions_and_clear_button(self):
         self.assertIn('LaunchedEffect(globalSearchDraft)', self.screen)
