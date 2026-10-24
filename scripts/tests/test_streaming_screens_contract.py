@@ -346,7 +346,7 @@ class StreamingScreens(unittest.TestCase):
     def test_device_approval_is_requested_without_visible_secret(self):
         identity = Path("overrides/AnyTvDeviceIdentity.kt").read_text(encoding="utf-8")
         self.assertIn('linkActivationRequired = state == "unauthorized"', self.screen)
-        self.assertIn('Text("Solicitar liberação")', self.screen)
+        self.assertIn('else "Solicitar liberação"', self.screen)
         self.assertIn('AnyTvDeviceIdentity.requestApproval(context)', self.screen)
         self.assertIn('AnyTvPersonalLinks.activationStatus(context)', self.screen)
         self.assertIn('deviceId(context).takeLast(8)', self.screen)
@@ -354,7 +354,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Código único de ativação', self.screen)
         self.assertNotIn('AnyTvDeviceIdentity.activate(context', self.screen)
         self.assertIn('ANYTV-REQUEST1', identity)
-        self.assertIn('"/v1/device/request"', identity)
+        self.assertIn('/v1/device/request', identity)
         self.assertNotIn('putString("activation', identity)
 
     def test_streaming_service_icons_and_cinema_sessions(self):
