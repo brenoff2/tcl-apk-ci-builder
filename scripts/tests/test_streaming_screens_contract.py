@@ -177,7 +177,7 @@ class StreamingScreens(unittest.TestCase):
     def test_library_global_saves_watch_progress_and_deduplicates(self):
         for fragment in (
             'packageName.ifBlank { "library" }',
-            'fun toggleFilmWatched(id: Int)',
+            'fun toggleFilmWatched(title: StreamingTitle)',
             '"anytv_watched_movies"', '"anytv_watched_episodes"',
             'fun toggleWatched(title: StreamingTitle, season: Int, episode: Int)',
             '"Filmes para assistir"', '"Continuando"',
