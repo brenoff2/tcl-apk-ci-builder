@@ -11,7 +11,7 @@ test("operator issuance returns 256-bit code and only hash for D1", () => {
   assert.equal(item.codeHash, createHash("sha256").update(bytes).digest("base64url"));
   assert.notEqual(item.code, item.codeHash);
   assert.equal(item.expiresAt, 1700000600);
-  assert.equal(item.validUntil, 1700000000 + 30 * 86400);
+  assert.equal(item.validUntil, 1700000000 + 365 * 86400);
 });
 test("operator policy rejects weak randomness and unsafe expiration", () => {
   assert.throws(() => issueActivation({ random: () => Buffer.alloc(10) }));
