@@ -85,23 +85,23 @@ internal object AnyTvPersonalLinks {
 
     /** Signed, read-only check: never treats a catalog response as activation proof. */
     suspend fun activationStatus(context: Context): String = withContext(Dispatchers.IO) {
-        val url = URL(AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/device/status")
-        val connection = url.openConnection() as HttpURLConnection
-        try {
-            connection.connectTimeout = 5000
-            connection.readTimeout = 8000
-            connection.setRequestProperty("Accept", "application/json")
-            AnyTvDeviceIdentity.attachProof(context, connection, url.toURI().rawPath)
-            when (connection.responseCode) {
-                200 -> "activated"
-                401 -> "unauthorized"
-                else -> "unavailable"
+        runCatching {
+            val url = URL(AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/device/status")
+            val connection = url.openConnection() as HttpURLConnection
+            try {
+                connection.connectTimeout = 5000
+                connection.readTimeout = 8000
+                connection.setRequestProperty("Accept", "application/json")
+                AnyTvDeviceIdentity.attachProof(context, connection, url.toURI().rawPath)
+                when (connection.responseCode) {
+                    200 -> "activated"
+                    401 -> "unauthorized"
+                    else -> "unavailable"
+                }
+            } finally {
+                connection.disconnect()
             }
-        } catch (_: Exception) {
-            "unavailable"
-        } finally {
-            connection.disconnect()
-        }
+        }.getOrDefault("unavailable")
     }
 
     /** Resolve official title link through the AnyTV backend. No client API key. */
