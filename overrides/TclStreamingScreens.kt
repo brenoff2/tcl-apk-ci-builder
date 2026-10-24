@@ -1014,27 +1014,23 @@ private fun AnyTvPosterCard(
     }
 }
 
-/** Single-row secondary carousel, separate from the paginated catalogue. */
+/** One horizontal strip with three full-size standard cards visible on screen. */
 @Composable
 private fun AnyTvOneRowPreview(
     heading: String,
     titles: List<StreamingTitle>,
-    onOpen: (StreamingTitle) -> Unit
+    card: @Composable (StreamingTitle, Modifier, Boolean) -> Unit
 ) {
     if (titles.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(7.dp),
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
         Text(heading, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            items(titles.distinctBy { "${it.media}:${it.id}" }.take(ANYTV_LIST_BATCH)) { title ->
-                Column(modifier = Modifier.width(109.dp).clickable { onOpen(title) }) {
-                    AnyTvPinnedImage(
-                        model = "https://image.tmdb.org/t/p/w185" + title.poster,
-                        contentDescription = title.name,
-                        modifier = Modifier.fillMaxWidth().height(145.dp),
-                        contentScale = ContentScale.Crop)
-                    Text(title.name, fontSize = 11.sp, lineHeight = 14.sp,
-                        maxLines = 2, overflow = TextOverflow.Ellipsis)
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val cardWidth = (maxWidth - 18.dp) / 3f
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                items(titles.distinctBy { "${it.media}:${it.id}" }
+                    .take(ANYTV_LIST_BATCH)) { title ->
+                    card(title, Modifier.width(cardWidth), heading.contains("Cinema"))
                 }
             }
         }
@@ -2328,18 +2324,14 @@ internal fun TclStreamingScreens(
                                     AnyTvOneRowPreview(
                                         if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                             "Em breve · Cinema" else "Em breve · Streaming",
-                                        previews) { chosen ->
-                                        details = chosen; detailsPackage = null
-                                    }
+                                        previews) posterCard)
                                 }
                             }
                             if (selectedHomeGenre == ANYTV_CINEMA_FILTER &&
                                 cinemaWorldwide.isNotEmpty()) {
                                 item {
                                     AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
-                                        cinemaWorldwide) { chosen ->
-                                        details = chosen; detailsPackage = null
-                                    }
+                                        cinemaWorldwide) posterCard)
                                 }
                             }
                         }
@@ -2599,17 +2591,13 @@ internal fun TclStreamingScreens(
                                 if (cinemaWorldwide.isNotEmpty()) {
                                     item {
                                         AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
-                                            cinemaWorldwide) { chosen ->
-                                            details = chosen; detailsPackage = null
-                                        }
+                                            cinemaWorldwide) posterCard)
                                     }
                                 }
                                 if (cinemaComingSoon.isNotEmpty()) {
                                     item {
                                         AnyTvOneRowPreview("Em breve · Cinema",
-                                            cinemaComingSoon) { chosen ->
-                                            details = chosen; detailsPackage = null
-                                        }
+                                            cinemaComingSoon) posterCard)
                                     }
                                 }
                             }
