@@ -91,7 +91,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('suspend fun offersInBrazil(item: StreamingTitle)', self.screen)
         self.assertIn('.optJSONObject("BR")?.optJSONArray("flatrate")', self.screen)
         self.assertIn('offer.optString("logo_path")', self.screen)
-        self.assertIn('StreamingOfferIcons(item, offerCache, displayed)', self.screen)
+        self.assertIn('StreamingOfferIcons(item, offerCache, displayed,', self.screen)
         self.assertIn('StreamingOfferIcons(current, offerCache, displayed', self.screen)
         self.assertIn('StreamingCatalog.appHasOffer(app, it)', self.screen)
         self.assertIn('Nenhuma oferta de assinatura confirmada no Brasil.', self.screen)
@@ -419,7 +419,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('textAlign = TextAlign.Center', self.screen)
         self.assertIn('Text(item.name, maxLines = 3, lineHeight = 14.sp,', self.screen)
         self.assertIn('modifier = Modifier.fillMaxWidth().height(42.dp)', self.screen)
-        self.assertIn('Always reserve a metadata row', self.screen)
+        self.assertIn('Reserve a category/provider row', self.screen)
         self.assertNotIn('if (item.votes > 0 || offerings.isNotEmpty())', self.screen)
         self.assertIn('modifier = Modifier.width(116.dp)', self.screen)
         self.assertNotIn('Text("★ "', self.screen)
@@ -428,8 +428,8 @@ class StreamingScreens(unittest.TestCase):
             'genreViewMode == "grid"',
             'items(genreTitles.chunked(3))',
             'title.overview.take(160)',
-            'Text("Trailer", fontSize = 11.sp',
-            'fun openGenreTrailer(title: StreamingTitle)',
+            'Text("▶ Ver trailer")',
+            'private fun AnyTvCardMetaRow(',
             'fun toggleFavorite(title: StreamingTitle, packageName: String)',
             'toggleFilmWatched(title.id)',
             'toggleSeriesTracking(title.id)',
@@ -445,6 +445,39 @@ class StreamingScreens(unittest.TestCase):
         ):
             with self.subTest(snippet=snippet):
                 self.assertIn(snippet, self.screen)
+
+    def test_three_row_cards_and_icon_only_genre_selector(self):
+        self.assertIn('AnyTvGenreViewIcon(Icons.Filled.ViewList, "Lista",', self.screen)
+        self.assertIn('AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade de três colunas",',
+                      self.screen)
+        self.assertNotIn('AnyTvCompactChip("Lista",', self.screen)
+        self.assertNotIn('AnyTvCompactChip("Grade 3",', self.screen)
+        self.assertIn('Icon(Icons.Filled.Favorite,', self.screen)
+        self.assertIn('tint = if (favorite) Color(0xFFE04B57) else neutral', self.screen)
+        self.assertIn('tint = if (marked) Color(0xFF1CB96B) else neutral', self.screen)
+        self.assertNotIn('AnyTvGenreTitleActions(', self.screen)
+        self.assertNotIn('onTrailer =', self.screen)
+        self.assertIn('Text("▶ Ver trailer")', self.screen)
+        self.assertEqual(self.screen.count('showRating = false'), 3)
+        for marker, until, metadata, offers, title in (
+            ('items(genreTitles.chunked(3))',
+             'repeat(3 - group.size)', 'AnyTvCardMetaRow(title,',
+             'StreamingOfferIcons(title, offerCache, displayed,',
+             'Text(title.name, maxLines = 3,'),
+            ('items(genreTitles, key =',
+             'HorizontalDivider(color =', 'AnyTvCardMetaRow(title,',
+             'StreamingOfferIcons(title, offerCache, displayed,',
+             'Text(title.name, maxLines = 3,'),
+            ('items(shelf.chunked(2))',
+             'if (heading.startsWith("Em breve"))',
+             'AnyTvCardMetaRow(item,',
+             'StreamingOfferIcons(item, offerCache, displayed,',
+             'Text(item.name, maxLines = 3,'),
+        ):
+            portion = self.screen.split(marker, 1)[1].split(until, 1)[0]
+            self.assertTrue(0 <= portion.find(metadata) < portion.find(offers) <
+                            portion.find(title), marker)
+        self.assertIn('modifier = Modifier.fillMaxWidth().height(42.dp)', self.screen)
 
     def test_search_live_suggestions_and_clear_button(self):
         self.assertIn('LaunchedEffect(globalSearchDraft)', self.screen)
