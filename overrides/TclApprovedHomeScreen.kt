@@ -517,23 +517,26 @@ private fun TclSideRocker(
     onIncrease: () -> Unit,
     onDecrease: () -> Unit
 ) {
-    val outline = RoundedCornerShape(25.dp)
+    val shape = RoundedCornerShape(30.dp)
     Box(
-        modifier = modifier
-            .clip(outline)
-            .background(Brush.verticalGradient(listOf(TclSurfaceHigh, TclSurface)))
-            .border(1.dp, TclOutline, outline)
+        modifier = modifier.clip(shape)
+            .background(Brush.verticalGradient(
+                listOf(Color(0xFF202128), Color(0xFF101116), Color(0xFF18191F))
+            ))
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(vertical = 12.dp, horizontal = 3.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                headerIcon, contentDescription = if (label == "Volume") "Silenciar" else "TV",
-                tint = TclText,
-                modifier = Modifier.size(17.dp).clickable(onClick = onHeader)
-            )
+            Box(
+                modifier = Modifier.fillMaxWidth().height(28.dp)
+                    .clickable(onClick = onHeader),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(headerIcon,
+                    contentDescription = if (label == "Volume") "Silenciar" else "TV",
+                    tint = TclText, modifier = Modifier.size(17.dp))
+            }
             Box(
                 modifier = Modifier.fillMaxWidth().weight(1f).clickable(onClick = onIncrease),
                 contentAlignment = Alignment.Center
@@ -541,6 +544,11 @@ private fun TclSideRocker(
                 Icon(Icons.Filled.Add, contentDescription = "Aumentar " + label,
                     tint = TclText, modifier = Modifier.size(24.dp))
             }
+            // Decorative unfilled rail, not a claimed TV volume/channel level.
+            Box(
+                modifier = Modifier.width(4.dp).weight(1.25f)
+                    .clip(RoundedCornerShape(4.dp)).background(Color(0xFF3B3D45))
+            )
             Box(
                 modifier = Modifier.fillMaxWidth().weight(1f).clickable(onClick = onDecrease),
                 contentAlignment = Alignment.Center
@@ -548,7 +556,8 @@ private fun TclSideRocker(
                 Icon(Icons.Filled.Remove, contentDescription = "Diminuir " + label,
                     tint = TclText, modifier = Modifier.size(24.dp))
             }
-            Text(label, fontSize = 9.sp, color = TclText, maxLines = 1)
+            Text(label, fontSize = 10.sp, color = TclMuted,
+                maxLines = 1, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
