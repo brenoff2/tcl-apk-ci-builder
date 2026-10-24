@@ -562,6 +562,13 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('sectionVisibleCount += ANYTV_LIST_BATCH', self.screen)
         self.assertIn('shelf.take(ANYTV_LIST_BATCH).chunked(2)', self.screen)
 
+        self.assertIn('LaunchedEffect(librarySection, homeLibrary)', self.screen)
+        self.assertIn('LaunchedEffect(watchingQuery)', self.screen)
+        self.assertIn('Nenhuma série corresponde à sua busca.', self.screen)
+        self.assertIn('rememberSuccessfulSearch(past)', self.screen)
+        self.assertNotIn('if (it.isNotEmpty()) rememberSuccessfulSearch(globalSearchTerm)',
+                         self.screen)
+
     def test_genre_cards_restore_same_poster_height_as_home(self):
         self.assertNotIn('Modifier.fillMaxWidth().height(135.dp)', self.screen)
         self.assertNotIn('Modifier.size(width = 92.dp, height = 132.dp)', self.screen)
@@ -654,7 +661,7 @@ class StreamingScreens(unittest.TestCase):
             'contentDescription = "Limpar texto da busca"',
             '"anytv_global_search_history_v1"',
             'fun rememberSuccessfulSearch(term: String)',
-            'if (it.isNotEmpty()) rememberSuccessfulSearch(globalSearchTerm)',
+            'rememberSuccessfulSearch(globalSearchTerm)',
             'Text("Buscas recentes"',
             'Text("Limpar histórico"',
             'globalSearchHistory.take(10).forEach { past ->',
