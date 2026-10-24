@@ -7,6 +7,7 @@ on:
       - 'overrides/TclStreamingScreens.kt'
       - 'overrides/TclApprovedHomeScreen.kt'
       - 'overrides/TclResponsivePad.kt'
+      - 'scripts/apply_tcl_sticky_controls.py'
       - 'overrides/TclInstalledApps.kt'
       - 'overrides/PlaybackTransportBar.kt'
       - 'overrides/AnyTvSplashScreen.kt'
