@@ -1434,8 +1434,11 @@ internal fun TclStreamingScreens(
                         return@launch
                     }
                     AnyTvPersonalResult.ActivationRequired -> {
-                        titleActionFeedback = "Links diretos não autorizados neste celular. " +
-                            "A ativação individual precisa estar registrada no servidor."
+                        val mode = TclTvAppApi.searchTitle(host, pairing,
+                            packageName, title.name)
+                        titleActionFeedback = "Links diretos ainda não autorizados neste celular. " +
+                            (if (mode == "search") "Busca enviada à TCL."
+                             else "Aplicativo aberto; pesquise o título na TV.")
                         return@launch
                     }
                     AnyTvPersonalResult.ResolverUnavailable -> {
