@@ -440,6 +440,38 @@ test("TMDB upstream error reports status without exposing credentials",async()=>
 });
 
 
+test("cinema BR now-playing uses TMDB region and preserves cache semantics", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "server-only-test";
+  const seen = [];
+  const deps = { fetch: async url => {
+    const parsed = new URL(url);
+    seen.push({ route: parsed.pathname, region: parsed.searchParams.get("region"),
+      page: parsed.searchParams.get("page") });
+    return new Response(JSON.stringify({
+      results: [{ id: 456, title: "Filme no cinema" }], total_pages: 3
+    }), { status: 200 });
+  }};
+  for (const page of [1, 2]) {
+    const req = new Request("https://anytv.invalid/v1/catalog/movie/now_playing"
+      + "?language=pt-BR&region=BR&page=" + page);
+    assert.equal((await catalogRequest(req, env, deps)).status, 200);
+    assert.equal((await catalogRequest(req, env, deps)).status, 200);
+  }
+  assert.deepEqual(seen, [
+    { route: "/3/movie/now_playing", region: "BR", page: "1" },
+    { route: "/3/movie/now_playing", region: "BR", page: "2" }
+  ]);
+  for (const suffix of [
+    "movie/now_playing?region=US", "movie/now_playing?region=BR&region=US",
+    "movie/upcoming?region=BR", "discover/movie?region=BR"
+  ]) {
+    assert.equal((await catalogRequest(
+      new Request("https://anytv.invalid/v1/catalog/" + suffix), env, deps)).status,
+      400, suffix);
+  }
+});
+
 test("discovery endpoints are allowlisted and cached without exposing TMDB token", async () => {
   const env = makeEnv();
   env.TMDB_READ_TOKEN = "secret-server-only";
