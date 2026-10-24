@@ -47,6 +47,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
@@ -1569,16 +1570,34 @@ internal fun TclStreamingScreens(
                     if (showGlobalSearch) {
                         Row(verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            OutlinedTextField(
+                            // Material3 OutlinedTextField has a 56dp intrinsic min height.
+                            // Clamping it to 42dp clipped the baseline below the visible field.
+                            // BasicTextField keeps the caret, placeholder and typed text centered.
+                            BasicTextField(
                                 value = globalSearchDraft,
                                 onValueChange = { globalSearchDraft = it.take(90) },
-                                placeholder = { Text("Filme ou série", fontSize = 12.sp) },
                                 singleLine = true,
-                                modifier = Modifier.weight(1f).height(42.dp),
+                                textStyle = TextStyle(fontSize = 14.sp,
+                                    color = MaterialTheme.colorScheme.onSurface),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                modifier = Modifier.weight(1f).height(44.dp)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline,
+                                        RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 12.dp),
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
                                     globalSearchTerm = globalSearchDraft.trim()
-                                }))
+                                }),
+                                decorationBox = { innerTextField ->
+                                    Box(modifier = Modifier.fillMaxSize(),
+                                        contentAlignment = Alignment.CenterStart) {
+                                        if (globalSearchDraft.isEmpty()) {
+                                            Text("Buscar filme ou série", fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                        innerTextField()
+                                    }
+                                })
                             IconButton(onClick = {
                                 globalSearchTerm = globalSearchDraft.trim()
                             }, enabled = globalSearchDraft.trim().length >= 3,
