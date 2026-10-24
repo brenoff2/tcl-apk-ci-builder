@@ -193,7 +193,8 @@ private object StreamingDiskCache {
         val target = File(dir, "saved_title_${media}_${id}.json")
         val prior = runCatching { JSONObject(target.readText()) }.getOrNull()
         val merged = JSONObject(prior?.toString() ?: "{}")
-        for (field in listOf("name", "overview", "date", "poster", "backdrop", "genres")) {
+        for (field in listOf("name", "overview", "date", "poster", "backdrop",
+            "genres", "rating", "votes")) {
             val value = payload.opt(field)
             if (value != null && value.toString().isNotBlank() && value.toString() != "[]")
                 merged.put(field, value)
@@ -357,7 +358,9 @@ private object StreamingCatalog {
                     StreamingDiskCache.rememberTitle(media, movieId, JSONObject()
                         .put("name", name).put("overview", overview)
                         .put("date", released).put("poster", poster)
-                        .put("backdrop", backdrop).put("genres", JSONArray(genreIds)))
+                        .put("backdrop", backdrop).put("genres", JSONArray(genreIds))
+                        .put("rating", entry.optDouble("vote_average", 0.0))
+                        .put("votes", entry.optInt("vote_count", 0)))
                 }
             }
         }
@@ -1324,6 +1327,8 @@ internal fun TclStreamingScreens(
                 if (id <= 0 || name.isBlank()) null
                 else StreamingTitle(id, name, entry.optString("overview"),
                     entry.optString("poster"), "tv",
+                    rating = entry.optDouble("rating", 0.0),
+                    votes = entry.optInt("votes", 0),
                     backdrop = entry.optString("backdrop"),
                     date = entry.optString("date"),
                     genreIds = entry.optJSONArray("genres")?.let { genres ->
@@ -1340,6 +1345,7 @@ internal fun TclStreamingScreens(
             stored.put(JSONObject().put("id", item.id).put("name", item.name)
                 .put("overview", item.overview).put("poster", item.poster)
                 .put("backdrop", item.backdrop).put("date", item.date)
+                .put("rating", item.rating).put("votes", item.votes)
                 .put("genres", JSONArray(item.genreIds)))
         }
         prefs.edit().putString("anytv_watching_titles_v1", stored.toString()).apply()
@@ -1463,7 +1469,9 @@ internal fun TclStreamingScreens(
                     return@mapNotNull null
                 StreamingFavorite(
                     StreamingTitle(id, o.optString("name"), o.optString("overview"),
-                        o.optString("poster"), kind, date = o.optString("date"),
+                        o.optString("poster"), kind,
+                        rating = o.optDouble("rating", 0.0),
+                        votes = o.optInt("votes", 0), date = o.optString("date"),
                         genreIds = o.optJSONArray("genres")?.let { arr ->
                             (0 until arr.length()).map { arr.optInt(it) }.filter { it > 0 }
                         } ?: emptyList()), pkg)
@@ -1481,6 +1489,8 @@ internal fun TclStreamingScreens(
         val genreArr = cached.optJSONArray("genres")
         return StreamingTitle(id, titleName, cached.optString("overview"),
             cached.optString("poster"), media,
+            rating = cached.optDouble("rating", 0.0),
+            votes = cached.optInt("votes", 0),
             backdrop = cached.optString("backdrop"), date = cached.optString("date"),
             genreIds = (0 until (genreArr?.length() ?: 0))
                 .map { genreArr!!.optInt(it) }.filter { it > 0 })
@@ -1502,6 +1512,7 @@ internal fun TclStreamingScreens(
                 .put("overview", value.title.overview)
                 .put("poster", value.title.poster)
                 .put("date", value.title.date)
+                .put("rating", value.title.rating).put("votes", value.title.votes)
                 .put("genres", JSONArray(value.title.genreIds)))
         }
         prefs.edit().putString("streaming_favorites", json.toString()).apply()
