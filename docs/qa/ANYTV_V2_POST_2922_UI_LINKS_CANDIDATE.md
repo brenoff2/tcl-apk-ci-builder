@@ -3,7 +3,7 @@
 **Data:** 2026-10-24  
 **Estado:** IMPLEMENTADO SOMENTE EM CÓDIGO DEV. **NÃO COMPILADO, NÃO PUBLICADO, NÃO HOMOLOGADO** nesta etapa.  
 **Canônico de versão publicada:** 2.9.22/code51, `com.tclremote.livre.v2`.  
-**Branch:** `feat/anytv-p0-device-proof-verifier-20261020`; PR #3 draft. Commit funcional de referência: `e7bc977cd9623af398323924d2e450fd0dd4ec61`.  
+**Branch:** `feat/anytv-p0-device-proof-verifier-20261020`; PR #3 draft. Commit funcional de referência: `6a3be3eb61d8d96d2049a43d5823ede8c942b1ae`.  
 **Progresso P0:** 7/11 marcos, 63%; gates F0–F8 continuam NAO_HOMOLOGADO.
 
 ## Pedido exato de interface (aprovado)
