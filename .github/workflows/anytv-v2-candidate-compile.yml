@@ -97,4 +97,18 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
           grep -q "name='com.tclremote.livre.v2' versionCode='54'" candidate-identity.txt
-          echo 'V2_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
+          grep -q "versionName='2.9.25-AnyTV'" candidate-identity.txt
+          sha256sum "$APK" > candidate-sha256.txt
+          printf '%s\n' 'AUDITORIA APENAS: APK sem assinatura. NAO instalar como atualizacao da V2 assinada.' > candidate-NOT-INSTALL.txt
+          echo 'V2_2925_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
+      - name: Store unsigned code54 candidate for audit only
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-v2-2925-code54-unsigned-audit
+          path: |
+            source/app/build/outputs/apk/release/app-release-unsigned.apk
+            candidate-identity.txt
+            candidate-sha256.txt
+            candidate-NOT-INSTALL.txt
+          retention-days: 14
+          if-no-files-found: error
