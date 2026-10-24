@@ -229,7 +229,11 @@
       "Maintains 3-line fixed horizontal home rail card alignment and no show more in home",
       "Worker strict TMDB discover sort allowlist deployed, 200/month link-only budget separated, all seven Worker bindings and device modules preserved",
       "Existing V2 signer/package, OTA channel and unrelated old cert2026 APK unchanged"
-    ]
+    ],
+    "qa_checklist": "docs/qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md",
+    "next_chat_checkpoint": "docs/handoffs/NEXT_CHAT_FIRST_MESSAGE.md",
+    "next_action": "Perform on-device D01-D12 acceptance tests without gate promotion; record PASS/FAIL with evidence; fix reproducible failures only.",
+    "last_canonical_continuity_review": "2026-10-23"
   },
   "v2_previous": {
     "as_of": "2026-10-23",
