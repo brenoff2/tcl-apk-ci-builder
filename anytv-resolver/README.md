@@ -1,3 +1,5 @@
+> **CANDIDATA DEV 24/10/2026 — NÃO IMPLANTADA:** fonte de `worker.mjs` agora aceita formatos oficiais adicionais de Netflix/Prime Video, prioriza `videoLink` validado e oferece status autenticado em `GET /v1/device/status` (200 ativado / 401 não autorizado). O Worker em produção ce51439e ainda NÃO contém essas alterações; confirmação de aparelho no D1 e abertura de título na TCL seguem pendentes. Não introduzir quotas, tokens em APK ou afirmações de reprodução. Ver `docs/qa/ANYTV_V2_POST_2922_UI_LINKS_CANDIDATE.md`.
+
 # AnyTV — catálogo TMDB e resolvedor de links (Worker ativo)
 
 **Atualização:** 23/10/2026  
