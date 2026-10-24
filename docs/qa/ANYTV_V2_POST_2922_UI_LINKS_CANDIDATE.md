@@ -28,8 +28,8 @@ Preservar o intervalo entre cartões, colunas da home de 116dp/9dp, duas fileira
 
 ### Limitações existentes, não solucionadas por código apenas
 
-- Autorização individual efetiva do celular no D1 **não comprovada**. A emissão de código de ativação e sua aplicação dependem de fluxo de provisionamento autorizado; não embutir token/API key em APK, não cadastrar automaticamente sem prova.
-- Worker atual de produção (`ce51439e...`) **não recebeu** o endpoint/código novos; a leitura atual de produção não foi realizada neste ciclo.
+- O D1 real tem **1 dispositivo P-256 autorizado**, mas a identidade da instalação V2 atual ainda NÃO foi comprovada. A ativação registrada foi em 21/10, antes da primeira distribuição documentada da V2 em 23/10; chaves Android Keystore são isoladas por pacote/UID. Não copiar a chave antiga, não emitir outro código sem aprovação.
+- Readback REAL do Worker ativo (`ce51439e...`): `ANYTV_RESOLVER_AUTH_MODE=device`, `ANYTV_DEVICE_ACTIVATION_ENABLED=true`, tabelas D1 presentes; **o código implantado ainda não contém** `/v1/device/status` nem `videoLink`. Endpoint de ativação existe, mas o diagnóstico novo exige deploy coordenado aprovado.
 - Companion TV **não publicado** nesta etapa. Versão instalada e suporte a `/title-open` na TCL real não verificados.
 - Links oficiais e intents devem ser comprovados serviço por serviço na TCL; não declarar reprodução quando `startActivity` apenas aceitou um pedido.
 - Sem novo provedor comercial integrado: Watchmode/JustWatch oficiais demandam contrato/planos e verificação de cobertura. Movie of the Night continua a fonte atual.
@@ -50,6 +50,8 @@ Preservar o intervalo entre cartões, colunas da home de 116dp/9dp, duas fileira
 | L05 | Assinatura V2/OTA e preservação dos dados após eventual release autorizada | NAO_EXECUTADO |
 | L06 | Resposta 404 `not_available` diferente de 404 `no_supported_link` e 409 `ambiguous`; fallback TMDB/Wikidata não interrompido por 401/5xx | BACKEND_PASS 32/32 #40060118239 + ANDROID_PASS #40060106346 |
 | L07 | Java/TV APK seguro, allowlist compatível e limite 500 caracteres sem Acessibilidade | PASS 7+3 testes e Gradle #40060021841; instalação TCL NAO_TESTADA |
+| L08 | Exibir código único apenas após status `unauthorized`, limpar após uso, não persistir, confirmar 201/200 e exibir pacote/sufixo de ID | CÓDIGO_DEV; contratos do emissor PASS #40082285396, Android CI candidato #40082388480 EM_EXECUCAO; QA física PENDENTE |
+| L09 | Comparar modo/device e cadastro atual no D1, sem expor chaves | READBACK_CF_PASS: 1 autorizado, 1 código consumido; identidade V2 atual NÃO COMPROVADA |
 
 **Evidência nova (readback 24/10):** [resolver offline #40058621968](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058621968) SUCCESS, 31/31 testes, zero falhas; [prova de dispositivo #40058631392](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058631392) SUCCESS. [Compilação V2 sem assinatura #40058791096](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058791096) terminou SUCCESS (38 testes de streaming + 2 de segurança, Gradle `BUILD SUCCESSFUL in 4m 34s`, verificação do pacote V2). O ajuste posterior que mantém fallback TMDB/Wikidata após 401/503/no_supported_link está no commit `b5a969e` e será verificado em execução independente. Nenhum deploy ou OTA.
 
@@ -58,5 +60,7 @@ Preservar o intervalo entre cartões, colunas da home de 116dp/9dp, duas fileira
 **CI TV sem publicação:** link da [candidata do companion #40059722774](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40059722774); valida URLs oficiais Prime/Netflix, permissões, compilação, identidade do TV companion. Estado final SUCCESS; não instala no aparelho.
 
 **Conferência complementar de 24/10:** [resolvedor #40060118239](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40060118239) SUCCESS 32/32 com semântica HTTP 404/409; [companion Java #40060021841](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40060021841) SUCCESS (7+3 testes, compilação, pacote e permissões). O cliente Android passou a interpretar o campo `status` no corpo do erro HTTP e a preservar a consulta alternativa sem bypass da autorização. [Última compilação Android #40060106346](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40060106346) SUCCESS: 39+2 testes, `BUILD SUCCESSFUL in 3m 28s`, identidade V2 verificada sem assinatura/deploy. Atribuição da Movie of the Night adicionada ao diálogo de fontes conforme termos oficiais. Sem produção/OTA/companion instalados.
+
+**Investigação adicional de 24/10:** o código real da versão em produção foi inspecionado via Cloudflare (sem expor segredos), assim como o D1 e os cinco bindings; os resultados estão em [ativação individual V2](ANYTV_V2_DEVICE_ACTIVATION_RUNBOOK.md) e [pré-liberação coordenada](../operations/ANYTV_V2_LINK_RELEASE_READINESS_20261024.md). O aplicativo da branch passa a oferecer somente **código único de uso único** em caso de dispositivo não autorizado; nenhum token de provedor e nenhum cadastro automático. A política do emissor foi alinhada a 365 dias (sem quota de requisições), mantendo código de 10 minutos e revogação possível. **Emissão e uso real continuam NÃO EXECUTADOS.**
 
 **Critério de parada:** não publicar APK, não fazer deploy de Worker, não atualizar companion, não mudar signer/OTA nem fazer merge sem autorização específica e evidência de build/testes. Se o CI falhar, investigar e corrigir somente a causa.
