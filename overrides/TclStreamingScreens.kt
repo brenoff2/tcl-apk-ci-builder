@@ -83,6 +83,14 @@ import java.text.Normalizer
 internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "", val genreIds: List<Int> = emptyList())
 private const val ANYTV_CINEMA_FILTER = -1
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
+private fun anyTvToday(): String =
+    java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
+private fun anyTvHasDate(item: StreamingTitle): Boolean =
+    item.date.matches(Regex("[0-9]{4}-[0-9]{2}-[0-9]{2}"))
+private fun anyTvReleased(item: StreamingTitle): Boolean =
+    anyTvHasDate(item) && item.date <= anyTvToday()
+private fun anyTvUpcoming(item: StreamingTitle): Boolean =
+    anyTvHasDate(item) && item.date > anyTvToday()
 internal data class StreamingGenre(val id: Int, val name: String)
 internal data class StreamingSeason(val number: Int, val name: String, val count: Int)
 internal data class StreamingEpisode(val number: Int, val name: String, val airDate: String)
@@ -484,7 +492,45 @@ private object StreamingCatalog {
                 "movie/upcoming", "movie/popular"))
             val suffix = if (route == "movie/now_playing") "&region=BR" else ""
             val payload = get("backend", route + "?language=pt-BR" + suffix)
-            mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+            val titles = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+            when (route) {
+                "movie/upcoming" -> titles.filter(::anyTvUpcoming)
+                // Now-playing is regional theatrical information, not streaming rights.
+                "movie/now_playing" -> titles
+                else -> titles.filter(::anyTvReleased)
+            }
+        }
+
+    /** Future streaming titles require a confirmed BR subscription offer. */
+    suspend fun discoveryUpcomingStreaming(): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+            coroutineScope {
+                val sources = listOf(
+                    async {
+                        runCatching { discoveryShelf("movie/upcoming", "movie") }
+                            .getOrDefault(emptyList())
+                    },
+                    async {
+                        runCatching {
+                            val payload = get("backend",
+                                "discover/tv?language=pt-BR&include_adult=false" +
+                                "&sort_by=first_air_date.desc&page=1")
+                            mapTitles(payload.optJSONArray("results") ?: JSONArray(), "tv", 0)
+                                .filter(::anyTvUpcoming)
+                        }.getOrDefault(emptyList())
+                    }
+                ).awaitAll().flatten().distinctBy { "${it.media}:${it.id}" }
+                val limit = Semaphore(4)
+                sources.map { title ->
+                    async {
+                        val confirmed = limit.withPermit {
+                            runCatching { offersInBrazil(title).isNotEmpty() }
+                                .getOrDefault(false)
+                        }
+                        title.takeIf { confirmed }
+                    }
+                }.awaitAll().filterNotNull()
+            }
         }
 
     /** TMDB theatrical listing for BR; no guessing from absent provider logos. */
@@ -522,7 +568,8 @@ private object StreamingCatalog {
                 "&sort_by=$sorting&with_genres=$id&page=$page"
             val payload = get("backend", route)
             StreamingResults(
-                mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id),
+                mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id)
+                    .filter(::anyTvReleased),
                 page < payload.optInt("total_pages", page))
         }
 
@@ -589,7 +636,7 @@ private object StreamingCatalog {
             throw IllegalStateException("Não foi possível consultar o catálogo de filmes e séries.",
                 firstFailure)
         }
-        collected.distinctBy { "${it.media}:${it.id}" }
+        collected.filter(::anyTvReleased).distinctBy { "${it.media}:${it.id}" }
             .sortedWith(compareByDescending<StreamingTitle> {
                 norm(it.name) == norm(withoutArticle) || norm(it.name) == identity ||
                     (identity.contains("amor") && identity.contains("vida") &&
@@ -617,7 +664,8 @@ private object StreamingCatalog {
 
     suspend fun related(media: String, id: Int): List<StreamingTitle> = withContext(Dispatchers.IO) {
         val response = get("backend", "$media/$id/recommendations?language=pt-BR")
-        mapTitles(response.optJSONArray("results") ?: JSONArray(), media, 0).take(12)
+        mapTitles(response.optJSONArray("results") ?: JSONArray(), media, 0)
+            .filter(::anyTvReleased).take(12)
     }
 
     suspend fun discover(
@@ -635,6 +683,7 @@ private object StreamingCatalog {
             "&include_adult=false&sort_by=popularity.desc&page=$page"
         val result = get(token, url)
         val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media, genre)
+            .filter(::anyTvReleased)
         // Search endpoints have no provider filter: verify real BR subscription offers.
         val titles = if (search) coroutineScope {
             val limit = Semaphore(4)
@@ -706,13 +755,18 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
     val context = LocalContext.current
     var previews by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     val previewProviders = remember { mutableStateMapOf<Int, StreamingOffer?>() }
+    var bannerCinemaIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     LaunchedEffect(Unit) {
         StreamingCatalog.configure(context)
+        bannerCinemaIds = runCatching {
+            StreamingCatalog.discoveryCinemaPage(1).titles.map { it.id }.toSet()
+        }.getOrDefault(emptySet())
         // discoveryShelf appends language itself: never pass a duplicate query.
         previews = runCatching {
             StreamingCatalog.discoveryShelf("trending/movie/week", "movie")
         }.getOrDefault(emptyList())
-            .filter { it.backdrop.isNotBlank() || it.poster.isNotBlank() }.take(10)
+            .filter { (anyTvReleased(it) || it.id in bannerCinemaIds) &&
+                (it.backdrop.isNotBlank() || it.poster.isNotBlank()) }.take(10)
     }
     Surface(
         modifier = Modifier.fillMaxWidth().height(75.dp)
@@ -752,8 +806,11 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
                     Column(modifier = Modifier.fillMaxHeight().weight(0.3f)
                         .padding(start = 12.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
                         verticalArrangement = Arrangement.SpaceBetween) {
-                        Text("EM DESTAQUE", fontSize = 9.sp,
-                            color = Color(0xFFB7BCC5), fontWeight = FontWeight.Bold)
+                        Text(if (movie.id in bannerCinemaIds) "F · CINEMA"
+                             else "EM DESTAQUE", fontSize = 9.sp,
+                            color = if (movie.id in bannerCinemaIds) Color(0xFF74ADFF)
+                                    else Color(0xFFB7BCC5),
+                            fontWeight = FontWeight.Bold)
                         Box(modifier = Modifier.weight(1f).fillMaxWidth(),
                             contentAlignment = Alignment.CenterStart) {
                             Text(movie.name, fontSize = 12.sp, lineHeight = 14.sp,
@@ -784,6 +841,33 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
                             .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp)),
                         contentScale = ContentScale.Crop
                     )
+                }
+            }
+        }
+    }
+}
+
+/** Single-row secondary carousel, separate from the paginated catalogue. */
+@Composable
+private fun AnyTvOneRowPreview(
+    heading: String,
+    titles: List<StreamingTitle>,
+    onOpen: (StreamingTitle) -> Unit
+) {
+    if (titles.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Text(heading, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            items(titles.distinctBy { "${it.media}:${it.id}" }.take(12)) { title ->
+                Column(modifier = Modifier.width(109.dp).clickable { onOpen(title) }) {
+                    AnyTvPinnedImage(
+                        model = "https://image.tmdb.org/t/p/w185" + title.poster,
+                        contentDescription = title.name,
+                        modifier = Modifier.fillMaxWidth().height(145.dp),
+                        contentScale = ContentScale.Crop)
+                    Text(title.name, fontSize = 11.sp, lineHeight = 14.sp,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
