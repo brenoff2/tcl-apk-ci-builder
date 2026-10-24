@@ -14,11 +14,9 @@ const encode = bytes => btoa(String.fromCharCode(...bytes))
 export async function activateDevice(request, env, deps = {}) {
   if (request.method !== "POST") return reply(405, "method_not_allowed");
   // No DB.batch, no enrollment: single-use code and key must commit together.
-  if (!env?.DB?.batch || !env?.RATE_LIMIT) return reply(503, "not_configured");
+  if (!env?.DB?.batch) return reply(503, "not_configured");
   if (Number(request.headers.get("content-length") || 0) > 1024) return reply(400, "invalid_request");
   try {
-    const ip = request.headers.get("cf-connecting-ip") || "unknown";
-    if (!(await env.RATE_LIMIT.limit({ key: "activate:" + ip })).success) return reply(429, "rate_limited");
     const raw = await request.text();
     if (raw.length > 1024) return reply(400, "invalid_request");
     const item = JSON.parse(raw);
