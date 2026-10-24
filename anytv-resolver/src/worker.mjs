@@ -213,12 +213,22 @@ export async function catalogRequest(request, env, deps = {}) {
     return asJson({ status: "bad_request" }, 400);
   }
   const lang = parsed.searchParams.get("language") || "pt-BR";
+  // TMDB sorting is restricted to official discover endpoints; never forward
+  // arbitrary query expressions or mutate unrelated search/metadata routes.
+  const sort = parsed.searchParams.get("sort_by") || "popularity.desc";
+  const discoverSorts = route === "discover/movie"
+    ? new Set(["popularity.desc", "vote_average.desc",
+        "primary_release_date.desc", "title.asc"])
+    : route === "discover/tv"
+      ? new Set(["popularity.desc", "vote_average.desc",
+          "first_air_date.desc", "name.asc"])
+      : new Set(["popularity.desc"]);
   const trailerLanguage = /^(movie|tv)\/[1-9][0-9]{0,9}\/videos$/.test(route);
   if ((parsed.searchParams.get("watch_region") || "BR") !== "BR" ||
       (lang !== "pt-BR" && !(trailerLanguage && lang === "en-US")) ||
       (parsed.searchParams.get("include_adult") || "false") !== "false" ||
       (parsed.searchParams.get("with_watch_monetization_types") || "flatrate") !== "flatrate" ||
-      (parsed.searchParams.get("sort_by") || "popularity.desc") !== "popularity.desc") {
+      !discoverSorts.has(sort)) {
     return asJson({ status: "bad_request" }, 400);
   }
   let diagnosticStage = "rate_limit";
