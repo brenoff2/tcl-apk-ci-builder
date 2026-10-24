@@ -1,8 +1,8 @@
-# AnyTV — resolvedor comercial de links (protótipo não implantado)
+# AnyTV — catálogo TMDB e resolvedor de links (Worker ativo)
 
-**Data:** 15/10/2026  
-**Branch:** `feat/tcl-v22-updates-back-bluetooth`  
-**Status:** código + migração D1 + testes automáticos; **NÃO implantado**, não conectado aos APKs de produção.
+**Atualização:** 23/10/2026  
+**Branch canônica:** `feat/anytv-p0-device-proof-verifier-20261020`  
+**Status:** Worker `anytv-link-resolver-pilot` ativo na Cloudflare, versão `ce51439e-ca19-40d3-85e8-019c7a3669a5`, deployment `3298f15b-68d1-455b-bbc1-624925d7ccaf`, 100% do tráfego. AnyTV V2 permanece na versão `2.9.22` (code 51); a mudança de backend não exige novo APK.
 
 ## Escopo do módulo
 
@@ -31,22 +31,22 @@ Resposta de sucesso, exemplo de estrutura (URL omitida propositalmente):
 }
 ```
 
-Os resultados `not_available`, `no_supported_link`, `ambiguous`, `monthly_quota_exhausted` e `resolver_unavailable` são intencionais. A chamada não cria nem acessa contas de streaming, não inicia reprodução e não ignora bloqueios regionais.
+Os resultados `not_available`, `no_supported_link`, `ambiguous` e `resolver_unavailable` são intencionais. Não existem respostas locais `monthly_quota_exhausted` ou `rate_limited`: limites internos de uso foram removidos. A chamada não cria nem acessa contas de streaming, não inicia reprodução e não ignora bloqueios regionais.
 
 ## Garantias implementadas
 
 - Segredos `ANYTV_MOVIE_API_KEY` (somente na avaliação do GitHub) e `ANYTV_MOVIE_API_KEY` no Worker **não têm carregamento automático entre GitHub e Cloudflare**. No Worker o nome escolhido é `ANYTV_MOVIE_API_KEY`; jamais colocar valores em `vars`, repositório, APK ou respostas.
 - `ANYTV_CLIENT_TOKEN` é um token de administrador para **piloto servidor-a-servidor**, não um mecanismo de contas comerciais. Não distribuir esse token fixo no APK.
-- `RATE_LIMIT`: limite rápido por IP; componente aproximado da Cloudflare, não é contabilidade de consumo.
-- `DB`: D1 com reserva **atômica** das consultas externas no mês (`UPDATE ... RETURNING`). O teto padrão, conservador, é **200 chamadas/mês** até conhecermos o limite real da conta.
+- **Sem teto de uso do AnyTV:** removidos os bloqueios internos de 200 consultas por mês e 20 consultas por minuto para catálogo, resolvedor e ativação; nenhuma vinculação `RATE_LIMIT` nem variável `MAX_*_CALLS_MONTH` permanece no Worker.
+- `DB`: D1 usado para cache e para ativação/autorização do dispositivo. A tabela legada `monthly_quota` ainda existe para rollback histórico, mas não é consultada ou atualizada pelo Worker.
 - Cache global via D1: resultado positivo por 6 horas; ausente/ambíguo por 30 minutos. Não se armazenam imagens, payloads globais ou dados pessoais.
 - URLs HTTPS apenas nos domínios e formatos próprios dos streamings; Apple TV+ aceita `playableId` controlado, Prime exige um `gti` válido. Removem-se parâmetros de publicidade.
 - Filtros: oferta de assinatura ou gratuita, no Brasil, sem canal adicional. Aluguel/compra não equivalem à assinatura.
 - Uma falha ou inconsistência retorna erro seguro, sem revelar chaves nem dados de outros títulos.
 
-**Atenção:** D1 mantém cache simples, mas duas consultas simultâneas para a mesma chave ainda podem reservar créditos distintos. A reserva global impede ultrapassar o teto configurado, embora não elimine trabalho duplicado; deduplicação de requisições é melhoria futura.
+**Atenção:** duas consultas simultâneas para a mesma chave podem consultar o fornecedor em paralelo antes de o cache ser gravado. Não há teto interno do AnyTV; limites contratuais externos (Cloudflare/TMDB/Movie of the Night) continuam sujeitos aos próprios planos dos fornecedores. A conta de cada fornecedor não foi alterada nem promovida a um plano pago.
 
-## Instalação futura — **NÃO executar na infraestrutura CLFCJ**
+## Histórico de instalação (não é procedimento de deploy atual) — **NÃO executar na infraestrutura CLFCJ**
 
 1. Criar uma conta/projeto Cloudflare **dedicado ao AnyTV**, separado de CLFCJ e demais sistemas.
 2. Criar D1 independente, a partir de `anytv-resolver/`:
@@ -65,7 +65,7 @@ Os resultados `not_available`, `no_supported_link`, `ambiguous`, `monthly_quota_
    - `ANYTV_CLIENT_TOKEN`: valor independente, longo e aleatório para o piloto, **nunca compartilhado com o app comercial**.
    
    O comando `wrangler secret put` pode criar uma versão e implantá-la imediatamente; evitar executá-lo sem revisar o contexto de produção.
-5. Manter `workers_dev: false` até autenticação e domínio próprio aprovados. Revisar limites `MAX_UPSTREAM_CALLS_MONTH` após inspecionar franquia e contrato.
+5. O Worker está em produção com os próprios segredos e binds D1. Não reintroduzir `RATE_LIMIT`, `MAX_UPSTREAM_CALLS_MONTH`, `MAX_LINK_CALLS_MONTH` nem quotas de uso para a conta pessoal do AnyTV. Limites eventualmente impostos pela API contratada são externos e devem ser tratados sem bloquear artificialmente o aplicativo.
 6. A implantação em hostname e a conexão com os APKs ficam bloqueadas até haver autorização para o ambiente AnyTV e **autenticação por usuário** (login + entitlement ou token curto, revogável). Não fazer bypass usando uma credencial estática embutida.
 
 ## Evidências de teste
@@ -80,7 +80,7 @@ Os resultados `not_available`, `no_supported_link`, `ambiguous`, `monthly_quota_
 
 1. Licença comercial do **TMDB** para imagens e sinopses **ou remoção/substituição de toda a dependência TMDB**: https://www.themoviedb.org/api-terms-of-use
 2. Confirmar por escrito uso comercial, atribuição, imagens, cache e franquia efetiva da Movie of the Night.
-3. Definir identidade de usuários, revogação e limitação individual, para impedir revenda/abuso do endpoint.
+3. Preservar identidade de dispositivos, revogação e autorização do resolvedor; não expor tokens fixos em APKs.
 4. Implantar em ambiente próprio, com monitoramento de custos, logs mínimos, alertas de cota e proteção contra tráfego malicioso.
 5. Em cada provedor: validar intent + pacote de destino em TV TCL real, inclusive Apple `playableId`. Não declarar "aberto na ficha" só porque `startActivity` não lançou exceção.
 6. Preservar versão anterior dos APKs, paridade de assinatura e rollback, sem mexer no branch `main` nem nos ambientes CLFCJ.
