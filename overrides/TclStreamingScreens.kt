@@ -549,33 +549,43 @@ private object StreamingCatalog {
 
     /** Future streaming titles require a confirmed BR subscription offer. */
     suspend fun discoveryUpcomingStreaming(): List<StreamingTitle> =
+        discoveryUpcomingStreamingPage(1).titles
+
+    /** Follow TMDB source pages without skipping titles removed by BR offer checks.
+     * One source page is up to 20 films plus 20 series; the UI reveals the
+     * verified results in batches of 24. Never infer an offer from a future date.
+     */
+    suspend fun discoveryUpcomingStreamingPage(page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
+            require(page in 1..50)
             coroutineScope {
-                val sources = listOf(
-                    async {
-                        runCatching { discoveryShelf("movie/upcoming", "movie") }
-                            .getOrDefault(emptyList())
-                    },
-                    async {
-                        runCatching {
-                            val payload = get("backend",
-                                "discover/tv?language=pt-BR&include_adult=false" +
-                                "&sort_by=first_air_date.desc&page=1")
-                            mapTitles(payload.optJSONArray("results") ?: JSONArray(), "tv", 0)
-                                .filter(::anyTvUpcoming)
-                        }.getOrDefault(emptyList())
-                    }
-                ).awaitAll().flatten().distinctBy { "${it.media}:${it.id}" }
+                val movieSource = async {
+                    get("backend", "movie/upcoming?language=pt-BR&page=$page")
+                }
+                val seriesSource = async {
+                    get("backend", "discover/tv?language=pt-BR&include_adult=false" +
+                        "&sort_by=first_air_date.desc&page=$page")
+                }
+                val films = movieSource.await()
+                val shows = seriesSource.await()
+                val sources = (
+                    mapTitles(films.optJSONArray("results") ?: JSONArray(), "movie", 0) +
+                    mapTitles(shows.optJSONArray("results") ?: JSONArray(), "tv", 0)
+                ).filter(::anyTvUpcoming).distinctBy { "${it.media}:${it.id}" }
                 val limit = Semaphore(4)
-                sources.map { title ->
+                val verified = sources.map { title ->
                     async {
-                        val confirmed = limit.withPermit {
+                        // A request failure is not proof of BR subscription rights.
+                        val offered = limit.withPermit {
                             runCatching { offersInBrazil(title).isNotEmpty() }
                                 .getOrDefault(false)
                         }
-                        title.takeIf { confirmed }
+                        title.takeIf { offered }
                     }
-                }.awaitAll().filterNotNull().take(ANYTV_LIST_BATCH)
+                }.awaitAll().filterNotNull()
+                StreamingResults(verified, page < 50 && (
+                    page < films.optInt("total_pages", page) ||
+                    page < shows.optInt("total_pages", page)))
             }
         }
 
@@ -1362,13 +1372,16 @@ internal fun TclStreamingScreens(
     var sectionExtra by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var sectionPage by remember { mutableIntStateOf(1) }
     var sectionMore by remember { mutableStateOf(true) }
+    // Declared before the opened-section effect, which reads this state.
+    var upcomingStreamingMore by remember { mutableStateOf(false) }
     var sectionLoading by remember { mutableStateOf(false) }
     var sectionError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(openedSection) {
         sectionVisibleCount = ANYTV_LIST_BATCH
         sectionExtra = emptyList()
         sectionPage = 1
-        sectionMore = true
+        sectionMore = if (openedSection == "Em breve · Streaming")
+            upcomingStreamingMore else true
         sectionLoading = false
         sectionError = null
         // A dedicated shelf is a new page, not an expansion at the old scroll position.
@@ -1482,9 +1495,11 @@ internal fun TclStreamingScreens(
     var cinemaComingSoon by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var cinemaWorldwide by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     LaunchedEffect(token) {
-        upcomingStreaming = runCatching {
-            StreamingCatalog.discoveryUpcomingStreaming()
-        }.getOrDefault(emptyList())
+        val streamingFuture = runCatching {
+            StreamingCatalog.discoveryUpcomingStreamingPage(1)
+        }.getOrDefault(StreamingResults(emptyList(), false))
+        upcomingStreaming = streamingFuture.titles
+        upcomingStreamingMore = streamingFuture.more
         cinemaComingSoon = runCatching {
             StreamingCatalog.discoveryShelf("movie/upcoming", "movie")
         }.getOrDefault(emptyList()).filter(::anyTvUpcoming)
@@ -2237,7 +2252,12 @@ internal fun TclStreamingScreens(
                         modifier = Modifier.weight(1f)) {
                         if (openedSection != null) {
                             val sectionTitle = openedSection.orEmpty()
-                            val sectionBase = uniqueShelves.firstOrNull {
+                            // The home rail shows only 24, but the source page can
+                            // already have more verified titles. Never skip that
+                            // overflow when opening its dedicated section.
+                            val sectionBase = if (sectionTitle == "Em breve · Streaming")
+                                visibleShelves[sectionTitle].orEmpty()
+                            else uniqueShelves.firstOrNull {
                                 it.first == sectionTitle
                             }?.second.orEmpty()
                             val sectionAll = (sectionBase + sectionExtra)
@@ -2277,7 +2297,7 @@ internal fun TclStreamingScreens(
                             }
                             val sectionCanPage = editorialRoute != null ||
                                 selectedProvider != null || selectedGenreProvider != null ||
-                                homeProvider != null
+                                homeProvider != null || sectionTitle == "Em breve · Streaming"
                             item {
                                 TextButton(onClick = { openedSection = null }) {
                                     Text("‹ Voltar às seções")
@@ -2317,6 +2337,8 @@ internal fun TclStreamingScreens(
                                                                 StreamingCatalog.discoveryShelfPage(
                                                                     editorialRoute.first,
                                                                     editorialRoute.second, next)
+                                                            sectionTitle == "Em breve · Streaming" ->
+                                                                StreamingCatalog.discoveryUpcomingStreamingPage(next)
                                                             selectedProvider != null ->
                                                                 StreamingCatalog.discover(
                                                                     token, selectedProvider.first.name,
@@ -2346,12 +2368,16 @@ internal fun TclStreamingScreens(
                                                         }
                                                     }.onSuccess { result ->
                                                         if (openedSection != sectionTitle) return@onSuccess
-                                                        val released = result.titles.filter {
-                                                            anyTvReleased(it) &&
+                                                        val matching = result.titles.filter {
+                                                            if (sectionTitle == "Em breve · Streaming")
+                                                                anyTvUpcoming(it) &&
+                                                                    (homeContentType == "all" ||
+                                                                        it.media == homeContentType)
+                                                            else anyTvReleased(it) &&
                                                                 (it.media != "movie" ||
                                                                     it.id !in cinemaIds)
                                                         }
-                                                        sectionExtra = (sectionExtra + released)
+                                                        sectionExtra = (sectionExtra + matching)
                                                             .distinctBy { "${it.media}:${it.id}" }
                                                         sectionPage = next
                                                         sectionMore = result.more
@@ -2714,7 +2740,9 @@ internal fun TclStreamingScreens(
                                     verticalAlignment = Alignment.CenterVertically) {
                                     Text(heading, fontWeight = FontWeight.SemiBold,
                                         modifier = Modifier.weight(1f))
-                                    if (!homeLibrary && shelf.size > 6) {
+                                    if (!homeLibrary && (shelf.size > 6 ||
+                                        (heading == "Em breve · Streaming" &&
+                                            upcomingStreamingMore))) {
                                         OutlinedButton(
                                             onClick = {
                                                 val genreName = heading.removePrefix("Por gênero: ")

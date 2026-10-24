@@ -441,7 +441,7 @@ class StreamingScreens(unittest.TestCase):
             'val films = discoveryShelves["Em alta nesta semana"]',
             'val shows = discoveryShelves["Séries em destaque"]',
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
-            'StreamingCatalog.discoveryUpcomingStreaming()',
+            'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'Text(if (item.media == "tv") "S" else "F"',
             'openedSection = heading', 'class AnyTvReleaseReminderReceiver',
             'Modifier.fillMaxWidth().aspectRatio(2f / 3f)',
@@ -554,6 +554,61 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('selected != null -> {', nav)
         self.assertIn('openedSection = heading', nav)
         self.assertIn('selectedHomeGenre = targetGenre.id', nav)
+
+    def test_upcoming_streaming_state_is_declared_before_effect(self):
+        self.assertLess(
+            self.screen.index('var upcomingStreamingMore by remember'),
+            self.screen.index('LaunchedEffect(openedSection) {'))
+        self.assertEqual(self.screen.count('var upcomingStreamingMore by remember'), 1)
+
+    def test_upcoming_streaming_page_fetches_both_sources_and_verifies_br_offer(self):
+        impl = self.screen.split('suspend fun discoveryUpcomingStreamingPage(', 1)[1].split(
+            '/** International cinema preview', 1)[0]
+        self.assertIn('require(page in 1..50)', impl)
+        for value in (
+            '"movie/upcoming?language=pt-BR&page=$page"',
+            '"discover/tv?language=pt-BR&include_adult=false"',
+            '"&sort_by=first_air_date.desc&page=$page"',
+            'movieSource.await()', 'seriesSource.await()',
+            '.filter(::anyTvUpcoming).distinctBy',
+            'Semaphore(4)',
+            'runCatching { offersInBrazil(title).isNotEmpty() }',
+            '.getOrDefault(false)',
+            'title.takeIf { offered }',
+            'StreamingResults(verified, page < 50 && (',
+            'page < films.optInt("total_pages", page)',
+            'page < shows.optInt("total_pages", page)',
+        ):
+            with self.subTest(value=value):
+                self.assertIn(value, impl)
+        self.assertNotIn('with_watch_providers=', impl)
+        # No 24-title truncation here: one source page may have more verified
+        # than 24, and the section must retain it for subsequent reveal clicks.
+        self.assertNotIn('.take(ANYTV_LIST_BATCH)', impl)
+
+    def test_upcoming_streaming_ver_mais_preserves_overflow_and_future_filter(self):
+        for piece in (
+            'var upcomingStreamingMore by remember',
+            'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
+            'upcomingStreaming = streamingFuture.titles',
+            'upcomingStreamingMore = streamingFuture.more',
+            'sectionMore = if (openedSection == "Em breve · Streaming")',
+            'visibleShelves[sectionTitle].orEmpty()',
+            'homeProvider != null || sectionTitle == "Em breve · Streaming"',
+            'sectionTitle == "Em breve · Streaming" ->',
+            'StreamingCatalog.discoveryUpcomingStreamingPage(next)',
+            'anyTvUpcoming(it) &&',
+            '(homeContentType == "all" ||',
+            'it.media == homeContentType)',
+            'heading == "Em breve · Streaming" &&',
+            'upcomingStreamingMore',
+        ):
+            with self.subTest(piece=piece):
+                self.assertIn(piece, self.screen)
+        self.assertIn('val sectionAll = (sectionBase + sectionExtra)', self.screen)
+        self.assertIn('sectionExtra = (sectionExtra + matching)', self.screen)
+        self.assertNotIn('sectionExtra = (sectionExtra + released)', self.screen)
+        self.assertNotIn('discoveryUpcomingStreaming()\n        }.getOrDefault', self.screen)
 
     def test_ver_mais_editorial_and_provider_pages_fetch_next_24(self):
         for snippet in (
