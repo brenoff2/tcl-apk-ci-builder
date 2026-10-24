@@ -10,9 +10,9 @@ const ORIGIN = "https://api.movieofthenight.com/v4";
 const ALLOWED = new Set(["netflix", "disney", "prime", "apple", "hbo"]);
 const UUID = "[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}";
 const LINK_PATTERNS = Object.freeze({
-  netflix: new RegExp("^/title/[0-9]{6,9}$"),
+  netflix: new RegExp("^/title/[0-9]{6,9}/?$"),
   disney: new RegExp("^/browse/entity-" + UUID + "$"),
-  prime: /^\/detail$/,
+  prime: /^\/detail(?:\/[A-Z0-9]{10,40})?$/,
   apple: /^\/(?:[a-z]{2}\/)?(?:movie|show)\/(?:[^/]{1,120}\/)?umc\.cmc\.[a-z0-9]{15,40}$/,
   hbo: new RegExp("^/(?:movie|show)/" + UUID + "$"),
 });
@@ -56,10 +56,17 @@ export function validateLink(provider, value) {
   } catch {
     return null;
   }
-  if (link.protocol !== "https:" || link.hostname !== HOSTS[provider] ||
+  const trustedHost = link.hostname === HOSTS[provider] ||
+    (provider === "prime" && link.hostname === "www.primevideo.com");
+  if (link.protocol !== "https:" || !trustedHost ||
       link.username || link.password || link.port || link.hash) return null;
   if (!LINK_PATTERNS[provider].test(link.pathname)) return null;
   if (provider === "prime") {
+    // Prime uses two official title URL shapes: catalog ASIN and video GTI.
+    if (link.hostname === "www.primevideo.com") {
+      if (link.search || !/^\/detail\/[A-Z0-9]{10,40}$/.test(link.pathname)) return null;
+      return "https://www.primevideo.com" + link.pathname;
+    }
     const keys = [...link.searchParams.keys()];
     const id = link.searchParams.get("gti");
     if (keys.length !== 1 || keys[0] !== "gti" ||
@@ -83,7 +90,8 @@ export function validateLink(provider, value) {
     return "https://" + HOSTS[provider] + link.pathname;
   }
   if (link.search) return null;
-  return "https://" + HOSTS[provider] + link.pathname;
+  return "https://" + HOSTS[provider] +
+    (provider === "netflix" ? link.pathname.replace(/\/$/, "") : link.pathname);
 }
 
 export function inspectOffers(show, expectedId, provider) {
@@ -99,7 +107,10 @@ export function inspectOffers(show, expectedId, provider) {
   if (eligible.length === 0) return { status: "not_available" };
   const candidates = new Set();
   for (const item of eligible) {
-    const safe = validateLink(provider, item.link);
+    // Prefer the provider's video target when safely recognized; its
+    // regular offer-page link remains a validated fallback.
+    const safe = validateLink(provider, item.videoLink) ||
+      validateLink(provider, item.link);
     if (safe) candidates.add(safe);
   }
   if (candidates.size === 0) return { status: "no_supported_link" };
@@ -306,6 +317,15 @@ export async function handleRequest(request, env, deps = {}) {
     return activateDevice(request, env, deps);
   }
   if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
+  // A signed status check reveals only whether THIS key is enabled, not keys
+  // or enrollment records. No quotas or shared client credentials are involved.
+  if (parsed.pathname === "/v1/device/status") {
+    if (!env?.DB || env.ANYTV_RESOLVER_AUTH_MODE !== "device")
+      return asJson({ status: "not_configured" }, 503);
+    const authorized = await verifyDeviceProof(request, env, deps);
+    return asJson({ status: authorized ? "activated" : "unauthorized" },
+      authorized ? 200 : 401);
+  }
   if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
   if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
   if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB ||
