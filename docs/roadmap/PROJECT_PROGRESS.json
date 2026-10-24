@@ -148,6 +148,10 @@
     {
       "date": "2026-10-23",
       "event": "2.9.21/code50 publicada, workflow 40041711964 success signed OTA SHA256 95d716c..., website byte readback pass; Cloudflare Worker e40717 deployed with independent TMDB and 200/month JustWatch link-only; live searches movie/TV and genre pagination pass; physical UI and notification QA pending. Gates remain unchanged."
+    },
+    {
+      "date": "2026-10-23",
+      "event": "AnyTV 2.9.22 code51 signed OTA published. Actions 40045953034 SUCCESS 32 steps, APK SHA256 44cab69ad0eb6c0110ff4180e6388f042e667d8b86dcd319e39d777973d85d94, readback bytes matched. TMDB Worker a6747819 100% live, sort smoke 40045771887 success; no 200/month TMDB limit; physical QA not homologated. No F0-F8 gate promotion."
     }
   ],
   "discovery_v3": {
@@ -191,6 +195,44 @@
   },
   "v2_current": {
     "as_of": "2026-10-23",
+    "version": "2.9.22",
+    "versionCode": 51,
+    "package": "com.tclremote.livre.v2",
+    "published": true,
+    "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
+    "ota_path": "updates/android/v2/current.apk",
+    "workflow_run": 40045953034,
+    "workflow_conclusion": "success",
+    "apk_sha256": "44cab69ad0eb6c0110ff4180e6388f042e667d8b86dcd319e39d777973d85d94",
+    "apk_git_blob": "39084853e1956f4aaedb3d8443ade9304e497581",
+    "apk_bytes": 28412772,
+    "ota_commit": "0b57a842cf7b662f6a8a85a84429d01f4901fdd4",
+    "signer_cert_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9",
+    "legacy_ota_blob_unchanged": "44c766b433ddb370f4589b87843f1edfd9cd7b7a",
+    "remote_byte_readback": true,
+    "live_search": "PASS: film Titanic 20 results; TV Breaking Bad 5 results",
+    "genre_paging_live": "PASS movie/tv 20 each, sort options popularity/rating/date/title with strict allowlist via workflow 40045771887",
+    "cloudflare_worker_current": "a6747819-e4da-422c-9766-a40151b87cd3",
+    "cloudflare_100_percent_traffic": true,
+    "cloudflare_deploy": "a196075c-8299-4c8d-9054-6e52bb486505",
+    "cloudflare_previous_version_rollback": "e407174c-2bff-4444-ab2c-9cd694b99728",
+    "tmdb_200_monthly_quota_removed": true,
+    "justwatch_link_limit_200_separate": true,
+    "rate_limit_and_cache_preserved": true,
+    "physical_qa": "NOT_HOMOLOGATED",
+    "changes": [
+      "Genre page list with year, rating and Brazilian provider logos, synopsis max 160 characters/3 lines and actions for favorite, watched/series tracking and on-demand YouTube trailer",
+      "Genre list/grid three columns switch and persisted sort popular, rating, most recent, title ascending, applied to TMDB upstream every 20-page fetch",
+      "Genre hero carousel maximum 10 slides, dots overlay on poster",
+      "Home compact banner 10 slides, title centered in reserved box, Ver fixed bottom in light grey with provider icon when available",
+      "Search field fixed baseline by 44dp BasicTextField vertically centered placeholder, text and cursor",
+      "Maintains 3-line fixed horizontal home rail card alignment and no show more in home",
+      "Worker strict TMDB discover sort allowlist deployed, 200/month link-only budget separated, all seven Worker bindings and device modules preserved",
+      "Existing V2 signer/package, OTA channel and unrelated old cert2026 APK unchanged"
+    ]
+  },
+  "v2_previous": {
+    "as_of": "2026-10-23",
     "version": "2.9.21",
     "versionCode": 50,
     "package": "com.tclremote.livre.v2",
@@ -222,36 +264,6 @@
       "genre filtered page uses hero slider then vertical list in 20-card pages with ONLY THERE show-more button",
       "main home remains two-row horizontal scroll with no show more",
       "Cloudflare TMDB search quota unblocked while JustWatch link budget remains separately bounded"
-    ]
-  },
-  "v2_previous": {
-    "as_of": "2026-10-23",
-    "version": "2.9.20",
-    "versionCode": 49,
-    "package": "com.tclremote.livre.v2",
-    "published": true,
-    "ota_branch": "feat/tcl-v22-updates-back-bluetooth",
-    "ota_path": "updates/android/v2/current.apk",
-    "workflow_run": 40038610382,
-    "workflow_conclusion": "success",
-    "apk_sha256": "547463d42acad59f4b3e7a32c58b3bb0519358961c9cb6d9f39a623cd6b6bac3",
-    "apk_git_blob": "5a4114f192635cc2fc1d142ec0d5fc2438a0db3a",
-    "apk_bytes": 28396388,
-    "ota_commit": "2e9359c74a9d6ea56e6fd39ebf7c9151ce5f310e",
-    "signer_cert_sha256": "fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9",
-    "remote_byte_readback": true,
-    "search_limit": "KNOWN_BROKEN_HTTP_429_MONTHLY_QUOTA_EXHAUSTED_USER_APPROVED_UI_RELEASE",
-    "premiere_reminders": "LOCAL_ANDROID_INEXACT_ALARM_MANIFEST_DECLARED_DEVICE_QA_PENDING",
-    "installed_and_physical_tv_qa": "NOT_HOMOLOGATED",
-    "changes": [
-      "20-item mixed film and series highlight pager",
-      "two-row horizontal up to 20 titles per rail",
-      "user-triggered show-more for genre pages up to 50 pages",
-      "film E square and series S circle indicator by score",
-      "movie upcoming and additional series shelves",
-      "debounced live typeahead at 650ms and clear-only X",
-      "local Android release notification scheduling with POST_NOTIFICATIONS permission",
-      "previous approved layout corrections"
     ]
   }
 }
