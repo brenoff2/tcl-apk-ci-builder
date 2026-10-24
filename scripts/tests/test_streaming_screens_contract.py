@@ -420,7 +420,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('LaunchedEffect(selected?.packageName, homeContentType)', self.screen)
         self.assertIn('myServiceShelves[key] = it.titles', self.screen)
         self.assertIn('HorizontalPager(', self.screen)
-        self.assertIn('Modifier.padding(top = 16.dp, bottom = 9.dp)', self.screen)
+        self.assertIn('Modifier.fillMaxWidth().padding(top = 12.dp)', self.screen)
         self.assertNotIn('} else {\\n                    val app = selected!!', self.screen)
 
     def test_double_row_real_pagination_and_mixed_highlights(self):
@@ -440,7 +440,7 @@ class StreamingScreens(unittest.TestCase):
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
             'Triple("Em breve · Filmes", "movie/upcoming", "movie")',
             'Text(if (item.media == "tv") "S" else "F"',
-            'scheduleAnyTvPremiereReminder(context, item)',
+            'expandedHomeShelf = if (expandedHomeShelf == heading)',
             'class AnyTvReleaseReminderReceiver',
         ):
             with self.subTest(snippet=snippet):
