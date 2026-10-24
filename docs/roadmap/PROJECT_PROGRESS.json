@@ -180,6 +180,10 @@
     {
       "date": "2026-10-24",
       "event": "TRANSICAO RECONCILIADA: release OTA assinada AnyTV V2 2.9.24/code53 CONFIRMADA GitHub Actions #40095671540 SUCCESS, SHA256 APK f5827bc0d3e4da5fbf90f9fe772e2aba2890953c1f295db73613c6f638be49ae, blob atual 7a1bbdea9e9628ce15d3c1e9d2debef3c98824eb (25.996.188 bytes), signer V2 preservado; legado intocado. Cloudflare Worker 58fe4b33 100% deploy 25de8328 com rollback 58a1c0c3 e 5 bindings preservados; release candidate 2.9.25/code54 ainda NAO ASSINADA/NAO PUBLICADA, workflow protegido no code53 e mudança bloqueada por política. DEV PR#3 head 91a2b84, request P256 sem código, Cinema BR selo F Cinema, CTA Ingresso.com sem sessões internas, todos logos BR; CI Worker #40097287821 SUCCESS, Android #40097330186 SUCCESS, latest Android #40097870978 IN_PROGRESS, proof #40097871008 SUCCESS. Ativação anterior de identidade V2 confirmada em handoff; código antigo não reutilizar. TV companion novo APK NAO PUBLICADO, QA física pendente, P0 7/11=63%, F0–F8 NAO_HOMOLOGADO. Detalhes docs/handoffs/2026-10-24-ANYTV-TRANSICAO-INTEGRAL-2924-2925.md"
+    },
+    {
+      "date": "2026-10-24",
+      "event": "READBACK FINAL CI DE CONTINUIDADE: Android candidato DEV head funcional 91a2b84, run 40097870978 SUCCESS, 42 testes interface/links + 2 credenciais + 9 adicionais, Gradle BUILD SUCCESSFUL 4m37s, APK V2 unsigned verificado; device proof run 40097871008 SUCCESS. NENHUMA assinatura/OTA 2.9.25-code54 realizada: workflow protegido ainda code53. Publicada segue AnyTV V2 2.9.24/code53, Worker 58fe4b33 100%; QA física e companion TCL pendentes, 7/11=63%, F0-F8 NAO_HOMOLOGADO. Handoff docs/handoffs/2026-10-24-ANYTV-TRANSICAO-INTEGRAL-2924-2925.md atualizado."
     }
   ],
   "discovery_v3": {
@@ -229,7 +233,7 @@
       "gate_note": "marcos técnicos; não significa homologação"
     },
     "human_gates": "F0-F8 NAO_HOMOLOGADO",
-    "next_action": "Validar último CI DEV #40097870978 e preparar 2.9.25/code54 com fluxo de solicitação assinada, catálogo Cinema/streamings BR; workflow assinado protegido bloqueou edição anterior, não contornar; testar na TCL e no celular"
+    "next_action": "Android DEV #40097870978 PASS (42+2+9, Gradle) mas nova 2.9.25/code54 segue unsigned e OTA code53; resolver bloqueio de workflow protegido SOMENTE pela via permitida, preparar assinatura V2 e testar TCL/Android"
   },
   "v2_current": {
     "as_of": "2026-10-24",
@@ -262,7 +266,7 @@
       "Categorias BR cinema e selo F Cinema reportados no código aprovado e sujeitos a QA física"
     ],
     "release_evidence": "docs/handoffs/2026-10-24-ANYTV-TRANSICAO-INTEGRAL-2924-2925.md",
-    "next_action": "Validar último CI DEV #40097870978 e preparar 2.9.25/code54 com fluxo de solicitação assinada, catálogo Cinema/streamings BR; workflow assinado protegido bloqueou edição anterior, não contornar; testar na TCL e no celular"
+    "next_action": "Android DEV #40097870978 PASS (42+2+9, Gradle) mas nova 2.9.25/code54 segue unsigned e OTA code53; resolver bloqueio de workflow protegido SOMENTE pela via permitida, preparar assinatura V2 e testar TCL/Android"
   },
   "v2_previous": {
     "as_of": "2026-10-24",
@@ -439,7 +443,7 @@
     "branch": "feat/anytv-p0-device-proof-verifier-20261020",
     "head_sha_at_checkpoint": "91a2b84a0f80f7ec3e643e97cf9c290e9d0be4ff",
     "ci_android_latest": 40097870978,
-    "ci_android_status_at_checkpoint": "IN_PROGRESS",
+    "ci_android_status_at_checkpoint": "SUCCESS",
     "ci_device_proof": 40097871008,
     "ci_device_proof_status": "SUCCESS",
     "previous_ci_android": 40097330186,
@@ -452,6 +456,9 @@
       "Android solicita acesso via assinatura P-256 ANYTV-REQUEST1, sem formulário de código secreto; aprovação manual D1 por operador"
     ],
     "blocker": "Workflow oficial protegido permanece para 2.9.24/code53; edição para code54 negada por política de ferramenta; não contornar e não publicar APK unsigned",
-    "tv_companion_update": "NOT_DONE; install version and signer not verified"
+    "tv_companion_update": "NOT_DONE; install version and signer not verified",
+    "ci_android_tests": "42 UI/link + 2 credentials + 9 additional",
+    "ci_android_gradle": "BUILD SUCCESSFUL in 4m 37s",
+    "ci_android_unsigned": true
   }
 }
