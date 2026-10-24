@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -77,9 +78,9 @@ fun PlaybackTransportBar(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             PlaybackChip(
                 text = "−10 s", description = "Voltar dez segundos conforme a TV",
                 modifier = Modifier.weight(1.1f)
@@ -107,7 +108,7 @@ fun PlaybackTransportBar(
                 onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_DPAD_RIGHT)
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             PlaybackChip(
                 text = "≪ " + (if (rewindRequests == 0) "1×" else levels[rewindRequests - 1].toString() + "×"),
                 description = "Retrocesso acelerado: toques sucessivos 1, 2, 4, 8 e 16 vezes",
@@ -140,12 +141,12 @@ private fun PlaybackChip(
 ) {
     FilledTonalButton(
         onClick = onClick,
-        modifier = modifier.height(40.dp).semantics { contentDescription = description },
-        shape = RoundedCornerShape(12.dp),
+        modifier = modifier.height(43.dp).semantics { contentDescription = description },
+        shape = RoundedCornerShape(17.dp),
         contentPadding = PaddingValues(horizontal = 1.dp),
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-            contentColor = MaterialTheme.colorScheme.onSurface
+            containerColor = Color(0xFF181A20),
+            contentColor = Color(0xFFF9F9FB)
         )
     ) {
         Text(
