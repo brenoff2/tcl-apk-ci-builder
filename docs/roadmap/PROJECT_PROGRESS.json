@@ -212,6 +212,10 @@
     {
       "date": "2026-10-24",
       "event": "Nova proposta visual do controle principal AnyTV recebida em screenshot (709x1536). Implementada na branch DEV: HOME preto grafite #08090D/acento #E9003B e cabeçalho duplo (TV + subtítulo Android TV), três ações circulares, seis atalhos padrão de apps REALMENTE instalados, hero TMDB full-bleed 92dp, transporte grafite sem moldura, D-pad radial até 304dp com OK 28% e aro vermelho sem borda externa, laterais volume/canal com trilho decorativo SEM percentual falso e cinco atalhos redondos inferiores. Preservados todos os callbacks/pressões longas e dados. Transformador sticky scripts/apply_tcl_sticky_controls.py atualizado para manter rodapé/dpad. Testes scripts/tests/test_approved_visual_contract.py e test_streaming_screens_contract.py atualizados, CI DEV 40104547392 contratos SUCCESS, Gradle em andamento no último readback. Relatório docs/qa/ANYTV_2925_REMOTE_VISUAL_20261024.md. Nenhuma assinatura/OTA/Worker/D1/companion/merge. Última OTA V2 assinada 2.9.24/code53. Gate P0 7/11=63%, F0-F8 NAO_HOMOLOGADO; QA física permanece pendente."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "READBACK FINAL NOVA PROPOSTA VISUAL: source funcional/testes fdced7c359072f7d8fc23cb40479f8160c3b63f7 compilado via GitHub Actions unsigned code54 40104547392 SUCCESS. Prepare upstream + sticky layout PASS, contratos UI/link/security PASS, Gradle assembleRelease PASS, aapt identity com.tclremote.livre.v2 versionCode54 versionName2.9.25-AnyTV PASS, artifact 12564042182 uploaded. ZIP conferido: APK sha256 recalculado 617e6e25cb6c768254e01beb7a9d4ac7758efca870826e4443aee72026de46b7 bate candidate-sha256.txt. Relatório docs/qa/ANYTV_2925_REMOTE_VISUAL_20261024.md. Artefato UNSIGNED exclusivamente QA, NÃO instalar sobre assinado. Última OTA assinada segue 2.9.24/code53; zero alteração no fluxo oficial assinado, signer, Worker, D1, companion TV e merge. Homologação física pendente, P0 7/11=63%, gates F0-F8 NAO_HOMOLOGADO."
     }
   ],
   "discovery_v3": {
