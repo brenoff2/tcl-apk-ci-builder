@@ -2239,7 +2239,7 @@ internal fun TclStreamingScreens(
                             }
                             if (sectionAll.size > sectionVisibleCount ||
                                 (!homeLibrary && sectionCanPage && sectionMore &&
-                                    sectionPage < 42 && sectionAll.size >= ANYTV_LIST_BATCH)) {
+                                    sectionPage < 42 && sectionAll.isNotEmpty())) {
                                 item {
                                     TextButton(
                                         enabled = !sectionLoading,

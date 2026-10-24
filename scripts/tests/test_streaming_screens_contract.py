@@ -464,6 +464,7 @@ class StreamingScreens(unittest.TestCase):
             'StreamingCatalog.discoveryShelfPage(',
             'StreamingCatalog.discover(token,',
             'sectionPage = next',
+            'sectionPage < 42 && sectionAll.isNotEmpty()',
             'sectionMore = result.more',
             'sectionVisibleCount += ANYTV_LIST_BATCH',
             'sectionError = "Não foi possível carregar mais títulos."',
@@ -472,6 +473,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn(
             'if (homeLibrary && sectionAll.size > sectionVisibleCount)',
             self.screen)
+        # A partially filtered first 24-title page must not hide later pages.
+        self.assertNotIn('sectionPage < 42 && sectionAll.size >= ANYTV_LIST_BATCH',
+                         self.screen)
 
     def test_watched_poster_preserves_title_without_favorite_or_cache_ttl(self):
         self.assertIn('fun toggleFilmWatched(title: StreamingTitle)', self.screen)
