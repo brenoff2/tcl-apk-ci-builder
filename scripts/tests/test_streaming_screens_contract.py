@@ -679,12 +679,20 @@ class StreamingScreens(unittest.TestCase):
                         self.screen.index('// Genre page: ten-image hero above'))
 
     def test_future_streaming_rejects_unverified_theatrical_titles(self):
-        self.assertIn('suspend fun discoveryUpcomingStreaming()', self.screen)
-        self.assertIn('offersInBrazil(title).isNotEmpty()', self.screen)
-        self.assertIn('mapTitles(payload.optJSONArray("results") ?: JSONArray(), "tv", 0)',
-                      self.screen)
-        self.assertIn('.filter(::anyTvUpcoming)', self.screen)
-        self.assertIn('title.takeIf { confirmed }', self.screen)
+        self.assertIn('suspend fun discoveryUpcomingStreamingPage(page: Int)', self.screen)
+        upcoming = self.screen.split(
+            'suspend fun discoveryUpcomingStreamingPage(page: Int)', 1)[1].split(
+            '/** International cinema preview', 1)[0]
+        for part in (
+            'mapTitles(films.optJSONArray("results") ?: JSONArray(), "movie", 0)',
+            'mapTitles(shows.optJSONArray("results") ?: JSONArray(), "tv", 0)',
+            '.filter(::anyTvUpcoming)',
+            'runCatching { offersInBrazil(title).isNotEmpty() }',
+            '.getOrDefault(false)',
+            'title.takeIf { offered }',
+        ):
+            self.assertIn(part, upcoming)
+        self.assertNotIn('title.takeIf { confirmed }', upcoming)
 
     def test_24_item_batches_and_stable_filtered_pagination(self):
         for part in (
