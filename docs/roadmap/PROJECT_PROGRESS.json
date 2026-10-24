@@ -232,6 +232,10 @@
     {
       "date": "2026-10-24",
       "event": "TRANSICAO CANONICA ATUAL POS-RELEASE 2.9.25/code54, 24/10/2026: usuario solicitou handoff integral ao novo chat, com todo o historico, decisoes e ponto exato. Criado docs/handoffs/2026-10-24-ANYTV-TRANSICAO-ATUAL-POS-2925.md, NEXT_CHAT_FIRST_MESSAGE.md substituido por primeira mensagem atual de 11.9k caracteres e versao anterior preservada como NEXT_CHAT_FIRST_MESSAGE_HISTORICO_PRE_20261024.md. AGENTS, STATUS, CURRENT_HANDOFF apontam ao mesmo documento. Leitura GitHub LIVE: signed release 2.9.25/code54 (workflow 40106161667 SUCCESS, OTA commit dcc51bad) ja publicada; uniformizacao posterior de todas paginas Streaming em AnyTvPosterCard, tres colunas 2:3 ContentScale.Fit, icones originais e 24/lote esta somente em DEV PR #3 DRAFT; CI unsigned 40114130735 SUCCESS no source b4fecc63 e proof 40114275545 SUCCESS. Fonte HEAD a289fd759475971705509e84c2d336be4611c2a6 antes de novos commits de documentacao; paridade SHA de 7 fontes/testes/workflow com build comprovada. Nao fazer release nova nem atualizar companion/Worker sem autorizacao; proxima versao precisara code >54. Sem homologacao fisica, gates F0-F8 NAO_HOMOLOGADO e progresso 7/11=63%."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "Retomada pos-release 2.9.25/code54: PR #3 aberto/draft, SHA codigo DEV 9ac3529f. Corrigidos Ver mais com paginacao de 24 em secoes editoriais/provedores, acesso as paginas seguintes quando filtro reduz pagina inicial, e snapshot duravel para filme marcado assistido sem favorito. CI unsigned novo 40119630330 disparado, resultado em confirmacao; device proof 40119630288 SUCCESS. Nenhuma assinatura/OTA/Worker/companion/merge; QA fisica NAO_TESTADA; 7/11=63%, gates F0-F8 NAO_HOMOLOGADO. QA docs/qa/ANYTV_20261024_REVIEW_RESIDUAL_POST_CODE54.md."
     }
   ],
   "discovery_v3": {

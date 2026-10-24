@@ -1,5 +1,8 @@
 # PROJETO ANYTV — TRANSIÇÃO INTEGRAL, ESTADO VERIFICADO E CONTINUIDADE
 
+> **QA RESIDUAL 24/10/2026 (SOMENTE DEV; SEM ASSINATURA/OTA):** auditoria do codigo real pos-2.9.25 identificou e corrigiu: pagina dedicada de Ver mais limitada aos primeiros 24 em secoes editoriais/provedores; marcado assistido por card sem snapshot duravel; continuidade da paginacao quando filtros reduzem o primeiro lote. Codigo e regressao no commit [9ac3529f](https://github.com/brenoff2/tcl-apk-ci-builder/commit/9ac3529f7949e9d721b6ef875bd3791f237d1c61), mantendo AnyTvPosterCard 2:3, tres colunas e icones originais. CI unsigned #40119630330 disparado (resultado ainda NAO_CONFIRMADO nesta nota); proof #40119630288 SUCCESS. QA visual Android/TCL NAO_TESTADO; M08/M09 IN_QA; M10/M11 BACKLOG; 7/11=63%, F0-F8 NAO_HOMOLOGADO. OTA V2 assinada 2.9.25/code54 continua publicada, branch de distribuicao dcc51bad; PR #3 DRAFT/sem merge. Relatorio: [QA residual](../qa/ANYTV_20261024_REVIEW_RESIDUAL_POST_CODE54.md).
+
+
 **Checkpoint:** 24/10/2026, após a homologação de CI da padronização visual pós-release 2.9.25/code54. **Projeto:** ANYTV. **Objetivo deste documento:** permitir que outro chat retome exatamente o trabalho sem depender da memória informal do diálogo. Este documento prevalece sobre cabeçalhos históricos de 2.9.12 a 2.9.24. Verificar sempre o GitHub ao vivo antes de afirmar versão, SHA ou gate. Não guardar códigos individuais de ativação, PIN, tokens nem segredos no repositório.
 
 ## 0. RESUMO EXECUTIVO — PRIMEIRA MENSAGEM DO PRÓXIMO CHAT
