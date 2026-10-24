@@ -1321,6 +1321,17 @@ internal fun TclStreamingScreens(
             trackedSeries.sorted().joinToString(",")).apply()
     }
     var watchingQuery by remember { mutableStateOf("") }
+    LaunchedEffect(librarySection, homeLibrary) {
+        if (homeLibrary) {
+            sectionVisibleCount = ANYTV_LIST_BATCH
+            catalogScrollState.scrollToItem(0)
+        }
+    }
+    LaunchedEffect(watchingQuery) {
+        if (homeLibrary && librarySection == "watching") {
+            catalogScrollState.scrollToItem(0)
+        }
+    }
     var showGlobalSearch by remember { mutableStateOf(false) }
     val initialGenreIds = remember(prefs) {
         prefs.getString("anytv_home_genres", null)?.split(",")
@@ -1524,10 +1535,7 @@ internal fun TclStreamingScreens(
         if (globalSearchTerm.length >= 2) {
             globalSearchBusy = true
             runCatching { StreamingCatalog.searchGlobal(globalSearchTerm) }
-                .onSuccess {
-                    globalSearchResults = it
-                    if (it.isNotEmpty()) rememberSuccessfulSearch(globalSearchTerm)
-                }
+                .onSuccess { globalSearchResults = it }
                 .onFailure {
                     globalSearchError = "Falha ao consultar o catálogo. " +
                         "Confira a conexão e tente novamente."
@@ -2475,6 +2483,14 @@ internal fun TclStreamingScreens(
                                 .filter { watchingQuery.isBlank() ||
                                     it.name.contains(watchingQuery.trim(), ignoreCase = true) }
                                 .distinctBy { it.id }
+                            if (inProgress.isEmpty() && watchingQuery.isNotBlank()) {
+                                item {
+                                    Text("Nenhuma série corresponde à sua busca.",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp,
+                                        modifier = Modifier.padding(vertical = 16.dp))
+                                }
+                            }
                             items(inProgress.take(sectionVisibleCount).chunked(2)) { pair ->
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .padding(vertical = 9.dp),
@@ -2674,6 +2690,7 @@ internal fun TclStreamingScreens(
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                                 keyboardActions = KeyboardActions(onSearch = {
                                     globalSearchTerm = globalSearchDraft.trim()
+                                    rememberSuccessfulSearch(globalSearchTerm)
                                 }),
                                 decorationBox = { innerTextField ->
                                     Box(modifier = Modifier.fillMaxSize(),
@@ -2687,6 +2704,7 @@ internal fun TclStreamingScreens(
                                 })
                             IconButton(onClick = {
                                 globalSearchTerm = globalSearchDraft.trim()
+                                rememberSuccessfulSearch(globalSearchTerm)
                             }, enabled = globalSearchDraft.trim().length >= 3,
                                 modifier = Modifier.size(36.dp)) {
                                 Icon(Icons.Filled.Search, contentDescription = "Executar busca",
@@ -2709,6 +2727,7 @@ internal fun TclStreamingScreens(
                                     .clickable {
                                         globalSearchDraft = past
                                         globalSearchTerm = past
+                                        rememberSuccessfulSearch(past)
                                     }.padding(vertical = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Filled.Search, contentDescription = null,
@@ -2746,6 +2765,7 @@ internal fun TclStreamingScreens(
                                         pair.forEach { found ->
                                             Column(modifier = Modifier.weight(1f).clickable {
                                                 details = found; detailsPackage = null
+                                                rememberSuccessfulSearch(globalSearchTerm)
                                                 showGlobalSearch = false
                                             }) {
                                                 AnyTvPinnedImage(
