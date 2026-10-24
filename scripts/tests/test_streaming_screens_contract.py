@@ -313,6 +313,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('RESOLVER_BASE = "https://anytv-link-resolver-pilot.brenoff.workers.dev"', identity)
         self.assertIn("AnyTvPersonalLinks.resolve(context, title, packageName)", self.screen)
         self.assertIn('Text("Verificar autorização de links"', self.screen)
+        self.assertIn('Streaming Availability API by Movie of the Night', self.screen)
+        self.assertIn('https://www.movieofthenight.com/about/api', self.screen)
         self.assertIn('AnyTvPersonalResult.ActivationRequired ->', self.screen)
         self.assertIn('AnyTvPersonalResult.ResolverUnavailable ->', self.screen)
         self.assertIn('AnyTvDeviceIdentity.RESOLVER_BASE + "/v1/device/status"', resolver)
