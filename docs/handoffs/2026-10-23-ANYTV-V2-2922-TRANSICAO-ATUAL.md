@@ -1,3 +1,5 @@
+> **AVISO 24/10/2026 — DOCUMENTO HISTÓRICO, NÃO É MAIS O HANDOFF VIGENTE.** O estado atual e o ponto de retomada estão em [TRANSIÇÃO ATUAL PÓS-2.9.25](2026-10-24-ANYTV-TRANSICAO-ATUAL-POS-2925.md). A versão **2.9.25/code54 já foi assinada e publicada** no [release #40106161667](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40106161667). A revisão visual posterior, com **três cartões/pôster 2:3** em todas as páginas, está **somente no PR #3 DEV** e passou no [CI unsigned #40114130735](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40114130735); ainda não foi lançada. Conteúdos abaixo preservados para cronologia, não para determinar versão corrente ou autorizar publicação.
+
 # PROJETO ANYTV — HANDOFF COMPLETO, ATUAL E EXECUTÁVEL
 **Checkpoint: 23/10/2026 | Situação: execução técnica publicada, homologação física pendente | Esta página prevalece sobre o handoff histórico de 2.9.12/2.9.13.**
 
