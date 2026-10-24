@@ -243,6 +243,22 @@ internal fun OfficialTvIcon(app: TvOfficialApp, size: Dp) {
     }
 }
 
+/** Cached real installed apps render immediately on reconnect; never invent services. */
+private fun cachedTvApps(raw: String?): List<TvOfficialApp> {
+    if (raw.isNullOrBlank()) return emptyList()
+    return runCatching {
+        val array = JSONArray(raw)
+        buildList<TvOfficialApp> {
+            for (i in 0 until array.length()) {
+                val item = array.optJSONObject(i) ?: continue
+                val pkg = item.optString("package")
+                if (pkg.isNotBlank()) add(TvOfficialApp(pkg,
+                    item.optString("name", pkg), item.optString("icon")))
+            }
+        }
+    }.getOrDefault(emptyList())
+}
+
 @Composable
 fun TclInstalledAppsBar(
     tvHost: String?, tvIdentity: String?, tvName: String?,
@@ -265,7 +281,12 @@ fun TclInstalledAppsBar(
     }
     var pairing by remember(deviceKey, host, nameKey) { mutableStateOf(savedPair) }
     var codeEntry by remember(deviceKey, host, nameKey) { mutableStateOf(pairing) }
-    var allApps by remember(deviceKey, host, nameKey) { mutableStateOf<List<TvOfficialApp>>(emptyList()) }
+    val savedAppsRaw = prefs.getString("installed:$host", null)
+        ?: prefs.getString("installed:$deviceKey", null)
+        ?: nameKey?.let { prefs.getString("installed:name:$it", null) }
+    var allApps by remember(deviceKey, host, nameKey) {
+        mutableStateOf(cachedTvApps(savedAppsRaw))
+    }
     val savedFavoriteRaw = prefs.getString("favorites:$host", null)
         ?: prefs.getString("favorites:$deviceKey", null)
         ?: nameKey?.let { prefs.getString("favorites:name:$it", null) }
@@ -287,6 +308,18 @@ fun TclInstalledAppsBar(
         val editor = prefs.edit().putString("pair:$deviceKey", code)
         if (host.isNotBlank()) editor.putString("pair:$host", code)
         if (nameKey != null) editor.putString("pair:name:$nameKey", code)
+        editor.commit()
+    }
+    fun storeApps(apps: List<TvOfficialApp>) {
+        val array = JSONArray()
+        apps.forEach { app ->
+            array.put(JSONObject().put("package", app.packageName)
+                .put("name", app.name).put("icon", app.icon))
+        }
+        val serialized = array.toString()
+        val editor = prefs.edit().putString("installed:$deviceKey", serialized)
+        if (host.isNotBlank()) editor.putString("installed:$host", serialized)
+        if (nameKey != null) editor.putString("installed:name:$nameKey", serialized)
         editor.commit()
     }
     fun storeFavorites(ids: List<String>) {
@@ -315,6 +348,7 @@ fun TclInstalledAppsBar(
                         pairing = code
                         codeEntry = code
                         allApps = apps
+                        storeApps(apps)
                         errorText = null
                         break
                     }
@@ -327,18 +361,25 @@ fun TclInstalledAppsBar(
     LaunchedEffect(host, pairing, refresh) {
         if (host.isNotBlank() && pairing.isNotBlank()) {
             busy = true
-            runCatching { TclTvAppApi.apps(host, pairing) }
-                .onSuccess { list ->
-                    allApps = list
-                    storePair(pairing)
-                    errorText = null
-                }.onFailure {
-                    errorText = it.message ?: "Não foi possível consultar aplicativos da TCL."
-                    if (it.message?.contains("Código incorreto") == true) {
-                        codeEntry = pairing
-                        showPair = true
-                    }
+            val firstAttempt = runCatching { TclTvAppApi.apps(host, pairing) }
+            val result = if (firstAttempt.isFailure && refresh == 0) {
+                // Companion may still be starting after TV reconnect.
+                kotlinx.coroutines.delay(1400L)
+                runCatching { TclTvAppApi.apps(host, pairing) }
+            } else firstAttempt
+            result.onSuccess { list ->
+                allApps = list
+                storeApps(list)
+                storePair(pairing)
+                errorText = null
+            }.onFailure {
+                errorText = it.message ?: "Não foi possível consultar aplicativos da TCL."
+                if (it.message?.contains("Código incorreto") == true) {
+                    codeEntry = pairing
+                    showPair = true
                 }
+                // Keep the last confirmed TV icons visible during outages.
+            }
             busy = false
         }
     }
@@ -355,7 +396,9 @@ fun TclInstalledAppsBar(
                 selectedApps.forEach { app ->
                     Column(
                         modifier = Modifier.width(62.dp).clickable {
-                            scope.launch {
+                            if (pairing.isBlank()) {
+                                showPair = true
+                            } else scope.launch {
                                 errorText = null
                                 runCatching { TclTvAppApi.open(host, pairing, app.packageName) }
                                     .onFailure {

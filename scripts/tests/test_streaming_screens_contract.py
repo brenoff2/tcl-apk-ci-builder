@@ -101,7 +101,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('distinctBy { provider(it.name) ?: norm(it.name) }', self.screen)
         self.assertIn('normalized.contains("channel")', self.screen)
         self.assertIn('normalized.contains("canal")', self.screen)
-        self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
+        self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
         self.assertIn('fontSize = 11.sp, maxLines = 1', self.screen)
         self.assertIn('lineHeight = 14.sp', self.screen)
 
@@ -201,7 +201,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Token TMDB', self.screen)
 
     def test_same_home_app_icons_year_and_readable_spacing(self):
-        self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
+        self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
         self.assertIn('lineHeight = 14.sp', self.screen)
         self.assertIn('Spacer(Modifier.height(5.dp))', self.screen)
         self.assertIn('first_air_date', self.screen)
@@ -239,7 +239,7 @@ class StreamingScreens(unittest.TestCase):
         ):
             self.assertIn(fragment, self.screen)
         self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
-        self.assertIn('OfficialTvIcon(installed, 20.dp)', self.screen)
+        self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
 
     def test_watched_and_tracking_history_does_not_depend_on_heart(self):
         self.assertIn('fun restoreTrackedTitle(media: String, id: Int)', self.screen)
@@ -479,6 +479,17 @@ class StreamingScreens(unittest.TestCase):
             with self.subTest(snippet=snippet):
                 self.assertIn(snippet, self.screen)
 
+    def test_home_more_reminder_and_brand_are_real(self):
+        self.assertIn('OutlinedButton(', self.screen)
+        self.assertIn('"Ver mais ›"', self.screen)
+        self.assertIn('expandedHomeShelf = if (expandedHomeShelf == heading)', self.screen)
+        self.assertIn('shelf.chunked(3).forEach { group ->', self.screen)
+        self.assertNotIn('Text(if (enabled) "Lembrar ✓" else "Lembrar"', self.screen)
+        self.assertIn('Spacer(Modifier.height(6.dp))', self.screen)
+        self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
+        self.assertIn('Box(modifier = Modifier.size(14.dp)', self.screen)
+        self.assertIn('R.drawable.anytv_horizontal', self.screen)
+
     def test_three_row_cards_and_icon_only_genre_selector(self):
         self.assertIn('AnyTvGenreViewIcon(Icons.Filled.ViewList, "Lista",', self.screen)
         self.assertIn('AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade de três colunas",',
@@ -491,7 +502,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('AnyTvGenreTitleActions(', self.screen)
         self.assertNotIn('onTrailer =', self.screen)
         self.assertIn('Text("▶ Ver trailer")', self.screen)
-        self.assertEqual(self.screen.count('showRating = false'), 3)
+        self.assertEqual(self.screen.count('showRating = false'), 4)
         self.assertIn('val unique = shelf.distinctBy', self.screen)
         self.assertIn('Keep cards visible when marked', self.screen)
         for marker, until, metadata, offers, title in (

@@ -102,7 +102,9 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn("TclTvAppApi.headphones(host, code)", self.skin)
         self.assertNotIn("KEYCODE_PROG_RED", self.skin)
         playback = (KOTLIN / "PlaybackTransportBar.kt").read_text()
-        self.assertIn("onHeadphones()", playback)
+        self.assertNotIn("onHeadphones()", playback)
+        self.assertNotIn("showEpisodeGuide = true", playback)
+        self.assertNotIn("KEYCODE_MEDIA_PREVIOUS", playback)
         self.assertNotIn("KEYCODE_PROG_RED", playback)
 
     def test_no_overlap_regression_and_cast_still_available(self):

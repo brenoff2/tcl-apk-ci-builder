@@ -33,6 +33,8 @@ import com.hari.androidtvremote.androidLib.remote.Remotemessage
 
 /**
  * Playback controls for Android TV Remote v2.
+ * Only real play/pause/stop/seek commands are offered. The three removed
+ * actions (restart, episodes, headphones) were not reliably supported.
  * Streaming apps interpret seeking and repeat acceleration independently:
  * the x labels represent repeated transport requests, not confirmed speed.
  */
@@ -43,14 +45,8 @@ fun PlaybackTransportBar(
     modifier: Modifier = Modifier
 ) {
     val levels = listOf(1, 2, 4, 8, 16)
-    val context = LocalContext.current
-    val companionPrefs = remember(context) {
-        context.getSharedPreferences("tcl_tv_companion", Context.MODE_PRIVATE)
-    }
-    var showHeadsetSetup by remember { mutableStateOf(false) }
     var forwardRequests by rememberSaveable { mutableStateOf(0) }
     var rewindRequests by rememberSaveable { mutableStateOf(0) }
-    var showEpisodeGuide by rememberSaveable { mutableStateOf(false) }
 
     fun reset() {
         forwardRequests = 0
@@ -129,80 +125,10 @@ fun PlaybackTransportBar(
                 onClick = { accelerateForward() }
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            PlaybackChip(
-                text = "↺ Do início",
-                description = "Solicita reinício do episódio; alguns streamings interpretam como anterior",
-                modifier = Modifier.weight(1f)
-            ) {
-                reset()
-                onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_PREVIOUS)
-            }
-            PlaybackChip(
-                text = "☷ Episódios",
-                description = "Abrir opções para acessar a lista de episódios",
-                modifier = Modifier.weight(1f)
-            ) {
-                reset()
-                showEpisodeGuide = true
-            }
-            PlaybackChip(
-                text = "🎧 Fones",
-                description = "Tentar desconectar e reconectar o fone Bluetooth pareado na TCL",
-                modifier = Modifier.weight(0.9f)
-            ) {
-                if (onHeadphones != null) {
-                    onHeadphones()
-                } else {
-                    // No Accessibility interception; do not send a useless red key.
-                    showHeadsetSetup = true
-                }
-            }
-        }
+
     }
 
-    if (showHeadsetSetup) {
-        TvCompanionSetupDialog(
-            description = "A reconexão dos fones requer o complemento Controle TCL TV " +
-                "1.3 ou superior. Na TV, abra o complemento e escolha os fones já pareados. " +
-                "A versão antiga com Acessibilidade não é necessária.",
-            onReady = {
-                showHeadsetSetup = false
-            },
-            onDismiss = { showHeadsetSetup = false }
-        )
-    }
 
-    if (showEpisodeGuide) {
-        AlertDialog(
-            onDismissRequest = { showEpisodeGuide = false },
-            title = { Text("Episódios e temporadas") },
-            text = {
-                Text(
-                    "Na Netflix, a lista fica na página da série, em \"Episódios e mais\". " +
-                    "O controle não consegue abrir essa seção diretamente a partir do vídeo. " +
-                    "Experimente Voltar ao título e selecione Episódios e mais com as setas. " +
-                    "Mostrar controles abre o menu de reprodução na TV."
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showEpisodeGuide = false
-                    onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_BACK)
-                }) {
-                    Text("Voltar ao título")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showEpisodeGuide = false
-                    onRemoteKey(Remotemessage.RemoteKeyCode.KEYCODE_DPAD_UP)
-                }) {
-                    Text("Mostrar controles")
-                }
-            }
-        )
-    }
 }
 
 @Composable

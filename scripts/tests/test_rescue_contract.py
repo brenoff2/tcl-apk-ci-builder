@@ -81,12 +81,14 @@ class RescueContractTests(unittest.TestCase):
         for key in (
             "KEYCODE_MEDIA_PLAY", "KEYCODE_MEDIA_PAUSE",
             "KEYCODE_MEDIA_STOP", "KEYCODE_MEDIA_FAST_FORWARD",
-            "KEYCODE_MEDIA_REWIND", "KEYCODE_MEDIA_PREVIOUS",
+            "KEYCODE_MEDIA_REWIND",
         ):
             with self.subTest(key=key):
                 self.assertIn(key, self.playback)
         self.assertIn("onHeadphones: (() -> Unit)? = null", self.playback)
-        self.assertIn("onHeadphones()", self.playback)
+        self.assertNotIn("onHeadphones()", self.playback)
+        self.assertNotIn("showEpisodeGuide = true", self.playback)
+        self.assertNotIn("KEYCODE_MEDIA_PREVIOUS", self.playback)
         self.assertNotIn("KEYCODE_PROG_RED", self.playback)
         self.assertIn("TvCompanionSetupDialog(", self.shortcut)
 

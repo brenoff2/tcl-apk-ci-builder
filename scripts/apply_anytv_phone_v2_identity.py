@@ -34,10 +34,10 @@ replace_exact(shared, 'suffix = "android/cert2026";', 'suffix = "android/v2";')
 replace_exact(shared,
               '} else if (PHONE_CERT_LEGACY.equals(signer)) {\n                        suffix = "android";\n',
               '')
-# Add visible launcher distinction; old app remains installed unchanged.
-replace_exact(base / "src/main/res/values/strings.xml",
-              '<string name="app_name">AnyTV</string>',
-              '<string name="app_name">AnyTV V2</string>')
+# The approved launcher display name remains AnyTV (package and signer isolate V2).
+assert '<string name="app_name">AnyTV</string>' in (
+    base / "src/main/res/values/strings.xml"
+).read_text(encoding="utf-8")
 assert PACKAGE_V2 in (base / "build.gradle.kts").read_text()
 assert cert in shared.read_text()
 assert "android/v2" in shared.read_text()

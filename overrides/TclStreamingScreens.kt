@@ -3,6 +3,7 @@ package com.hari.androidtvremote.ui.app
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -45,6 +46,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.hari.androidtvremote.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.Color
@@ -819,9 +822,9 @@ private fun StreamingOfferIcons(
                 }
                 if (installed != null) {
                     // Exactly the same launcher icon component used on the main TV screen.
-                    OfficialTvIcon(installed, 20.dp)
+                    OfficialTvIcon(installed, 14.dp)
                 } else {
-                    Box(modifier = Modifier.size(20.dp).clip(RoundedCornerShape(5.dp))
+                    Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(4.dp))
                         .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                         contentAlignment = Alignment.Center) {
                         if (offer.logo.isNotBlank()) {
@@ -1028,6 +1031,7 @@ internal fun TclStreamingScreens(
             .filter { StreamingCatalog.supportsSubscription(it) }.distinct().take(12)
     }
     var homeLibrary by remember { mutableStateOf(false) }
+    var expandedHomeShelf by remember { mutableStateOf<String?>(null) }
     var trackedSeries by remember {
         mutableStateOf(prefs.getString("anytv_tracking_series", "")
             ?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet())
@@ -1498,6 +1502,12 @@ internal fun TclStreamingScreens(
             color = MaterialTheme.colorScheme.background) {
             Column(modifier = Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Image(
+                    painter = painterResource(R.drawable.anytv_horizontal),
+                    contentDescription = "AnyTV",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.width(170.dp).height(38.dp)
+                )
                 AnyTvStreamNavBar(
                     library = homeLibrary && selected == null,
                     section = librarySection,
@@ -1968,6 +1978,7 @@ internal fun TclStreamingScreens(
                                                 StreamingOfferIcons(title, offerCache, displayed,
                                                     showRating = false)
                                                 // Keep three lines reserved, even for short titles.
+                                                Spacer(Modifier.height(6.dp))
                                                 Text(title.name, maxLines = 3, lineHeight = 14.sp,
                                                     modifier = Modifier.fillMaxWidth().height(42.dp),
                                                     overflow = TextOverflow.Ellipsis,
@@ -2007,6 +2018,7 @@ internal fun TclStreamingScreens(
                                                 onFavorite = { toggleFavorite(title, "library") })
                                             StreamingOfferIcons(title, offerCache, displayed,
                                                 showRating = false)
+                                            Spacer(Modifier.height(6.dp))
                                             Text(title.name, maxLines = 3, lineHeight = 14.sp,
                                                 modifier = Modifier.fillMaxWidth().height(42.dp),
                                                 overflow = TextOverflow.Ellipsis,
@@ -2069,9 +2081,68 @@ internal fun TclStreamingScreens(
                         uniqueShelves.forEach { (heading, shelf) ->
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text(heading, fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.padding(top = 16.dp, bottom = 9.dp))
-                                    // One horizontal scroll moves two stacked rows.
+                                    Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically) {
+                                        Text(heading, fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.weight(1f))
+                                        if (shelf.size > 6) {
+                                            OutlinedButton(
+                                                onClick = {
+                                                    expandedHomeShelf = if (expandedHomeShelf == heading)
+                                                        null else heading
+                                                },
+                                                modifier = Modifier.height(34.dp),
+                                                shape = RoundedCornerShape(21.dp),
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp)
+                                            ) {
+                                                Text(if (expandedHomeShelf == heading) "Voltar"
+                                                     else "Ver mais ›", fontSize = 11.sp)
+                                            }
+                                        }
+                                    }
+                                    if (expandedHomeShelf == heading) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                            shelf.chunked(3).forEach { group ->
+                                                Row(modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                                    verticalAlignment = Alignment.Top) {
+                                                    group.forEach { item ->
+                                                        Column(modifier = Modifier.weight(1f).clickable {
+                                                            details = item; detailsPackage = null
+                                                        }) {
+                                                            AnyTvPinnedImage(
+                                                                model = "https://image.tmdb.org/t/p/w185" + item.poster,
+                                                                contentDescription = "Cartaz: " + item.name,
+                                                                modifier = Modifier.fillMaxWidth().height(158.dp),
+                                                                contentScale = ContentScale.Crop)
+                                                            Spacer(Modifier.height(5.dp))
+                                                            AnyTvCardMetaRow(item,
+                                                                favorite = isFavorite(item, "library"),
+                                                                marked = if (item.media == "movie")
+                                                                    item.id.toString() in watchedFilms
+                                                                else item.id.toString() in trackedSeries,
+                                                                compact = true,
+                                                                onMarked = {
+                                                                    if (item.media == "movie")
+                                                                        toggleFilmWatched(item.id)
+                                                                    else toggleSeriesTracking(item.id)
+                                                                },
+                                                                onFavorite = { toggleFavorite(item, "library") })
+                                                            StreamingOfferIcons(item, offerCache, displayed,
+                                                                showRating = false)
+                                                            Spacer(Modifier.height(6.dp))
+                                                            Text(item.name, maxLines = 3, lineHeight = 14.sp,
+                                                                modifier = Modifier.fillMaxWidth().height(42.dp),
+                                                                overflow = TextOverflow.Ellipsis, fontSize = 11.sp)
+                                                        }
+                                                    }
+                                                    repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                    // Keep the approved horizontal two-row rail by default.
                                     LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                                         items(shelf.chunked(2)) { pair ->
                                             Column(verticalArrangement = Arrangement.spacedBy(11.dp),
@@ -2102,41 +2173,16 @@ internal fun TclStreamingScreens(
                                                         StreamingOfferIcons(item, offerCache, displayed,
                                                             showRating = false)
                                                         // Fixed three-line titles keep both rows aligned.
+                                                        Spacer(Modifier.height(6.dp))
                                                         Text(item.name, maxLines = 3, lineHeight = 14.sp,
                                                             modifier = Modifier.fillMaxWidth().height(42.dp),
                                                             overflow = TextOverflow.Ellipsis,
                                                             fontSize = 11.sp)
-                                                        if (heading.startsWith("Em breve")) {
-                                                            val reminderId = "movie:" + item.id
-                                                            val enabled = premiereReminders[reminderId]
-                                                                ?: prefs.getBoolean("anytv_reminder_" + reminderId, false)
-                                                            TextButton(onClick = {
-                                                                if (enabled) {
-                                                                    cancelAnyTvPremiereReminder(context, item)
-                                                                    premiereReminders[reminderId] = false
-                                                                    prefs.edit().putBoolean(
-                                                                        "anytv_reminder_" + reminderId, false).apply()
-                                                                } else {
-                                                                    val scheduled = runCatching {
-                                                                        scheduleAnyTvPremiereReminder(context, item)
-                                                                    }.getOrDefault(false)
-                                                                    if (scheduled) {
-                                                                        premiereReminders[reminderId] = true
-                                                                        prefs.edit().putBoolean(
-                                                                            "anytv_reminder_" + reminderId, true).apply()
-                                                                    } else {
-                                                                        message = "A data de estreia deve ser futura para criar o lembrete."
-                                                                    }
-                                                                }
-                                                            }, contentPadding = PaddingValues(0.dp)) {
-                                                                Text(if (enabled) "Lembrar ✓" else "Lembrar",
-                                                                    fontSize = 11.sp)
-                                                            }
-                                                        }
                                                     }
                                                 }
                                             }
                                         }
+                                    }
                                     }
                                 }
                             }

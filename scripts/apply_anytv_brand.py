@@ -35,7 +35,51 @@ drawable = res/"drawable-nodpi"
 drawable.mkdir(parents=True, exist_ok=True)
 copyfile(icon_path, drawable/"anytv_icon.png")
 copyfile(logo_path, drawable/"anytv_wordmark.png")
+copyfile("assets/anytv_horizontal.png", drawable/"anytv_horizontal.png")
 copyfile("overrides/AnyTvSplashScreen.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/SplashScreen.kt")
+# Keep the supplied brand palette consistent on all devices, including when
+# Android changes wallpaper/dynamic colors. Preserve user data and package.
+theme = Path("source/app/src/main/java/com/hari/androidtvremote/ui/theme/Theme.kt")
+theme_source = theme.read_text(encoding="utf-8")
+assert theme_source.count(
+    "colorScheme = if (useDark) dynamicDarkColorScheme() else dynamicLightColorScheme(),"
+) == 1, "Upstream theme changed: check before applying brand"
+theme_source = theme_source.replace(
+    "import androidx.compose.material3.MaterialTheme",
+    "import androidx.compose.material3.MaterialTheme\n"
+    "import androidx.compose.material3.darkColorScheme\n"
+    "import androidx.compose.ui.graphics.Color"
+)
+theme_source = theme_source.replace(
+    "colorScheme = if (useDark) dynamicDarkColorScheme() else dynamicLightColorScheme(),",
+    "colorScheme = anyTvRedDarkScheme,"
+)
+theme_source += """
+private val anyTvRedDarkScheme = darkColorScheme(
+    primary = Color(0xFFFF1744),
+    onPrimary = Color.White,
+    primaryContainer = Color(0xFF6D1029),
+    onPrimaryContainer = Color.White,
+    secondary = Color(0xFFE4B8C3),
+    onSecondary = Color(0xFF24050E),
+    secondaryContainer = Color(0xFF35232A),
+    onSecondaryContainer = Color.White,
+    background = Color(0xFF09090B),
+    onBackground = Color(0xFFF5F3F4),
+    surface = Color(0xFF101013),
+    onSurface = Color(0xFFF5F3F4),
+    surfaceContainerLow = Color(0xFF121215),
+    surfaceContainer = Color(0xFF19181C),
+    surfaceContainerHigh = Color(0xFF242126),
+    surfaceContainerHighest = Color(0xFF302A31),
+    onSurfaceVariant = Color(0xFFC6C0C5),
+    outline = Color(0xFF70676E),
+    outlineVariant = Color(0xFF4C4248),
+    error = Color(0xFFFF637A)
+)
+"""
+theme.write_text(theme_source, encoding="utf-8")
+
 gradle = Path("source/app/build.gradle.kts")
 cfg = gradle.read_text(encoding="utf-8")
 assert cfg.count("versionCode = 23") == 1 and cfg.count('versionName = "2.3-TCL"') == 1
