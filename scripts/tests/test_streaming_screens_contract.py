@@ -433,7 +433,7 @@ class StreamingScreens(unittest.TestCase):
             'suspend fun discoveryGenrePage(id: Int, media: String, page: Int,',
             'sourcePage < payload.optInt("total_pages", sourcePage)',
             'genreMore[key] = it.more',
-            'items(shelf.chunked(2))',
+            'items(shelf.take(ANYTV_LIST_BATCH).chunked(2))',
             'StreamingCatalog.discoveryGenrePage(',
             'items(genreTitles, key =',
             'if (!homeLibrary && selected == null && selectedHomeGenre != 0)',
@@ -553,6 +553,13 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('expandedHomeShelf', self.screen)
         self.assertNotIn('shelf.chunked(3).forEach', self.screen)
 
+    def test_saved_library_keeps_all_records_and_pages_in_24s(self):
+        self.assertIn('homeLibrary -> true // Saved/watched records', self.screen)
+        self.assertIn('if (homeLibrary) unique else unique.take(ANYTV_LIST_BATCH)', self.screen)
+        self.assertIn('val sectionTitles = sectionAll.take(sectionVisibleCount)', self.screen)
+        self.assertIn('sectionVisibleCount += ANYTV_LIST_BATCH', self.screen)
+        self.assertIn('shelf.take(ANYTV_LIST_BATCH).chunked(2)', self.screen)
+
     def test_genre_cards_restore_same_poster_height_as_home(self):
         self.assertNotIn('Modifier.fillMaxWidth().height(135.dp)', self.screen)
         self.assertNotIn('Modifier.size(width = 92.dp, height = 132.dp)', self.screen)
@@ -604,7 +611,7 @@ class StreamingScreens(unittest.TestCase):
              'HorizontalDivider(color =', 'AnyTvCardMetaRow(title,',
              'StreamingOfferIcons(title, offerCache, displayed,',
              'Text(title.name, maxLines = 3,'),
-            ('items(shelf.chunked(2))',
+            ('items(shelf.take(ANYTV_LIST_BATCH).chunked(2))',
              'if (heading.startsWith("Em breve"))',
              'AnyTvCardMetaRow(item,',
              'StreamingOfferIcons(item, offerCache, displayed,',
