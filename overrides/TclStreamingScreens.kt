@@ -2036,7 +2036,7 @@ internal fun TclStreamingScreens(
                         } else filteredShelves.values.flatMap { it }
                         mixed.distinctBy { "${it.media}:${it.id}" }.filter {
                             if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                                it.media == "movie" && it.id in cinemaIds
+                                it.media == "movie" // Genre source is now_playing BR
                             else anyTvReleased(it) &&
                                 (it.media != "movie" || it.id !in cinemaIds)
                         }.filterNot {
@@ -2049,7 +2049,7 @@ internal fun TclStreamingScreens(
                         val unique = shelf.filter { title ->
                             when {
                                 heading == ANYTV_CINEMA_SHELF ->
-                                    title.media == "movie" && title.id in cinemaIds
+                                    title.media == "movie" // Source is now_playing BR
                                 heading.startsWith("Em breve") -> anyTvUpcoming(title)
                                 else -> anyTvReleased(title) &&
                                     (title.media != "movie" || title.id !in cinemaIds)
