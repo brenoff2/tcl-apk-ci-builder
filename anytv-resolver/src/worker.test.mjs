@@ -62,6 +62,39 @@ test("identifies authentic Disney, Netflix, Prime, Apple and HBO links", () => {
     "https://play.hbomax.com/show/a0a085b8-6657-46ca-9476-6af0070b9cce");
 });
 
+test("normalizes verified Netflix slash and Prime Video catalog links", () => {
+  assert.equal(validateLink("netflix", FIX.netflix + "/"), FIX.netflix);
+  const primeWeb = "https://www.primevideo.com/detail/0HM3DRN79M0E7QOBLMYTS41IG0";
+  assert.equal(validateLink("prime", primeWeb), primeWeb);
+  assert.equal(validateLink("prime", primeWeb + "?redirect=https://evil.example"), null);
+  assert.equal(validateLink("prime", "https://www.primevideo.com/detail/hi"), null);
+  assert.equal(validateLink("prime", "https://primevideo.com/detail/0HM3DRN79M0E7QOBLMYTS41IG0"), null);
+});
+
+test("prefers a verified direct video link over the provider offer page", () => {
+  const video = "https://www.netflix.com/title/81309354";
+  const item = show("movie/329", [
+    { ...mockOffer("netflix", FIX.netflix), videoLink: video }
+  ]);
+  assert.deepEqual(inspectOffers(item, "movie/329", "netflix"),
+    { status: "link_candidate", url: video });
+  const unsafe = show("movie/329", [
+    { ...mockOffer("netflix", FIX.netflix), videoLink: "https://evil.example/watch/329" }
+  ]);
+  assert.deepEqual(inspectOffers(unsafe, "movie/329", "netflix"),
+    { status: "link_candidate", url: FIX.netflix });
+});
+
+test("signed device status cannot bypass activation", async () => {
+  const env = makeEnv();
+  const noMode = await handleRequest(request("/v1/device/status"), env);
+  assert.equal(noMode.status, 503);
+  env.ANYTV_RESOLVER_AUTH_MODE = "device";
+  const denied = await handleRequest(request("/v1/device/status"), env);
+  assert.equal(denied.status, 401);
+  assert.deepEqual(await denied.json(), { status: "unauthorized" });
+});
+
 test("preserves only validated Apple TV+ playableId and drops affiliate params", () => {
   const url = "https://tv.apple.com/br/movie/the-gorge/umc.cmc.26o403koqo2klixc0jtqy6tmc" +
     "?at=1000l3V2&playableId=tvs.sbd.9001%3A271469518";
