@@ -1082,6 +1082,9 @@ internal fun TclStreamingScreens(
     var titleActionPending by remember { mutableStateOf(false) }
     var titleActionFeedback by remember { mutableStateOf<String?>(null) }
     var deviceLinkStatus by remember { mutableStateOf<String?>(null) }
+    var linkActivationRequired by remember { mutableStateOf(false) }
+    var deviceActivationCode by remember { mutableStateOf("") }
+    var deviceActivationPending by remember { mutableStateOf(false) }
     var favorites by remember {
         mutableStateOf(runCatching {
             val arr = JSONArray(prefs.getString("streaming_favorites", "[]"))
@@ -2352,18 +2355,70 @@ internal fun TclStreamingScreens(
                     }
                     TextButton(onClick = {
                         scope.launch {
-                            deviceLinkStatus = when (AnyTvPersonalLinks.activationStatus(context)) {
+                            val state = AnyTvPersonalLinks.activationStatus(context)
+                            linkActivationRequired = state == "unauthorized"
+                            deviceActivationCode = ""
+                            deviceLinkStatus = when (state) {
                                 "activated" -> "Links autorizados neste celular."
-                                "unauthorized" -> "Este celular ainda não está ativado para links diretos."
+                                "unauthorized" -> "Esta instalação ainda não está autorizada para links diretos."
                                 else -> "Não foi possível verificar a autorização dos links."
                             }
                         }
-                    }, contentPadding = PaddingValues(0.dp)) {
+                    }, enabled = !deviceActivationPending,
+                        contentPadding = PaddingValues(0.dp)) {
                         Text("Verificar autorização de links", fontSize = 11.sp)
                     }
                     if (deviceLinkStatus != null) {
                         Text(deviceLinkStatus.orEmpty(), fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // Each APK has a separate Android Keystore identity.
+                        Text("Instalação: " + context.packageName + " · " +
+                            AnyTvDeviceIdentity.deviceId(context).takeLast(8),
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (linkActivationRequired) {
+                        Text("Cole o código único de ativação emitido pelo operador. " +
+                            "Não é uma chave de API e não será salvo no aparelho.",
+                            fontSize = 11.sp)
+                        OutlinedTextField(
+                            value = deviceActivationCode,
+                            onValueChange = { value ->
+                                deviceActivationCode = value.trim().take(43)
+                            },
+                            label = { Text("Código único de ativação") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !deviceActivationPending,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                        )
+                        TextButton(
+                            enabled = !deviceActivationPending &&
+                                deviceActivationCode.matches(Regex("[A-Za-z0-9_-]{43}")),
+                            onClick = {
+                                val singleUseCode = deviceActivationCode
+                                scope.launch {
+                                    deviceActivationPending = true
+                                    try {
+                                        val activated = withContext(Dispatchers.IO) {
+                                            runCatching {
+                                                AnyTvDeviceIdentity.activate(context, singleUseCode)
+                                            }.getOrDefault(false)
+                                        }
+                                        deviceActivationCode = ""
+                                        val verified = activated &&
+                                            AnyTvPersonalLinks.activationStatus(context) == "activated"
+                                        linkActivationRequired = !verified
+                                        deviceLinkStatus = if (verified)
+                                            "Links autorizados neste celular."
+                                        else "Não foi possível ativar este dispositivo. " +
+                                            "Confira se o código está válido e foi emitido para esta instalação."
+                                    } finally {
+                                        deviceActivationPending = false
+                                    }
+                                }
+                            }
+                        ) { Text(if (deviceActivationPending) "Ativando…" else "Ativar links") }
                     }
                     val releasedYear = title.date.take(4).takeIf {
                         it.length == 4 && it.all(Char::isDigit)
