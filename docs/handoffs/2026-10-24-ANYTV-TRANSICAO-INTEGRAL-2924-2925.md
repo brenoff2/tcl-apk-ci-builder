@@ -22,7 +22,7 @@ Código: overrides/TclStreamingScreens.kt, overrides/TclInstalledApps.kt, overri
 
 **Worker Cloudflare ATUAL COMPROVADO via leitura direta em 24/10:** anytv-link-resolver-pilot, versão 58fe4b33-6ee2-4841-8587-c28acaaad435, deployment 25de8328-10ab-471a-8e94-fb4cdbce13d9, **100% de tráfego**. Rollback anterior 58a1c0c3-eafc-406a-9961-9656a01e14ec. Cinco bindings preservados: DB D1 canônico, ANYTV_RESOLVER_AUTH_MODE=device, ANYTV_DEVICE_ACTIVATION_ENABLED=true, segredos ANYTV_MOVIE_API_KEY e TMDB_READ_TOKEN (valores NÃO registrar). Smoke anterior: health/catalog HTTP200; status sem prova HTTP401; request inválido HTTP400. Removidos bloqueios artificiais próprios de 200 chamadas/mês, 20/min por IP e ativação; contratos externos do fornecedor permanecem. Movie of the Night é a API comercial de links, não confundir com JustWatch/TMDB.
 
-**CI MAIS RECENTE DO HEAD 91a2b84:** GitHub Actions #40097871008 (prova de dispositivo) SUCCESS; #40097870978 (Android candidate unsigned) estava IN_PROGRESS ao readback 24/10 13:24Z, na etapa Gradle. Conferir resultado antes de afirmar PASS para o último commit. CI anterior Android #40097330186 SUCCESS; backend #40097287821 SUCCESS; device proof #40097330068 SUCCESS.
+**CI MAIS RECENTE DO HEAD 91a2b84:** GitHub Actions #40097871008 (prova de dispositivo) SUCCESS; #40097870978 (Android candidate unsigned) terminou SUCCESS, comprovado em readback do job: 42 testes de interface, 2 de credenciais, 9 testes adicionais, Gradle BUILD SUCCESSFUL em 4m37s e identidade V2 unsigned verificada. Não confundir unsigned com release code54. CI anterior Android #40097330186 SUCCESS; backend #40097287821 SUCCESS; device proof #40097330068 SUCCESS.
 
 **Status oficial P0:** 7 de 11 marcos técnicos = 63%, todos os gates F0–F8 NAO_HOMOLOGADO, M08 ativação real M09 abertura real do título TV M10 integrado/rollback M11 operação estável ainda sem aceite global. Não promover gates por lançamento/CI.
 
@@ -41,7 +41,7 @@ Código: overrides/TclStreamingScreens.kt, overrides/TclInstalledApps.kt, overri
 
 ## 5. Pendências prioritárias NO EXATO PONTO DE PARADA
 
-1. **Fechar CI do último commit DEV**: readback de #40097870978 para head 91a2b84; verificar se a remoção do método Android legado compila com testes; resolver erros cirurgicamente, sem criar múltiplas releases não necessárias.
+1. **CI do último commit DEV FECHADO**: #40097870978 SUCCESS para head 91a2b84, 42+2+9 testes, Gradle aprovado, pacote de auditoria unsigned. Prosseguir para liberação legítima de 2.9.25; não refazer compilação sem mudança de código.
 2. **Release 2.9.25/code54 ainda NÃO publicada**: revisão do workflow protegido conforme autorização legítima da política, preservar .github/workflows/release-anytv-phone-v2-new-package.yml, request code54, signer V2 original, OTA legacy intacta, SHA256 signed, cert, git blob, readback HTTPS e backup/rollback; não contornar bloqueio nem publicar APK unsigned.
 3. **Instalar/testar no Android real**: nova identidade visual, splash e launcher, barra de aplicativos da TV sem tocar duas vezes, separação visual F/S-Cinema-provedores/título, "Ver mais" funcionando, sem "Lembrar" e botões sem função, favoritos/assistidos persistentes, pesquisa, lista/grade/paginação/trailer. Tela exata e evidência D01–D12/U01–U05.
 4. **Cinema e provedores**: validar lista BR now_playing, selo "Cinema" azul ao lado do F apenas com sinal fundamentado, disponibilidade streaming separada, CTA Ingresso.com honesto, lista completa de logos BR sem duplicidades.
