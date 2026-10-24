@@ -1,31 +1,37 @@
-# ANYTV — PRIMEIRA MENSAGEM PARA RETOMAR NO PRÓXIMO CHAT
+# ANYTV — PRIMEIRA MENSAGEM PARA O PRÓXIMO CHAT (ESTADO CORRETO E ATUAL)
 
-**Checkpoint canônico: 23/10/2026. Projeto em andamento; NÃO RECOMEÇAR.** A versão publicada é **AnyTV V2 2.9.22 (versionCode 51)**. Os registros sobre a 2.9.12 e bloqueio do antigo `ANYTV_RECOVERY_SECRET_2026` no histórico são **obsoletos**, não pendências atuais.
+**Leia este texto como instrução de continuidade. Não reinicie o projeto, não confunda a V2 com o legado e não use o handoff arquivado de 2.9.12/2.9.13 como estado atual.**
 
-> **CONTINUIDADE OBRIGATÓRIA.** Leia o GitHub canônico `brenoff2/tcl-apk-ci-builder`, desenvolvimento `feat/anytv-p0-device-proof-verifier-20261020`, distribuição OTA independente `feat/tcl-v22-updates-back-bluetooth`. Verifique primeiro `docs/roadmap/PROJECT_PROGRESS.json`, `AGENTS.md`, `docs/STATUS.md` e `docs/handoffs/CURRENT_HANDOFF.md`. Não refaça builds aprovados e não publique nova versão apenas para organizar documentação.
+Estou retomando o **PROJETO ANYTV**. O objetivo é manter e melhorar o aplicativo Android AnyTV que controla a TCL/Android TV (LAN/TLS, pareamento, D-pad, volume, teclado/IME, Bluetooth), lança plataformas de streaming e apresenta catálogo de filmes/séries com informações verificadas do TMDB e disponibilidade no Brasil. Preciso de **continuidade real**, a partir dos commits e do estado operacional, e de respostas com progresso, feitos/pendentes e provas. Não me faça recontar decisões.
 
-## Objetivo geral
+## Canônico obrigatório
 
-Manter o aplicativo AnyTV para controlar televisão TCL por rede e Bluetooth, com pareamento, navegação, teclado, favoritos, lançador de streaming e catálogo de filmes/séries; preservar o app legado `com.tclremote.livre`, o companion TCL e os fluxos já validados. O aplicativo V2 separado `com.tclremote.livre.v2` deve receber OTA assinada sem alterar o canal `cert2026`.
+- Repositório privado: `brenoff2/tcl-apk-ci-builder` — https://github.com/brenoff2/tcl-apk-ci-builder
+- Desenvolvimento: `feat/anytv-p0-device-proof-verifier-20261020` (PR #3 draft); distribuição OTA: `feat/tcl-v22-updates-back-bluetooth`. Não mesclar automaticamente em main.
+- Leia primeiro `docs/roadmap/PROJECT_PROGRESS.json`, **handoff atual e completo** `docs/handoffs/2026-10-23-ANYTV-V2-2922-TRANSICAO-ATUAL.md`, `AGENTS.md`, `docs/STATUS.md`, `docs/handoffs/CURRENT_HANDOFF.md` e checklist `docs/qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md`. Arquivo histórico anterior `docs/handoffs/2026-10-23-anytv-full-transition.md` contém contexto antigo, não o release vigente.
+- Código central: `overrides/TclStreamingScreens.kt`, `anytv-resolver/src/worker.mjs` e módulos de autenticação, `.github/workflows/release-anytv-phone-v2-new-package.yml` e testes.
 
-## Situação técnica comprovada
+## Estado de fato — NÃO REFAZER
 
-- **OTA V2 publicada:** `2.9.22-AnyTV`, `versionCode 51`, `com.tclremote.livre.v2`. [GitHub Actions #40045953034](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40045953034): **SUCCESS, 32 etapas**, Kotlin/Android, testes IME, busca TMDB real, signer recuperado, APK assinado, publicado e conferido por bytes via HTTPS.
-- **APK:** `updates/android/v2/current.apk` na branch OTA; Git blob `39084853e1956f4aaedb3d8443ade9304e497581`, tamanho **28.412.772 bytes**, SHA256 `44cab69ad0eb6c0110ff4180e6388f042e667d8b86dcd319e39d777973d85d94`; commit da publicação `0b57a842cf7b662f6a8a85a84429d01f4901fdd4`.
-- **Assinatura V2:** certificado SHA256 `fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9`. **Canal legado preservado**: `updates/android/cert2026/current.apk`, blob `44c766b433ddb370f4589b87843f1edfd9cd7b7a`. Não confundir certificado V2 com cert2026.
-- **Catálogo online:** Cloudflare Worker `anytv-link-resolver-pilot` versão `a6747819-e4da-422c-9766-a40151b87cd3` no tráfego 100%, deployment `a196075c-8299-4c8d-9054-6e52bb486505`; permite quatro modos validados de ordenação TMDB em descobertas de filmes/séries e conserva rate-limit/cache/segredos. **Não há limite mensal de 200 no TMDB**; a quota interna de 200/mês permanece isolada à resolução de links pela API Movie of the Night (`api.movieofthenight.com/v4`), com contador próprio. JustWatch é citado na atribuição de ofertas TMDB e não é o fornecedor tarifado por essa quota. [Live smoke #40045771887](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40045771887): SUCCESS.
-- **UI V2 2.9.22:** busca 44dp com texto e cursor centralizados; página filtrada de gênero com lista detalhada (sinopse 160 caracteres, ano, nota, ícones BR, favorito, assistido/acompanhamento, trailer sob demanda), opção grade de três cartazes por linha, ordenação por popularidade/nota/mais recentes/título e `Mostrar mais 20` exclusivamente no gênero; 10 destaques e dots sobre banner; banner pequeno da home com título centrado, `Ver ›` fixo e cinza claro com logo confirmado. Seções horizontais da home mantêm duas fileiras com espaço reservado para três linhas de título.
-- **Progresso formal:** `7/11 = 63%` dos marcos técnicos. **Todos os gates humanos F0–F8 continuam `NAO_HOMOLOGADO`**. A publicação técnica **não** comprova o layout/interações no aparelho.
+**AnyTV V2 2.9.22-AnyTV, code 51, `com.tclremote.livre.v2` PUBLICADA.** GitHub Actions #40045953034 terminou SUCCESS **32 etapas** (Android build, IME, busca real, assinatura, OTA e readback byte-a-byte). APK `updates/android/v2/current.apk` branch OTA, SHA256 `44cab69ad0eb6c0110ff4180e6388f042e667d8b86dcd319e39d777973d85d94`, Git blob `39084853e1956f4aaedb3d8443ade9304e497581`, tamanho 28.412.772 bytes. Assinatura V2 `fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9` preservada; APK legado `updates/android/cert2026/current.apk` mantém blob `44c766b433ddb370f4589b87843f1edfd9cd7b7a`. O canal V2 é independente do legado.
 
-## Próxima ação legítima (não é novo release automático)
+**Última determinação do usuário IMPLEMENTADA EM PRODUÇÃO:** retirar **QUALQUER LIMITE ARTIFICIAL DE USO**. Worker Cloudflare atual `ce51439e-ca19-40d3-85e8-019c7a3669a5`, deploy `3298f15b-68d1-455b-bbc1-624925d7ccaf` com 100% do tráfego; foram removidos **200 chamadas/mês** (inclusive na API comercial de links **Movie of the Night**), **20 chamadas/minuto** por IP e limitação de ativação. Foram eliminados os bindings `MAX_UPSTREAM_CALLS_MONTH` e `RATE_LIMIT`. Permanecem 5 bindings autorizados, segredos privados, D1/cache, autenticação por prova do dispositivo, URL allowlist e os três módulos. Auditoria direta da Cloudflare confirmou; tests 40052421285 e live smoke 40052526994 **SUCCESS**. **JustWatch não é a API comercial de links tarifada**: é necessário distinguir da Movie of the Night (`api.movieofthenight.com/v4`). Limites de planos externos Cloudflare/TMDB/fornecedor não são removíveis pelo código. **Não é preciso novo APK** para essa atualização do Worker.
 
-Executar checklist específico [homologação real V2 2.9.22](../qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md) no Android/TCL. Marcar PASS/FAIL por evidência, priorizando texto da busca, alternância lista/grade, ordenação global entre páginas, `Mostrar mais 20`, favorito/assistido, trailers, dots e alinhamento do banner. **Corrigir somente falhas reproduzidas** e publicar uma única versão nova se houver alterações no app. Não afirmar homologação física sem teste real nem solicitar repetição de decisões já registradas.
+## Visual e funcionalidade aprovada/implementada no código V2
 
-## Fontes para continuidade
+- Marcadores F (filme) branco em azul, S (série) branco em vermelho, compactos e centralizados; nota e logos apenas de serviços brasileiros confirmados.
+- Home streaming: carrosséis horizontais com **duas fileiras** e coluna de largura fixa **116dp**, espaço horizontal **9dp** e altura de título fixa de **três linhas / 42dp**, evitando deslocamento dos filmes da fileira inferior. **NÃO apresentar “Mostrar mais” na home**.
+- Gênero filtrado (ex.: Ação): destaque no topo com **10 slides**, dots sobrepostos à imagem; abaixo escolha **Lista / Grade de 3 cartazes por linha**, com 20 resultados por página e botão **“Mostrar mais 20”** só nessa página; persistência de ordenação popularidade, melhor nota, mais recentes ou título A–Z, aplicada no backend a todas as páginas.
+- Lista: ano, nota, canal verificado, sinopse resumida até 160 caracteres/três linhas, favoritos e assistidos/acompanhamento integrados à persistência, ação Trailer sob demanda com YouTube real.
+- Banner compacto da tela inicial: até 10 filmes, texto do título centralizado em espaço reservado para 2 linhas, `Ver ›` fixo no rodapé em cinza claro; logo do canal ao lado **se houver prova** de oferta.
+- Busca: substituído `OutlinedTextField` de 42dp que cortava texto por `BasicTextField` de **44dp** com texto/cursor/placeholder centralizados; busca automática, X para limpar e pesquisa real.
+- Notificação de estreia `Lembrar` é **local Android aproximada**, não push remoto; data TMDB não assegura estreia no streaming. Exige QA físico.
+- Objetivo de identidade visual em outra frente: nome **AnyTV**, minimalista, dark com vermelho; **não redesenhar app sem solicitação específica**.
 
-- [Progresso canônico](../roadmap/PROJECT_PROGRESS.json)
-- [Handoff atual](./CURRENT_HANDOFF.md)
-- [Documentação operacional](../STATUS.md)
-- [Registro cronológico integral](./2026-10-23-anytv-full-transition.md) — histórico, não substitui estado vigente
-- [QA real no aparelho](../qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md)
-- [Run de publicação V2 2.9.22](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40045953034)
+## Progresso e pendências REAIS
+
+`docs/roadmap/PROJECT_PROGRESS.json`: **7/11 marcos técnicos, 63%**, e todos os gates **F0–F8 = NAO_HOMOLOGADO**. A publicação V2 e os testes do Worker não aprovam experiência no aparelho. Próxima tarefa principal é executar ou orientar a coleta das evidências **D01–D12** em `docs/qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md` (instalação preservando dados, busca/teclado, lista/grade, classificação/paginação, favorito/assistido, trailer, slider/dots, banner, alinhamento, Bluetooth/IME/TCL). Não inventar PASS; não pedir instalação repetida sem necessidade. Se houver falha reproduzida, corrigir pontualmente e fazer **uma** release V2 validada com mesmo pacote/certificado, build, testes, assinatura e readback. Pendente também M08 ativação em aparelho, M09 abertura de título na TV, M10 homologação integrada/rollback, M11 estabilidade/aceite. Manter gates não homologados.
+
+Histórico detalhado da 2.9.8–2.9.13 (incluindo SSL/TLS, RSA e erros de assinatura) está preservado no arquivo histórico, **não constitui bloqueio da versão atual V2**. A progressão 2.9.20→2.9.21→2.9.22, seus requisitos e os reparos de quota estão integralmente detalhados no novo handoff canônico. Não confundir certificados V2 e cert2026 nem expor segredos.
+
+**AÇÃO NO NOVO CHAT:** (1) conferir estado do GitHub e Worker, (2) mostrar quadro de progresso verificado e D01–D12 pendentes, (3) prosseguir do ponto da homologação e das falhas reais, sem mais pesquisa/release só por organização. Documentar cada nova evidência no canônico e avançar o máximo sem perder contexto. Nenhum uso interno deve ser artificialmente bloqueado.
