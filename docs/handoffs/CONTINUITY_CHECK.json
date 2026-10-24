@@ -31,14 +31,28 @@
       "result": "NOT_RUN"
     }
   ],
-  "acceptance": "Only PASS after an independent new conversation recovers each item from repository evidence without previous chat context. Preparation in this conversation is not the independent chat test and must not be marked PASS.",
-  "prepared_at": "2026-10-23",
-  "handoff_source": "docs/handoffs/2026-10-23-anytv-full-transition.md",
+  "acceptance": "Only PASS after a NEW independent chat recovers and verifies each point from live repository evidence WITHOUT old conversation context. Creating or reviewing this handoff in the current conversation does not count. Preserve NOT_RUN until then.",
+  "prepared_at": "2026-10-24",
+  "handoff_source": "docs/handoffs/2026-10-24-ANYTV-TRANSICAO-ATUAL-POS-2925.md",
   "preparation_evidence": {
-    "handoff_synchronized_between_branches": true,
-    "canonical_workflow_verified_run": 39963760834,
-    "ota_current_version": "2.9.12",
-    "candidate_version": "2.9.13",
-    "blocked_publisher_run": 39963496459
+    "handoff_synchronized_between_branches": false,
+    "canonical_workflow_verified_run": 40106161667,
+    "ota_current_version": "2.9.25",
+    "ota_current_version_code": 54,
+    "ota_commit_sha": "dcc51bad5561e66462ab6e1eb2f1d3fd24ee5112",
+    "post_release_dev_source_sha": "b4fecc63f744d66b8240d091db0a427e338e67ad",
+    "post_release_unsigned_ci_run": 40114130735,
+    "post_release_device_proof_ci_run": 40114275545,
+    "post_release_unsigned_artifact_id": 12567737040,
+    "pr_number": 3,
+    "pr_draft": true,
+    "progress_accepted": 7,
+    "progress_total": 11,
+    "progress_percent": 63,
+    "physical_gates_status": "F0-F8 NAO_HOMOLOGADO",
+    "signer_v2_preserved": true,
+    "legacy_ota_untouched": true,
+    "archive_first_message": "docs/handoffs/NEXT_CHAT_FIRST_MESSAGE_HISTORICO_PRE_20261024.md",
+    "note": "Novo handoff documentado na branch DEV; não sincronizar branches automaticamente nem marcar PASS sem teste de leitura em outro chat."
   }
 }
