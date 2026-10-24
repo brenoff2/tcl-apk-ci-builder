@@ -49,7 +49,8 @@ fun SplashRoute(
     }
 
     Box(
-        modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(\n            listOf(Color(0xFF18020A), Color.Black, Color.Black)))
+        modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(
+            listOf(Color(0xFF18020A), Color.Black, Color.Black)))
             .statusBarsPadding().navigationBarsPadding(),
         contentAlignment = Alignment.Center
     ) {
