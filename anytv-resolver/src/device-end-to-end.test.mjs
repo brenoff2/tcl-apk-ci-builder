@@ -13,7 +13,8 @@ test("activation -> idempotent acknowledgment -> resolver; no upstream on denied
   const publicKey = "p256:" + b64(await crypto.subtle.exportKey("raw", pair.publicKey));
   const code = b64(randomBytes(32));
   const codeHash = createHash("sha256").update(Buffer.from(code, "base64url")).digest("base64url");
-  let activated = false, nonceUsed = false, upstream = 0;
+  let activated = false, upstream = 0;
+  const nonceUsed = new Set();
   const device = { public_key: publicKey, enabled: 1, expires_at: seconds + 3600 };
   const db = {
     prepare(sql) { return { bind(...args) { return {
@@ -27,8 +28,8 @@ test("activation -> idempotent acknowledgment -> resolver; no upstream on denied
       },
       async run() {
         assert.match(sql, /INSERT OR IGNORE INTO device_nonces/);
-        if (nonceUsed) return { meta: { changes: 0 } };
-        nonceUsed = true; return { meta: { changes: 1 } };
+        if (nonceUsed.has(args[1])) return { meta: { changes: 0 } };
+        nonceUsed.add(args[1]); return { meta: { changes: 1 } };
       },
       sql, args
     }; } }; },
@@ -68,6 +69,19 @@ test("activation -> idempotent acknowledgment -> resolver; no upstream on denied
   });
   assert.equal((await handleRequest(activation(), env, deps)).status, 201);
   assert.equal((await handleRequest(activation(), env, deps)).status, 201);
+  const statusPath = "/v1/device/status";
+  const statusNonce = "a".repeat(48);
+  const statusSig = b64(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" },
+    pair.privateKey, new TextEncoder().encode(
+      ["ANYTV1", "GET", statusPath, stamp, statusNonce].join("\n"))));
+  const statusRequest = () => new Request("https://resolver.test" + statusPath, {
+    headers: { "x-anytv-device": id, "x-anytv-time": stamp,
+      "x-anytv-nonce": statusNonce, "x-anytv-signature": statusSig }
+  });
+  const active = await handleRequest(statusRequest(), env, deps);
+  assert.equal(active.status, 200);
+  assert.deepEqual(await active.json(), { status: "activated" });
+  assert.equal((await handleRequest(statusRequest(), env, deps)).status, 401);
   const accepted = await handleRequest(signed(), env, deps);
   assert.equal(accepted.status, 404);
   assert.equal((await accepted.json()).cached, true);
