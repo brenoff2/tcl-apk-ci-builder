@@ -86,6 +86,7 @@ class SafeTvCompanionTests(unittest.TestCase):
     def test_tv_companion_accepts_verified_prime_netflix_variants_only(self):
         self.assertIn('path.matches("/title/[0-9]{6,9}/?")', self.bridge)
         self.assertIn('path.matches("/detail/[0-9A-Z]{10,40}")', self.bridge)
+        self.assertIn('url.length() > 500', self.bridge)
         self.assertIn('"www.primevideo.com".equals(host)', self.bridge)
         self.assertIn('"app.primevideo.com".equals(host)', self.bridge)
         self.assertIn('"https".equals(u.getScheme())', self.bridge)
