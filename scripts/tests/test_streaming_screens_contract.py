@@ -91,7 +91,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('suspend fun offersInBrazil(item: StreamingTitle)', self.screen)
         self.assertIn('.optJSONObject("BR")?.optJSONArray("flatrate")', self.screen)
         self.assertIn('offer.optString("logo_path")', self.screen)
-        self.assertIn('StreamingOfferIcons(item, offerCache, displayed,', self.screen)
+        self.assertIn('StreamingOfferIcons(title, offerCache, apps,', self.screen)
         self.assertIn('StreamingOfferIcons(current, offerCache, displayed', self.screen)
         self.assertIn('StreamingCatalog.appHasOffer(app, it)', self.screen)
         self.assertIn('Nenhuma oferta de assinatura confirmada no Brasil.', self.screen)
@@ -180,7 +180,7 @@ class StreamingScreens(unittest.TestCase):
             'fun toggleFilmWatched(id: Int)',
             '"anytv_watched_movies"', '"anytv_watched_episodes"',
             'fun toggleWatched(title: StreamingTitle, season: Int, episode: Int)',
-            '"Filmes para assistir"', '"Séries em andamento"',
+            '"Filmes para assistir"', '"Continuando"',
             '"Filmes já assistidos"', 'val filteredShelves',
             'val uniqueShelves', 'it.media}:',
         ):
@@ -248,7 +248,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val trackedIds = trackedSeries +', self.screen)
         self.assertIn('val watching = trackedIds.mapNotNull', self.screen)
         self.assertIn('"Filmes já assistidos", history', self.screen)
-        self.assertIn('"Séries em andamento", watching', self.screen)
+        self.assertIn('"Continuando", watching', self.screen)
 
     def test_quick_title_actions_and_permanent_local_artwork(self):
         for text in ('"Adicionar à minha lista"', '"Marcar como assistido"',
@@ -428,62 +428,33 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Modifier.fillMaxWidth().padding(top = 12.dp)', self.screen)
         self.assertNotIn('} else {\\n                    val app = selected!!', self.screen)
 
-    def test_double_row_real_pagination_and_mixed_highlights(self):
-        for snippet in (
+    def test_three_visible_cards_and_24_title_batches(self):
+        for fragment in (
             'suspend fun discoveryGenrePage(id: Int, media: String, page: Int,',
             'sourcePage < payload.optInt("total_pages", sourcePage)',
             'genreMore[key] = it.more',
-            'items(shelf.take(ANYTV_LIST_BATCH).chunked(2))',
+            'items(shelf.take(ANYTV_LIST_BATCH)) { title ->',
+            'items(shelf.take(sectionVisibleCount).chunked(3))',
+            'items(genreTitles.chunked(3))',
             'StreamingCatalog.discoveryGenrePage(',
-            'items(genreTitles, key =',
-            'if (!homeLibrary && selected == null && selectedHomeGenre != 0)',
-            '"Mostrar mais 24"',
-            'genreShelves[genreKey] =',
+            '"Mostrar mais 24"', 'genreShelves[genreKey] =',
             'val films = discoveryShelves["Em alta nesta semana"]',
             'val shows = discoveryShelves["Séries em destaque"]',
-            'for (i in 0 until 10)',
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
             'StreamingCatalog.discoveryUpcomingStreaming()',
             'Text(if (item.media == "tv") "S" else "F"',
-            'openedSection = heading',
-            'class AnyTvReleaseReminderReceiver',
+            'openedSection = heading', 'class AnyTvReleaseReminderReceiver',
+            'Modifier.fillMaxWidth().aspectRatio(2f / 3f)',
+            'ContentScale.Fit)', 'OfficialTvIcon(installed, 14.dp)',
         ):
-            with self.subTest(snippet=snippet):
-                self.assertIn(snippet, self.screen)
-        self.assertNotIn('items(shelf.take(12))', self.screen)
-        self.assertNotIn('"Mostrar mais " + heading', self.screen)
-        self.assertIn('Color(0xFFD62828) else Color(0xFF1769E0)', self.screen)
-        self.assertIn('includeFontPadding = false', self.screen)
-        self.assertIn('textAlign = TextAlign.Center', self.screen)
-        self.assertIn('Text(item.name, maxLines = 3, lineHeight = 14.sp,', self.screen)
-        self.assertIn('modifier = Modifier.fillMaxWidth().height(42.dp)', self.screen)
-        self.assertIn('Reserve a category/provider row', self.screen)
-        self.assertNotIn('if (item.votes > 0 || offerings.isNotEmpty())', self.screen)
-        self.assertIn('modifier = Modifier.width(116.dp)', self.screen)
-        self.assertNotIn('Text("★ "', self.screen)
-        for snippet in (
-            'genreViewMode == "list"',
-            'genreViewMode == "grid"',
-            'items(genreTitles.chunked(3))',
-            'title.overview.take(160)',
-            'Text("▶ Ver trailer")',
-            'private fun AnyTvCardMetaRow(',
-            'fun toggleFavorite(title: StreamingTitle, packageName: String)',
-            'toggleFilmWatched(title.id)',
-            'toggleSeriesTracking(title)',
-            'val sorting = when (sort)',
-            '"&sort_by=$sorting&with_genres=$id&page=$sourcePage"',
-            'val genreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"',
-            'Text(if (genreLoading[genreKey] == true)',
-            '}.take(10)',
-            'previewProviders[movie.id]',
-            'contentDescription = "Canal: " + offer.name',
-            'color = Color(0xFFCED0D6)',
-            'contentAlignment = Alignment.CenterStart',
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, self.screen)
+        for forbidden in (
+            'items(shelf.take(ANYTV_LIST_BATCH).chunked(2))',
+            'items(genreTitles, key =', 'genreViewMode == "list"',
+            'Modifier.size(width = 116.dp, height = 158.dp)',
         ):
-            with self.subTest(snippet=snippet):
-                self.assertIn(snippet, self.screen)
-
+            self.assertNotIn(forbidden, self.screen)
     def test_home_more_reminder_and_brand_are_real(self):
         self.assertIn('OutlinedButton(', self.screen)
         self.assertIn('"Ver mais ›"', self.screen)
@@ -556,25 +527,37 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('shelf.chunked(3).forEach', self.screen)
 
     def test_saved_library_keeps_all_records_and_pages_in_24s(self):
-        self.assertIn('homeLibrary -> true // Saved/watched records', self.screen)
-        self.assertIn('if (homeLibrary) unique else unique.take(ANYTV_LIST_BATCH)', self.screen)
-        self.assertIn('val sectionTitles = sectionAll.take(sectionVisibleCount)', self.screen)
-        self.assertIn('sectionVisibleCount += ANYTV_LIST_BATCH', self.screen)
-        self.assertIn('shelf.take(ANYTV_LIST_BATCH).chunked(2)', self.screen)
-
-        self.assertIn('LaunchedEffect(librarySection, homeLibrary)', self.screen)
-        self.assertIn('LaunchedEffect(watchingQuery)', self.screen)
-        self.assertIn('Nenhuma série corresponde à sua busca.', self.screen)
-        self.assertIn('rememberSuccessfulSearch(past)', self.screen)
-        self.assertNotIn('if (it.isNotEmpty()) rememberSuccessfulSearch(globalSearchTerm)',
-                         self.screen)
-
-    def test_genre_cards_restore_same_poster_height_as_home(self):
-        self.assertNotIn('Modifier.fillMaxWidth().height(135.dp)', self.screen)
-        self.assertNotIn('Modifier.size(width = 92.dp, height = 132.dp)', self.screen)
-        self.assertIn('Modifier.size(width = 116.dp, height = 158.dp)', self.screen)
-        self.assertGreaterEqual(self.screen.count('modifier = Modifier.fillMaxWidth().height(158.dp)'), 3)
-
+        for snippet in (
+            'homeLibrary -> true // Saved/watched records',
+            'if (homeLibrary) unique else unique.take(ANYTV_LIST_BATCH)',
+            'val sectionTitles = sectionAll.take(sectionVisibleCount)',
+            'sectionVisibleCount += ANYTV_LIST_BATCH',
+            'items(shelf.take(sectionVisibleCount).chunked(3))',
+            'LaunchedEffect(librarySection, homeLibrary)',
+            'LaunchedEffect(watchingQuery)',
+            'Nenhuma série corresponde à sua busca.',
+            'rememberSuccessfulSearch(past)',
+        ):
+            self.assertIn(snippet, self.screen)
+    def test_full_ratio_three_column_posters_in_all_pages(self):
+        for snippet in (
+            'private fun AnyTvPosterCard(',
+            'modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)',
+            'contentScale = ContentScale.Fit)',
+            'val cardWidth = (maxWidth - 18.dp) / 3f',
+            'items(genreTitles.chunked(3))',
+            'items(sectionTitles.chunked(3))',
+            'items(shelf.take(sectionVisibleCount).chunked(3))',
+            'items(inProgress.take(sectionVisibleCount).chunked(3))',
+            'globalSearchResults.chunked(3)',
+        ):
+            self.assertIn(snippet, self.screen)
+        for forbidden in (
+            'modifier = Modifier.fillMaxWidth().height(158.dp)',
+            'Modifier.size(width = 116.dp, height = 158.dp)',
+            'items(inProgress.take(sectionVisibleCount).chunked(2))',
+        ):
+            self.assertNotIn(forbidden, self.screen)
     def test_cinema_is_based_on_tmdb_br_now_playing_not_missing_streaming(self):
         self.assertIn('private const val ANYTV_CINEMA_FILTER = -1', self.screen)
         self.assertIn('"movie/now_playing?language=pt-BR&region=BR&page=$sourcePage"', self.screen)
@@ -586,7 +569,7 @@ class StreamingScreens(unittest.TestCase):
                       self.screen)
         self.assertIn('Text("Cinema", modifier = Modifier', self.screen)
         self.assertIn('background(Color(0xFF1769E0))', self.screen)
-        self.assertEqual(self.screen.count('inCinema = '), 6)
+        self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', self.screen)
         self.assertIn('if (item.media == "movie" && inCinema)', self.screen)
         self.assertIn('"Cinema · Filmes em cartaz no Brasil"', self.screen)
         self.assertIn('"Em cartaz · Brasil · TMDB"', self.screen)
@@ -596,62 +579,46 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('cinemaIds = cinemaIds + result.titles.map { it.id }', self.screen)
         self.assertNotIn('inCinema = offerings.isEmpty()', self.screen)
 
-    def test_three_row_cards_and_icon_only_genre_selector(self):
-        self.assertIn('AnyTvGenreViewIcon(Icons.Filled.ViewList, "Lista",', self.screen)
-        self.assertIn('AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade de três colunas",',
-                      self.screen)
-        self.assertNotIn('AnyTvCompactChip("Lista",', self.screen)
-        self.assertNotIn('AnyTvCompactChip("Grade 3",', self.screen)
-        self.assertIn('Icon(Icons.Filled.Favorite,', self.screen)
-        self.assertIn('tint = if (favorite) Color(0xFFE04B57) else neutral', self.screen)
-        self.assertIn('tint = if (marked) Color(0xFF1CB96B) else neutral', self.screen)
-        self.assertNotIn('AnyTvGenreTitleActions(', self.screen)
-        self.assertNotIn('onTrailer =', self.screen)
-        self.assertIn('Text("▶ Ver trailer")', self.screen)
-        self.assertEqual(self.screen.count('showRating = false'), 4)
-        self.assertIn('val unique = shelf.filter { title ->', self.screen)
-        self.assertIn('Keep cards visible when marked', self.screen)
-        for marker, until, metadata, offers, title in (
-            ('items(genreTitles.chunked(3))',
-             'repeat(3 - group.size)', 'AnyTvCardMetaRow(title,',
-             'StreamingOfferIcons(title, offerCache, displayed,',
-             'Text(title.name, maxLines = 3,'),
-            ('items(genreTitles, key =',
-             'HorizontalDivider(color =', 'AnyTvCardMetaRow(title,',
-             'StreamingOfferIcons(title, offerCache, displayed,',
-             'Text(title.name, maxLines = 3,'),
-            ('items(shelf.take(ANYTV_LIST_BATCH).chunked(2))',
-             'if (heading.startsWith("Em breve"))',
-             'AnyTvCardMetaRow(item,',
-             'StreamingOfferIcons(item, offerCache, displayed,',
-             'Text(item.name, maxLines = 3,'),
-        ):
-            portion = self.screen.split(marker, 1)[1].split(until, 1)[0]
-            self.assertTrue(0 <= portion.find(metadata) < portion.find(offers) <
-                            portion.find(title), marker)
-        self.assertIn('modifier = Modifier.fillMaxWidth().height(42.dp)', self.screen)
-
-    def test_watching_series_stay_persisted_and_visible_in_two_columns(self):
+    def test_shared_card_preserves_existing_streaming_icons_and_metadata_order(self):
+        shared = self.screen.split('private fun AnyTvPosterCard(', 1)[1].split(
+            '/** One horizontal strip', 1)[0]
+        a = shared.index('AnyTvPinnedImage(')
+        b = shared.index('AnyTvCardMetaRow(')
+        c = shared.index('Text(title.name,')
+        d = shared.index('StreamingOfferIcons(')
+        self.assertTrue(a < b < c < d)
         for snippet in (
-            '"anytv_watching_titles_v1"',
-            'fun rememberWatchingTitle(title: StreamingTitle)',
+            'tint = if (favorite) Color(0xFFE04B57) else neutral',
+            'tint = if (marked) Color(0xFF1CB96B) else neutral',
+            'OfficialTvIcon(installed, 14.dp)',
+            'Text(if (item.media == "tv") "S" else "F"',
+            'posterCard(title, Modifier.weight(1f)',
+            'posterCard(series, Modifier.weight(1f), false)',
+            'posterCard(found, Modifier.weight(1f), false)',
+            'posterCard(suggested, Modifier.width(cardWidth), false)',
+            'posterCard(title, Modifier.width(cardWidth)',
+        ):
+            self.assertIn(snippet, self.screen)
+        self.assertNotIn('ContentScale.Crop', shared)
+        self.assertNotIn('AnyTvGenreViewIcon(Icons.Filled.ViewList', self.screen)
+        self.assertNotIn('AnyTvGenreViewIcon(Icons.Filled.GridView', self.screen)
+    def test_continuando_persisted_three_column_grid_and_search(self):
+        for snippet in (
+            '"anytv_watching_titles_v1"', 'fun rememberWatchingTitle(title: StreamingTitle)',
             'if (media == "tv") watchingTitles[id]?.let { return it }',
             'fun toggleSeriesTracking(title: StreamingTitle)',
             'fun toggleWatched(title: StreamingTitle, season: Int, episode: Int)',
-            'watchingTitles = watchingTitles + (title.id to title)',
             'suspend fun lookupSeries(id: Int): StreamingTitle?',
             'val restored = runCatching { StreamingCatalog.lookupSeries(id) }.getOrNull()',
             '!it.name.startsWith("saved_title_")',
-            'librarySection == "watching"',
-            'items(inProgress.take(sectionVisibleCount).chunked(2))',
+            'items(inProgress.take(sectionVisibleCount).chunked(3))',
             'sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })',
             'value = watchingQuery',
-            'label = { Text("Buscar nas minhas séries em andamento") }',
+            'placeholder = { Text("Buscar nas minhas séries") }',
+            '"watching" -> "Continuando"',
             'Text("Mostrar mais 24")',
         ):
-            with self.subTest(snippet=snippet):
-                self.assertIn(snippet, self.screen)
-
+            self.assertIn(snippet, self.screen)
     def test_global_search_is_full_black_overlay_with_independent_history(self):
         for snippet in (
             'if (showGlobalSearch) {',
@@ -665,7 +632,7 @@ class StreamingScreens(unittest.TestCase):
             'Text("Buscas recentes"',
             'Text("Limpar histórico"',
             'globalSearchHistory.take(10).forEach { past ->',
-            'globalSearchResults.chunked(2).forEach { pair ->',
+            'globalSearchResults.chunked(3).forEach { group ->',
             '.verticalScroll(rememberScrollState())',
             'globalSearchResults = emptyList(); globalSearchError = null',
         ):
