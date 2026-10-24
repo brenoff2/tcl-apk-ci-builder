@@ -838,31 +838,36 @@ private fun StreamingOfferIcons(
                     fontSize = 11.sp, maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            val visible = if (expanded) 4 else 2
-            offerings.take(visible).forEach { offer ->
-                val installed = apps.firstOrNull {
-                    StreamingCatalog.appHasOffer(it, listOf(offer))
-                }
-                if (installed != null) {
-                    // Exactly the same launcher icon component used on the main TV screen.
-                    OfficialTvIcon(installed, 14.dp)
-                } else {
-                    Box(modifier = Modifier.size(14.dp).clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        contentAlignment = Alignment.Center) {
-                        if (offer.logo.isNotBlank()) {
-                            AnyTvPinnedImage(model = "https://image.tmdb.org/t/p/w92" + offer.logo,
-                                contentDescription = "Disponível em " + offer.name,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Fit)
-                        } else {
-                            Text(offer.name.take(2), fontSize = 10.sp, maxLines = 1)
+            // Provider availability in BR is independent of installed TV apps.
+            // Keep all distinct confirmed provider logos, scrolling horizontally
+            // within the fixed card row instead of hiding providers after two.
+            Row(modifier = Modifier.weight(1f, fill = false)
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                offerings.distinctBy { it.id }.forEach { offer ->
+                    val installed = apps.firstOrNull {
+                        StreamingCatalog.appHasOffer(it, listOf(offer))
+                    }
+                    if (installed != null) {
+                        OfficialTvIcon(installed, 14.dp)
+                    } else {
+                        Box(modifier = Modifier.size(14.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                            contentAlignment = Alignment.Center) {
+                            if (offer.logo.isNotBlank()) {
+                                AnyTvPinnedImage(
+                                    model = "https://image.tmdb.org/t/p/w92" + offer.logo,
+                                    contentDescription = "Disponível em " + offer.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Fit)
+                            } else {
+                                Text(offer.name.take(2), fontSize = 8.sp, maxLines = 1)
+                            }
                         }
                     }
                 }
-            }
-            if (offerings.size > visible) {
-                Text("+${offerings.size - visible}", fontSize = 10.sp, maxLines = 1)
             }
         }
 }
@@ -2558,6 +2563,21 @@ internal fun TclStreamingScreens(
                         releasedYear, titleGenres.takeIf { it.isNotEmpty() }?.joinToString(" · "))
                         .joinToString(" · "), fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold)
+                    if (title.media == "movie" && title.id in cinemaIds) {
+                        Text("Em cartaz no Brasil (TMDB). Consulte a programação da sua cidade:",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedButton(onClick = {
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW,
+                                    Uri.parse("https://www.ingresso.com/")))
+                            }.onFailure {
+                                titleActionFeedback = "Não foi possível abrir a programação dos cinemas."
+                            }
+                        }) {
+                            Text("Ver cinemas e sessões · Ingresso.com", fontSize = 12.sp)
+                        }
+                    }
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
                     if (title.votes > 0) {
                         Text("★ Nota TMDB: " +
