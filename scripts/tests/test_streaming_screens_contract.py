@@ -777,7 +777,8 @@ class StreamingScreens(unittest.TestCase):
     def test_saved_library_keeps_all_records_and_pages_in_24s(self):
         for snippet in (
             'homeLibrary -> true // Saved/watched records',
-            'if (homeLibrary) unique else unique.take(ANYTV_LIST_BATCH)',
+            'else heading to (if (homeLibrary) unique',
+            'else unique.take(ANYTV_LIST_BATCH))',
             'val sectionTitles = sectionAll.take(sectionVisibleCount)',
             'sectionVisibleCount += ANYTV_LIST_BATCH',
             'items(shelf.take(sectionVisibleCount).chunked(3))',
