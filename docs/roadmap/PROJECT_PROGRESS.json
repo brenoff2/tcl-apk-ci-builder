@@ -196,6 +196,10 @@
     {
       "date": "2026-10-24",
       "event": "NOVA RODADA DEV 2.9.25 24 TITULOS: grade genero poster 158dp como home, lista 116x158dp; Ver mais navega para pagina real genero/Cinema e pagina dedicada de secao sem expansao; pagina logica 24 recortada de fonte TMDB 20 com dedup/filtragem segura, Mostrar mais 24, homepage 24, library paginada sem apagar favoritos. CI 40101131043 contrato SUCCESS, Gradle em andamento no ultimo readback; proof 40101131025 SUCCESS. Checklist docs/qa/ANYTV_V2_2925_CARDS_NAVIGATION_PAGINATION24_20261024.md. Nenhum signer/OTA/Worker/D1/TV companion/merge alterado. P0 7/11 e F0-F8 inalterados."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "READBACK FINAL 24 TITULOS E NAVEGACAO: GitHub Actions Android unsigned candidate 40101131043 SUCCESS para código funcional f3b02151, testes UI/links/segurança SUCCESS, Gradle assembleRelease SUCCESS, identidade APK V2 unsigned SUCCESS; device-proof 40101131025 SUCCESS. Cartoes de genero normalizados 158dp, Ver mais navega a genero/Cinema/secao, 24 por lote com paginação TMDB 20->24 sem cortes e biblioteca preservada. Ultima OTA assinada 2.9.24/code53; ainda NAO e release code54, workflow oficial protegido inalterado. TV real, signer/OTA code54, companion e QA fisica pendentes. P0 7/11=63%, F0-F8 NAO_HOMOLOGADO. QA docs/qa/ANYTV_V2_2925_CARDS_NAVIGATION_PAGINATION24_20261024.md"
     }
   ],
   "discovery_v3": {
