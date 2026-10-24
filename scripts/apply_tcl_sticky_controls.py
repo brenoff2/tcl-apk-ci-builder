@@ -14,7 +14,7 @@ p = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclApprovedHo
 source = p.read_text(encoding="utf-8")
 top = """    BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(TclSurface, TclBg, TclBg)))
+            .background(Brush.verticalGradient(listOf(Color(0xFF11141B), TclBg, TclBg)))
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
 """
@@ -39,10 +39,10 @@ stage = source[stage_start:footer_start]
 footer = source[footer_start:spacer_start]
 
 # Bound the D-pad to the actual free viewport height, then center the complete
-# D-pad and both rockers as one unit. A 50% OK button retains its own hit zone.
+# D-pad and both rockers as one unit. The 28% OK ring remains a large tap target.
 stage = stage.replace(
-    ".coerceAtLeast(0.dp).coerceAtMost(280.dp)",
-    ".coerceAtLeast(0.dp).coerceAtMost(280.dp).coerceAtMost(stageHeight)"
+    ".coerceAtLeast(0.dp).coerceAtMost(304.dp)",
+    ".coerceAtLeast(0.dp).coerceAtMost(304.dp).coerceAtMost(stageHeight)"
 )
 assert "coerceAtMost(stageHeight)" in stage
 
@@ -54,11 +54,11 @@ layout = top + """        val outerWidth = maxWidth
             Column(
                 modifier = Modifier.fillMaxWidth()
                     .padding(
-                        horizontal = if (outerWidth < 360.dp) 8.dp else 12.dp,
-                        vertical = if (tightHeight) 4.dp else 8.dp
+                        horizontal = if (outerWidth < 360.dp) 10.dp else 14.dp,
+                        vertical = if (tightHeight) 6.dp else 12.dp
                     ),
                 verticalArrangement = Arrangement.spacedBy(
-                    if (tightHeight) 6.dp else if (compactHeight) 8.dp else 10.dp
+                    if (tightHeight) 9.dp else if (compactHeight) 13.dp else 17.dp
                 )
             ) {
 """ + header + """            }
@@ -72,8 +72,8 @@ layout = top + """        val outerWidth = maxWidth
 """ + stage + """            }
             Box(modifier = Modifier.fillMaxWidth()
                 .padding(
-                    horizontal = if (outerWidth < 360.dp) 8.dp else 12.dp,
-                    vertical = if (tightHeight) 4.dp else 8.dp
+                    horizontal = if (outerWidth < 360.dp) 10.dp else 14.dp,
+                    vertical = if (tightHeight) 6.dp else 12.dp
                 )) {
 """ + footer + """            }
         }
