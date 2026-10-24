@@ -164,6 +164,10 @@
     {
       "date": "2026-10-24",
       "event": "Candidata pos-2.9.22 SOMENTE NA BRANCH DEV: reorganizacao dos cartoes na home e genero (ano/nota, assistido/favorito, F/S e provedores, titulo em 3 linhas); icones Lista/Grade; trailer apenas na ficha. Resolvedor com status assinado de autorizacao, mensagem 401/503 e formatos Prime/Netflix, preferencia videoLink; codigo companion alinhado. Testes de contrato atualizados; CI/readback e QA no aparelho/TV NAO COMPROVADOS; APK publico permanece 2.9.22/code51, Worker de producao ce51439e permanece sem deploy, marcos 7/11 gates F0-F8 inalterados. Ver docs/qa/ANYTV_V2_POST_2922_UI_LINKS_CANDIDATE.md."
+    },
+    {
+      "date": "2026-10-24",
+      "event": "Candidata tecnica AnyTV pos-2.9.22 VALIDADA EM CI sem publicacao: source funcional head cadb886 (resolucao de 404 not_available versus no_supported_link e 409 ambiguous, fallback 401/5xx com TMDB/Wikidata preservado), app UI cartoes ano/nota + assistido/favorito, F/S+streamings e titulo 3 linhas; Movie of the Night atribuido. Android #40060106346 SUCCESS 39 testes de UI/links + 2 credenciais, Gradle 3m28 e pacote V2; Worker #40060118239 SUCCESS 32/32 e dry-run sem deploy; companion #40060021841 SUCCESS 7+3, Gradle, permissoes sem Acessibilidade. Compilacoes de auditoria NAO ASSINADAS; sem instalacao, OTA, deploy Worker, alteracao signer ou merge. Versao publicada 2.9.22/code51, Worker ce51439e; progresso 7/11=63%, F0-F8 NAO_HOMOLOGADO. Evidencia: docs/qa/ANYTV_V2_POST_2922_UI_LINKS_CANDIDATE.md."
     }
   ],
   "discovery_v3": {
