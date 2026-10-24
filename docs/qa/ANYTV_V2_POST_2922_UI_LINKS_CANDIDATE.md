@@ -1,7 +1,7 @@
 # AnyTV V2 — UI de cartões e links diretos (candidata após 2.9.22)
 
 **Data:** 2026-10-24  
-**Estado:** IMPLEMENTADO SOMENTE EM CÓDIGO DEV. **NÃO COMPILADO, NÃO PUBLICADO, NÃO HOMOLOGADO** nesta etapa.  
+**Estado:** IMPLEMENTADO EM CÓDIGO DEV; **COMPILAÇÃO ANDROID PASS** no commit `6a3be3e`, run #40058791096; revisão adicional de fallback em `b5a969e` com nova CI pendente. **NÃO PUBLICADO, NÃO HOMOLOGADO** em telefone/TV.  
 **Canônico de versão publicada:** 2.9.22/code51, `com.tclremote.livre.v2`.  
 **Branch:** `feat/anytv-p0-device-proof-verifier-20261020`; PR #3 draft. Commit funcional de referência: `6a3be3eb61d8d96d2049a43d5823ede8c942b1ae`.  
 **Progresso P0:** 7/11 marcos, 63%; gates F0–F8 continuam NAO_HOMOLOGADO.
@@ -44,11 +44,15 @@ Preservar o intervalo entre cartões, colunas da home de 116dp/9dp, duas fileira
 | U04 | Alternância ícones lista/grade, ordenação e paginação sem regressão | NAO_TESTADO_EM_APARELHO |
 | U05 | Trailer presente e funcional somente na ficha | NAO_TESTADO_EM_APARELHO |
 | L01 | Node tests: normalização Netflix/Prime, `videoLink` seguro, 401/503 e replay | PASS (31/31) #40058621968 |
-| L02 | Kotlin/Python contratos e Gradle `assembleRelease` para V2 candidata | CONTRATOS_PASS; GRADLE_PENDENTE #40058791096 |
+| L02 | Kotlin/Python contratos e Gradle `assembleRelease` para V2 candidata | PASS no commit `6a3be3e`: 38 + 2 contratos, Gradle BUILD SUCCESSFUL, identidade V2 #40058791096; regressão após `b5a969e` em CI |
 | L03 | Dispositivo real ativado: status 200; não ativado: 401 com mensagem correta | NAO_TESTADO_EM_APARELHO |
 | L04 | Prime, Netflix, Disney, Apple e Max: ficha / busca / app aberto (registrar separadamente) | NAO_TESTADO_NA_TCL |
 | L05 | Assinatura V2/OTA e preservação dos dados após eventual release autorizada | NAO_EXECUTADO |
 
-**Evidência nova (readback 24/10):** [resolver offline #40058621968](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058621968) SUCCESS, 31/31 testes, zero falhas; [prova de dispositivo #40058631392](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058631392) SUCCESS. [Compilação V2 sem assinatura #40058791096](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058791096) iniciou; testes de contrato passaram, conclusão Gradle ainda não verificada neste registro. Nenhum deploy ou OTA.
+**Evidência nova (readback 24/10):** [resolver offline #40058621968](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058621968) SUCCESS, 31/31 testes, zero falhas; [prova de dispositivo #40058631392](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058631392) SUCCESS. [Compilação V2 sem assinatura #40058791096](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40058791096) terminou SUCCESS (38 testes de streaming + 2 de segurança, Gradle `BUILD SUCCESSFUL in 4m 34s`, verificação do pacote V2). O ajuste posterior que mantém fallback TMDB/Wikidata após 401/503/no_supported_link está no commit `b5a969e` e será verificado em execução independente. Nenhum deploy ou OTA.
+
+**Cobertura oficial Movie of the Night Brasil (fonte pública em 24/10):** https://docs.movieofthenight.com/guide/countries-and-services lista `netflix`, `prime`, `disney`, `hbo`, `apple`, `paramount`, `mubi`, `curiosity`, `plutotv`, `crunchyroll`, `zee5`; **não lista Globoplay nem Plex**. Não prometer link direto desses serviços apenas com a API atual; estudar fonte licenciada ou capacidade oficial do app TCL.
+
+**CI TV sem publicação:** link da [candidata do companion #40059722774](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40059722774); valida URLs oficiais Prime/Netflix, permissões, compilação, identidade do TV companion. Estado inicial EM_EXECUCAO; não instala no aparelho.
 
 **Critério de parada:** não publicar APK, não fazer deploy de Worker, não atualizar companion, não mudar signer/OTA nem fazer merge sem autorização específica e evidência de build/testes. Se o CI falhar, investigar e corrigir somente a causa.
