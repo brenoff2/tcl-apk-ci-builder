@@ -851,7 +851,8 @@ private fun AnyTvGenreTitleActions(
     onTrailer: () -> Unit
 ) {
     val color = MaterialTheme.colorScheme.onSurfaceVariant
-    Row(verticalAlignment = Alignment.CenterVertically,
+    Row(modifier = if (compact) Modifier else Modifier.horizontalScroll(rememberScrollState()),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(if (compact) 3.dp else 7.dp)) {
         if (compact) {
             IconButton(onClick = onFavorite, modifier = Modifier.size(29.dp)) {
@@ -873,7 +874,7 @@ private fun AnyTvGenreTitleActions(
             }
         } else {
             TextButton(onClick = onFavorite, contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.height(30.dp)) {
+                modifier = Modifier.heightIn(min = 40.dp)) {
                 Icon(if (favorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = null, modifier = Modifier.size(14.dp),
                     tint = if (favorite) Color(0xFFE04B57) else color)
@@ -881,7 +882,7 @@ private fun AnyTvGenreTitleActions(
                 Text(if (favorite) "Na lista" else "Favorito", fontSize = 11.sp, maxLines = 1)
             }
             TextButton(onClick = onMarked, contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.height(30.dp)) {
+                modifier = Modifier.heightIn(min = 40.dp)) {
                 Icon(Icons.Filled.CheckCircle, contentDescription = null,
                     modifier = Modifier.size(14.dp),
                     tint = if (marked) Color(0xFF1CB96B) else color)
@@ -893,7 +894,7 @@ private fun AnyTvGenreTitleActions(
                 }, fontSize = 11.sp, maxLines = 1)
             }
             TextButton(onClick = onTrailer, contentPadding = PaddingValues(0.dp),
-                modifier = Modifier.height(30.dp)) {
+                modifier = Modifier.heightIn(min = 40.dp)) {
                 Icon(Icons.Filled.PlayCircleFilled, contentDescription = null,
                     modifier = Modifier.size(14.dp))
                 Spacer(Modifier.width(3.dp))
