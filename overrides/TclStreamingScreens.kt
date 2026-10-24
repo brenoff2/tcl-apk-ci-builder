@@ -1904,7 +1904,13 @@ internal fun TclStreamingScreens(
                     title.id.toString() in watchedFilms
                 else title.id.toString() in trackedSeries,
                 inCinema = cinemaSection || title.id in cinemaIds,
-                onOpen = { details = title; detailsPackage = null },
+                onOpen = {
+                    details = title; detailsPackage = null
+                    if (showGlobalSearch) {
+                        rememberSuccessfulSearch(globalSearchTerm)
+                        showGlobalSearch = false
+                    }
+                },
                 onMarked = {
                     if (title.media == "movie") toggleFilmWatched(title.id)
                     else toggleSeriesTracking(title)
@@ -2669,27 +2675,16 @@ internal fun TclStreamingScreens(
                         if (globalSearchTerm.isNotBlank() && !globalSearchBusy) {
                             Text("Resultados: " + globalSearchTerm, fontSize = 11.sp)
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                                globalSearchResults.chunked(2).forEach { pair ->
+                                globalSearchResults.chunked(3).forEach { group ->
                                     Row(modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        pair.forEach { found ->
-                                            Column(modifier = Modifier.weight(1f).clickable {
-                                                details = found; detailsPackage = null
-                                                rememberSuccessfulSearch(globalSearchTerm)
-                                                showGlobalSearch = false
-                                            }) {
-                                                AnyTvPinnedImage(
-                                                    model = "https://image.tmdb.org/t/p/w185" + found.poster,
-                                                    contentDescription = found.name,
-                                                    modifier = Modifier.fillMaxWidth().height(158.dp),
-                                                    contentScale = ContentScale.Crop)
-                                                Text(found.name, color = Color.White,
-                                                    fontSize = 12.sp, maxLines = 2, lineHeight = 15.sp)
-                                                StreamingOfferIcons(found, offerCache, displayed,
-                                                    inCinema = found.id in cinemaIds)
-                                            }
+                                        horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                        verticalAlignment = Alignment.Top) {
+                                        group.forEach { found ->
+                                            posterCard(found, Modifier.weight(1f), false)
                                         }
-                                        repeat(2 - pair.size) { Spacer(Modifier.weight(1f)) }
+                                        repeat(3 - group.size) {
+                                            Spacer(Modifier.weight(1f))
+                                        }
                                     }
                                 }
                             }
