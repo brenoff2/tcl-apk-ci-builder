@@ -83,6 +83,7 @@ import java.text.Normalizer
 internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "", val genreIds: List<Int> = emptyList())
 private const val ANYTV_CINEMA_FILTER = -1
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
+private const val ANYTV_LIST_BATCH = 24
 private fun anyTvToday(): String =
     java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 private fun anyTvHasDate(item: StreamingTitle): Boolean =
@@ -484,6 +485,34 @@ private object StreamingCatalog {
             }
         }
 
+    /**
+     * TMDB catalog responses are 20 entries per upstream page. Merge and filter
+     * before slicing 24 visible entries, so a title excluded for a future
+     * release never shifts page boundaries or causes skipped/duplicated IDs.
+     * Cached source-page responses make subsequent loads inexpensive.
+     */
+    private suspend fun catalogPage24(
+        page: Int,
+        fetch: suspend (Int) -> StreamingResults
+    ): StreamingResults {
+        require(page in 1..41)
+        val through = page * ANYTV_LIST_BATCH
+        val collected = ArrayList<StreamingTitle>(through + 1)
+        val seen = HashSet<String>()
+        for (sourcePage in 1..50) {
+            val source = fetch(sourcePage)
+            for (title in source.titles) {
+                if (seen.add("${title.media}:${title.id}")) collected.add(title)
+                if (collected.size > through) break
+            }
+            if (collected.size > through || !source.more) break
+        }
+        return StreamingResults(
+            collected.drop(through - ANYTV_LIST_BATCH).take(ANYTV_LIST_BATCH),
+            collected.size > through
+        )
+    }
+
     /** Global editorial shelves independent of the TV's installed providers. */
     suspend fun discoveryShelf(route: String, media: String): List<StreamingTitle> =
         withContext(Dispatchers.IO) {
@@ -491,14 +520,17 @@ private object StreamingCatalog {
                 "movie/now_playing", "movie/top_rated", "tv/on_the_air",
                 "movie/upcoming", "movie/popular"))
             val suffix = if (route == "movie/now_playing") "&region=BR" else ""
-            val payload = get("backend", route + "?language=pt-BR" + suffix)
-            val titles = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
-            when (route) {
-                "movie/upcoming" -> titles.filter(::anyTvUpcoming)
-                // Now-playing is regional theatrical information, not streaming rights.
-                "movie/now_playing" -> titles
-                else -> titles.filter(::anyTvReleased)
-            }
+            catalogPage24(1) { sourcePage ->
+                val payload = get("backend",
+                    route + "?language=pt-BR" + suffix + "&page=$sourcePage")
+                val titles = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+                val matching = when (route) {
+                    "movie/upcoming" -> titles.filter(::anyTvUpcoming)
+                    "movie/now_playing" -> titles // Regional theatrical source.
+                    else -> titles.filter(::anyTvReleased)
+                }
+                StreamingResults(matching, sourcePage < payload.optInt("total_pages", sourcePage))
+            }.titles
         }
 
     /** Future streaming titles require a confirmed BR subscription offer. */
@@ -546,14 +578,16 @@ private object StreamingCatalog {
     suspend fun discoveryCinemaPage(page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
             require(page in 1..50)
-            val payload = get("backend",
-                "movie/now_playing?language=pt-BR&region=BR&page=$page")
-            StreamingResults(
-                mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", 0),
-                page < payload.optInt("total_pages", page))
+            catalogPage24(page) { sourcePage ->
+                val payload = get("backend",
+                    "movie/now_playing?language=pt-BR&region=BR&page=$sourcePage")
+                StreamingResults(
+                    mapTitles(payload.optJSONArray("results") ?: JSONArray(), "movie", 0),
+                    sourcePage < payload.optInt("total_pages", sourcePage))
+            }
         }
 
-    /** A genre page contains up to 20 real TMDB entries; page 2+ is user-triggered. */
+    /** Genre pages expose 24 released titles; page 2+ loads on demand. */
     suspend fun discoveryGenre(id: Int): List<StreamingTitle> =
         discoveryGenrePage(id, "movie", 1).titles
     suspend fun discoveryGenre(id: Int, media: String): List<StreamingTitle> =
@@ -563,7 +597,7 @@ private object StreamingCatalog {
         sort: String = "popular"): StreamingResults =
         withContext(Dispatchers.IO) {
             require(media == "movie" || media == "tv")
-            require(page in 1..50)
+            require(page in 1..41)
             require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14,
                 10759, 80, 10765, 10766, 10768, 10762))
             val sorting = when (sort) {
@@ -573,13 +607,15 @@ private object StreamingCatalog {
                 "title" -> if (media == "tv") "name.asc" else "title.asc"
                 else -> "popularity.desc"
             }
-            val route = "discover/$media?language=pt-BR&include_adult=false" +
-                "&sort_by=$sorting&with_genres=$id&page=$page"
-            val payload = get("backend", route)
-            StreamingResults(
-                mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id)
-                    .filter(::anyTvReleased),
-                page < payload.optInt("total_pages", page))
+            catalogPage24(page) { sourcePage ->
+                val route = "discover/$media?language=pt-BR&include_adult=false" +
+                    "&sort_by=$sorting&with_genres=$id&page=$sourcePage"
+                val payload = get("backend", route)
+                StreamingResults(
+                    mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id)
+                        .filter(::anyTvReleased),
+                    sourcePage < payload.optInt("total_pages", sourcePage))
+            }
         }
 
     /** Real TMDB seasons and episodes; cached locally so opening the same series costs nothing. */
@@ -683,29 +719,32 @@ private object StreamingCatalog {
         val providerId = providerId(token, app, media)
         if (providerId == 0) return@withContext StreamingResults(emptyList(), false)
         val search = query.isNotBlank()
-        val url = if (search)
-            "search/$media?language=pt-BR&include_adult=false&query=" +
-                URLEncoder.encode(query, "UTF-8") + "&page=$page"
-        else "discover/$media?language=pt-BR&watch_region=BR" +
-            "&with_watch_providers=$providerId&with_watch_monetization_types=flatrate" +
-            (if (genre > 0) "&with_genres=$genre" else "") +
-            "&include_adult=false&sort_by=popularity.desc&page=$page"
-        val result = get(token, url)
-        val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media, genre)
-            .filter(::anyTvReleased)
-        // Search endpoints have no provider filter: verify real BR subscription offers.
-        val titles = if (search) coroutineScope {
-            val limit = Semaphore(4)
-            candidates.map { item ->
-                async {
-                    val available = limit.withPermit {
-                        runCatching { offeredInBrazil(token, item, providerId) }.getOrDefault(false)
+        catalogPage24(page) { sourcePage ->
+            val url = if (search)
+                "search/$media?language=pt-BR&include_adult=false&query=" +
+                    URLEncoder.encode(query, "UTF-8") + "&page=$sourcePage"
+            else "discover/$media?language=pt-BR&watch_region=BR" +
+                "&with_watch_providers=$providerId&with_watch_monetization_types=flatrate" +
+                (if (genre > 0) "&with_genres=$genre" else "") +
+                "&include_adult=false&sort_by=popularity.desc&page=$sourcePage"
+            val result = get(token, url)
+            val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media, genre)
+                .filter(::anyTvReleased)
+            // Search endpoints have no provider filter: verify BR subscription offers.
+            val titles = if (search) coroutineScope {
+                val limit = Semaphore(4)
+                candidates.map { item ->
+                    async {
+                        val available = limit.withPermit {
+                            runCatching { offeredInBrazil(token, item, providerId) }
+                                .getOrDefault(false)
+                        }
+                        if (available) item else null
                     }
-                    if (available) item else null
-                }
-            }.awaitAll().filterNotNull()
-        } else candidates
-        StreamingResults(titles, page < result.optInt("total_pages", page))
+                }.awaitAll().filterNotNull()
+            } else candidates
+            StreamingResults(titles, sourcePage < result.optInt("total_pages", sourcePage))
+        }
     }
 }
 
@@ -918,7 +957,7 @@ private fun AnyTvOneRowPreview(
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
         Text(heading, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            items(titles.distinctBy { "${it.media}:${it.id}" }.take(12)) { title ->
+            items(titles.distinctBy { "${it.media}:${it.id}" }.take(ANYTV_LIST_BATCH)) { title ->
                 Column(modifier = Modifier.width(109.dp).clickable { onOpen(title) }) {
                     AnyTvPinnedImage(
                         model = "https://image.tmdb.org/t/p/w185" + title.poster,
@@ -2173,7 +2212,7 @@ internal fun TclStreamingScreens(
                         }
                         // Genre page: ten-image hero above either a detailed vertical list
                         // or three-column vertical grid. The upstream TMDB sort is applied
-                        // consistently to page 1 and every user-requested next 20 titles.
+                        // consistently to page 1 and every user-requested next 24 titles.
                         if (!homeLibrary && selected == null && selectedHomeGenre != 0) {
                             val genreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"
                             val genreTitles = genreShelves[genreKey].orEmpty()
@@ -2355,7 +2394,7 @@ internal fun TclStreamingScreens(
                                             }
                                         }, modifier = Modifier.fillMaxWidth()) {
                                         Text(if (genreLoading[genreKey] == true)
-                                            "Carregando…" else "Mostrar mais 20",
+                                            "Carregando…" else "Mostrar mais 24",
                                             fontSize = 13.sp)
                                     }
                                 }
