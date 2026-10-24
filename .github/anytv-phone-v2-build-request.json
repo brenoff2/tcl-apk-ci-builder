@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 53,
+  "expected_version_code": 54,
   "preserve_legacy_ota": true,
-  "source": "AnyTV V2 codigo real: marca vermelha/preta, splash/icone, grade Ver mais, removidos botoes sem funcionalidade, cache dos icones da TCL, Cinema BR TMDB",
+  "source": "AnyTV V2 2.9.25/code54: nova interface controle grafite/vermelho aprovada, catalogo streaming e Cinema BR, busca global fullscreen com historico, series em andamento duraveis, cartoes internos e 24 por lote; fonte DEV validada em CI unsigned #40104547392.",
   "new_install_only": false,
-  "release_version": "2.9.24-AnyTV",
-  "release_scope": "AnyTV V2 2.9.24/code53: corrigir marca/icone/splash/tema, botao Ver mais funcional, espacos/cartoes, remover Lembrar e 3 controles inoperantes, cache de aplicativos TV; NOVO Cinema BR com filtro TMDB now_playing region=BR paginado e selo azul F Cinema em titulos confirmados, SEM assumir cinema se nao houver streaming; Worker regional 58a1c0c3 em producao, cinco bindings originais e auth device sem mudancas; manter package com.tclremote.livre.v2, signer V2 original, dados do usuario, canal OTA V2 e backup legado; gates unitarios, Kotlin/IME, tmdb live, assinatura SHA256 e remote byte readback obrigatorios; QA fisica TCL ainda pendente.",
-  "ci_revision": 10
+  "release_version": "2.9.25-AnyTV",
+  "release_scope": "Atualizar somente o aplicativo AnyTV para telefone com o pacote com.tclremote.livre.v2, versionCode 54 e versionName 2.9.25-AnyTV, preservando certificado V2 original, dados locais, vinculo com TCL, OTA exclusiva updates/android/v2/current.apk e backup inalterado updates/android/cert2026/current.apk; incluir redesign preto/grafite, direcional OK vermelho, banner cinema e melhorias recentes de busca/series/24 titulos. Exigir CI de contratos, Kotlin, IME, catalogo, signer SHA256, verificacao OTA HTTPS byte por byte, rollforward so code54; TV companion e Worker inalterados. QA fisica posterior.",
+  "ci_revision": 11
 }
