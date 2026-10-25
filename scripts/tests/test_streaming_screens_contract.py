@@ -21,9 +21,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('genre == ANYTV_ANIME_FILTER', self.screen)
         self.assertIn('entry.optString("original_language")', self.screen)
         self.assertIn('title.originalLanguage == "ja" && 16 in title.genreIds', self.screen)
-        self.assertIn('var genreViewMode by remember { mutableStateOf("detalhado") }', self.screen)
+        self.assertIn('var genreViewMode by remember { mutableStateOf("grade") }', self.screen)
         self.assertIn('var genreSectionsMode by remember { mutableStateOf(false) }', self.screen)
-        self.assertIn('else genreSectionsMode = !genreSectionsMode', self.screen)
+        self.assertIn('else { genreSectionsMode = !genreSectionsMode; genreViewMode = "grade" }', self.screen)
         self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
         self.assertIn('"Lançamentos recentes · $genreName"', self.screen)
         self.assertIn('"Mais bem avaliados · $genreName"', self.screen)
@@ -33,7 +33,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('verticalArrangement = Arrangement.spacedBy(1.dp)) {', self.screen)
 
     def test_genre_sections_toggle_and_hero_single_badge(self):
-        self.assertIn('else genreSectionsMode = !genreSectionsMode', self.screen)
+        self.assertIn('else { genreSectionsMode = !genreSectionsMode; genreViewMode = "grade" }', self.screen)
         self.assertIn('else genreSectionsMode)\n                                                "Ver em seções"', self.screen)
         self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
         self.assertNotIn('Text(if (current.media == "movie") "F" else "S"', self.screen)
@@ -41,13 +41,12 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('heightIn(min = 16.dp)', self.screen)
         self.assertIn('Text(summary, fontSize = 12.sp, lineHeight = 15.sp,', self.screen)
 
-    def test_new_streaming_arrivals_require_real_provider_change(self):
-        self.assertIn('anytv_br_provider_snapshot_v1', self.screen)
-        self.assertIn('anytv_br_provider_arrivals_v1', self.screen)
-        self.assertIn('snapshot.has(key) && (current - previous).isNotEmpty()', self.screen)
-        self.assertIn('put("Recém-chegados ao Streaming", newArrivalTitles)', self.screen)
-        self.assertIn('originalLanguage = cached.optString("original_language")', self.screen)
-        self.assertNotIn('TMDB não fornece histórico', self.screen)
+    def test_removed_unverified_new_streaming_arrivals(self):
+        self.assertNotIn('put("Recém-chegados ao Streaming"', self.screen)
+        self.assertNotIn('anytv_br_provider_arrivals_v1', self.screen)
+        self.assertIn('Spacer(Modifier.height(9.dp))', self.screen)
+        self.assertIn('includeFontPadding = false', self.screen)
+        self.assertIn('(1..25).map { sourcePage ->', self.screen)
 
     def test_recent_sections_have_distinct_verified_sources(self):
         self.assertIn('suspend fun recentPremieres(media: String)', self.screen)
