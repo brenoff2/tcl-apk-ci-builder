@@ -2480,7 +2480,9 @@ internal fun TclStreamingScreens(
                                                 offer, activeServiceNames)
                                         } ?: StreamingOffer(-1, "", ""), activeServiceNames)
                                 }
-                                if (confirmed.isNotEmpty()) put(heading, confirmed)
+                                // Preserve editorial section headings while offer checks are
+                                // resolving. Never substitute unverified streaming titles.
+                                put(heading, confirmed)
                             }
                         }
                     val heroTitles = if (homeLibrary) emptyList() else {
@@ -2518,7 +2520,9 @@ internal fun TclStreamingScreens(
                             }
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty() &&
-                            !(heading == "Em breve · Streaming" && upcomingStreamingMore))
+                            !(heading == "Em breve · Streaming" && upcomingStreamingMore) &&
+                            !(activeServiceNames.isNotEmpty() && selected == null &&
+                                !homeLibrary && selectedHomeGenre == 0))
                             null
                         else heading to (if (homeLibrary) unique.filter {
                             libraryQuery.isBlank() ||
@@ -3258,6 +3262,14 @@ internal fun TclStreamingScreens(
                                             shape = RoundedCornerShape(20.dp)
                                         ) { Text("Mostrar mais") }
                                     }
+                                }
+                            } else if (shelf.isEmpty() &&
+                                activeServiceNames.isNotEmpty() && selected == null) {
+                                item {
+                                    Text("Nenhum título com oferta BR confirmada nos streamings " +
+                                        "selecionados nesta seção.",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else if (shelf.isEmpty() && heading == "Em breve · Streaming") {
                                 item {
