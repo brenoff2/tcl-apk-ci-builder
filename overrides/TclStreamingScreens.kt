@@ -576,7 +576,7 @@ private object StreamingCatalog {
         withContext(Dispatchers.IO) {
             require(route in setOf("trending/movie/week", "trending/tv/week",
                 "movie/now_playing", "movie/top_rated", "tv/on_the_air",
-                "movie/upcoming", "movie/popular"))
+                "movie/upcoming", "movie/popular", "tv/popular", "tv/top_rated"))
             val suffix = if (route == "movie/now_playing") "&region=BR" else ""
             catalogPage24(page) { sourcePage ->
                 val payload = get("backend",
@@ -2003,15 +2003,35 @@ internal fun TclStreamingScreens(
         for ((name, route, kind) in listOf(
             Triple("Em alta nesta semana", "trending/movie/week", "movie"),
             Triple(ANYTV_CINEMA_SHELF, "movie/now_playing", "movie"),
-            Triple("Mais bem avaliados no TMDB", "movie/top_rated", "movie"),
+            Triple("Mais bem avaliados", "movie/top_rated", "movie"),
+            Triple("Mais bem avaliados · Séries", "tv/top_rated", "tv"),
             Triple("Séries em destaque", "trending/tv/week", "tv"),
             Triple("Novidades em séries", "tv/on_the_air", "tv"),
-            Triple("Populares no TMDB", "movie/popular", "movie")
+            Triple("Filmes e séries mais assistidos · Filmes", "movie/popular", "movie"),
+            Triple("Filmes e séries mais assistidos · Séries", "tv/popular", "tv")
         )) {
             runCatching { StreamingCatalog.discoveryShelf(route, kind) }
                 .onSuccess { if (it.isNotEmpty()) shelves[name] = it }
                 .onFailure { discoveryError = "Algumas seções não puderam carregar." }
         }
+        val popularFilms = shelves.remove("Filmes e séries mais assistidos · Filmes").orEmpty()
+        val popularSeries = shelves.remove("Filmes e séries mais assistidos · Séries").orEmpty()
+        val popularMixed = buildList {
+            for (index in 0 until maxOf(popularFilms.size, popularSeries.size)) {
+                popularFilms.getOrNull(index)?.let { add(it) }
+                popularSeries.getOrNull(index)?.let { add(it) }
+            }
+        }
+        if (popularMixed.isNotEmpty()) shelves["Filmes e séries mais assistidos"] = popularMixed
+        val bestFilms = shelves.remove("Mais bem avaliados").orEmpty()
+        val bestSeries = shelves.remove("Mais bem avaliados · Séries").orEmpty()
+        val bestMixed = buildList {
+            for (index in 0 until maxOf(bestFilms.size, bestSeries.size)) {
+                bestFilms.getOrNull(index)?.let { add(it) }
+                bestSeries.getOrNull(index)?.let { add(it) }
+            }
+        }
+        if (bestMixed.isNotEmpty()) shelves["Mais bem avaliados"] = bestMixed
         discoveryShelves = shelves
         discoveryLoading = false
     }
@@ -2514,10 +2534,10 @@ internal fun TclStreamingScreens(
                             val sectionPageLimit = if (sectionTitle == "Em breve · Streaming") 50 else 42
                             val editorialRoute = when (sectionTitle) {
                                 "Em alta nesta semana" -> "trending/movie/week" to "movie"
-                                "Mais bem avaliados no TMDB" -> "movie/top_rated" to "movie"
+                                "Mais bem avaliados" -> "movie/top_rated" to "movie"
                                 "Séries em destaque" -> "trending/tv/week" to "tv"
                                 "Novidades em séries" -> "tv/on_the_air" to "tv"
-                                "Populares no TMDB" -> "movie/popular" to "movie"
+                                "Filmes e séries mais assistidos" -> "movie/popular" to "movie"
                                 else -> null
                             }
                             val selectedProvider = selected?.let { app ->
