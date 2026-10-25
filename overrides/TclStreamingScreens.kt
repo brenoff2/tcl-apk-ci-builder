@@ -622,7 +622,7 @@ private object StreamingCatalog {
             val gate = Semaphore(4)
             val payloads = coroutineScope {
                 listOf("popularity.desc", "$dateField.desc").flatMap { sorting ->
-                    (1..8).map { sourcePage ->
+                    (1..25).map { sourcePage ->
                         async {
                             gate.withPermit {
                                 runCatching {
@@ -635,7 +635,26 @@ private object StreamingCatalog {
                     }
                 }.awaitAll()
             }
+            // Supplement discover with TMDB's distinct editorial feeds;
+            // all results still need a factual first-premiere date in the last 90 days.
+            val secondaryRoutes = if (media == "movie")
+                listOf("movie/popular", "trending/movie/week")
+            else listOf("tv/on_the_air", "tv/popular", "trending/tv/week")
+            val supplemental = coroutineScope {
+                secondaryRoutes.flatMap { route ->
+                    (1..5).map { page ->
+                        async {
+                            gate.withPermit {
+                                runCatching { discoveryShelfPage(route, media, page).titles }
+                                    .getOrDefault(emptyList())
+                            }
+                        }
+                    }
+                }.awaitAll().flatten()
+            }
             val found = linkedMapOf<String, StreamingTitle>()
+            supplemental.filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
+                .forEach { title -> found.putIfAbsent("${title.media}:${title.id}", title) }
             payloads.filterNotNull().forEach { payload ->
                 mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
                     .filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
