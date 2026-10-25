@@ -987,6 +987,8 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
 @Composable
 private fun AnyTvCinemaHero(
     titles: List<StreamingTitle>,
+    offerCache: MutableMap<String, List<StreamingOffer>>,
+    apps: List<TvOfficialApp>,
     onOpen: (StreamingTitle) -> Unit
 ) {
     val movies = titles.filter { it.media == "movie" }
@@ -1033,19 +1035,10 @@ private fun AnyTvCinemaHero(
                         style = TextStyle(shadow = Shadow(
                             color = Color.Black.copy(alpha = 0.90f),
                             offset = Offset(0f, 2f), blurRadius = 4f)))
-                    Row(horizontalArrangement = Arrangement.spacedBy(7.dp),
-                        verticalAlignment = Alignment.CenterVertically) {
-                        val year = film.date.take(4)
-                            .takeIf { it.matches(Regex("[0-9]{4}")) }
-                        if (year != null) {
-                            Text(year, fontSize = 10.sp, color = Color.White)
-                        }
-                        Text("Cinema", modifier = Modifier
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(Color(0xFF1769E0))
-                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                            fontSize = 9.sp, color = Color.White,
-                            fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        StreamingOfferIcons(film, offerCache, apps, showRating = false,
+                            inCinema = true, showYear = true)
                     }
                 }
             }
@@ -2974,7 +2967,7 @@ internal fun TclStreamingScreens(
                                 selectedHomeGenre == 0 && homeContentType == "all" &&
                                 !homeLibrary) {
                                 item {
-                                    AnyTvCinemaHero(shelf) { chosen ->
+                                    AnyTvCinemaHero(shelf, offerCache, displayed) { chosen ->
                                         details = chosen
                                         detailsPackage = null
                                     }
