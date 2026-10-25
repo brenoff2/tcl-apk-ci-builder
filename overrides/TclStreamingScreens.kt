@@ -2299,9 +2299,13 @@ internal fun TclStreamingScreens(
                             val series = favorites.filter { it.title.media == "tv" }
                                 .map { it.title }.distinctBy { it.id }
                             val unseen = films.filter { it.id.toString() !in watchedFilms }
-                            val history = watchedFilms.mapNotNull { key ->
+                            val history = (watchedFilms.mapNotNull { key ->
                                 key.toIntOrNull()?.let { restoreTrackedTitle("movie", it) }
-                            }.distinctBy { it.id }
+                            } + watchedEpisodes.mapNotNull { key ->
+                                key.substringBefore(":").toIntOrNull()?.let {
+                                    restoreTrackedTitle("tv", it)
+                                }
+                            }).distinctBy { "${it.media}:${it.id}" }
                             val trackedIds = trackedSeries +
                                 watchedEpisodes.mapNotNull { it.substringBefore(":").takeIf(String::isNotBlank) }
                             val watching = trackedIds.mapNotNull { key ->
@@ -2314,7 +2318,7 @@ internal fun TclStreamingScreens(
                             } else if (librarySection == "watching") {
                                 if (watching.isNotEmpty()) put("Séries acompanhadas", watching)
                             } else if (librarySection == "watched") {
-                                if (history.isNotEmpty()) put("Filmes já assistidos", history)
+                                if (history.isNotEmpty()) put("Filmes e séries assistidos", history)
                             }
                         } else {
                             if (selectedHomeGenre == 0 && activeServiceNames.isEmpty()) {
