@@ -600,6 +600,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('selectedHomeGenre == 0 && titles.isNotEmpty()', provider)
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
         self.assertIn('homeContentType = kind', self.screen)
+        self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) continue', self.screen)
+        self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach', self.screen)
         self.assertNotIn('homeContentType = kind; selectedHomeGenre = 0', self.screen)
         provider_entry = self.screen.split('selected = app; media = "movie"; genre = 0; page = 1', 1)[1].split(
             'homeLibrary = false; showGlobalSearch = false', 1)[0]
