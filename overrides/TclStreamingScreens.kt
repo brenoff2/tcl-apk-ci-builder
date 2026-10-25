@@ -1970,12 +1970,21 @@ internal fun TclStreamingScreens(
             val candidates = (discoveryShelves.values.flatten() +
                 genreShelves.values.flatten() + upcomingStreaming)
                 .distinctBy { "${it.media}:${it.id}" }.take(300)
-            for (title in candidates) {
-                val key = "${title.media}:${title.id}"
-                if (key !in offerCache) {
-                    runCatching { StreamingCatalog.offersInBrazil(title) }
-                        .onSuccess { offerCache[key] = it }
-                }
+            // Resolve BR offers with bounded concurrency. Sequential retrieval
+            // kept unrelated home sections empty while waiting for slow providers.
+            val gate = Semaphore(4)
+            coroutineScope {
+                candidates.map { title ->
+                    async {
+                        val key = "${title.media}:${title.id}"
+                        if (key !in offerCache) {
+                            gate.withPermit {
+                                runCatching { StreamingCatalog.offersInBrazil(title) }
+                                    .onSuccess { offerCache[key] = it }
+                            }
+                        }
+                    }
+                }.awaitAll()
             }
         }
     }
