@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 70,
+  "expected_version_code": 71,
   "preserve_legacy_ota": true,
-  "source": "Recent first premieres (last 90 days) in Novidades, and compact 3dp vertical spacing in detailed list cards; targeted regression tests. Corrected detailed-card regression assertion in cb28fe7f.",
+  "source": "Anime exclusive by original Japanese language and animation genre, fix Anime sentinel filter, separate Anime from main/provider catalog and previews, genre/Anime detailed list default with Ver em seções toggle; preserve 90-day Novidades and compact detail.",
   "new_install_only": false,
-  "release_version": "2.9.41-AnyTV",
-  "release_scope": "Official signed V2 2.9.41/code70 OTA after tests, compilation, original signer verification and remote byte readback; preserve cert2026 legacy OTA.",
-  "ci_revision": 36
+  "release_version": "2.9.42-AnyTV",
+  "release_scope": "Signed AnyTV 2.9.42/code71 OTA, original signer, protected CI, original cert2026 untouched; require signed APK and remote byte-readback.",
+  "ci_revision": 37
 }
