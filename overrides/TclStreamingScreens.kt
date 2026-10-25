@@ -2264,13 +2264,15 @@ internal fun TclStreamingScreens(
                                         else "Filmes · " + app.name, it)
                                 }
                             }
-                            if (titles.isNotEmpty() &&
+                            if (selectedHomeGenre == 0 && titles.isNotEmpty() &&
                                 (homeContentType == "all" || homeContentType == media)) {
                                 put("Em destaque · " + app.name, titles)
                             }
                             val possibleGenres = if (homeContentType == "tv") tvGenres
                                 else allMovieGenres
-                            possibleGenres.filter { it.id in filterGenreIds }.forEach { kind ->
+                            possibleGenres.filter { kind ->
+                                selectedHomeGenre == 0 && kind.id in filterGenreIds
+                            }.forEach { kind ->
                                 myServiceShelves[app.name + ":" + media + ":" + kind.id]
                                     ?.takeIf { it.isNotEmpty() }?.let {
                                         put("Por gênero: " + kind.name, it)
@@ -2530,7 +2532,7 @@ internal fun TclStreamingScreens(
                                                                     if (sectionTitle.startsWith(
                                                                             "Em destaque ·")) genre
                                                                     else anyTvProviderGenre(selectedProvider.second,
-                                                                        homeContentType, selectedHomeGenre),
+                                                                        selectedHomeGenre, allMovieGenres, tvGenres),
                                                                     if (sectionTitle.startsWith(
                                                                             "Em destaque ·")) searchTerm else "")
                                                             selectedGenreProvider != null ->
@@ -2544,7 +2546,7 @@ internal fun TclStreamingScreens(
                                                                 val homeKind = if (sectionTitle.endsWith("· Séries"))
                                                                     "tv" else "movie"
                                                                 val homeGenre = anyTvProviderGenre(
-                                                                    homeKind, homeContentType, selectedHomeGenre)
+                                                                    homeKind, selectedHomeGenre, allMovieGenres, tvGenres)
                                                                 StreamingCatalog.discover(token,
                                                                     homeProvider, homeKind, next,
                                                                     homeGenre, "")
