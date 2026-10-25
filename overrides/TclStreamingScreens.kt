@@ -1201,7 +1201,7 @@ private fun StreamingOfferIcons(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically) {
-                offerings.distinctBy { it.id }.forEach { offer ->
+                offerings.distinctBy { anyTvServiceKey(it.name) }.forEach { offer ->
                     val installed = apps.firstOrNull {
                         StreamingCatalog.appHasOffer(it, listOf(offer))
                     }
@@ -1420,6 +1420,11 @@ internal fun TclStreamingScreens(
     var showCatalogEditor by remember { mutableStateOf(false) }
     val catalogPrefs = remember(context) { context.getSharedPreferences("tcl_tv_installed_apps", Context.MODE_PRIVATE) }
     var visibleCatalogServices by remember { mutableStateOf(catalogPrefs.getString("anytv_catalog_visible_services", "")?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()) }
+    var tmdbProviderArtwork by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    LaunchedEffect(Unit) {
+        tmdbProviderArtwork = runCatching { anyTvBrazilProviders() }
+            .getOrDefault(emptyList()).associate { anyTvServiceKey(it.name) to it.logo }
+    }
     var hiddenInstalledServices by remember { mutableStateOf(catalogPrefs.getString("anytv_catalog_hidden_installed", "")?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()) }
     val providerListTitles = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val providerListPages = remember { mutableStateMapOf<String, Int>() }
@@ -2343,12 +2348,21 @@ internal fun TclStreamingScreens(
                                         RoundedCornerShape(15.dp))
                                     .padding(3.dp), contentAlignment = Alignment.Center) {
                                     if (app.packageName.startsWith("catalog:")) {
+                                        val logo = tmdbProviderArtwork[anyTvServiceKey(app.name)].orEmpty()
                                         Box(modifier = Modifier.fillMaxSize()
                                             .clip(RoundedCornerShape(11.dp))
                                             .background(Color(0xFF1C1E25)),
                                             contentAlignment = Alignment.Center) {
-                                            Text(app.name.take(2).uppercase(), fontSize = 16.sp,
-                                                color = Color.White, fontWeight = FontWeight.Bold)
+                                            if (logo.startsWith("/")) {
+                                                AnyTvPinnedImage(
+                                                    model = "https://image.tmdb.org/t/p/w185" + logo,
+                                                    contentDescription = "Streaming " + app.name,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Fit)
+                                            } else {
+                                                Text(app.name.take(2).uppercase(), fontSize = 16.sp,
+                                                    color = Color.White, fontWeight = FontWeight.Bold)
+                                            }
                                         }
                                     } else OfficialTvIcon(app, 52.dp)
                                 }
