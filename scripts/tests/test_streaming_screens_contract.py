@@ -624,6 +624,12 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('sectionMore = result.more', self.screen)
         self.assertIn('upcomingStreamingMore = streamingFuture.more', self.screen)
 
+    def test_subscription_filter_preserves_editorial_sections_without_fake_offers(self):
+        self.assertIn('put(heading, confirmed)', self.screen)
+        self.assertIn('Nenhum título com oferta BR confirmada nos streamings', self.screen)
+        self.assertIn('activeServiceNames.isNotEmpty() && selected == null', self.screen)
+        self.assertIn('StreamingCatalog.matchesSelectedSubscription(', self.screen)
+
     def test_provider_media_buttons_share_home_filter_state(self):
         self.assertIn('contentType = homeContentType,', self.screen)
         self.assertNotIn('contentType = if (selected == null) homeContentType else media,', self.screen)
