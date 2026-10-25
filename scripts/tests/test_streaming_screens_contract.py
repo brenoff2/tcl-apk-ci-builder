@@ -615,6 +615,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val genreTitles = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', self.screen)
         self.assertIn('else listOf("movie", "tv").filter {', self.screen)
         self.assertIn('kind == "tv" && selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
+        self.assertIn('put("Cinema · Em cartaz no Brasil", it)', self.screen)
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
         self.assertIn('val selectedKindId = anyTvResolvedGenre(selectedHomeGenre,', self.screen)
 
