@@ -1067,6 +1067,18 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
         self.assertIn("versionCode = " + ("39" if os.environ.get("TCL_V39") == "1" else "38" if os.environ.get("TCL_V38") == "1" else "37" if os.environ.get("TCL_V37") == "1" else "36" if os.environ.get("TCL_V36") == "1" else "35" if os.environ.get("TCL_V35") == "1" else "34"), self.gradle)
 
+    def test_poster_actions_use_contrasting_icon_outline_not_round_badges(self):
+        card = self.screen.split('private fun AnyTvPosterCard(', 1)[1].split(
+            '/** One horizontal strip', 1)[0]
+        self.assertIn('tint = Color.Black.copy(alpha = 0.85f)', card)
+        self.assertIn('modifier = Modifier.size(24.dp)', card)
+        self.assertIn('modifier = Modifier.size(19.dp)', card)
+        self.assertNotIn('.background(Color.Black.copy(alpha = 0.60f), RoundedCornerShape(16.dp))', card)
+
+    def test_cinema_grid_uses_common_section_header_spacing(self):
+        self.assertIn('"Em cartaz no Brasil"', self.screen)
+        self.assertIn('.padding(top = 24.dp, bottom = 12.dp)', self.screen)
+
     def test_new_compact_streaming_contract(self):
         self.assertIn('Box(modifier = Modifier.weight(1f)) { actions() }', self.screen)
         self.assertIn('AnyTvRatingOverlay(title, Modifier.align(Alignment.TopStart)', self.screen)
