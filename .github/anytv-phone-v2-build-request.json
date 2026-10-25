@@ -3,9 +3,9 @@
   "intent": "release-independent-phone-v2",
   "expected_version_code": 74,
   "preserve_legacy_ota": true,
-  "source": "Fix confirmed Worker HTTP400 incompatibility: only authorized sort_by/date query, filter anime locally after standard genre discovery; remove Novidades cinema/on_the_air conflation, add first-premiere recent movies, new series, season premieres, honest provider arrivals unavailable; expand cinema exclusion, preserve genre page lists. Paginate sorted release data locally to skip future-dated TMDB entries, using only Worker-permitted parameters (commit 75d14b4).",
+  "source": "Fix confirmed Worker HTTP400 incompatibility: only authorized sort_by/date query, filter anime locally after standard genre discovery; remove Novidades cinema/on_the_air conflation, add first-premiere recent movies, new series, season premieres, honest provider arrivals unavailable; expand cinema exclusion, preserve genre page lists. Paginate sorted release data locally to skip future-dated TMDB entries, using only Worker-permitted parameters (commit 75d14b4). Live read-only integration checks for Worker discover/movie, discover/tv and Anime genre 16 before signing.",
   "new_install_only": false,
   "release_version": "2.9.45-AnyTV",
   "release_scope": "Official signed V2 2.9.45/code74 Android OTA; test and compile sources; preserve V2 signer and cert2026, publish only if previous versionCode less than 74, require HTTPS byte readback.",
-  "ci_revision": 43
+  "ci_revision": 44
 }
