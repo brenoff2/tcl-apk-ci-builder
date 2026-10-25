@@ -668,10 +668,12 @@ class StreamingScreens(unittest.TestCase):
     def test_genre_page_combines_movies_and_series_only_when_all_selected(self):
         self.assertIn('if (homeContentType == "all") listOf("movie", "tv")', self.screen)
         self.assertIn('anyTvResolvedGenre(selectedHomeGenre, mediaKind,', self.screen)
-        self.assertIn('val genreTitles = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('val genreMedia = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', self.screen)
         self.assertIn('genreShelves[genreKey].orEmpty()', self.screen)
-        self.assertIn('val genreTitles = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', self.screen)
-        self.assertIn('else listOf("movie", "tv").filter {', self.screen)
+        self.assertIn('val genreCandidates = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('genreSources.forEach { (_, titles) ->', self.screen)
+        self.assertIn('titles.getOrNull(index)?.let { add(it) }', self.screen)
+        self.assertIn('val genreTitles = genreCandidates', self.screen)
         self.assertIn('kind == "tv" && selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
         self.assertIn('put("Cinema · Em cartaz no Brasil", it)', self.screen)
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
@@ -887,8 +889,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn(
             '"$selectedGenreKind:$selectedHomeGenre:$genreSort" !in genreShelves',
             self.screen)
-        self.assertIn('genreMore[genreKey] == true', self.screen)
-        self.assertIn('genrePage[genreKey] = next', self.screen)
+        self.assertIn('genreSources.any { (key, _) -> genreMore[key] == true }', self.screen)
+        self.assertIn('genrePage[key] = next', self.screen)
+        self.assertIn('requests.forEach { (key, mediaKind, id) ->', self.screen)
 
     def test_watched_poster_preserves_title_without_favorite_or_cache_ttl(self):
         self.assertIn('fun toggleFilmWatched(title: StreamingTitle)', self.screen)
@@ -1027,7 +1030,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('"Em cartaz · Brasil · TMDB"', self.screen)
         self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()', self.screen)
         self.assertIn('anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)', self.screen)
-        self.assertIn('if (pageGenreId == ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('if (id == ANYTV_CINEMA_FILTER)', self.screen)
         self.assertIn('cinemaIds = cinemaIds + result.titles.map { it.id }', self.screen)
         self.assertNotIn('inCinema = offerings.isEmpty()', self.screen)
 
