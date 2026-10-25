@@ -1,3 +1,13 @@
+## Organização de lançamentos aprovada — 25/10/2026
+- Remover a seção genérica «Novidades», anteriormente alimentada por `movie/now_playing` e `tv/on_the_air`, pois confundia Cinema, séries em andamento e estreias.
+- «Filmes recém-lançados»: considerar estreias até 90 dias e oferta `flatrate` BR comprovada, excluindo títulos identificados como em cartaz na consulta Cinema BR. Datas regionais específicas requerem fontes/rotas adicionais verificadas.
+- «Séries novas»: usar a primeira data de estreia, não o status de exibição.
+- «Novas temporadas»: distinguir temporadas adicionais cuja data de início esteja nos últimos 90 dias; não tratá-las como séries novas.
+- «Recém-chegados ao Streaming»: não inferir entrada recente apenas por presença no TMDB/JustWatch. Até existir histórico real de entradas por serviço, mostrar indisponibilidade de evidência, sem listar falsos recém-chegados.
+- Anime japonês (gênero animação + idioma original `ja`) deve ficar isolado dos catálogos gerais; página Anime usa descoberta TMDB por gênero 16 e filtragem local da origem. O Worker de produção rejeita `with_original_language` e campos de data não permitidos com HTTP 400. Não alterar a allowlist do Worker só para suprir filtros de interface; optar por consultas permitidas e filtro local, com teste HTTP real antes da assinatura.
+- Página Gênero/Anime usa lista Detalhada como padrão e alternância para seções, sem trilhos duplicados.
+- A publicação 2.9.45/code74 confirma build, teste de Worker, assinatura e OTA, mas **não** confirma homologação física de telas e dados no dispositivo.
+
 # AnyTV — Decisões vigentes
 Atualizado em 2026-10-25. Fonte: checkpoint canônico 2.9.39 e arquivos de implementação consultados na branch DEV. Decisões não documentadas permanecem em aberto.
 
