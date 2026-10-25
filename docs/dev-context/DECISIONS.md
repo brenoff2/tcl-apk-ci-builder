@@ -1,3 +1,12 @@
+## Complemento aprovado — 2.9.48/code77 (25/10/2026)
+- Gênero e Anime: modo padrão é lista Detalhada. O botão «Ver em seções» **deve ativar seções de fato** com o mesmo componente horizontal do Streaming, agrupando Filmes, Séries, Lançamentos recentes e Mais bem avaliados, sem duplicação dos trilhos com a lista. O texto do botão mostra a próxima ação, nunca o estado invertido.
+- Lista Detalhada: espaçamento de metadados compacto de 1dp, linha de provedores de altura mínima 16dp, sinopse lineHeight 15sp; preservar título, gêneros, badges, logos e dois botões distintos.
+- Slide principal: usar somente `StreamingOfferIcons` para F no quadrado azul/S no círculo vermelho, ano e indicador Cinema quando confirmado, sem texto F/S solto e sem duplicar Cinema.
+- «Filmes recém-lançados» e «Séries novas»: descobrir títulos em fontes TMDB permitidas pelo Worker, combinando páginas ordenadas por popularidade e data, filtrar estreia original nos últimos 90 dias e excluir Anime. Filmes encontrados no catálogo Cinema BR corrente pertencem exclusivamente à página Cinema. Oferta flatrate BR **não é pré-requisito** para classificação factual de estreia; disponibilidade para assistir é informação separada.
+- «Recém-chegados ao Streaming»: não usar atualidade do filme, popularidade ou primeira consulta como prova. Persistir provedores BR observados por título; somente um novo provedor detectado em comparação posterior com o mesmo título autoriza inclusão. Primeira execução faz baseline e pode mostrar seção vazia. Histórico guarda evidência observacional local por 30 dias, não garante data exata de inclusão na plataforma.
+- Publicação: preservar signer V2 e cert2026. Verificar branch remota e bytes pelo **SHA imutável do commit**, para evitar falsos negativos do cache CDN da URL de branch.
+- QA física e visual não pode ser afirmada sem prova no aparelho; CI de contrato/Gradle/OTA não substitui essa etapa.
+
 ## Organização de lançamentos aprovada — 25/10/2026
 - Remover a seção genérica «Novidades», anteriormente alimentada por `movie/now_playing` e `tv/on_the_air`, pois confundia Cinema, séries em andamento e estreias.
 - «Filmes recém-lançados»: considerar estreias até 90 dias e oferta `flatrate` BR comprovada, excluindo títulos identificados como em cartaz na consulta Cinema BR. Datas regionais específicas requerem fontes/rotas adicionais verificadas.
