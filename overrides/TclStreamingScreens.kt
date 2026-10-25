@@ -2622,6 +2622,25 @@ internal fun TclStreamingScreens(
                                                 scope.launch {
                                                     runCatching {
                                                         when {
+                                                            sectionTitle == "Filmes e séries mais assistidos" ||
+                                                                sectionTitle == "Mais bem avaliados" -> {
+                                                                val base = if (sectionTitle ==
+                                                                    "Mais bem avaliados") "top_rated" else "popular"
+                                                                val moviePage = StreamingCatalog.discoveryShelfPage(
+                                                                    "movie/$base", "movie", next)
+                                                                val seriesPage = StreamingCatalog.discoveryShelfPage(
+                                                                    "tv/$base", "tv", next)
+                                                                val mixed = buildList {
+                                                                    for (idx in 0 until maxOf(
+                                                                            moviePage.titles.size,
+                                                                            seriesPage.titles.size)) {
+                                                                        moviePage.titles.getOrNull(idx)?.let { add(it) }
+                                                                        seriesPage.titles.getOrNull(idx)?.let { add(it) }
+                                                                    }
+                                                                }
+                                                                StreamingResults(mixed,
+                                                                    moviePage.more || seriesPage.more)
+                                                            }
                                                             editorialRoute != null ->
                                                                 StreamingCatalog.discoveryShelfPage(
                                                                     editorialRoute.first,
