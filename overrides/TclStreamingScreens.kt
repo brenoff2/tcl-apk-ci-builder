@@ -1015,10 +1015,15 @@ private fun AnyTvCinemaHero(
                     contentDescription = "Cinema: " + film.name,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize())
+                Box(modifier = Modifier.fillMaxSize().background(
+                    Brush.verticalGradient(listOf(
+                        Color.Transparent,
+                        Color.Black.copy(alpha = 0.15f),
+                        Color.Black.copy(alpha = 0.86f)
+                    ))))
                 Column(modifier = Modifier.align(Alignment.BottomStart)
-                    .background(Color.Black.copy(alpha = 0.70f),
-                        RoundedCornerShape(topEnd = 8.dp))
-                    .padding(horizontal = 11.dp, vertical = 6.dp),
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(film.name, fontWeight = FontWeight.SemiBold,
                         fontSize = 12.sp, maxLines = 2, color = Color.White,
