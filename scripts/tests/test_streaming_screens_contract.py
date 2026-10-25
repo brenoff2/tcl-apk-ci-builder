@@ -65,7 +65,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_compact_catalog_layout_regression(self):
         self.assertIn('AnyTvStreamNavBar(', self.screen)
-        self.assertIn('Text(selected?.name ?: "Início"', self.screen)
+        self.assertIn('Text(pageTitle, fontSize = 17.sp', self.screen)
         self.assertIn('val app = selected!!', self.screen)
         self.assertIn('// Home and individual provider use ONE identical catalogue layout.', self.screen)
         self.assertNotIn('} else {\n                    val app = selected!!', self.screen)
@@ -125,7 +125,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("Explorar por plataforma"', self.screen)
         self.assertNotIn('Text("Streaming", fontSize = 20.sp', self.screen)
         self.assertNotIn('Text("Filtrar destaques por plataforma instalada na TV"', self.screen)
-        self.assertIn('val heroTitles = if (homeLibrary || (selected == null &&', self.screen)
+        self.assertIn('val heroTitles = if (homeLibrary) emptyList() else', self.screen)
 
     def test_bounded_persistent_quota_saving_metadata_cache(self):
         for fragment in (
@@ -420,7 +420,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_provider_and_main_share_actual_slider_and_sections(self):
         self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
-        self.assertIn('Text(selected?.name ?: "Início"', self.screen)
+        self.assertIn('Text(pageTitle, fontSize = 17.sp', self.screen)
         self.assertIn('if (selected != null && !homeLibrary)', self.screen)
         self.assertIn('LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre)', self.screen)
         self.assertIn('myServiceShelves[key] = it.titles', self.screen)
@@ -538,7 +538,7 @@ class StreamingScreens(unittest.TestCase):
         # BR now-playing Cinema marker (when the movie is in cinemaIds).
         self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', self.screen)
         self.assertIn('inCinema = current.id in cinemaIds', self.screen)
-        self.assertIn('AnyTvCinemaHero(shelf, offerCache, displayed)', self.screen)
+        self.assertNotIn('AnyTvCinemaHero(shelf, offerCache, displayed)', self.screen)
         # International preview remains available on dedicated cinema filter pages,
         # but the home section now keeps only the verified Brazil cinema hero.
         self.assertIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
@@ -1077,7 +1077,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('value = libraryQuery', self.screen)
         self.assertIn('libraryQuery.isBlank()', self.screen)
         self.assertNotIn('"Ver mais ›"', self.screen)
-        self.assertIn('AnyTvCinemaHero(shelf, offerCache, displayed)', self.screen)
+        self.assertNotIn('AnyTvCinemaHero(shelf, offerCache, displayed)', self.screen)
         self.assertIn('Box(modifier = Modifier.width(3.dp).height(22.dp)', self.screen)
 
     def test_library_labels_and_cinema_overlay_share_home_visual_contract(self):
