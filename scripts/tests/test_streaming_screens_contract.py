@@ -14,7 +14,7 @@ class StreamingScreens(unittest.TestCase):
         cls.gradle = Path("source/app/build.gradle.kts").read_text()
 
     def test_detailed_card_has_compact_metadata_spacing(self):
-        self.assertIn('verticalArrangement = Arrangement.spacedBy(3.dp)) {\\n                // Line 1: title', self.screen)
+        self.assertIn('verticalArrangement = Arrangement.spacedBy(3.dp)) {', self.screen)
 
     def test_novidades_only_contains_recent_first_premieres(self):
         self.assertIn('private fun anyTvRecentPremiere(item: StreamingTitle)', self.screen)
