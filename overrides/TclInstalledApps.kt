@@ -576,6 +576,9 @@ fun TclInstalledAppsBar(
                             favorites = valid
                             hasUserFavorites = true
                             storeFavorites(valid)
+                            prefs.edit().putString("anytv_catalog_hidden_installed",
+                                allApps.map { it.packageName }.filter { it !in valid }
+                                    .sorted().joinToString(",")).apply()
                             catalogFavorites = catalogDraft
                             prefs.edit().putString("anytv_catalog_visible_services", catalogDraft.sorted().joinToString(",")).apply()
                             showManager = false
