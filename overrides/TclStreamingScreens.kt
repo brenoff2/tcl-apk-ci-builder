@@ -2136,6 +2136,12 @@ internal fun TclStreamingScreens(
     LaunchedEffect(token) {
         discoveryLoading = true
         discoveryError = null
+        // Separate BR theatrical titles from editorial/streaming shelves.
+        // The first cinematic batch alone is not enough to exclude older pages.
+        val theatricalPages = runCatching {
+            (1..4).flatMap { page -> StreamingCatalog.discoveryCinemaPage(page).titles }
+        }.getOrDefault(emptyList())
+        cinemaIds = cinemaIds + theatricalPages.map { it.id }
         val shelves = linkedMapOf<String, List<StreamingTitle>>()
         for ((name, route, kind) in listOf(
             Triple("Em alta nesta semana", "trending/movie/week", "movie"),
