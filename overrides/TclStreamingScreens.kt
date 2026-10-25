@@ -3514,16 +3514,23 @@ internal fun TclStreamingScreens(
                                 }
                             }
                             if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER) {
-                                genreSources.forEach { (key, titles) ->
-                                    val clean = titles.filter { title ->
-                                        if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(title)
-                                        else !anyTvIsAnime(title)
-                                    }
-                                    if (clean.isNotEmpty()) item {
-                                        AnyTvOneRowPreview(
-                                            (if (key.startsWith("tv:")) "Séries" else "Filmes") +
-                                                " · " + (if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                                    "Anime" else "Gênero"), clean, posterCard)
+                                // Real editorial rails, reusing the Streaming section component
+                                // and exactly the same filtered, deduplicated genre catalogue.
+                                val genreName = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                    "Anime" else (allMovieGenres + tvGenres).firstOrNull {
+                                        it.id == selectedHomeGenre
+                                    }?.name ?: "Gênero"
+                                val genreSections = linkedMapOf(
+                                    "Filmes · $genreName" to genreTitles.filter { it.media == "movie" },
+                                    "Séries · $genreName" to genreTitles.filter { it.media == "tv" },
+                                    "Lançamentos recentes · $genreName" to genreTitles
+                                        .filter(::anyTvRecentPremiere).sortedByDescending { it.date },
+                                    "Mais bem avaliados · $genreName" to genreTitles
+                                        .filter { it.votes > 0 }.sortedByDescending { it.rating }
+                                )
+                                genreSections.forEach { (heading, sectionTitles) ->
+                                    if (sectionTitles.isNotEmpty()) item {
+                                        AnyTvOneRowPreview(heading, sectionTitles, posterCard)
                                     }
                                 }
                             } else if (genreViewMode == "detalhado" &&
