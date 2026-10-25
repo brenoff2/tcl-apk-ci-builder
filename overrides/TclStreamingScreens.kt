@@ -1925,6 +1925,7 @@ internal fun TclStreamingScreens(
             }
             for (kind in kinds) {
                 val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
+                if (selectedHomeGenre > 0 && chosenGenre == 0) continue
                 val key = name + ":" + kind + ":" + chosenGenre
                 if (key !in myServiceShelves) {
                     runCatching {
@@ -2258,6 +2259,7 @@ internal fun TclStreamingScreens(
                             }
                             kinds.forEach { kind ->
                                 val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
+                                if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach
                                 val key = app.name + ":" + kind + ":" + chosenGenre
                                 myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
                                     put(if (kind == "tv") "Séries · " + app.name
@@ -2364,6 +2366,7 @@ internal fun TclStreamingScreens(
                                 }
                                 kinds.forEach { kind ->
                                     val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
+                                    if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach
                                     val key = name + ":" + kind + ":" + chosenGenre
                                     myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
                                         put("Destaques " + name +
