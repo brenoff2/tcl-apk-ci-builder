@@ -2813,10 +2813,14 @@ internal fun TclStreamingScreens(
                         // or three-column vertical grid. The upstream TMDB sort is applied
                         // consistently to page 1 and every user-requested next 24 titles.
                         if (!homeLibrary && selected == null && selectedHomeGenre != 0) {
-                            val genreKey = "$selectedGenreKind:" +
+                            val genreKey = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                "movie:$ANYTV_CINEMA_FILTER:$genreSort"
+                            else "$selectedGenreKind:" +
                                 anyTvResolvedGenre(selectedHomeGenre, selectedGenreKind,
                                     allMovieGenres, tvGenres) + ":$genreSort"
-                            val genreTitles = listOf("movie", "tv").filter {
+                            val genreTitles = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                genreShelves[genreKey].orEmpty()
+                            else listOf("movie", "tv").filter {
                                 homeContentType == "all" || it == homeContentType
                             }.flatMap { mediaKind ->
                                 val id = anyTvResolvedGenre(selectedHomeGenre, mediaKind,
