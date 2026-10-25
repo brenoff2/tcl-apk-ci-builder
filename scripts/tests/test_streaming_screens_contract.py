@@ -425,7 +425,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre)', self.screen)
         self.assertIn('myServiceShelves[key] = it.titles', self.screen)
         self.assertIn('HorizontalPager(', self.screen)
-        self.assertIn('Modifier.fillMaxWidth().padding(top = 12.dp)', self.screen)
+        self.assertIn('Modifier.fillMaxWidth().padding(top = 24.dp)', self.screen)
         self.assertNotIn('} else {\\n                    val app = selected!!', self.screen)
 
     def test_three_visible_cards_and_24_title_batches(self):
