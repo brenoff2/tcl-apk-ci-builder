@@ -634,6 +634,10 @@ class StreamingScreens(unittest.TestCase):
         self.assertEqual(self.screen.count('color = Color(0xFFFF5368),'), 2)
         self.assertIn('"Desmarcar todos" else "Marcar todos", fontSize = 13.sp', self.screen)
 
+    def test_principal_never_reintroduces_cinema_on_movie_tab(self):
+        self.assertNotIn('if (homeContentType != "tv") {\n                                discoveryShelves[ANYTV_CINEMA_SHELF]', self.screen)
+        self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
+
     def test_subscription_filter_preserves_editorial_sections_without_fake_offers(self):
         self.assertIn('put(heading, confirmed)', self.screen)
         self.assertIn('Nenhum título com oferta BR confirmada nos streamings', self.screen)
