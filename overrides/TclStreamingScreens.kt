@@ -1428,7 +1428,7 @@ internal fun TclStreamingScreens(
         sectionVisibleCount = ANYTV_LIST_BATCH
         sectionExtra = emptyList()
         sectionPage = 1
-        sectionMore = if (openedSection == "Em breve · Streaming")
+        sectionMore = if (openedSection == "Em breve · Filmes e séries")
             upcomingStreamingMore else true
         sectionLoading = false
         sectionError = null
@@ -2434,7 +2434,7 @@ internal fun TclStreamingScreens(
                             }
                             // Even if page one has no BR offers, later source pages can.
                             if (future.isNotEmpty() || upcomingStreamingMore)
-                                put("Em breve · Streaming", future)
+                                put("Em breve · Filmes e séries", future)
                                 filterGenreIds.forEach { id ->
                                     val label = (allMovieGenres + tvGenres).firstOrNull {
                                         it.id == id
@@ -2527,7 +2527,7 @@ internal fun TclStreamingScreens(
                             }
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty() &&
-                            !(heading == "Em breve · Streaming" && upcomingStreamingMore) &&
+                            !(heading == "Em breve · Filmes e séries" && upcomingStreamingMore) &&
                             !(activeServiceNames.isNotEmpty() && selected == null &&
                                 !homeLibrary && selectedHomeGenre == 0))
                             null
@@ -2543,7 +2543,7 @@ internal fun TclStreamingScreens(
                             // The home rail shows only 24, but the source page can
                             // already have more verified titles. Never skip that
                             // overflow when opening its dedicated section.
-                            val sectionBase = if (sectionTitle == "Em breve · Streaming")
+                            val sectionBase = if (sectionTitle == "Em breve · Filmes e séries")
                                 visibleShelves[sectionTitle].orEmpty()
                             else uniqueShelves.firstOrNull {
                                 it.first == sectionTitle
@@ -2551,7 +2551,7 @@ internal fun TclStreamingScreens(
                             val sectionAll = (sectionBase + sectionExtra)
                                 .distinctBy { "${it.media}:${it.id}" }
                             val sectionTitles = sectionAll.take(sectionVisibleCount)
-                            val sectionPageLimit = if (sectionTitle == "Em breve · Streaming") 50 else 42
+                            val sectionPageLimit = if (sectionTitle == "Em breve · Filmes e séries") 50 else 42
                             val editorialRoute = when (sectionTitle) {
                                 "Em alta nesta semana" -> "trending/movie/week" to "movie"
                                 "Novidades" -> "movie/now_playing" to "movie"
@@ -2587,7 +2587,7 @@ internal fun TclStreamingScreens(
                             }
                             val sectionCanPage = editorialRoute != null ||
                                 selectedProvider != null || selectedGenreProvider != null ||
-                                homeProvider != null || sectionTitle == "Em breve · Streaming"
+                                homeProvider != null || sectionTitle == "Em breve · Filmes e séries"
                             item {
                                 TextButton(onClick = { openedSection = null }) {
                                     Text("‹ Voltar às seções")
@@ -2606,10 +2606,10 @@ internal fun TclStreamingScreens(
                                     repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
-                            if (sectionTitle == "Em breve · Streaming" && sectionAll.isEmpty()) {
+                            if (sectionTitle == "Em breve · Filmes e séries" && sectionAll.isEmpty()) {
                                 item {
                                     Text(if (sectionMore)
-                                        "Nenhuma assinatura BR confirmada nesta seleção. " +
+                                        "Nenhum lançamento futuro com oferta BR confirmada nesta seleção. " +
                                             "Mostrar mais consulta as próximas páginas."
                                     else "Nenhum lançamento futuro com assinatura BR confirmada.",
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -2620,7 +2620,7 @@ internal fun TclStreamingScreens(
                                 (!homeLibrary && sectionCanPage && sectionMore &&
                                     sectionPage < sectionPageLimit &&
                                     (sectionAll.isNotEmpty() ||
-                                        sectionTitle == "Em breve · Streaming"))) {
+                                        sectionTitle == "Em breve · Filmes e séries"))) {
                                 item {
                                     OutlinedButton(
                                         enabled = !sectionLoading,
@@ -2669,7 +2669,7 @@ internal fun TclStreamingScreens(
                                                                 StreamingCatalog.discoveryShelfPage(
                                                                     editorialRoute.first,
                                                                     editorialRoute.second, next)
-                                                            sectionTitle == "Em breve · Streaming" ->
+                                                            sectionTitle == "Em breve · Filmes e séries" ->
                                                                 StreamingCatalog.discoveryUpcomingStreamingPage(next)
                                                             selectedProvider != null ->
                                                                 StreamingCatalog.discover(
@@ -2702,7 +2702,7 @@ internal fun TclStreamingScreens(
                                                     }.onSuccess { result ->
                                                         if (openedSection != sectionTitle) return@onSuccess
                                                         val matching = result.titles.filter {
-                                                            if (sectionTitle == "Em breve · Streaming")
+                                                            if (sectionTitle == "Em breve · Filmes e séries")
                                                                 anyTvUpcoming(it) &&
                                                                     (homeContentType == "all" ||
                                                                         it.media == homeContentType)
@@ -2953,7 +2953,7 @@ internal fun TclStreamingScreens(
                                 item {
                                     AnyTvOneRowPreview(
                                         if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                                            "Em breve · Cinema" else "Em breve · Streaming",
+                                            "Em breve · Cinema" else "Em breve · Filmes e séries",
                                         previews, posterCard)
                                 }
                             }
@@ -3314,9 +3314,9 @@ internal fun TclStreamingScreens(
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
-                            } else if (shelf.isEmpty() && heading == "Em breve · Streaming") {
+                            } else if (shelf.isEmpty() && heading == "Em breve · Filmes e séries") {
                                 item {
-                                    Text("Nenhuma oferta BR confirmada na primeira página. " +
+                                    Text("Nenhum lançamento com oferta BR confirmada na primeira página. " +
                                         "Ver mais consulta as próximas páginas.",
                                         fontSize = 12.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant)
