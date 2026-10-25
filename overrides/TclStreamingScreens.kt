@@ -613,10 +613,6 @@ private object StreamingCatalog {
     suspend fun recentPremieres(media: String): List<StreamingTitle> =
         withContext(Dispatchers.IO) {
             require(media == "movie" || media == "tv")
-            val cutoff = java.util.Calendar.getInstance().apply {
-                add(java.util.Calendar.DAY_OF_YEAR, -90)
-            }.time
-            val formatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
             val dateField = if (media == "tv") "first_air_date" else "primary_release_date"
             // The deployed Worker intentionally allows sorting, not date-range
             // query params. Apply the 90-day window only after receiving TMDB data.
