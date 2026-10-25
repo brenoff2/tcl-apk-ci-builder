@@ -420,6 +420,12 @@ private object StreamingCatalog {
             val entry = providers.optJSONObject(i) ?: continue
             if (norm(entry.optString("provider_name")) == alias) return entry.optInt("provider_id")
         }
+        // Dynamic TMDB provider names are valid even when not in legacy aliases.
+        for (i in 0 until providers.length()) {
+            val entry = providers.optJSONObject(i) ?: continue
+            if (anyTvServiceKey(entry.optString("provider_name")) ==
+                anyTvServiceKey(app)) return entry.optInt("provider_id")
+        }
         return 0
     }
 
@@ -2314,11 +2320,14 @@ internal fun TclStreamingScreens(
                         val installed = displayed.filter {
                             StreamingCatalog.streaming(it) && it.packageName !in hiddenInstalledServices
                         }
-                        val extra = visibleCatalogServices.sorted().filter { name ->
-                            installed.none { it.name.equals(name, ignoreCase = true) } &&
-                                StreamingCatalog.supportsSubscription(name)
-                        }.map { name -> TvOfficialApp("catalog:" + name, name, "") }
-                        (installed + extra).forEach { app ->
+                        val installedKeys = displayed
+                            .filter { StreamingCatalog.streaming(it) }
+                            .map { anyTvServiceKey(it.name) }.toSet()
+                        val extra = visibleCatalogServices.sorted()
+                            .distinctBy(::anyTvServiceKey)
+                            .filter { anyTvServiceKey(it) !in installedKeys }
+                            .map { name -> TvOfficialApp("catalog:" + name, name, "") }
+                        (installed + extra).distinctBy { anyTvServiceKey(it.name) }.forEach { app ->
                             val selectedHere = selected?.packageName == app.packageName
                             Column(modifier = Modifier.width(62.dp).clickable {
                                 selected = app; providerListMode = false
@@ -3737,9 +3746,15 @@ internal fun TclStreamingScreens(
         var installedDraft by remember(showCatalogEditor) { mutableStateOf(hiddenInstalledServices) }
         var extrasDraft by remember(showCatalogEditor) { mutableStateOf(visibleCatalogServices) }
         val installedServices = displayed.filter { StreamingCatalog.streaming(it) }
-        val otherServices = subscriptionNames.filter { name ->
-            installedServices.none { it.name.equals(name, ignoreCase = true) }
+        var brazilProviderNames by remember(showCatalogEditor) { mutableStateOf(emptyList<String>()) }
+        LaunchedEffect(showCatalogEditor) {
+            if (showCatalogEditor) brazilProviderNames =
+                runCatching { anyTvBrazilProviderNames() }.getOrDefault(emptyList())
         }
+        val installedKeys = installedServices.map { anyTvServiceKey(it.name) }.toSet()
+        val otherServices = (brazilProviderNames + extrasDraft)
+            .distinctBy(::anyTvServiceKey)
+            .filter { anyTvServiceKey(it) !in installedKeys }
         AlertDialog(onDismissRequest = { showCatalogEditor = false },
             title = { Text("Editar streamings") },
             text = {
