@@ -68,6 +68,44 @@ import java.net.URL
 
 data class TvOfficialApp(val packageName: String, val name: String, val icon: String)
 
+/** Canonical subscription identity; an add-on remains separate from the base plan. */
+internal fun anyTvServiceKey(name: String): String {
+    val raw = java.text.Normalizer.normalize(name.lowercase(java.util.Locale.ROOT),
+        java.text.Normalizer.Form.NFD).replace(Regex("[^a-z0-9]"), "")
+    return when {
+        raw.contains("hbomax") || raw == "max" -> "hbomax"
+        raw.contains("netflix") -> "netflix"
+        raw.contains("amazonprimevideo") || raw == "primevideo" -> "primevideo"
+        raw.contains("disney") -> "disneyplus"
+        raw.contains("appletv") -> "appletv"
+        raw.contains("universalplus") -> "universalplus"
+        else -> raw
+    }
+}
+
+/** Real TMDB Brazilian providers, not a fixed hard-coded shortlist. */
+internal suspend fun anyTvBrazilProviderNames(): List<String> =
+    withContext(Dispatchers.IO) {
+        val names = mutableListOf<String>()
+        for (media in listOf("movie", "tv")) {
+            val conn = java.net.URL(
+                "https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/watch/providers/$media?language=pt-BR&watch_region=BR"
+            ).openConnection() as HttpURLConnection
+            try {
+                conn.connectTimeout = 6000
+                conn.readTimeout = 9000
+                val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                val values = json.optJSONArray("results") ?: JSONArray()
+                for (i in 0 until values.length()) {
+                    val name = values.optJSONObject(i)?.optString("provider_name")?.trim().orEmpty()
+                    if (name.isNotBlank()) names.add(name)
+                }
+            } finally { conn.disconnect() }
+        }
+        names.distinctBy(::anyTvServiceKey).sortedBy { it.lowercase(java.util.Locale.ROOT) }
+    }
+
+
 /** TV-local pairing; icons and app names are read from Android TV PackageManager. */
 internal object TclTvAppApi {
     private fun request(host: String, code: String, path: String, body: String? = null): String {
@@ -509,8 +547,14 @@ fun TclInstalledAppsBar(
     if (showManager) {
         var draft by remember(deviceKey, host, showManager) { mutableStateOf(favorites) }
         var catalogDraft by remember(deviceKey, host, showManager) { mutableStateOf(catalogFavorites) }
-        val otherServices = listOf("Netflix", "Prime Video", "Disney+", "Max", "Paramount+", "Apple TV+", "Globoplay", "Crunchyroll", "Mubi", "Telecine", "Looke", "Claro Video")
-            .filter { service -> allApps.none { it.name.equals(service, ignoreCase = true) } }
+        var providerNames by remember(showManager) { mutableStateOf(emptyList<String>()) }
+        LaunchedEffect(showManager) {
+            if (showManager) providerNames = runCatching { anyTvBrazilProviderNames() }
+                .getOrDefault(emptyList())
+        }
+        val installedKeys = allApps.map { anyTvServiceKey(it.name) }.toSet()
+        val otherServices = (providerNames + catalogDraft).distinctBy(::anyTvServiceKey)
+            .filter { anyTvServiceKey(it) !in installedKeys }
         val present = allApps.associateBy { it.packageName }
         val displayed = allApps.sortedWith(
             compareBy<TvOfficialApp> { if (it.packageName in draft) 0 else 1 }
