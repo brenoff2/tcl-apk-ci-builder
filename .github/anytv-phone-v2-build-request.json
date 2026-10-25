@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 60,
+  "expected_version_code": 61,
   "preserve_legacy_ota": true,
-  "source": "AnyTV 2.9.31 final: updated all obsolete UI tests after user-approved removal Android TV subtitle (streaming, visual and TCL v22 contracts); restored Grid/Details and labels and internal search; no Worker change.",
+  "source": "User-authorized release 25/10/2026: post-2.9.31 DEV filter/media/BR offer/Anime/detail corrections and Cinema exclusion fix, verified unsigned candidate #40218997820 SUCCESS (code61).",
   "new_install_only": false,
-  "release_version": "2.9.31-AnyTV",
-  "release_scope": "Official V2 signed OTA only, package com.tclremote.livre.v2, original certificate, code60 over code59, full regressions/Gradle/IME/TMDB/HTTPS byte readback; preserve worker, D1, companion TCL, legacy OTA and existing favorites/assistidos.",
-  "ci_revision": 22
+  "release_version": "2.9.32-AnyTV",
+  "release_scope": "Official V2 signed OTA code61 over code60, original V2 certificate, full regressions/Gradle/IME/TMDB and HTTPS byte readback; preserve Worker, D1, TV companion, legacy OTA, favorites and watched states.",
+  "ci_revision": 23
 }
