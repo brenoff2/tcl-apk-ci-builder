@@ -1274,7 +1274,7 @@ private fun AnyTvStreamNavBar(
                 if (!library && contentType == "all") primary else neutral, onHome)
             TclHeaderAction(Icons.Filled.Favorite, "Minha lista",
                 if (library && section == "saved") primary else neutral, onList)
-            TclHeaderAction(Icons.Filled.PlayCircleFilled, "Continuando",
+            TclHeaderAction(Icons.Filled.PlayCircleFilled, "Séries acompanhadas",
                 if (library && section == "watching") primary else neutral, onWatching)
             TclHeaderAction(Icons.Filled.CheckCircle, "Assistidos",
                 if (library && section == "watched") primary else neutral, onWatched)
@@ -2286,7 +2286,7 @@ internal fun TclStreamingScreens(
                                 if (unseen.isNotEmpty()) put("Filmes para assistir", unseen)
                                 if (series.isNotEmpty()) put("Minhas séries", series)
                             } else if (librarySection == "watching") {
-                                if (watching.isNotEmpty()) put("Continuando", watching)
+                                if (watching.isNotEmpty()) put("Séries acompanhadas", watching)
                             } else if (librarySection == "watched") {
                                 if (history.isNotEmpty()) put("Filmes já assistidos", history)
                             }
@@ -2574,7 +2574,7 @@ internal fun TclStreamingScreens(
                         if (homeLibrary) {
                             item {
                                 Text(when (librarySection) {
-                                    "watching" -> "Continuando"
+                                    "watching" -> "Séries acompanhadas"
                                     "watched" -> "Assistidos"
                                     else -> "Minha lista"
                                 }, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
