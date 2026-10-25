@@ -1284,11 +1284,11 @@ private fun AnyTvStreamNavBar(
     val chips: @Composable () -> Unit = {
         Row(horizontalArrangement = Arrangement.spacedBy(5.dp),
             verticalAlignment = Alignment.CenterVertically) {
-            AnyTvCompactChip("Filmes", !library && contentType == "movie") {
-                onContentType(if (contentType == "movie") "all" else "movie")
+            AnyTvCompactChip("Filmes", !library && contentType != "tv") {
+                onContentType(if (contentType == "all") "tv" else "all")
             }
-            AnyTvCompactChip("Séries", !library && contentType == "tv") {
-                onContentType(if (contentType == "tv") "all" else "tv")
+            AnyTvCompactChip("Séries", !library && contentType != "movie") {
+                onContentType(if (contentType == "all") "movie" else "all")
             }
         }
     }
@@ -2329,7 +2329,7 @@ internal fun TclStreamingScreens(
                                 if (history.isNotEmpty()) put("Filmes e séries assistidos", history)
                             }
                         } else {
-                            if (selectedHomeGenre == 0 && activeServiceNames.isEmpty()) {
+                            if (selectedHomeGenre == 0) {
                                 discoveryShelves.forEach { (heading, titles) ->
                                     if (heading != ANYTV_CINEMA_SHELF) {
                                         val selectedTitles = titles.filter {
@@ -2411,7 +2411,7 @@ internal fun TclStreamingScreens(
                     val filteredShelves = visibleShelves
                     val heroTitles = if (homeLibrary) emptyList() else {
                         val mixed = if (selected == null && selectedHomeGenre == 0 &&
-                            homeContentType == "all") {
+                            homeContentType == "all" && activeServiceNames.isEmpty()) {
                             val films = discoveryShelves["Em alta nesta semana"].orEmpty()
                             val shows = discoveryShelves["Séries em destaque"].orEmpty()
                             buildList {
