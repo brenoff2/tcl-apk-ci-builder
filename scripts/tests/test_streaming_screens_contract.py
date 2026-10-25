@@ -16,7 +16,7 @@ class StreamingScreens(unittest.TestCase):
     def test_real_installed_apps_are_the_source(self):
         self.assertIn('request(host, code, "/apps")', self.apps)
         self.assertIn("TclStreamingScreens(apps = allApps", self.apps)
-        self.assertIn("OfficialTvIcon(app, 56.dp)", self.screen)
+        self.assertIn("OfficialTvIcon(app, 52.dp)", self.screen)
         self.assertNotIn("listOf(TvOfficialApp(", self.screen)
         self.assertIn('"favorites:$deviceKey"', self.apps)
 
@@ -110,7 +110,7 @@ class StreamingScreens(unittest.TestCase):
             'TclHeaderAction(Icons.Filled.Home, "Início: filmes e séries"',
             'showGlobalSearch = !showGlobalSearch',
             'if (showGlobalSearch)',
-            'OfficialTvIcon(app, 56.dp)',
+            'OfficialTvIcon(app, 52.dp)',
             'suspend fun discoveryGenre(id: Int)',
             'with_original_language=ja',
             'StreamingCatalog.genres(token, "movie")',
@@ -238,7 +238,7 @@ class StreamingScreens(unittest.TestCase):
             'AnyTvCompactChip("Filmes", !library', 'onContentType = { kind ->',
         ):
             self.assertIn(fragment, self.screen)
-        self.assertIn('OfficialTvIcon(app, 56.dp)', self.screen)
+        self.assertIn('OfficialTvIcon(app, 52.dp)', self.screen)
         self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
 
     def test_watched_and_tracking_history_does_not_depend_on_heart(self):
@@ -370,7 +370,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Surface(modifier = Modifier.fillMaxSize()', self.screen)
         self.assertIn('shape = RoundedCornerShape(0.dp)', self.screen)
         self.assertIn('color = MaterialTheme.colorScheme.background', self.screen)
-        self.assertIn('horizontalArrangement = Arrangement.End', self.screen)
+        self.assertIn('horizontalArrangement = Arrangement.spacedBy(7.dp)', self.screen)
         self.assertNotIn('Icons.Outlined.FavoriteBorder', self.screen)
         self.assertIn('Icon(Icons.Filled.Favorite,', self.screen)
         self.assertIn('TclHeaderAction(Icons.Filled.FilterList', self.screen)
