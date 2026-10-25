@@ -755,12 +755,12 @@ private object StreamingCatalog {
             catalogPage24(page) { sourcePage ->
                 val route = "discover/$media?language=pt-BR&include_adult=false" +
                     "&sort_by=$sorting&with_genres=${if (id == ANYTV_ANIME_FILTER) 16 else id}" +
-                    (if (id == ANYTV_ANIME_FILTER) "&with_original_language=ja" else "") +
                     "&page=$sourcePage"
                 val payload = get("backend", route)
                 StreamingResults(
                     mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id)
-                        .filter(::anyTvReleased),
+                        .filter(::anyTvReleased)
+                        .filter { id != ANYTV_ANIME_FILTER || anyTvIsAnime(it) },
                     sourcePage < payload.optInt("total_pages", sourcePage))
             }
         }
