@@ -540,7 +540,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', self.screen)
         self.assertIn('inCinema = current.id in cinemaIds', self.screen)
         self.assertIn('AnyTvCinemaHero(shelf)', self.screen)
-        self.assertNotIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
+        # International preview remains available on dedicated cinema filter pages,
+        # but the home section now keeps only the verified Brazil cinema hero.
+        self.assertIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
 
     def test_provider_genre_ver_mais_keeps_service_and_loads_next_24(self):
         page = self.screen.split('if (openedSection != null) {', 1)[1].split(
