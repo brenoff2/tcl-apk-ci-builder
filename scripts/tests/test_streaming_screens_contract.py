@@ -630,6 +630,10 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('StreamingCatalog.offersInBrazil(title)', self.screen)
         self.assertIn('}.awaitAll()', self.screen)
 
+    def test_filter_mark_all_controls_are_readable_in_both_columns(self):
+        self.assertEqual(self.screen.count('color = Color(0xFFFF5368),'), 2)
+        self.assertIn('"Desmarcar todos" else "Marcar todos", fontSize = 13.sp', self.screen)
+
     def test_subscription_filter_preserves_editorial_sections_without_fake_offers(self):
         self.assertIn('put(heading, confirmed)', self.screen)
         self.assertIn('Nenhum título com oferta BR confirmada nos streamings', self.screen)
