@@ -84,7 +84,7 @@ import java.io.File
 import java.security.MessageDigest
 import java.text.Normalizer
 
-internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "", val genreIds: List<Int> = emptyList())
+internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "", val genreIds: List<Int> = emptyList(), val originalLanguage: String = "")
 private fun anyTvGenreLabels(
     title: StreamingTitle,
     movieGenres: List<StreamingGenre>,
@@ -97,6 +97,8 @@ private fun anyTvGenreLabels(
 }
 private const val ANYTV_CINEMA_FILTER = -1
 private const val ANYTV_ANIME_FILTER = -2
+private fun anyTvIsAnime(title: StreamingTitle): Boolean =
+    title.originalLanguage == "ja" && 16 in title.genreIds
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
 private const val ANYTV_LIST_BATCH = 24
 /** Movie genres drive 'All'; TV genres drive the 'Series' tab. */
@@ -388,7 +390,7 @@ private object StreamingCatalog {
                 val movieId = entry.optInt("id")
                 val name = entry.optString(if (media == "tv") "name" else "title")
                 val itemGenres = entry.optJSONArray("genre_ids")
-                val matchGenre = genre == 0 || (itemGenres != null &&
+                val matchGenre = genre == 0 || genre == ANYTV_ANIME_FILTER || (itemGenres != null &&
                     (0 until itemGenres.length()).any { itemGenres.optInt(it) == genre })
                 if (movieId > 0 && name.isNotBlank() && matchGenre) {
                     val previous = StreamingDiskCache.previousTitle(media, movieId)
@@ -410,7 +412,8 @@ private object StreamingCatalog {
                         .map { itemGenres!!.optInt(it) }.filter { it > 0 }
                     add(StreamingTitle(movieId, name, overview, poster, media,
                         entry.optDouble("vote_average", 0.0),
-                        entry.optInt("vote_count", 0), backdrop, released, genreIds))
+                        entry.optInt("vote_count", 0), backdrop, released, genreIds,
+                        entry.optString("original_language")))
                     StreamingDiskCache.rememberTitle(media, movieId, JSONObject()
                         .put("name", name).put("overview", overview)
                         .put("date", released).put("poster", poster)
@@ -1407,7 +1410,8 @@ internal fun TclStreamingScreens(
             ?.takeIf { it in setOf("popular", "rating", "recent", "title") } ?: "popular")
     }
     var genreSortMenu by remember { mutableStateOf(false) }
-    var genreViewMode by remember { mutableStateOf("grade") }
+    var genreViewMode by remember { mutableStateOf("detalhado") }
+    var genreSectionsMode by remember { mutableStateOf(false) }
     val catalogScrollState = rememberLazyListState()
     var showGenreSettings by remember { mutableStateOf(false) }
     var showMyStreamingSettings by remember { mutableStateOf(false) }
@@ -2609,7 +2613,7 @@ internal fun TclStreamingScreens(
                                     val resolved = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
                                         ANYTV_ANIME_FILTER else anyTvResolvedGenre(selectedHomeGenre,
                                         mediaKind, allMovieGenres, tvGenres)
-                                    if (resolved > 0) {
+                                    if (resolved > 0 || resolved == ANYTV_ANIME_FILTER) {
                                         genreShelves["$mediaKind:$resolved:$genreSort"]
                                             ?.takeIf { it.isNotEmpty() }?.let {
                                                 put((if (mediaKind == "tv") "Séries" else "Filmes") +
@@ -2665,10 +2669,18 @@ internal fun TclStreamingScreens(
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
+                    val animeSeparatedShelves = linkedMapOf<String, List<StreamingTitle>>().apply {
+                        visibleShelves.forEach { (heading, titles) ->
+                            put(heading, titles.filter { title ->
+                                if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(title)
+                                else !anyTvIsAnime(title)
+                            })
+                        }
+                    }
                     val filteredShelves = if (activeServiceNames.isEmpty() || homeLibrary ||
-                        selected != null) visibleShelves else
+                        selected != null) animeSeparatedShelves else
                         linkedMapOf<String, List<StreamingTitle>>().apply {
-                            visibleShelves.forEach { (heading, candidates) ->
+                            animeSeparatedShelves.forEach { (heading, candidates) ->
                                 val confirmed = candidates.filter { item ->
                                     val offers = offerCache["${item.media}:${item.id}"].orEmpty()
                                     StreamingCatalog.matchesSelectedSubscription(
@@ -2697,6 +2709,9 @@ internal fun TclStreamingScreens(
                             }
                         } else filteredShelves.values.flatMap { it }
                         mixed.distinctBy { "${it.media}:${it.id}" }.filter {
+                            if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(it)
+                            else !anyTvIsAnime(it)
+                        }.filter {
                             if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                 it.media == "movie" // Genre source is now_playing BR
                             else anyTvReleased(it) &&
@@ -2951,15 +2966,17 @@ internal fun TclStreamingScreens(
                                     }
                                     Text(pageTitle, modifier = Modifier.weight(1f),
                                         fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                                    if (selected != null) {
+                                    if (selected != null || (selectedHomeGenre != 0 &&
+                                            selectedHomeGenre != ANYTV_CINEMA_FILTER && !homeLibrary)) {
                                         OutlinedButton(onClick = {
-                                            providerListMode = !providerListMode
+                                            if (selected != null) providerListMode = !providerListMode
+                                            else genreSectionsMode = !genreSectionsMode
                                         }, shape = RoundedCornerShape(11.dp),
                                             modifier = Modifier.height(34.dp),
                                             contentPadding = PaddingValues(horizontal = 12.dp,
                                                 vertical = 0.dp)) {
-                                            Text(if (providerListMode) "Ver em seções"
-                                                else "Ver em lista", fontSize = 12.sp,
+                                            Text(if (if (selected != null) providerListMode else !genreSectionsMode)
+                                                "Ver em seções" else "Ver em lista", fontSize = 12.sp,
                                                 maxLines = 1)
                                         }
                                     }
@@ -3349,6 +3366,8 @@ internal fun TclStreamingScreens(
                                 }
                             }
                             val genreTitles = genreCandidates
+                                .filter { title -> if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                    anyTvIsAnime(title) else !anyTvIsAnime(title) }
                                 .distinctBy { "${it.media}:${it.id}" }.filter { title ->
                                     activeServiceNames.isEmpty() ||
                                         offerCache["${title.media}:${title.id}"].orEmpty().any { offer ->
@@ -3416,7 +3435,20 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                             }
-                            if (genreViewMode == "detalhado" &&
+                            if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER) {
+                                genreSources.forEach { (key, titles) ->
+                                    val clean = titles.filter { title ->
+                                        if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(title)
+                                        else !anyTvIsAnime(title)
+                                    }
+                                    if (clean.isNotEmpty()) item {
+                                        AnyTvOneRowPreview(
+                                            (if (key.startsWith("tv:")) "Séries" else "Filmes") +
+                                                " · " + (if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                                    "Anime" else "Gênero"), clean, posterCard)
+                                    }
+                                }
+                            } else if (genreViewMode == "detalhado" &&
                                 selectedHomeGenre != ANYTV_CINEMA_FILTER) {
                                 items(genreTitles) { title -> detailedListCard(title) }
                             } else {
