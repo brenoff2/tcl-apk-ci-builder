@@ -29,3 +29,10 @@ O bloco de exclusão `ANYTV_CINEMA_SHELF` na Principal exigia `homeContentType =
 - Worker/D1/companion/segredos/updater: **NÃO ALTERADOS**.
 - Progresso: **7/11 (63%)**. M08/M09 IN_QA; M10/M11 BACKLOG; F0–F8 NAO_HOMOLOGADO.
 - Antes de liberar candidata 2.9.32/code61: confirmar CI do novo SHA, regressões das dez exigências e aprovação explícita para assinatura/publicação.
+
+## Continuidade de geração de APK (25/10/2026)
+- Testes isolados: #40218890258 SUCCESS para fonte `1e835dc`; #40218923760 SUCCESS para HEAD `8d2c176`.
+- Inspeção do workflow de compilação detectou versão candidata obsoleta `2.9.25/code54` em `.github/workflows/anytv-v2-candidate-compile.yml`, apesar da OTA oficial `2.9.31/code60`.
+- Commit `308a62d212503ca514febf42892411b3fac8d5ad` atualiza APENAS a compilação unsigned de auditoria para `2.9.32-AnyTV/code61`, inclusive verificação de identidade e nome do artefato `anytv-v2-2932-code61-unsigned-audit`.
+- Novo workflow de compilação #40218997820 foi criado automaticamente; na consulta inicial encontrava-se PENDING. Não equivale a build concluído. Workflow anterior #40218890248 compila versão antiga e não é candidato instalável.
+- APK continua SEM ASSINATURA; não instalar sobre V2 assinada. Nenhuma OTA, assinatura, alteração do updater/certificado/Worker/D1/companion ou merge.
