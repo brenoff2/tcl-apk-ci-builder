@@ -1477,6 +1477,10 @@ internal fun TclStreamingScreens(
     }
     var watchingQuery by remember { mutableStateOf("") }
     var libraryQuery by remember { mutableStateOf("") }
+    var internalSearchQuery by remember { mutableStateOf("") }
+    LaunchedEffect(selected?.packageName, selectedHomeGenre, homeContentType) {
+        internalSearchQuery = ""
+    }
     LaunchedEffect(librarySection, homeLibrary) {
         if (homeLibrary) {
             sectionVisibleCount = ANYTV_LIST_BATCH
@@ -2408,7 +2412,15 @@ internal fun TclStreamingScreens(
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
-                    val filteredShelves = visibleShelves
+                    val filteredShelves = if (internalSearchQuery.isBlank()) visibleShelves else
+                        linkedMapOf<String, List<StreamingTitle>>().apply {
+                            visibleShelves.forEach { (name, items) ->
+                                val matching = items.filter {
+                                    it.name.contains(internalSearchQuery.trim(), ignoreCase = true)
+                                }
+                                if (matching.isNotEmpty()) put(name, matching)
+                            }
+                        }
                     val heroTitles = if (homeLibrary) emptyList() else {
                         val mixed = if (selected == null && selectedHomeGenre == 0 &&
                             homeContentType == "all") {
@@ -2641,6 +2653,45 @@ internal fun TclStreamingScreens(
                                     Text(pageTitle, fontSize = 17.sp,
                                         fontWeight = FontWeight.SemiBold)
                                 }
+                                if (selected != null || selectedHomeGenre > 0) {
+                                    Row(modifier = Modifier.fillMaxWidth().height(44.dp)
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant,
+                                            RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Icon(Icons.Filled.Search,
+                                            contentDescription = "Buscar nesta página",
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(19.dp))
+                                        BasicTextField(
+                                            value = internalSearchQuery,
+                                            onValueChange = { internalSearchQuery = it.take(90) },
+                                            singleLine = true,
+                                            modifier = Modifier.weight(1f),
+                                            textStyle = TextStyle(fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface),
+                                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                            decorationBox = { inner ->
+                                                Box(contentAlignment = Alignment.CenterStart) {
+                                                    if (internalSearchQuery.isEmpty()) {
+                                                        Text("Buscar nesta página", fontSize = 13.sp,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                    }
+                                                    inner()
+                                                }
+                                            })
+                                        IconButton(onClick = { internalSearchQuery = "" },
+                                            enabled = internalSearchQuery.isNotEmpty(),
+                                            modifier = Modifier.size(30.dp)) {
+                                            Icon(Icons.Filled.Close,
+                                                contentDescription = "Limpar busca",
+                                                tint = MaterialTheme.colorScheme.onSurface.copy(
+                                                    alpha = if (internalSearchQuery.isEmpty()) 0.45f else 1f),
+                                                modifier = Modifier.size(18.dp))
+                                        }
+                                    }
+                                }
                             }
                         }
                         if (homeLibrary) {
@@ -2865,7 +2916,10 @@ internal fun TclStreamingScreens(
                                     allMovieGenres, tvGenres)
                                 if (id == 0) emptyList() else
                                     genreShelves["$mediaKind:$id:$genreSort"].orEmpty()
-                            }.distinctBy { "${it.media}:${it.id}" }
+                            }.distinctBy { "${it.media}:${it.id}" }.filter {
+                                internalSearchQuery.isBlank() ||
+                                    it.name.contains(internalSearchQuery.trim(), ignoreCase = true)
+                            }
                             item {
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .padding(top = 24.dp, bottom = 12.dp),
