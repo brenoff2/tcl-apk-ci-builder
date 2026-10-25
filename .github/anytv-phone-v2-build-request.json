@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 62,
+  "expected_version_code": 63,
   "preserve_legacy_ota": true,
-  "source": "User-authorized 2.9.33/code62 provider list mode with test assertions updated for changed provider header, no UI regression intended.",
+  "source": "User approved final production release after replacing the home + with Edit, two-column installed/other streaming picker, saved selection, per-provider red selection border and uninstalled streaming catalog navigation.",
   "new_install_only": false,
-  "release_version": "2.9.33-AnyTV",
-  "release_scope": "Signed official phone V2 OTA 2.9.33/code62 over code61. Execute full workflow regressions/Gradle/IME/catalog/signature and HTTPS byte readback; preserve legacy OTA, worker, D1, companion TV, personal user records.",
-  "ci_revision": 26
+  "release_version": "2.9.34-AnyTV",
+  "release_scope": "Signed official V2 OTA 2.9.34/code63 on top of validated 2.9.33/code62. Preserve V2 signer, package, Worker, companion and legacy OTA. Fail closed on UI contracts, Kotlin compile, signer and remote byte readback.",
+  "ci_revision": 27
 }
