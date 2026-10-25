@@ -97,13 +97,13 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Nenhuma oferta de assinatura confirmada no Brasil.', self.screen)
         self.assertNotIn('displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->\n                                FilterChip(', self.screen)
 
-    def test_streaming_brands_compact_deduplicated_and_not_addon_channels(self):
-        self.assertIn('distinctBy { provider(it.name) ?: norm(it.name) }', self.screen)
-        self.assertIn('normalized.contains("channel")', self.screen)
-        self.assertIn('normalized.contains("canal")', self.screen)
+    def test_streaming_brands_preserve_valid_brazilian_addon_channels(self):
+        self.assertIn('}.distinctBy { it.id }', self.screen)
+        self.assertIn('"universalplus" in v -> "universalplus"', self.screen)
+        self.assertNotIn('normalized.contains("channel")', self.screen)
+        self.assertNotIn('normalized.contains("canal")', self.screen)
         self.assertIn('OfficialTvIcon(installed, 14.dp)', self.screen)
-        self.assertIn('fontSize = 11.sp, maxLines = 1', self.screen)
-        self.assertIn('lineHeight = 14.sp', self.screen)
+        self.assertIn('offer.logo.isNotBlank()', self.screen)
 
     def test_compact_home_search_platforms_and_customizable_genre_lists(self):
         for piece in (
