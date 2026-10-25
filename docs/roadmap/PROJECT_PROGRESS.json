@@ -296,6 +296,10 @@
     {
       "date": "2026-10-25",
       "event": "AnyTV V2 2.9.31/code60: paridade visual streaming/principal, título de gênero conforme Filmes/Séries/Todos, Grade/Detalhado, remoção de subtítulo Android TV, busca interna com lupa/X e gêneros TMDB sob posters/heros. CI signed #40208593028 SUCCESS, OTA commit 481d498, HTTPS byte-readback PASS. Progresso 7/11; QA físico pendente."
+    },
+    {
+      "date": "2026-10-25",
+      "event": "Handoff integral pós-2.9.31/code60 e DEV 2932 gravado em docs/handoffs/2026-10-25-ANYTV-TRANSICAO-COMPLETA-APOS-2932-DEV.md; CI unsigned #40215965755 SUCCESS, sem assinatura/OTA; última demanda de UX/Anime registrada para auditoria e homologação. Mantidos progresso 7/11 (63%), gates M08/M09 IN_QA e F0-F8 NAO_HOMOLOGADO."
     }
   ],
   "discovery_v3": {
