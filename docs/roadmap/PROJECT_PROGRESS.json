@@ -292,6 +292,10 @@
     {
       "date": "2026-10-25",
       "event": "AnyTV 2.9.30/code59 assinada e publicada OTA: filtros de gênero preservados na Principal, em Filmes/Séries e dentro de streamings; gênero pode reunir filmes e séries com IDs TMDB próprios; rota Cinema BR preservada e sombra grafite nos ícones. Actions #40205466794 SUCCESS, OTA commit 6c49b2e, HTTPS byte readback PASS. QA físico pendente, 7/11 e F0-F8 inalterados."
+    },
+    {
+      "date": "2026-10-25",
+      "event": "AnyTV V2 2.9.31/code60: paridade visual streaming/principal, título de gênero conforme Filmes/Séries/Todos, Grade/Detalhado, remoção de subtítulo Android TV, busca interna com lupa/X e gêneros TMDB sob posters/heros. CI signed #40208593028 SUCCESS, OTA commit 481d498, HTTPS byte-readback PASS. Progresso 7/11; QA físico pendente."
     }
   ],
   "discovery_v3": {
