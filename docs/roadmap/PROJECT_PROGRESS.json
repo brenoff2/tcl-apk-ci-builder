@@ -272,6 +272,10 @@
     {
       "date": "2026-10-24",
       "event": "Correcao de ponteiros do canônico apos publicacao assinada 2.9.25/code54: release workflow #40106161667 SUCCESS, SHA256 c53596d8f8210bf0a12769481796481a851d00da4c52f544120b85367dd17fe0, git blob OTA 917b2f31191b93f63e7ee121f3d7d90d3c8e04e6 (26.012.572 bytes), commit dcc51bad. v2_current/operational_checkpoint passam a apontar code54; v2_previous code53; code52/code53 checkpoint/candidata pre-release arquivados sem perda. v2_candidate_next sem versao futura atribuida e fonte PR #3 unsigned separada. Worker 58fe nao alterado nem deployado. 7/11 (63%), F0-F8 NAO_HOMOLOGADO e QA fisica pendente. Evidencia e contrato documental: docs/qa/ANYTV_20261024_CANONICAL_OTA_POINTER_CORRECTION.md."
+    },
+    {
+      "date": "2026-10-25",
+      "event": "AnyTV DEV PR#3: codigo 182a97de resolve mensagem falsa de Assistidos vazios quando IDs legados sao preservados, acrescenta Recuperar mais 12 manual sob limite do Worker e bloqueio de HTTP400, e corrige spinner infinito na primeira pagina de genero/Cinema (loading/error/retry/cancelamento). Teste textual antigo corrigido isoladamente em ffb2c8d8 apos CI inicial #40169458180 FAILED sem falha Kotlin demonstrada. CI Android unsigned #40169560233 COMPLETED/SUCCESS (71 contratos streaming +2 credenciais +11 visuais; Gradle BUILD SUCCESSFUL in 4m13s; artifact #12589154176 (23.289.396 bytes unsigned)); prova isolada #40169560291 SUCCESS; Worker #40136181610 SUCCESS sem novos arquivos Worker. QA docs/qa/ANYTV_20261025_WATCHED_RETRY_GENRE_FAILURE.md. Publicada 2.9.25/code54 permanece intocada, sem merge/deploy/assinatura/OTA. Android/TCL fisicos nao testados, progresso 7/11=63%, F0-F8 NAO_HOMOLOGADO. Plano fisico OTA assinada atual docs/qa/ANYTV_V2_2.9.25_DEVICE_HOMOLOGATION_PLAN_20261025.md substitui ponteiro ativo antigo 2.9.22, preservando arquivo historico."
     }
   ],
   "discovery_v3": {
@@ -284,11 +288,11 @@
     "note": "Este registro Discovery V3 2.9.9 e historico; as versoes e nomes da OTA 2.9.8/2.9.12 descritos na evidencia antiga nao representam o estado atual. Consulte v2_current e operational_checkpoint para a release assinada vigente."
   },
   "operational_checkpoint": {
-    "date": "2026-10-24",
+    "date": "2026-10-25",
     "handoff": "docs/handoffs/2026-10-24-ANYTV-TRANSICAO-ATUAL-POS-2925.md",
     "first_message": "docs/handoffs/NEXT_CHAT_FIRST_MESSAGE.md",
-    "device_qa": "docs/qa/ANYTV_V2_2.9.22_DEVICE_HOMOLOGATION.md",
-    "note": "Estado operacional vigente: OTA 2.9.25/code54 assinada, comprovada por release #40106161667; PR #3 e seus builds unsigned permanecem somente DEV. Checkpoint code53 integral preservado no campo historico.",
+    "device_qa": "docs/qa/ANYTV_V2_2.9.25_DEVICE_HOMOLOGATION_PLAN_20261025.md",
+    "note": "Estado operacional: OTA 2.9.25/code54 assinada e publicada sem mudança; PR #3 avançou a recuperação de Assistidos (retry manual de até 12) e o controle de falhas das primeiras páginas de gênero/Cinema, com CI unsigned e prova isolada. Worker de produção não foi atualizado; QA físico continua pendente.",
     "current_v2": {
       "version": "2.9.25",
       "versionCode": 54,
@@ -324,15 +328,15 @@
       "gate_note": "marcos técnicos; não significa homologação"
     },
     "human_gates": "F0-F8 NAO_HOMOLOGADO",
-    "next_action": "Fazer QA fisico no Android/TCL da OTA assinada 2.9.25/code54; o PR #3 DEV unsigned, a rota Worker movie/{id} e a nova interface nao foram publicados. Exigir aprovacao expressa para novo release ou deploy.",
+    "next_action": "Homologar a OTA assinada 2.9.25/code54 no Android/TCL real conforme docs/qa/ANYTV_V2_2.9.25_DEVICE_HOMOLOGATION_PLAN_20261025.md. Nao misturar com PR #3 unsigned; a rota Worker movie/{id} exige deploy separado autorizado e QA real.",
     "release_evidence": "docs/qa/ANYTV_2925_CODE54_SIGNED_OTA_RELEASE_20261024.md",
     "current_dev": {
       "branch": "feat/anytv-p0-device-proof-verifier-20261020",
-      "head_sha_at_checkpoint": "151dac9ca96e60b08a2bb9f7fa3454dffc0c4b0e",
-      "android_unsigned_run": 40136181568,
+      "head_sha_at_checkpoint": "ffb2c8d85d7b2271129891936e15b85aed4c78c5",
+      "android_unsigned_run": 40169560233,
       "worker_offline_run": 40136181610,
-      "device_proof_run": 40136181616,
-      "unsigned_artifact_id": 12576879607,
+      "device_proof_run": 40169560291,
+      "unsigned_artifact_id": 12589154176,
       "published": false,
       "signed": false,
       "physical_qa": "NOT_HOMOLOGATED"
@@ -535,21 +539,22 @@
     "published": false,
     "signed": false,
     "branch": "feat/anytv-p0-device-proof-verifier-20261020",
-    "head_sha_at_checkpoint": "151dac9ca96e60b08a2bb9f7fa3454dffc0c4b0e",
-    "ci_android_latest": 40136181568,
+    "head_sha_at_checkpoint": "ffb2c8d85d7b2271129891936e15b85aed4c78c5",
+    "ci_android_latest": 40169560233,
     "ci_android_status_at_checkpoint": "SUCCESS",
-    "ci_device_proof": 40136181616,
+    "ci_device_proof": 40169560291,
     "ci_device_proof_status": "SUCCESS",
     "ci_worker": 40136181610,
     "ci_worker_status": "SUCCESS",
-    "ci_android_tests": "69 streaming + 2 credentials + 11 visual",
-    "ci_android_gradle": "BUILD SUCCESSFUL in 4m45s",
+    "ci_android_tests": "71 streaming + 2 credentials + 11 visual",
+    "ci_android_gradle": "BUILD SUCCESSFUL in 4m13s",
     "ci_android_unsigned": true,
-    "unsigned_artifact_id": 12576879607,
+    "unsigned_artifact_id": 12589154176,
     "features": [
       "Poster completo 2:3 em 3 colunas, cinema BR, filtros de plataforma e paginacao de catalogo DEV",
       "Historico Assistidos persistente e recuperacao de movie/{id} no Worker fonte DEV; Worker publicado ainda nao tem a rota",
-      "Tratamento HTTP 404 de ID TMDB ausente sem bloquear o proximo filme, em fonte DEV somente"
+      "Tratamento HTTP 404 de ID TMDB ausente sem bloquear o proximo filme, em fonte DEV somente",
+      "Assistidos: IDs antigos preservados, Recuperar mais 12 sob demanda; primeiras paginas de generos e Cinema mostram erro e Tentar novamente sem spinner infinito, somente DEV"
     ],
     "blocker": "Nao existe release futuro aprovado: code54 ja pertence a OTA assinada publicada 2.9.25. Novo APK deve elevar versionCode acima de 54, reutilizar certificado V2 original, obter autorizacao de release e QA fisica. Nao publicar candidato unsigned; novo endpoint Worker requer deploy independente autorizado.",
     "tv_companion_update": "NOT_DONE; install version and signer not verified"
