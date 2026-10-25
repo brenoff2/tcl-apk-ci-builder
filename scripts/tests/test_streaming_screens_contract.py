@@ -57,7 +57,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('"Filmes recém-lançados" to recentMovies', self.screen)
         self.assertIn('"Séries novas" to newSeries', self.screen)
         self.assertIn('"Novas temporadas" to newSeasons', self.screen)
-        self.assertIn('for (sorting in listOf("popularity.desc", "$dateField.desc"))', self.screen)
+        self.assertIn('listOf("popularity.desc", "$dateField.desc").flatMap { sorting ->', self.screen)
         self.assertIn('recent.filterNot { it.id in theatrical }', self.screen)
         self.assertNotIn('Entradas recentes ainda não verificadas:', self.screen)
         self.assertNotIn('"Novidades" to news', self.screen)
