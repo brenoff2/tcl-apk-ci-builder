@@ -3007,20 +3007,19 @@ internal fun TclStreamingScreens(
                                             verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                             Text(title.name, fontSize = 14.sp,
                                                 fontWeight = FontWeight.SemiBold, maxLines = 2)
-                                            Row(modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                                                verticalAlignment = Alignment.CenterVertically) {
-                                                Text((if (title.media == "movie") "F" else "S") +
-                                                    " · " + title.date.take(4),
-                                                    fontSize = 10.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                val offers = offerCache["${title.media}:${title.id}"].orEmpty()
-                                                Text(offers.take(2).joinToString(", ") { it.name },
-                                                    fontSize = 10.sp, maxLines = 1,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                            Text(anyTvGenreLabels(title, allMovieGenres, tvGenres),
-                                                fontSize = 10.sp, maxLines = 1,
+                                            val offers = offerCache["${title.media}:${title.id}"].orEmpty()
+                                            val metadata = listOfNotNull(
+                                                if (title.media == "movie") "F" else "S",
+                                                title.date.take(4).takeIf {
+                                                    it.matches(Regex("[0-9]{4}"))
+                                                },
+                                                offers.take(2).joinToString(", ") { it.name }
+                                                    .takeIf { it.isNotBlank() },
+                                                anyTvGenreLabels(title, allMovieGenres, tvGenres)
+                                                    .takeIf { it.isNotBlank() }
+                                            ).joinToString(" · ")
+                                            Text(metadata, fontSize = 10.sp, maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             val summary = title.overview.trim()
                                             if (summary.isNotBlank()) {
