@@ -3,9 +3,9 @@
   "intent": "release-independent-phone-v2",
   "expected_version_code": 76,
   "preserve_legacy_ota": true,
-  "source": "User-requested definitive fix: real genre editorial sections and correct toggle; compact details and single styled hero F/S; populated recent films/new series via bounded dual-sort TMDB discovery; evidence-based newcomer section comparing persisted BR provider snapshots, not fake recent arrivals.",
+  "source": "User-requested definitive fix: real genre editorial sections and correct toggle; compact details and single styled hero F/S; populated recent films/new series via bounded dual-sort TMDB discovery; evidence-based newcomer section comparing persisted BR provider snapshots, not fake recent arrivals. Optimize recent movie/series discovery with bounded parallel requests; keep provider-history proof for newly arrived catalogs.",
   "new_install_only": false,
   "release_version": "2.9.47-AnyTV",
   "release_scope": "Official V2 2.9.47/code76 signed OTA, preserve signer and legacy cert2026, run tests and live Worker request gates, byte-for-byte HTTPS readback.",
-  "ci_revision": 46
+  "ci_revision": 47
 }
