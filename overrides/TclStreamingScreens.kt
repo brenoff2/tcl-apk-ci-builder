@@ -3237,15 +3237,6 @@ internal fun TclStreamingScreens(
                                                     StreamingOfferIcons(current, offerCache,
                                                         displayed, showRating = false, showYear = true,
                                                         inCinema = current.id in cinemaIds)
-                                                    if (current.media == "movie" &&
-                                                        current.id in cinemaIds) {
-                                                        Text("Cinema", modifier = Modifier
-                                                            .clip(RoundedCornerShape(3.dp))
-                                                            .background(Color(0xFF1769E0))
-                                                            .padding(horizontal = 4.dp, vertical = 2.dp),
-                                                            fontSize = 9.sp, color = Color.White,
-                                                            fontWeight = FontWeight.SemiBold)
-                                                    }
                                                 }
                                                 val heroGenres = anyTvGenreLabels(
                                                     current, allMovieGenres, tvGenres)
