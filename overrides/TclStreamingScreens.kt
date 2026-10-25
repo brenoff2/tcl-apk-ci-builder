@@ -413,12 +413,12 @@ private object StreamingCatalog {
         }
 
     private fun providerId(token: String, app: String, media: String): Int {
-        val alias = provider(app) ?: return 0
+        val alias = provider(app)
         val providers = get(token, "watch/providers/$media?language=pt-BR&watch_region=BR")
             .optJSONArray("results") ?: JSONArray()
         for (i in 0 until providers.length()) {
             val entry = providers.optJSONObject(i) ?: continue
-            if (norm(entry.optString("provider_name")) == alias) return entry.optInt("provider_id")
+            if (alias != null && norm(entry.optString("provider_name")) == alias) return entry.optInt("provider_id")
         }
         // Dynamic TMDB provider names are valid even when not in legacy aliases.
         for (i in 0 until providers.length()) {
