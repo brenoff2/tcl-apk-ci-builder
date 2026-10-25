@@ -358,7 +358,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('putString("activation', identity)
 
     def test_streaming_service_icons_and_cinema_sessions(self):
-        self.assertIn('offerings.distinctBy { it.id }.forEach', self.screen)
+        self.assertIn('offerings.distinctBy { anyTvServiceKey(it.name) }.forEach', self.screen)
         self.assertIn('StreamingCatalog.appHasOffer(it, listOf(offer))', self.screen)
         self.assertIn('https://image.tmdb.org/t/p/w92', self.screen)
         self.assertIn('Text("Ver cinemas e sessões · Ingresso.com"', self.screen)
