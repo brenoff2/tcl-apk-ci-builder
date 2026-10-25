@@ -2961,7 +2961,13 @@ internal fun TclStreamingScreens(
                                     allMovieGenres, tvGenres)
                                 if (id == 0) emptyList() else
                                     genreShelves["$mediaKind:$id:$genreSort"].orEmpty()
-                            }.distinctBy { "${it.media}:${it.id}" }
+                            }.distinctBy { "${it.media}:${it.id}" }.filter { title ->
+                                activeServiceNames.isEmpty() ||
+                                    offerCache["${title.media}:${title.id}"].orEmpty().any { offer ->
+                                        StreamingCatalog.matchesSelectedSubscription(
+                                            offer, activeServiceNames)
+                                    }
+                            }
                             item {
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .padding(top = 24.dp, bottom = 12.dp),
