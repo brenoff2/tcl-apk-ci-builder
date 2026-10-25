@@ -2326,7 +2326,7 @@ internal fun TclStreamingScreens(
             verticalAlignment = Alignment.Top) {
             detailedPosterCard(title, Modifier.width(112.dp))
             Column(modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 // Line 1: title; line 2: genres; line 3: official badges,
                 // year and confirmed BR subscription logos.
                 Text(title.name, fontSize = 14.sp,
