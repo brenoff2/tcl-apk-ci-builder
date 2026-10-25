@@ -624,6 +624,12 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('sectionMore = result.more', self.screen)
         self.assertIn('upcomingStreamingMore = streamingFuture.more', self.screen)
 
+    def test_br_subscription_offers_use_bounded_parallel_resolution(self):
+        self.assertIn('val gate = Semaphore(4)', self.screen)
+        self.assertIn('gate.withPermit {', self.screen)
+        self.assertIn('StreamingCatalog.offersInBrazil(title)', self.screen)
+        self.assertIn('}.awaitAll()', self.screen)
+
     def test_subscription_filter_preserves_editorial_sections_without_fake_offers(self):
         self.assertIn('put(heading, confirmed)', self.screen)
         self.assertIn('Nenhum título com oferta BR confirmada nos streamings', self.screen)
