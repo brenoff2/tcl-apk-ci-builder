@@ -2716,6 +2716,9 @@ internal fun TclStreamingScreens(
                                                     if (year != null) {
                                                         Text(year, fontSize = 11.sp, color = Color.White)
                                                     }
+                                                    StreamingOfferIcons(current, offerCache,
+                                                        displayed, showRating = false,
+                                                        inCinema = current.id in cinemaIds)
                                                     if (current.media == "movie" &&
                                                         current.id in cinemaIds) {
                                                         Text("Cinema", modifier = Modifier
@@ -3239,11 +3242,11 @@ internal fun TclStreamingScreens(
             .map { (name, items) -> name to items.map { it.id }.toSet() }
         AlertDialog(
             onDismissRequest = { showMyStreamingSettings = false },
-            title = { Text("Filtros de descoberta") },
+            title = { Text("Filtros de descoberta", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Escolha suas assinaturas e os gêneros para descobrir títulos.",
-                        fontSize = 11.sp)
+                        fontSize = 12.sp)
                     Row(modifier = Modifier.fillMaxWidth().heightIn(max = 370.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Column(modifier = Modifier.weight(1f).heightIn(max = 350.dp)
@@ -3299,7 +3302,7 @@ internal fun TclStreamingScreens(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
+                Button(shape = RoundedCornerShape(22.dp), onClick = {
                     myServices = editingMyServices
                     filterGenreIds = editingFilterGenres
                     prefs.edit().putString("anytv_my_streamings",
@@ -3313,7 +3316,7 @@ internal fun TclStreamingScreens(
                 }) { Text("Aplicar filtros") }
             },
             dismissButton = {
-                TextButton(onClick = { showMyStreamingSettings = false }) { Text("Cancelar") }
+                OutlinedButton(shape = RoundedCornerShape(22.dp), onClick = { showMyStreamingSettings = false }) { Text("Cancelar") }
             }
         )
     }
