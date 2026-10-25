@@ -1410,6 +1410,12 @@ internal fun TclStreamingScreens(
     LaunchedEffect(myServices) { onlyMyStreaming = myServices.isNotEmpty() }
     var editingMyServices by remember { mutableStateOf(storedMyServices) }
     val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    var providerListMode by remember { mutableStateOf(false) }
+    val providerListTitles = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val providerListPages = remember { mutableStateMapOf<String, Int>() }
+    val providerListMore = remember { mutableStateMapOf<String, Boolean>() }
+    val providerListLoading = remember { mutableStateMapOf<String, Boolean>() }
+    val providerListErrors = remember { mutableStateMapOf<String, String>() }
     val activeServiceNames = remember(myServices, apps) {
         myServices.map { name -> apps.firstOrNull { it.packageName == name }?.name ?: name }
             .filter { StreamingCatalog.supportsSubscription(it) }.distinct().take(12)
@@ -1986,6 +1992,35 @@ internal fun TclStreamingScreens(
         }
     }
 
+    LaunchedEffect(selected?.packageName, selectedHomeGenre, homeContentType, providerListMode) {
+        val app = selected ?: return@LaunchedEffect
+        if (!providerListMode) return@LaunchedEffect
+        val kinds = listOf("movie", "tv").filter {
+            homeContentType == "all" || it == homeContentType
+        }
+        for (kind in kinds) {
+            val id = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
+            if (selectedHomeGenre > 0 && id == 0) continue
+            val key = "${app.name}:$kind:$id"
+            if (key !in providerListTitles) {
+                providerListLoading[key] = true
+                try {
+                    val response = StreamingCatalog.discover(token, app.name, kind, 1, id, "")
+                    providerListTitles[key] = response.titles
+                    providerListPages[key] = 1
+                    providerListMore[key] = response.more
+                    providerListErrors.remove(key)
+                } catch (error: java.util.concurrent.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    providerListErrors[key] = "Não foi possível carregar este catálogo."
+                } finally {
+                    providerListLoading[key] = false
+                }
+            }
+        }
+    }
+
     // Provider pages reuse the home carousel, loading real provider results.
     LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre) {
         val app = selected ?: return@LaunchedEffect
@@ -2274,7 +2309,8 @@ internal fun TclStreamingScreens(
                         horizontalArrangement = Arrangement.End) {
                         displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
                             Column(modifier = Modifier.width(62.dp).clickable {
-                                selected = app; media = "movie"; genre = 0; page = 1
+                                selected = app; providerListMode = false
+                                media = "movie"; genre = 0; page = 1
                                 // Keep the active Filmes/Séries and gênero filters when opening a provider.
                                 homeLibrary = false; showGlobalSearch = false
                                 searchDraft = ""; searchTerm = ""; showSaved = false; message = null
@@ -2755,8 +2791,16 @@ internal fun TclStreamingScreens(
                                         }?.name ?: "Gênero"
                                         else -> "Principal"
                                     }
-                                    Text(pageTitle, fontSize = 17.sp,
-                                        fontWeight = FontWeight.SemiBold)
+                                    Text(pageTitle, modifier = Modifier.weight(1f, fill = false),
+                                        fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                                    if (selected != null) {
+                                        TextButton(onClick = {
+                                            providerListMode = !providerListMode
+                                        }) {
+                                            Text(if (providerListMode) "Ver em seções"
+                                                else "Ver em lista", fontSize = 12.sp)
+                                        }
+                                    }
                                 }
 
                             }
@@ -2933,6 +2977,124 @@ internal fun TclStreamingScreens(
                                         }
 
                                     }
+                                }
+                            }
+                        }
+                        // Provider list uses the same hero, poster cards and detail/list modes
+                        // as genres, but fetches ONLY the selected provider's BR flatrate feed.
+                        if (!homeLibrary && selected != null && providerListMode) {
+                            val app = selected!!
+                            val sources = listOf("movie", "tv").filter {
+                                homeContentType == "all" || it == homeContentType
+                            }.mapNotNull { kind ->
+                                val id = anyTvProviderGenre(kind, selectedHomeGenre,
+                                    allMovieGenres, tvGenres)
+                                if (selectedHomeGenre > 0 && id == 0) null
+                                else Triple("${app.name}:$kind:$id", kind, id)
+                            }
+                            val films = sources.firstOrNull { it.second == "movie" }?.let {
+                                providerListTitles[it.first].orEmpty()
+                            }.orEmpty()
+                            val shows = sources.firstOrNull { it.second == "tv" }?.let {
+                                providerListTitles[it.first].orEmpty()
+                            }.orEmpty()
+                            val combined = buildList {
+                                for (index in 0 until maxOf(films.size, shows.size)) {
+                                    films.getOrNull(index)?.let { add(it) }
+                                    shows.getOrNull(index)?.let { add(it) }
+                                }
+                            }.distinctBy { "${it.media}:${it.id}" }
+                            item {
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Catálogo · " + app.name,
+                                        modifier = Modifier.weight(1f),
+                                        fontWeight = FontWeight.SemiBold)
+                                    AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade",
+                                        genreViewMode == "grade") { genreViewMode = "grade" }
+                                    AnyTvGenreViewIcon(Icons.Filled.ViewList, "Detalhado",
+                                        genreViewMode == "detalhado") { genreViewMode = "detalhado" }
+                                }
+                            }
+                            if (genreViewMode == "detalhado") {
+                                items(combined) { title ->
+                                    Row(modifier = Modifier.fillMaxWidth()
+                                        .padding(vertical = 7.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        posterCard(title, Modifier.width(94.dp), false)
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(title.name, fontWeight = FontWeight.SemiBold)
+                                            Text((if (title.media == "movie") "F" else "S") +
+                                                " · " + title.date.take(4) + " · " +
+                                                anyTvGenreLabels(title, allMovieGenres, tvGenres),
+                                                fontSize = 11.sp)
+                                            Text(title.overview, fontSize = 12.sp,
+                                                maxLines = 6, overflow = TextOverflow.Ellipsis)
+                                            TextButton(onClick = { details = title
+                                                detailsPackage = null }) {
+                                                Text("Trailer e mais detalhes")
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                items(combined.chunked(3)) { group ->
+                                    Row(modifier = Modifier.fillMaxWidth()
+                                        .padding(vertical = 7.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                        group.forEach { title ->
+                                            posterCard(title, Modifier.weight(1f), false)
+                                        }
+                                        repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
+                                    }
+                                }
+                            }
+                            item {
+                                if (sources.any { providerListLoading[it.first] == true })
+                                    Text("Carregando filmes e séries…", fontSize = 12.sp)
+                                if (combined.isEmpty() &&
+                                    sources.none { providerListLoading[it.first] == true })
+                                    Text("Nenhum título encontrado para esta seleção.",
+                                        fontSize = 12.sp)
+                                sources.forEach { source ->
+                                    providerListErrors[source.first]?.let { error ->
+                                        Text(error, color = MaterialTheme.colorScheme.error)
+                                    }
+                                }
+                                if (sources.any { providerListMore[it.first] == true }) {
+                                    OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                        enabled = sources.none { providerListLoading[it.first] == true },
+                                        onClick = {
+                                            val requests = sources.filter {
+                                                providerListMore[it.first] == true
+                                            }
+                                            requests.forEach { providerListLoading[it.first] = true }
+                                            scope.launch {
+                                                requests.forEach { (key, kind, id) ->
+                                                    try {
+                                                        val next = (providerListPages[key] ?: 1) + 1
+                                                        val result = StreamingCatalog.discover(
+                                                            token, app.name, kind, next, id, "")
+                                                        providerListTitles[key] =
+                                                            (providerListTitles[key].orEmpty() +
+                                                                result.titles).distinctBy {
+                                                                "${it.media}:${it.id}"
+                                                            }
+                                                        providerListPages[key] = next
+                                                        providerListMore[key] = result.more
+                                                        providerListErrors.remove(key)
+                                                    } catch (error: java.util.concurrent.CancellationException) {
+                                                        throw error
+                                                    } catch (error: Exception) {
+                                                        providerListErrors[key] =
+                                                            "Não foi possível carregar mais títulos."
+                                                    } finally {
+                                                        providerListLoading[key] = false
+                                                    }
+                                                }
+                                            }
+                                        }) { Text("Mostrar mais") }
                                 }
                             }
                         }
@@ -3263,8 +3425,9 @@ internal fun TclStreamingScreens(
                             }
                         }
                         uniqueShelves.filterNot { (heading, _) ->
-                            !homeLibrary && selected == null && selectedHomeGenre == 0 &&
-                                heading == ANYTV_CINEMA_SHELF
+                            (!homeLibrary && selected != null && providerListMode) ||
+                            (!homeLibrary && selected == null && selectedHomeGenre == 0 &&
+                                heading == ANYTV_CINEMA_SHELF)
                         }.forEach { (heading, shelf) ->
                             item {
                                 Row(modifier = Modifier.fillMaxWidth()
