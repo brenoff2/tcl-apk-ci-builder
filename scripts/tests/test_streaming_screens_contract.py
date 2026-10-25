@@ -1161,10 +1161,6 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Brush.verticalGradient(listOf(', self.screen)
         self.assertIn('Color.Black.copy(alpha = 0.86f)', self.screen)
 
-
-if __name__ == "__main__":
-    unittest.main()
-
     def test_provider_list_mode_reuses_hero_and_paginates_both_kinds(self):
         for fragment in (
             'var providerListMode by remember',
@@ -1181,3 +1177,7 @@ if __name__ == "__main__":
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, self.screen)
+
+
+if __name__ == "__main__":
+    unittest.main()
