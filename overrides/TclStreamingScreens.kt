@@ -2313,11 +2313,22 @@ internal fun TclStreamingScreens(
                                 }
 
                             } else {
-                                val kind = currentGenreList.firstOrNull { it.id == selectedHomeGenre }
-                                genreShelves["$selectedGenreKind:$selectedHomeGenre:$genreSort"]
-                                    ?.takeIf { it.isNotEmpty() }?.let {
-                                        put("Em destaque: " + (kind?.name ?: "Gênero"), it)
+                                val kind = (allMovieGenres + tvGenres).firstOrNull {
+                                    it.id == selectedHomeGenre
+                                }
+                                listOf("movie", "tv").filter {
+                                    homeContentType == "all" || homeContentType == it
+                                }.forEach { mediaKind ->
+                                    val resolved = anyTvResolvedGenre(selectedHomeGenre,
+                                        mediaKind, allMovieGenres, tvGenres)
+                                    if (resolved > 0) {
+                                        genreShelves["$mediaKind:$resolved:$genreSort"]
+                                            ?.takeIf { it.isNotEmpty() }?.let {
+                                                put((if (mediaKind == "tv") "Séries" else "Filmes") +
+                                                    " · " + (kind?.name ?: "Gênero"), it)
+                                            }
                                     }
+                                }
                             }
                         }
                         if (!homeLibrary && selected == null && selectedHomeGenre == 0) {
@@ -2794,9 +2805,17 @@ internal fun TclStreamingScreens(
                         // or three-column vertical grid. The upstream TMDB sort is applied
                         // consistently to page 1 and every user-requested next 24 titles.
                         if (!homeLibrary && selected == null && selectedHomeGenre != 0) {
-                            val genreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"
-                            val genreTitles = genreShelves[genreKey].orEmpty()
-                                .distinctBy { "${it.media}:${it.id}" }
+                            val genreKey = "$selectedGenreKind:" +
+                                anyTvResolvedGenre(selectedHomeGenre, selectedGenreKind,
+                                    allMovieGenres, tvGenres) + ":$genreSort"
+                            val genreTitles = listOf("movie", "tv").filter {
+                                homeContentType == "all" || it == homeContentType
+                            }.flatMap { mediaKind ->
+                                val id = anyTvResolvedGenre(selectedHomeGenre, mediaKind,
+                                    allMovieGenres, tvGenres)
+                                if (id == 0) emptyList() else
+                                    genreShelves["$mediaKind:$id:$genreSort"].orEmpty()
+                            }.distinctBy { "${it.media}:${it.id}" }
                             item {
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .padding(top = 24.dp, bottom = 12.dp),
@@ -2861,8 +2880,10 @@ internal fun TclStreamingScreens(
                                         onClick = {
                                             if (genreLoading[genreKey] != true) {
                                                 genreLoading[genreKey] = true
-                                                val pageGenreId = selectedHomeGenre
                                                 val pageMedia = selectedGenreKind
+                                                val pageGenreId = anyTvResolvedGenre(
+                                                    selectedHomeGenre, pageMedia,
+                                                    allMovieGenres, tvGenres)
                                                 val pageSort = genreSort
                                                 scope.launch {
                                                     val next = (genrePage[genreKey] ?: 1) + 1
