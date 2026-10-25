@@ -1988,6 +1988,7 @@ internal fun TclStreamingScreens(
         }
         for (kind in kinds) {
             val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
+            if (selectedHomeGenre > 0 && chosenGenre == 0) continue
             val key = app.name + ":" + kind + ":" + chosenGenre
             if (key !in myServiceShelves) {
                 runCatching {
@@ -2235,7 +2236,7 @@ internal fun TclStreamingScreens(
                 AnyTvStreamNavBar(
                     library = homeLibrary && selected == null,
                     section = librarySection,
-                    contentType = if (selected == null) homeContentType else media,
+                    contentType = homeContentType,
                     filtersActive = onlyMyStreaming || filterGenreIds.isNotEmpty() || selectedHomeGenre != 0,
                     onHome = { selected = null; homeLibrary = false
                         homeContentType = "all"; selectedHomeGenre = 0 },
