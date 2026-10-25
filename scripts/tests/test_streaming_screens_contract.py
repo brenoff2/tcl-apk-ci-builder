@@ -17,6 +17,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val matchGenre = genre == 0 || genre == ANYTV_ANIME_FILTER', self.screen)
         self.assertIn('if (resolved > 0 || resolved == ANYTV_ANIME_FILTER)', self.screen)
         self.assertIn('private fun anyTvIsAnime(title: StreamingTitle)', self.screen)
+        self.assertIn('.filter { id != ANYTV_ANIME_FILTER || anyTvIsAnime(it) }', self.screen)
+        self.assertIn('genre == ANYTV_ANIME_FILTER', self.screen)
         self.assertIn('entry.optString("original_language")', self.screen)
         self.assertIn('title.originalLanguage == "ja" && 16 in title.genreIds', self.screen)
         self.assertIn('var genreViewMode by remember { mutableStateOf("detalhado") }', self.screen)
