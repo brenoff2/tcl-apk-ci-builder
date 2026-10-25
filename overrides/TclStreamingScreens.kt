@@ -1970,6 +1970,12 @@ internal fun TclStreamingScreens(
     LaunchedEffect(selectedHomeGenre, genreSort) {
         catalogScrollState.scrollToItem(0)
     }
+    LaunchedEffect(selectedHomeGenre) {
+        if (selectedHomeGenre != 0) {
+            genreViewMode = "detalhado"
+            genreSectionsMode = false
+        }
+    }
     LaunchedEffect(selectedHomeGenre, selected?.packageName, homeLibrary, homeContentType) {
         openedSection = null
     }
@@ -3678,6 +3684,9 @@ internal fun TclStreamingScreens(
                             }
                         }
                         uniqueShelves.filterNot { (heading, _) ->
+                            // Genre and Anime have their own dedicated list/sections below;
+                            // repeating source rails here pollutes their pages.
+                            (!homeLibrary && selected == null && selectedHomeGenre != 0) ||
                             (!homeLibrary && selected != null && providerListMode) ||
                             (!homeLibrary && selected == null && selectedHomeGenre == 0 &&
                                 heading == ANYTV_CINEMA_SHELF)
