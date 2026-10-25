@@ -180,7 +180,7 @@ class StreamingScreens(unittest.TestCase):
             'fun toggleFilmWatched(title: StreamingTitle)',
             '"anytv_watched_movies"', '"anytv_watched_episodes"',
             'fun toggleWatched(title: StreamingTitle, season: Int, episode: Int)',
-            '"Filmes para assistir"', '"Continuando"',
+            '"Filmes para assistir"', '"Séries acompanhadas"',
             '"Filmes já assistidos"', 'val filteredShelves',
             'val uniqueShelves', 'it.media}:',
         ):
@@ -248,7 +248,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val trackedIds = trackedSeries +', self.screen)
         self.assertIn('val watching = trackedIds.mapNotNull', self.screen)
         self.assertIn('"Filmes já assistidos", history', self.screen)
-        self.assertIn('"Continuando", watching', self.screen)
+        self.assertIn('"Séries acompanhadas", watching', self.screen)
 
     def test_quick_title_actions_and_permanent_local_artwork(self):
         for text in ('"Adicionar à minha lista"', '"Marcar como assistido"',
@@ -1030,7 +1030,7 @@ class StreamingScreens(unittest.TestCase):
             'sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })',
             'value = watchingQuery',
             'placeholder = { Text("Buscar nas minhas séries") }',
-            '"watching" -> "Continuando"',
+            '"watching" -> "Séries acompanhadas"',
             'Text("Mostrar mais 24")',
         ):
             self.assertIn(snippet, self.screen)
