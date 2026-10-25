@@ -1055,6 +1055,7 @@ private fun AnyTvPosterCard(
     marked: Boolean,
     inCinema: Boolean,
     genreLabel: String,
+    posterOnly: Boolean = false,
     onOpen: () -> Unit,
     onMarked: () -> Unit,
     onFavorite: () -> Unit
@@ -1096,17 +1097,18 @@ private fun AnyTvPosterCard(
                 }
             }
         }
-        // Fixed metadata and two-line title footprints prevent horizontal
-        // rails from shifting vertically when the active title changes.
-        Text(genreLabel, modifier = Modifier.fillMaxWidth(),
-            fontSize = 10.sp, lineHeight = 13.sp, minLines = 1, maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
-        StreamingOfferIcons(title, offerCache, apps, showRating = false,
-            inCinema = inCinema, showYear = true)
-        Text(title.name, modifier = Modifier.fillMaxWidth(),
-            fontSize = 11.sp, lineHeight = 14.sp, minLines = 2, maxLines = 2,
-            overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+        if (!posterOnly) {
+            // Standard card keeps its original title and metadata layout.
+            Text(genreLabel, modifier = Modifier.fillMaxWidth(),
+                fontSize = 10.sp, lineHeight = 13.sp, minLines = 1, maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            StreamingOfferIcons(title, offerCache, apps, showRating = false,
+                inCinema = inCinema, showYear = true)
+            Text(title.name, modifier = Modifier.fillMaxWidth(),
+                fontSize = 11.sp, lineHeight = 14.sp, minLines = 2, maxLines = 2,
+                overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
@@ -2286,6 +2288,89 @@ internal fun TclStreamingScreens(
                 onFavorite = { toggleFavorite(title, "library") })
         }
 
+    // A detailed row uses the original interactive poster, without repeating
+    // its compact title, genre and provider lines below the artwork.
+    val detailedPosterCard: @Composable (StreamingTitle, Modifier) -> Unit =
+        { title, cardModifier ->
+            AnyTvPosterCard(
+                title = title, modifier = cardModifier,
+                offerCache = offerCache, apps = displayed,
+                favorite = isFavorite(title, "library"),
+                marked = if (title.media == "movie")
+                    title.id.toString() in watchedFilms
+                else title.id.toString() in trackedSeries,
+                inCinema = title.id in cinemaIds,
+                genreLabel = anyTvGenreLabels(title, allMovieGenres, tvGenres),
+                posterOnly = true,
+                onOpen = { details = title; detailsPackage = null },
+                onMarked = {
+                    if (title.media == "movie") toggleFilmWatched(title)
+                    else toggleSeriesTracking(title)
+                },
+                onFavorite = { toggleFavorite(title, "library") })
+        }
+
+    val detailedListCard: @Composable (StreamingTitle) -> Unit = { title ->
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Top) {
+            detailedPosterCard(title, Modifier.width(112.dp))
+            Column(modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Line 1: title; line 2: genres; line 3: official badges,
+                // year and confirmed BR subscription logos.
+                Text(title.name, fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold, maxLines = 2)
+                val genres = anyTvGenreLabels(title, allMovieGenres, tvGenres)
+                if (genres.isNotBlank()) {
+                    Text(genres, fontSize = 11.sp, maxLines = 2,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                StreamingOfferIcons(title, offerCache, displayed,
+                    showRating = false, showYear = true,
+                    inCinema = title.media == "movie" && title.id in cinemaIds)
+                val summary = title.overview.trim()
+                if (summary.isNotBlank()) {
+                    Text(summary, fontSize = 12.sp, lineHeight = 17.sp,
+                        maxLines = 7, overflow = TextOverflow.Ellipsis,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedButton(onClick = {
+                        scope.launch {
+                            val video = runCatching {
+                                StreamingCatalog.trailer(title.media, title.id)
+                            }.getOrNull()
+                            if (video == null) {
+                                android.widget.Toast.makeText(context,
+                                    "Trailer não disponível.", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                runCatching {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW,
+                                        Uri.parse(video)))
+                                }.onFailure {
+                                    android.widget.Toast.makeText(context,
+                                        "Não foi possível abrir o trailer.",
+                                        android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(34.dp)) {
+                        Text("▶ Trailer", fontSize = 11.sp, maxLines = 1)
+                    }
+                    OutlinedButton(onClick = {
+                        details = title; detailsPackage = null
+                    }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                        modifier = Modifier.height(34.dp)) {
+                        Text("Mais detalhes", fontSize = 11.sp, maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+
     Dialog(onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxSize(),
@@ -2852,14 +2937,18 @@ internal fun TclStreamingScreens(
                                         }?.name ?: "Gênero"
                                         else -> "Principal"
                                     }
-                                    Text(pageTitle, modifier = Modifier.weight(1f, fill = false),
+                                    Text(pageTitle, modifier = Modifier.weight(1f),
                                         fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                                     if (selected != null) {
-                                        TextButton(onClick = {
+                                        OutlinedButton(onClick = {
                                             providerListMode = !providerListMode
-                                        }) {
+                                        }, shape = RoundedCornerShape(11.dp),
+                                            modifier = Modifier.height(34.dp),
+                                            contentPadding = PaddingValues(horizontal = 12.dp,
+                                                vertical = 0.dp)) {
                                             Text(if (providerListMode) "Ver em seções"
-                                                else "Ver em lista", fontSize = 12.sp)
+                                                else "Ver em lista", fontSize = 12.sp,
+                                                maxLines = 1)
                                         }
                                     }
                                 }
@@ -3064,41 +3153,67 @@ internal fun TclStreamingScreens(
                                     films.getOrNull(index)?.let { add(it) }
                                     shows.getOrNull(index)?.let { add(it) }
                                 }
-                            }.distinctBy { "${it.media}:${it.id}" }
+                            }.distinctBy { "${it.media}:${it.id}" }.let { results ->
+                                when (genreSort) {
+                                    "rating" -> results.sortedByDescending { it.rating }
+                                    "recent" -> results.sortedByDescending { it.date }
+                                    "title" -> results.sortedBy {
+                                        it.name.lowercase(java.util.Locale.ROOT)
+                                    }
+                                    else -> results
+                                }
+                            }
                             item {
-                                Row(modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .padding(top = 24.dp, bottom = 12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.width(3.dp).height(22.dp)
+                                        .background(Color(0xFFE3383F),
+                                            RoundedCornerShape(3.dp)))
                                     Text("Catálogo · " + app.name,
-                                        modifier = Modifier.weight(1f),
                                         fontWeight = FontWeight.SemiBold)
+                                }
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                     AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade",
                                         genreViewMode == "grade") { genreViewMode = "grade" }
                                     AnyTvGenreViewIcon(Icons.Filled.ViewList, "Detalhado",
-                                        genreViewMode == "detalhado") { genreViewMode = "detalhado" }
-                                }
-                            }
-                            if (genreViewMode == "detalhado") {
-                                items(combined) { title ->
-                                    Row(modifier = Modifier.fillMaxWidth()
-                                        .padding(vertical = 7.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                        posterCard(title, Modifier.width(94.dp), false)
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(title.name, fontWeight = FontWeight.SemiBold)
-                                            Text((if (title.media == "movie") "F" else "S") +
-                                                " · " + title.date.take(4) + " · " +
-                                                anyTvGenreLabels(title, allMovieGenres, tvGenres),
-                                                fontSize = 11.sp)
-                                            Text(title.overview, fontSize = 12.sp,
-                                                maxLines = 6, overflow = TextOverflow.Ellipsis)
-                                            TextButton(onClick = { details = title
-                                                detailsPackage = null }) {
-                                                Text("Trailer e mais detalhes")
+                                        genreViewMode == "detalhado") {
+                                        genreViewMode = "detalhado"
+                                    }
+                                    Box {
+                                        val sortLabel = when (genreSort) {
+                                            "rating" -> "Melhor nota"
+                                            "recent" -> "Mais recentes"
+                                            "title" -> "Título A–Z"
+                                            else -> "Mais populares"
+                                        }
+                                        AnyTvCompactChip("Ordenar: $sortLabel ▾", false) {
+                                            genreSortMenu = true
+                                        }
+                                        DropdownMenu(expanded = genreSortMenu,
+                                            onDismissRequest = { genreSortMenu = false }) {
+                                            listOf("popular" to "Mais populares",
+                                                "rating" to "Melhor nota",
+                                                "recent" to "Mais recentes",
+                                                "title" to "Título A–Z").forEach { (mode, label) ->
+                                                DropdownMenuItem(text = { Text(label) },
+                                                    onClick = {
+                                                        genreSort = mode
+                                                        genreSortMenu = false
+                                                        prefs.edit().putString(
+                                                            "anytv_genre_sort", mode).apply()
+                                                    })
                                             }
                                         }
                                     }
                                 }
+                            }
+                            if (genreViewMode == "detalhado") {
+                                items(combined) { title -> detailedListCard(title) }
                             } else {
                                 items(combined.chunked(3)) { group ->
                                     Row(modifier = Modifier.fillMaxWidth()
@@ -3291,46 +3406,7 @@ internal fun TclStreamingScreens(
                             }
                             if (genreViewMode == "detalhado" &&
                                 selectedHomeGenre != ANYTV_CINEMA_FILTER) {
-                                items(genreTitles) { title ->
-                                    Row(modifier = Modifier.fillMaxWidth()
-                                        .padding(vertical = 8.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                        verticalAlignment = Alignment.Top) {
-                                        posterCard(title, Modifier.width(112.dp), false)
-                                        Column(modifier = Modifier.weight(1f),
-                                            verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                            Text(title.name, fontSize = 14.sp,
-                                                fontWeight = FontWeight.SemiBold, maxLines = 2)
-                                            val offers = offerCache["${title.media}:${title.id}"].orEmpty()
-                                            val metadata = listOfNotNull(
-                                                if (title.media == "movie") "F" else "S",
-                                                title.date.take(4).takeIf {
-                                                    it.matches(Regex("[0-9]{4}"))
-                                                },
-                                                offers.take(2).joinToString(", ") { it.name }
-                                                    .takeIf { it.isNotBlank() },
-                                                anyTvGenreLabels(title, allMovieGenres, tvGenres)
-                                                    .takeIf { it.isNotBlank() }
-                                            ).joinToString(" · ")
-                                            Text(metadata, fontSize = 10.sp, maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            val summary = title.overview.trim()
-                                            if (summary.isNotBlank()) {
-                                                Text(summary, fontSize = 12.sp,
-                                                    lineHeight = 17.sp, maxLines = 7,
-                                                    overflow = TextOverflow.Ellipsis,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                            }
-                                            TextButton(onClick = {
-                                                details = title
-                                                detailsPackage = null
-                                            }, contentPadding = PaddingValues(0.dp)) {
-                                                Text("Trailer e mais detalhes", fontSize = 11.sp)
-                                            }
-                                        }
-                                    }
-                                }
+                                items(genreTitles) { title -> detailedListCard(title) }
                             } else {
                                 items(genreTitles.chunked(3)) { group ->
                                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
