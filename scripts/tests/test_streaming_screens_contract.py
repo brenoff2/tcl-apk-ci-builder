@@ -31,6 +31,8 @@ class StreamingScreens(unittest.TestCase):
 
     def test_recent_sections_have_distinct_verified_sources(self):
         self.assertIn('suspend fun recentPremieres(media: String)', self.screen)
+        self.assertNotIn('&$dateField.gte=', self.screen)
+        self.assertNotIn('&$dateField.lte=', self.screen)
         self.assertIn('suspend fun recentlyStartedSeasons()', self.screen)
         self.assertIn('"Filmes recém-lançados" to recentMovies', self.screen)
         self.assertIn('"Séries novas" to newSeries', self.screen)
@@ -141,7 +143,6 @@ class StreamingScreens(unittest.TestCase):
             'if (showGlobalSearch)',
             'OfficialTvIcon(app, 52.dp)',
             'suspend fun discoveryGenre(id: Int)',
-            'with_original_language=ja',
             'StreamingCatalog.genres(token, "movie")',
             'selectedHomeGenre = kind.id',
             'Text("⚙ Listas", fontSize = 11.sp)',
@@ -428,7 +429,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_anime_uses_japanese_animation_not_generic_animation(self):
         self.assertIn('ANYTV_ANIME_FILTER = -2', self.screen)
-        self.assertIn('with_original_language=ja', self.screen)
+        self.assertNotIn('with_original_language=ja', self.screen)
         self.assertIn('AnyTvCompactChip("Anime"', self.screen)
 
     def test_editorial_shelves_and_streaming_offers_remain_separate(self):
