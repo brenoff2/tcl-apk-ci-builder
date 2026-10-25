@@ -117,7 +117,7 @@ class StreamingScreens(unittest.TestCase):
             'selectedHomeGenre = kind.id',
             'Text("⚙ Listas", fontSize = 11.sp)',
             'putString("anytv_home_genres"',
-            'choices.filter { it.id in filterGenreIds ||',
+            'filterGenreIds.mapNotNull { selectedId ->',
             '"Por gênero: " + kind.name',
         ):
             with self.subTest(piece=piece):
@@ -154,7 +154,7 @@ class StreamingScreens(unittest.TestCase):
             '"Marcar todos"', '"Desmarcar todos"',
             'editingFilterGenres = if (allGenreIds.isNotEmpty()',
             'val requested = if (selectedHomeGenre == 0)',
-            'choices.filter { it.id in filterGenreIds',
+            'filterGenreIds.mapNotNull { selectedId ->',
             'put("Por gênero: " + kind.name, it)',
         ):
             with self.subTest(fragment=fragment):
@@ -956,7 +956,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('"Em cartaz no Brasil"', self.screen)
         self.assertIn('"Em cartaz · Brasil · TMDB"', self.screen)
         self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()', self.screen)
-        self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', self.screen)
+        self.assertIn('anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)', self.screen)
         self.assertIn('if (pageGenreId == ANYTV_CINEMA_FILTER)', self.screen)
         self.assertIn('cinemaIds = cinemaIds + result.titles.map { it.id }', self.screen)
         self.assertNotIn('inCinema = offerings.isEmpty()', self.screen)
@@ -1052,7 +1052,7 @@ class StreamingScreens(unittest.TestCase):
     def test_poster_actions_use_contrasting_icon_outline_not_round_badges(self):
         card = self.screen.split('private fun AnyTvPosterCard(', 1)[1].split(
             '/** One horizontal strip', 1)[0]
-        self.assertIn('tint = Color.Black.copy(alpha = 0.85f)', card)
+        self.assertIn('tint = Color(0xFF353535).copy(alpha = 0.85f)', card)
         self.assertIn('modifier = Modifier.size(24.dp)', card)
         self.assertIn('modifier = Modifier.size(19.dp)', card)
         self.assertNotIn('.background(Color.Black.copy(alpha = 0.60f), RoundedCornerShape(16.dp))', card)
