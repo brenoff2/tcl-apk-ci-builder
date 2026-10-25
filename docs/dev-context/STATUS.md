@@ -1,3 +1,5 @@
+> **RELEASE POSTERIOR CONFIRMADA — 25/10/2026:** AnyTV **2.9.40/code69**, maintenance build sem alterações funcionais de UI; GitHub Actions [#40236534156](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40236534156) **COMPLETED/SUCCESS**. Compilação, testes, assinatura V2, publicação na OTA oficial e byte-readback remoto **SUCCESS**. Artefato assinado `anytv-v2-2940-signed-update` ID `12615786069` ([download](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40236534156/artifacts/12615786069)). OTA `feat/tcl-v22-updates-back-bluetooth:updates/android/v2/current.apk`, commit `507caa4f0880918f0212ca8102268fce54adb806`. Homologação física Android/TCL **NÃO_TESTADO**. As referências a 2.9.39 abaixo documentam estado anterior, não a última versão. Próxima release precisa de versionCode >69.
+
 # AnyTV — Estado de desenvolvimento
 Atualizado em 2026-10-25. Registro documental, sem alteração do aplicativo ou publicação.
 
