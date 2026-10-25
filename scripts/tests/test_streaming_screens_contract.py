@@ -13,6 +13,17 @@ class StreamingScreens(unittest.TestCase):
         cls.apps = (UI / "TclInstalledApps.kt").read_text(encoding="utf-8")
         cls.gradle = Path("source/app/build.gradle.kts").read_text()
 
+    def test_anime_separate_from_general_catalog_and_genres_default_list(self):
+        self.assertIn('val matchGenre = genre == 0 || genre == ANYTV_ANIME_FILTER', self.screen)
+        self.assertIn('if (resolved > 0 || resolved == ANYTV_ANIME_FILTER)', self.screen)
+        self.assertIn('private fun anyTvIsAnime(title: StreamingTitle)', self.screen)
+        self.assertIn('entry.optString("original_language")', self.screen)
+        self.assertIn('title.originalLanguage == "ja" && 16 in title.genreIds', self.screen)
+        self.assertIn('var genreViewMode by remember { mutableStateOf("detalhado") }', self.screen)
+        self.assertIn('var genreSectionsMode by remember { mutableStateOf(false) }', self.screen)
+        self.assertIn('else genreSectionsMode = !genreSectionsMode', self.screen)
+        self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
+
     def test_detailed_card_has_compact_metadata_spacing(self):
         self.assertIn('verticalArrangement = Arrangement.spacedBy(3.dp)) {', self.screen)
 
