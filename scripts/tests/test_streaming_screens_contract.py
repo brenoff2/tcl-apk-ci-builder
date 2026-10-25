@@ -557,7 +557,7 @@ class StreamingScreens(unittest.TestCase):
             'showRating = false, showYear = true,',
             'AnyTvRatingOverlay(current)',
             'current.id in cinemaIds',
-            'Text("Cinema", modifier = Modifier',
+            'inCinema = current.id in cinemaIds',
             'repeat(heroTitles.size) { dot ->',
             '.width(if (pagerState.currentPage == dot)',
         ):
