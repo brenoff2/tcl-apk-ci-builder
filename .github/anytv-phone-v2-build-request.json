@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 77,
+  "expected_version_code": 78,
   "preserve_legacy_ota": true,
-  "source": "User-requested definitive fix: real genre editorial sections and correct toggle; compact details and single styled hero F/S; populated recent films/new series via bounded dual-sort TMDB discovery; evidence-based newcomer section comparing persisted BR provider snapshots, not fake recent arrivals. Optimize recent movie/series discovery with bounded parallel requests; keep provider-history proof for newly arrived catalogs. Hero metadata uses only shared F/S/Cinema badges to avoid duplicated Cinema label. Release readback now validates OTA branch SHA and immutable commit-addressed binary to avoid branch raw-CDN cache staleness.",
+  "source": "Remove Recém-chegados ao Streaming completely; open genres in grid and show genuine Streaming-style sections on toggle; eliminate font padding between title/genre/year and reserve proper gap before Trailer/More details; expand 90-day movie/new-series feeds with bounded multiple TMDB routes and 25 discovery pages.",
   "new_install_only": false,
-  "release_version": "2.9.48-AnyTV",
-  "release_scope": "Final signed AnyTV 2.9.48/code77 after potentially publishing code76; protected original V2 signer/cert2026; commit-pinned HTTPS byte-readback.",
-  "ci_revision": 50
+  "release_version": "2.9.49-AnyTV",
+  "release_scope": "Signed AnyTV V2 2.9.49/code78 OTA after full tests and Android compile, original signer intact and immutable commit-addressed GitHub HTTPS byte readback.",
+  "ci_revision": 51
 }
