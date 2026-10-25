@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 64,
+  "expected_version_code": 65,
   "preserve_legacy_ota": true,
-  "source": "User-identified Crystal Lake 2026 Universal+ Amazon Channel logo missing: allow BR flatrate add-on channels with exact provider IDs/logo while retaining distinction from base Amazon Prime. Recognize Universal+ in filters.",
+  "source": "User-reported missing noninstalled providers and duplicated Netflix/HBO Max. Use TMDB BR watch/providers/movie + tv provider lists, canonical identity dedup and installed exclusion in home and streaming Edit. Preserve subscriptions and original signer.",
   "new_install_only": false,
-  "release_version": "2.9.35-AnyTV",
-  "release_scope": "Signed V2 2.9.35/code64 OTA superseding 2.9.34/code63; preserve signer, package, existing user settings, Worker/D1 and TV companion. Gate on contract, compile, signer and byte readback.",
-  "ci_revision": 28
+  "release_version": "2.9.36-AnyTV",
+  "release_scope": "Guarded V2 OTA 2.9.36/code65, supersedes 2.9.35/code64. Require full tests, Gradle build, V2 signer verification and GitHub OTA remote byte readback. No backend or companion modifications.",
+  "ci_revision": 29
 }
