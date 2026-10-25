@@ -1193,7 +1193,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("Trailer e mais detalhes")', details)
 
     def test_streaming_subtitle_controls_are_separate_rows(self):
-        section = self.screen.split('Text("Catálogo · " + app.name', 1)[1].split(
+        section = self.screen.split('val combined = buildList', 1)[1].split(
             'if (genreViewMode == "detalhado")', 1)[0]
         self.assertIn('Box(modifier = Modifier.width(3.dp).height(22.dp)', section.split(
             'Row(modifier = Modifier.fillMaxWidth()\n                                    .horizontalScroll', 1)[0])
