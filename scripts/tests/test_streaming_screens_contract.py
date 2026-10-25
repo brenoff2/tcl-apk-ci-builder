@@ -601,6 +601,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
         self.assertIn('homeContentType = kind', self.screen)
         self.assertNotIn('homeContentType = kind; selectedHomeGenre = 0', self.screen)
+        provider_entry = self.screen.split('selected = app; media = "movie"; genre = 0; page = 1', 1)[1].split(
+            'homeLibrary = false; showGlobalSearch = false', 1)[0]
+        self.assertNotIn('homeContentType = "all"', provider_entry)
 
     def test_genre_page_combines_movies_and_series_only_when_all_selected(self):
         self.assertIn('if (homeContentType == "all") listOf("movie", "tv")', self.screen)
