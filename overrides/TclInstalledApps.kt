@@ -84,9 +84,11 @@ internal fun anyTvServiceKey(name: String): String {
 }
 
 /** Real TMDB Brazilian providers, not a fixed hard-coded shortlist. */
-internal suspend fun anyTvBrazilProviderNames(): List<String> =
+internal data class AnyTvBrazilProvider(val name: String, val logo: String)
+
+internal suspend fun anyTvBrazilProviders(): List<AnyTvBrazilProvider> =
     withContext(Dispatchers.IO) {
-        val names = mutableListOf<String>()
+        val names = mutableListOf<AnyTvBrazilProvider>()
         for (media in listOf("movie", "tv")) {
             val conn = java.net.URL(
                 "https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/watch/providers/$media?language=pt-BR&watch_region=BR"
@@ -98,12 +100,20 @@ internal suspend fun anyTvBrazilProviderNames(): List<String> =
                 val values = json.optJSONArray("results") ?: JSONArray()
                 for (i in 0 until values.length()) {
                     val name = values.optJSONObject(i)?.optString("provider_name")?.trim().orEmpty()
-                    if (name.isNotBlank()) names.add(name)
+                    if (name.isNotBlank()) {
+                        val logo = values.optJSONObject(i)?.optString("logo_path").orEmpty()
+                        names.add(AnyTvBrazilProvider(name, logo.takeIf { it.startsWith("/") }.orEmpty()))
+                    }
                 }
             } finally { conn.disconnect() }
         }
-        names.distinctBy(::anyTvServiceKey).sortedBy { it.lowercase(java.util.Locale.ROOT) }
+        names.distinctBy { anyTvServiceKey(it.name) }
+            .sortedBy { it.name.lowercase(java.util.Locale.ROOT) }
     }
+
+
+internal suspend fun anyTvBrazilProviderNames(): List<String> =
+    anyTvBrazilProviders().map { it.name }
 
 
 /** TV-local pairing; icons and app names are read from Android TV PackageManager. */
@@ -547,15 +557,6 @@ fun TclInstalledAppsBar(
 
     if (showManager) {
         var draft by remember(deviceKey, host, showManager) { mutableStateOf(favorites) }
-        var catalogDraft by remember(deviceKey, host, showManager) { mutableStateOf(catalogFavorites) }
-        var providerNames by remember(showManager) { mutableStateOf(emptyList<String>()) }
-        LaunchedEffect(showManager) {
-            if (showManager) providerNames = runCatching { anyTvBrazilProviderNames() }
-                .getOrDefault(emptyList())
-        }
-        val installedKeys = allApps.map { anyTvServiceKey(it.name) }.toSet()
-        val otherServices = (providerNames + catalogDraft).distinctBy(::anyTvServiceKey)
-            .filter { anyTvServiceKey(it) !in installedKeys }
         val present = allApps.associateBy { it.packageName }
         val displayed = allApps.sortedWith(
             compareBy<TvOfficialApp> { if (it.packageName in draft) 0 else 1 }
@@ -572,48 +573,27 @@ fun TclInstalledAppsBar(
             ) {
                 Column(modifier = Modifier.padding(15.dp),
                     verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("Editar streamings", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    Text("Escolha quais serviços aparecem na faixa. Instalação e seleção do catálogo são independentes.",
+                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text("Somente aplicativos realmente instalados na TCL aparecem no controle remoto.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                    Row(modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Na minha TV", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            LazyColumn {
-                                items(displayed, key = { "tv:" + it.packageName }) { item ->
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = item.packageName in draft,
-                                            onCheckedChange = { checked ->
-                                                draft = if (checked) draft + item.packageName
-                                                    else draft.filterNot { it == item.packageName }
-                                            })
-                                        Text(item.name, fontSize = 11.sp, maxLines = 2,
-                                            modifier = Modifier.weight(1f))
-                                    }
-                                }
-                            }
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Outros streamings", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            LazyColumn {
-                                items(otherServices, key = { "catalog:" + it }) { name ->
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = name in catalogDraft,
-                                            onCheckedChange = { checked ->
-                                                catalogDraft = if (checked) catalogDraft + name
-                                                    else catalogDraft - name
-                                            })
-                                        Text(name, fontSize = 11.sp, maxLines = 2,
-                                            modifier = Modifier.weight(1f))
-                                    }
-                                }
+                    LazyColumn(modifier = Modifier.heightIn(max = 440.dp)) {
+                        items(displayed, key = { it.packageName }) { item ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                OfficialTvIcon(app = item, size = 36.dp)
+                                Text(item.name, fontSize = 12.sp,
+                                    modifier = Modifier.weight(1f).padding(start = 8.dp))
+                                Checkbox(checked = item.packageName in draft,
+                                    onCheckedChange = { checked ->
+                                        draft = if (checked) draft + item.packageName
+                                            else draft.filterNot { it == item.packageName }
+                                    })
                             }
                         }
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { draft = emptyList(); catalogDraft = emptySet() }) { Text("Limpar") }
+                        TextButton(onClick = { draft = emptyList() }) { Text("Limpar") }
                         TextButton(onClick = { showManager = false }) { Text("Cancelar") }
                         Spacer(Modifier.width(6.dp))
                         Button(onClick = {
@@ -624,8 +604,6 @@ fun TclInstalledAppsBar(
                             prefs.edit().putString("anytv_catalog_hidden_installed",
                                 allApps.map { it.packageName }.filter { it !in valid }
                                     .sorted().joinToString(",")).apply()
-                            catalogFavorites = catalogDraft
-                            prefs.edit().putString("anytv_catalog_visible_services", catalogDraft.sorted().joinToString(",")).apply()
                             showManager = false
                         }) { Text("Salvar") }
                     }
