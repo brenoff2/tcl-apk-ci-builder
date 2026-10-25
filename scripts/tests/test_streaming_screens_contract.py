@@ -437,7 +437,7 @@ class StreamingScreens(unittest.TestCase):
             'items(shelf.take(sectionVisibleCount).chunked(3))',
             'items(genreTitles.chunked(3))',
             'StreamingCatalog.discoveryGenrePage(',
-            '"Mostrar mais 24"', 'genreShelves[genreKey] =',
+            '"Mostrar mais"', 'genreShelves[genreKey] =',
             'val films = discoveryShelves["Em alta nesta semana"]',
             'val shows = discoveryShelves["Séries em destaque"]',
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
@@ -615,7 +615,7 @@ class StreamingScreens(unittest.TestCase):
             'sectionPage < sectionPageLimit) {',
             'sectionTitle == "Em breve · Streaming" && sectionAll.isEmpty()',
             'Nenhuma assinatura BR confirmada nesta seleção.',
-            'Mostrar mais 24 consulta as próximas páginas.',
+            'Mostrar mais consulta as próximas páginas.',
             'shelf.isEmpty() && heading == "Em breve · Streaming"',
             'Ver mais consulta as próximas páginas.',
         ):
@@ -923,7 +923,7 @@ class StreamingScreens(unittest.TestCase):
             'collected.drop(through - ANYTV_LIST_BATCH).take(ANYTV_LIST_BATCH)',
             'catalogPage24(page) { sourcePage ->',
             'catalogPage24(1) { sourcePage ->',
-            '"Mostrar mais 24"',
+            '"Mostrar mais"',
         ):
             self.assertIn(part, self.screen)
         self.assertNotIn('"Mostrar mais 20"', self.screen)
@@ -1031,7 +1031,7 @@ class StreamingScreens(unittest.TestCase):
             'value = watchingQuery',
             'placeholder = { Text("Buscar nas minhas séries") }',
             '"watching" -> "Séries acompanhadas"',
-            'Text("Mostrar mais 24")',
+            'Text("Mostrar mais")',
         ):
             self.assertIn(snippet, self.screen)
     def test_global_search_is_full_black_overlay_with_independent_history(self):
