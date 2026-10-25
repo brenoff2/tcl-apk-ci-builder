@@ -624,6 +624,11 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('sectionMore = result.more', self.screen)
         self.assertIn('upcomingStreamingMore = streamingFuture.more', self.screen)
 
+    def test_provider_media_buttons_share_home_filter_state(self):
+        self.assertIn('contentType = homeContentType,', self.screen)
+        self.assertNotIn('contentType = if (selected == null) homeContentType else media,', self.screen)
+        self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) continue', self.screen)
+
     def test_selected_provider_uses_genre_keys_consistent_with_tv_tab(self):
         provider = self.screen.split('if (selected != null && !homeLibrary) {', 1)[1].split(
             '} else if (homeLibrary)', 1)[0]
