@@ -2323,6 +2323,12 @@ internal fun TclStreamingScreens(
                                 }
 
                             } else {
+                                if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
+                                    genreShelves["movie:$ANYTV_CINEMA_FILTER:$genreSort"]
+                                        ?.takeIf { it.isNotEmpty() }?.let {
+                                            put("Cinema · Em cartaz no Brasil", it)
+                                        }
+                                }
                                 val kind = (allMovieGenres + tvGenres).firstOrNull {
                                     it.id == selectedHomeGenre
                                 }
