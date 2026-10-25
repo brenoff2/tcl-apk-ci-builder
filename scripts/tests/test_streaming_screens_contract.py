@@ -472,7 +472,7 @@ class StreamingScreens(unittest.TestCase):
             'StreamingCatalog.discoveryGenrePage(',
             '"Mostrar mais"', 'genreShelves[genreKey] =',
             'val films = discoveryShelves["Em alta nesta semana"]',
-            'val shows = discoveryShelves["Séries em destaque"]',
+            'val shows = discoveryShelves["Em alta nesta semana"]',
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'Text(if (item.media == "tv") "S" else "F"',
