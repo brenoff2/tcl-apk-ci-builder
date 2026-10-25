@@ -1411,6 +1411,10 @@ internal fun TclStreamingScreens(
     var editingMyServices by remember { mutableStateOf(storedMyServices) }
     val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var providerListMode by remember { mutableStateOf(false) }
+    var showCatalogEditor by remember { mutableStateOf(false) }
+    val catalogPrefs = remember(context) { context.getSharedPreferences("tcl_tv_installed_apps", Context.MODE_PRIVATE) }
+    var visibleCatalogServices by remember { mutableStateOf(catalogPrefs.getString("anytv_catalog_visible_services", "")?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()) }
+    var hiddenInstalledServices by remember { mutableStateOf(catalogPrefs.getString("anytv_catalog_hidden_installed", "")?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()) }
     val providerListTitles = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val providerListPages = remember { mutableStateMapOf<String, Int>() }
     val providerListMore = remember { mutableStateMapOf<String, Boolean>() }
@@ -2306,22 +2310,56 @@ internal fun TclStreamingScreens(
                 // Home and individual provider use ONE identical catalogue layout.
                     // The same real TV platform shortcuts, compact rather than a large list.
                     Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.End) {
-                        displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
+                        horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        val installed = displayed.filter {
+                            StreamingCatalog.streaming(it) && it.packageName !in hiddenInstalledServices
+                        }
+                        val extra = visibleCatalogServices.sorted().filter { name ->
+                            installed.none { it.name.equals(name, ignoreCase = true) } &&
+                                StreamingCatalog.supportsSubscription(name)
+                        }.map { name -> TvOfficialApp("catalog:" + name, name, "") }
+                        (installed + extra).forEach { app ->
+                            val selectedHere = selected?.packageName == app.packageName
                             Column(modifier = Modifier.width(62.dp).clickable {
                                 selected = app; providerListMode = false
                                 media = "movie"; genre = 0; page = 1
-                                // Keep the active Filmes/Séries and gênero filters when opening a provider.
                                 homeLibrary = false; showGlobalSearch = false
                                 searchDraft = ""; searchTerm = ""; showSaved = false; message = null
                             }.semantics { contentDescription = "Explorar " + app.name },
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                                OfficialTvIcon(app, 56.dp)
+                                Box(modifier = Modifier.size(59.dp)
+                                    .border(if (selectedHere) 2.dp else 0.dp,
+                                        if (selectedHere) Color(0xFFE3383F) else Color.Transparent,
+                                        RoundedCornerShape(15.dp))
+                                    .padding(3.dp), contentAlignment = Alignment.Center) {
+                                    if (app.packageName.startsWith("catalog:")) {
+                                        Box(modifier = Modifier.fillMaxSize()
+                                            .clip(RoundedCornerShape(11.dp))
+                                            .background(Color(0xFF1C1E25)),
+                                            contentAlignment = Alignment.Center) {
+                                            Text(app.name.take(2).uppercase(), fontSize = 16.sp,
+                                                color = Color.White, fontWeight = FontWeight.Bold)
+                                        }
+                                    } else OfficialTvIcon(app, 52.dp)
+                                }
                                 Text(app.name, fontSize = 10.sp, maxLines = 1,
                                     color = Color.White, lineHeight = 11.sp,
                                     overflow = TextOverflow.Ellipsis)
                             }
+                        }
+                        Column(modifier = Modifier.width(62.dp).clickable {
+                            showCatalogEditor = true
+                        }, horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Box(modifier = Modifier.size(56.dp)
+                                .clip(RoundedCornerShape(15.dp))
+                                .background(Color(0xFF1C1E25)),
+                                contentAlignment = Alignment.Center) {
+                                Text("Editar", color = MaterialTheme.colorScheme.primary,
+                                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Text("Streamings", fontSize = 10.sp, maxLines = 1, color = Color.White)
                         }
                     }
                     // Search, content type and genres share one compact line.
@@ -3694,6 +3732,62 @@ internal fun TclStreamingScreens(
                 }
             }
         }
+    }
+    if (showCatalogEditor) {
+        var installedDraft by remember(showCatalogEditor) { mutableStateOf(hiddenInstalledServices) }
+        var extrasDraft by remember(showCatalogEditor) { mutableStateOf(visibleCatalogServices) }
+        val installedServices = displayed.filter { StreamingCatalog.streaming(it) }
+        val otherServices = subscriptionNames.filter { name ->
+            installedServices.none { it.name.equals(name, ignoreCase = true) }
+        }
+        AlertDialog(onDismissRequest = { showCatalogEditor = false },
+            title = { Text("Editar streamings") },
+            text = {
+                Row(modifier = Modifier.fillMaxWidth().heightIn(max = 390.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        Text("Na minha TV", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        installedServices.forEach { app ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = app.packageName !in installedDraft,
+                                    onCheckedChange = { checked ->
+                                        installedDraft = if (checked) installedDraft - app.packageName
+                                            else installedDraft + app.packageName
+                                    })
+                                Text(app.name, fontSize = 11.sp, maxLines = 2)
+                            }
+                        }
+                    }
+                    Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        Text("Outros streamings", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        otherServices.forEach { name ->
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = name in extrasDraft,
+                                    onCheckedChange = { checked ->
+                                        extrasDraft = if (checked) extrasDraft + name
+                                            else extrasDraft - name
+                                    })
+                                Text(name, fontSize = 11.sp, maxLines = 2)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    hiddenInstalledServices = installedDraft
+                    visibleCatalogServices = extrasDraft
+                    catalogPrefs.edit()
+                        .putString("anytv_catalog_hidden_installed",
+                            installedDraft.sorted().joinToString(","))
+                        .putString("anytv_catalog_visible_services",
+                            extrasDraft.sorted().joinToString(",")).apply()
+                    showCatalogEditor = false
+                }) { Text("Salvar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCatalogEditor = false }) { Text("Cancelar") }
+            })
     }
     if (showMyStreamingSettings) {
         val availableGenres = (allMovieGenres + tvGenres).groupBy { it.name }
