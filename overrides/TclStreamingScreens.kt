@@ -2176,7 +2176,9 @@ internal fun TclStreamingScreens(
             "Novas temporadas" to newSeasons,
             "Filmes e séries mais assistidos" to popular, "Mais bem avaliados" to best)
             .forEach { (heading, titles) ->
-                if (titles.isNotEmpty()) shelves[heading] = titles
+                if (titles.isNotEmpty() || heading in setOf(
+                    "Filmes recém-lançados", "Séries novas", "Novas temporadas"))
+                    shelves[heading] = titles
             }
         discoveryShelves = shelves
         discoveryLoading = false
@@ -2805,6 +2807,7 @@ internal fun TclStreamingScreens(
                             }
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty() &&
+                            heading !in setOf("Filmes recém-lançados", "Séries novas", "Novas temporadas") &&
                             !(heading == "Em breve · Filmes e séries" && upcomingStreamingMore) &&
                             !(activeServiceNames.isNotEmpty() && selected == null &&
                                 !homeLibrary && selectedHomeGenre == 0))
@@ -3733,6 +3736,13 @@ internal fun TclStreamingScreens(
                                             shape = RoundedCornerShape(20.dp)
                                         ) { Text("Mostrar mais") }
                                     }
+                                }
+                            } else if (shelf.isEmpty() && heading in setOf(
+                                "Filmes recém-lançados", "Séries novas", "Novas temporadas")) {
+                                item {
+                                    Text("Nenhum título com data e classificação confirmadas nesta seleção.",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else if (shelf.isEmpty() &&
                                 activeServiceNames.isNotEmpty() && selected == null) {
