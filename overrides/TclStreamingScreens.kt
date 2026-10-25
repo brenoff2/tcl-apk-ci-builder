@@ -148,7 +148,7 @@ private fun anyTvRecentPremiere(item: StreamingTitle): Boolean {
     return item.date >= cutoff
 }
 internal data class StreamingGenre(val id: Int, val name: String)
-internal data class StreamingSeason(val number: Int, val name: String, val count: Int)
+internal data class StreamingSeason(val number: Int, val name: String, val count: Int, val airDate: String = "")
 internal data class StreamingEpisode(val number: Int, val name: String, val airDate: String)
 internal data class StreamingOffer(val id: Int, val name: String, val logo: String)
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
@@ -609,6 +609,57 @@ private object StreamingCatalog {
             }
         }
 
+    /** Recently premiered movies and first-run series; never reuse theatrical now_playing. */
+    suspend fun recentPremieres(media: String): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+            require(media == "movie" || media == "tv")
+            val cutoff = java.util.Calendar.getInstance().apply {
+                add(java.util.Calendar.DAY_OF_YEAR, -90)
+            }.time
+            val formatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            val lower = formatter.format(cutoff)
+            val dateField = if (media == "tv") "first_air_date" else "primary_release_date"
+            val route = "discover/$media?language=pt-BR&include_adult=false" +
+                "&sort_by=$dateField.desc&$dateField.gte=$lower" +
+                "&$dateField.lte=${anyTvToday()}&page=1"
+            val payload = get("backend", route)
+            val titles = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+                .filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
+            if (media == "movie") {
+                // Only confirmed BR flatrate titles qualify as new streaming films;
+                // an item currently in cinemas is not a streaming premiere claim.
+                val gate = Semaphore(4)
+                coroutineScope {
+                    titles.map { title -> async {
+                        gate.withPermit {
+                            val offers = runCatching { offersInBrazil(title) }.getOrDefault(emptyList())
+                            title.takeIf { offers.isNotEmpty() }
+                        }
+                    }}.awaitAll().filterNotNull()
+                }
+            } else titles
+        }
+
+    /** Confirm a newly premiered season of a previously established series. */
+    suspend fun recentlyStartedSeasons(): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+            val ongoing = discoveryShelf("tv/on_the_air", "tv")
+                .filter { !anyTvIsAnime(it) && anyTvReleased(it) && !anyTvRecentPremiere(it) }
+                .take(24)
+            val gate = Semaphore(4)
+            coroutineScope {
+                ongoing.map { title -> async {
+                    gate.withPermit {
+                        val seasons = runCatching { seasons(title.id) }.getOrDefault(emptyList())
+                        title.takeIf { seasons.any {
+                            it.number > 1 && it.airDate.isNotBlank() &&
+                                anyTvRecentPremiere(title.copy(date = it.airDate))
+                        }}
+                    }
+                }}.awaitAll().filterNotNull()
+            }
+        }
+
     /** Future film/TV releases are factual TMDB dates, not confirmed subscriptions. */
     suspend fun discoveryUpcomingStreaming(): List<StreamingTitle> =
         discoveryUpcomingStreamingPage(1).titles
@@ -718,7 +769,7 @@ private object StreamingCatalog {
             if (season < 0 || count <= 0) null
             else StreamingSeason(season, e.optString("name").ifBlank {
                 if (season == 0) "Especiais" else "Temporada $season"
-            }, count)
+            }, count, e.optString("air_date"))
         }
     }
     suspend fun episodes(id: Int, season: Int): List<StreamingEpisode> =
@@ -2079,8 +2130,6 @@ internal fun TclStreamingScreens(
             Triple("Mais bem avaliados", "movie/top_rated", "movie"),
             Triple("Mais bem avaliados · Séries", "tv/top_rated", "tv"),
             Triple("Séries em destaque", "trending/tv/week", "tv"),
-            Triple("Novidades em filmes", "movie/now_playing", "movie"),
-            Triple("Novidades em séries", "tv/on_the_air", "tv"),
             Triple("Filmes e séries mais assistidos · Filmes", "movie/popular", "movie"),
             Triple("Filmes e séries mais assistidos · Séries", "tv/popular", "tv")
         )) {
@@ -2097,15 +2146,18 @@ internal fun TclStreamingScreens(
             }
         val weekly = interleave(shelves.remove("Em alta nesta semana").orEmpty(),
             shelves.remove("Séries em destaque").orEmpty())
-        val news = interleave(shelves.remove("Novidades em filmes").orEmpty(),
-            shelves.remove("Novidades em séries").orEmpty())
-            .filter(::anyTvRecentPremiere).sortedByDescending { it.date }
+        val recentMovies = runCatching { StreamingCatalog.recentPremieres("movie") }.getOrDefault(emptyList())
+        val newSeries = runCatching { StreamingCatalog.recentPremieres("tv") }.getOrDefault(emptyList())
+        val newSeasons = runCatching { StreamingCatalog.recentlyStartedSeasons() }.getOrDefault(emptyList())
         val popular = interleave(shelves.remove("Filmes e séries mais assistidos · Filmes").orEmpty(),
             shelves.remove("Filmes e séries mais assistidos · Séries").orEmpty())
         val best = interleave(shelves.remove("Mais bem avaliados").orEmpty(),
             shelves.remove("Mais bem avaliados · Séries").orEmpty())
         shelves.clear()
-        linkedMapOf("Em alta nesta semana" to weekly, "Novidades" to news,
+        linkedMapOf("Em alta nesta semana" to weekly,
+            "Filmes recém-lançados" to recentMovies,
+            "Séries novas" to newSeries,
+            "Novas temporadas" to newSeasons,
             "Filmes e séries mais assistidos" to popular, "Mais bem avaliados" to best)
             .forEach { (heading, titles) ->
                 if (titles.isNotEmpty()) shelves[heading] = titles
@@ -2729,7 +2781,9 @@ internal fun TclStreamingScreens(
                                 heading == ANYTV_CINEMA_SHELF ->
                                     title.media == "movie" // Source is now_playing BR
                                 heading.startsWith("Em breve") -> anyTvUpcoming(title)
-                                heading == "Novidades" -> anyTvRecentPremiere(title)
+                                heading in setOf("Filmes recém-lançados", "Séries novas") ->
+                                    anyTvRecentPremiere(title) && (title.media != "movie" || title.id !in cinemaIds)
+                                heading == "Novas temporadas" -> title.media == "tv"
                                 else -> anyTvReleased(title) &&
                                     (title.media != "movie" || title.id !in cinemaIds)
                             }
@@ -2762,10 +2816,8 @@ internal fun TclStreamingScreens(
                             val sectionPageLimit = if (sectionTitle == "Em breve · Filmes e séries") 50 else 42
                             val editorialRoute = when (sectionTitle) {
                                 "Em alta nesta semana" -> "trending/movie/week" to "movie"
-                                "Novidades" -> "movie/now_playing" to "movie"
                                 "Mais bem avaliados" -> "movie/top_rated" to "movie"
                                 "Séries em destaque" -> "trending/tv/week" to "tv"
-                                "Novidades em séries" -> "tv/on_the_air" to "tv"
                                 "Filmes e séries mais assistidos" -> "movie/popular" to "movie"
                                 else -> null
                             }
@@ -2843,18 +2895,16 @@ internal fun TclStreamingScreens(
                                                 scope.launch {
                                                     runCatching {
                                                         when {
-                                                            sectionTitle in setOf("Em alta nesta semana", "Novidades",
+                                                            sectionTitle in setOf("Em alta nesta semana",
                                                                 "Filmes e séries mais assistidos",
                                                                 "Mais bem avaliados") -> {
                                                                 val movieRoute = when (sectionTitle) {
                                                                     "Em alta nesta semana" -> "trending/movie/week"
-                                                                    "Novidades" -> "movie/now_playing"
                                                                     "Mais bem avaliados" -> "movie/top_rated"
                                                                     else -> "movie/popular"
                                                                 }
                                                                 val seriesRoute = when (sectionTitle) {
                                                                     "Em alta nesta semana" -> "trending/tv/week"
-                                                                    "Novidades" -> "tv/on_the_air"
                                                                     "Mais bem avaliados" -> "tv/top_rated"
                                                                     else -> "tv/popular"
                                                                 }
@@ -2914,7 +2964,7 @@ internal fun TclStreamingScreens(
                                                                 anyTvUpcoming(it) &&
                                                                     (homeContentType == "all" ||
                                                                         it.media == homeContentType)
-                                                            else (if (sectionTitle == "Novidades")
+                                                            else (if (sectionTitle in setOf("Filmes recém-lançados", "Séries novas"))
                                                                 anyTvRecentPremiere(it) else anyTvReleased(it)) &&
                                                                 (it.media != "movie" ||
                                                                     it.id !in cinemaIds)
