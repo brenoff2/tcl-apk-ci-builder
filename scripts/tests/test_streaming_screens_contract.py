@@ -606,18 +606,18 @@ class StreamingScreens(unittest.TestCase):
         # The user must still be able to open this section and request page 2.
         for value in (
             'if (future.isNotEmpty() || upcomingStreamingMore)',
-            'put("Em breve · Streaming", future)',
+            'put("Em breve · Filmes e séries", future)',
             'if (unique.isEmpty() &&',
-            '!(heading == "Em breve · Streaming" && upcomingStreamingMore)',
-            'val sectionPageLimit = if (sectionTitle == "Em breve · Streaming") 50 else 42',
+            '!(heading == "Em breve · Filmes e séries" && upcomingStreamingMore)',
+            'val sectionPageLimit = if (sectionTitle == "Em breve · Filmes e séries") 50 else 42',
             'sectionPage < sectionPageLimit &&',
             'sectionAll.isNotEmpty() ||',
-            'sectionTitle == "Em breve · Streaming")))',
+            'sectionTitle == "Em breve · Filmes e séries")))',
             'sectionPage < sectionPageLimit) {',
-            'sectionTitle == "Em breve · Streaming" && sectionAll.isEmpty()',
-            'Nenhuma assinatura BR confirmada nesta seleção.',
+            'sectionTitle == "Em breve · Filmes e séries" && sectionAll.isEmpty()',
+            'Nenhum lançamento futuro com oferta BR confirmada nesta seleção.',
             'Mostrar mais consulta as próximas páginas.',
-            'shelf.isEmpty() && heading == "Em breve · Streaming"',
+            'shelf.isEmpty() && heading == "Em breve · Filmes e séries"',
             'Ver mais consulta as próximas páginas.',
         ):
             with self.subTest(value=value):
@@ -690,15 +690,15 @@ class StreamingScreens(unittest.TestCase):
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'upcomingStreaming = streamingFuture.titles',
             'upcomingStreamingMore = streamingFuture.more',
-            'sectionMore = if (openedSection == "Em breve · Streaming")',
+            'sectionMore = if (openedSection == "Em breve · Filmes e séries")',
             'visibleShelves[sectionTitle].orEmpty()',
-            'homeProvider != null || sectionTitle == "Em breve · Streaming"',
-            'sectionTitle == "Em breve · Streaming" ->',
+            'homeProvider != null || sectionTitle == "Em breve · Filmes e séries"',
+            'sectionTitle == "Em breve · Filmes e séries" ->',
             'StreamingCatalog.discoveryUpcomingStreamingPage(next)',
             'anyTvUpcoming(it) &&',
             '(homeContentType == "all" ||',
             'it.media == homeContentType)',
-            'heading == "Em breve · Streaming" &&',
+            'heading == "Em breve · Filmes e séries" &&',
             'upcomingStreamingMore',
         ):
             with self.subTest(piece=piece):
@@ -937,7 +937,7 @@ class StreamingScreens(unittest.TestCase):
     def test_genre_and_cinema_one_row_previews_precede_results(self):
         self.assertIn('private fun AnyTvOneRowPreview(', self.screen)
         self.assertIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
-        self.assertIn('"Em breve · Cinema" else "Em breve · Streaming"', self.screen)
+        self.assertIn('"Em breve · Cinema" else "Em breve · Filmes e séries"', self.screen)
         self.assertIn('StreamingCatalog.discoveryCinemaInternational()', self.screen)
         self.assertIn('StreamingCatalog.discoveryShelf("movie/upcoming", "movie")',
                       self.screen)
