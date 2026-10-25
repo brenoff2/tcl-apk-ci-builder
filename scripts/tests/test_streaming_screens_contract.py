@@ -478,7 +478,7 @@ class StreamingScreens(unittest.TestCase):
             'style = TextStyle(shadow = Shadow(',
             'Offset(0f, 2f), blurRadius = 6f',
             'val year = current.date.take(4)',
-            'if (current.votes > 0)',
+            'AnyTvRatingOverlay(current)',
             'current.id in cinemaIds',
             'Text("Cinema", modifier = Modifier',
             'repeat(heroTitles.size) { dot ->',
@@ -487,19 +487,12 @@ class StreamingScreens(unittest.TestCase):
             self.assertIn(value, hero)
         self.assertNotIn('Text(if (pagerState.currentPage == dot)', hero)
 
-    def test_streaming_navigation_wraps_only_on_narrow_screens(self):
+    def test_streaming_navigation_stays_one_line_on_mobile(self):
         nav = self.screen.split('private fun AnyTvStreamNavBar(', 1)[1].split(
             'private fun AnyTvCompactChip(', 1)[0]
-        for value in (
-            'BoxWithConstraints(modifier = Modifier.fillMaxWidth())',
-            'if (maxWidth < 390.dp)',
-            'val chips: @Composable () -> Unit = {',
-            'val actions: @Composable () -> Unit = {',
-            'Modifier.horizontalScroll(actionScroll)',
-            'chips()',
-            'actions()',
-        ):
-            self.assertIn(value, nav)
+        self.assertIn('Box(modifier = Modifier.weight(1f)) { actions() }', nav)
+        self.assertNotIn('if (maxWidth < 390.dp)', nav)
+        self.assertIn('Modifier.horizontalScroll(actionScroll)', nav)
         self.assertEqual(nav.count('TclHeaderAction(Icons.Filled.'), 6)
 
     def test_provider_ver_mais_uses_same_media_genre_as_initial_shelf(self):
@@ -994,29 +987,21 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('cinemaIds = cinemaIds + result.titles.map { it.id }', self.screen)
         self.assertNotIn('inCinema = offerings.isEmpty()', self.screen)
 
-    def test_shared_card_preserves_existing_streaming_icons_and_metadata_order(self):
+    def test_shared_card_overlays_and_metadata_order(self):
         shared = self.screen.split('private fun AnyTvPosterCard(', 1)[1].split(
             '/** One horizontal strip', 1)[0]
-        a = shared.index('AnyTvPinnedImage(')
-        b = shared.index('AnyTvCardMetaRow(')
-        c = shared.index('Text(title.name,')
-        d = shared.index('StreamingOfferIcons(')
-        self.assertTrue(a < b < c < d)
-        for snippet in (
-            'tint = if (favorite) Color(0xFFE04B57) else neutral',
-            'tint = if (marked) Color(0xFF1CB96B) else neutral',
-            'OfficialTvIcon(installed, 14.dp)',
-            'Text(if (item.media == "tv") "S" else "F"',
-            'posterCard(title, Modifier.weight(1f)',
-            'posterCard(series, Modifier.weight(1f), false)',
-            'posterCard(found, Modifier.weight(1f), false)',
-            'posterCard(suggested, Modifier.width(cardWidth), false)',
-            'posterCard(title, Modifier.width(cardWidth)',
-        ):
-            self.assertIn(snippet, self.screen)
-        self.assertNotIn('ContentScale.Crop', shared)
-        self.assertNotIn('AnyTvGenreViewIcon(Icons.Filled.ViewList', self.screen)
-        self.assertNotIn('AnyTvGenreViewIcon(Icons.Filled.GridView', self.screen)
+        self.assertLess(shared.index('AnyTvPinnedImage('),
+                        shared.index('AnyTvRatingOverlay(title,'))
+        self.assertLess(shared.index('AnyTvRatingOverlay(title,'),
+                        shared.index('StreamingOfferIcons('))
+        self.assertLess(shared.index('StreamingOfferIcons('),
+                        shared.index('Text(title.name,'))
+        self.assertIn('showYear = true', shared)
+        self.assertIn('maxLines = 2', shared)
+        self.assertIn('contentScale = ContentScale.Fit', shared)
+        self.assertIn('if (favorite) Color(0xFFE04B57) else Color.White', shared)
+        self.assertIn('if (marked) Color(0xFF1CB96B) else Color.White', shared)
+
     def test_continuando_persisted_three_column_grid_and_search(self):
         for snippet in (
             '"anytv_watching_titles_v1"', 'fun rememberWatchingTitle(title: StreamingTitle)',
