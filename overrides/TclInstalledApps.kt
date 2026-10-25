@@ -298,6 +298,7 @@ fun TclInstalledAppsBar(
     }
     var showPair by remember(deviceKey, host) { mutableStateOf(false) }
     var showManager by remember(deviceKey, host) { mutableStateOf(false) }
+    var catalogFavorites by remember { mutableStateOf(prefs.getString("anytv_catalog_visible_services", "")?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()) }
     var showStreaming by remember(deviceKey, host) { mutableStateOf(false) }
     var busy by remember(deviceKey, host) { mutableStateOf(false) }
     var errorText by remember(deviceKey, host) { mutableStateOf<String?>(null) }
@@ -421,7 +422,7 @@ fun TclInstalledAppsBar(
                         .background(Color(0xFF1C1E25))
                         .clickable { showManager = true },
                     contentAlignment = Alignment.Center
-                ) { Text("+", color = MaterialTheme.colorScheme.primary, fontSize = 23.sp) }
+                ) { Text("Editar", color = MaterialTheme.colorScheme.primary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
             }
         } else {
             OutlinedButton(
@@ -507,6 +508,9 @@ fun TclInstalledAppsBar(
 
     if (showManager) {
         var draft by remember(deviceKey, host, showManager) { mutableStateOf(favorites) }
+        var catalogDraft by remember(deviceKey, host, showManager) { mutableStateOf(catalogFavorites) }
+        val otherServices = listOf("Netflix", "Prime Video", "Disney+", "Max", "Paramount+", "Apple TV+", "Globoplay", "Crunchyroll", "Mubi", "Telecine", "Looke", "Claro Video")
+            .filter { service -> allApps.none { it.name.equals(service, ignoreCase = true) } }
         val present = allApps.associateBy { it.packageName }
         val displayed = allApps.sortedWith(
             compareBy<TvOfficialApp> { if (it.packageName in draft) 0 else 1 }
@@ -523,57 +527,48 @@ fun TclInstalledAppsBar(
             ) {
                 Column(modifier = Modifier.padding(15.dp),
                     verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("Seus aplicativos", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    Text("Ícones oficiais da TV. Marque os favoritos e use ↑ ↓ para ordenar.",
+                    Text("Editar streamings", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text("Escolha quais serviços aparecem na faixa. Instalação e seleção do catálogo são independentes.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
-                    LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
-                        items(displayed, key = { it.packageName }) { item ->
-                            val selected = item.packageName in draft
-                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                                verticalAlignment = Alignment.CenterVertically) {
-                                OfficialTvIcon(app = item, size = 39.dp)
-                                Spacer(Modifier.width(7.dp))
-                                Text(item.name, modifier = Modifier.weight(1f),
-                                    maxLines = 1, overflow = TextOverflow.Ellipsis,
-                                    fontSize = 12.sp)
-                                if (selected) {
-                                    TextButton(
-                                        onClick = {
-                                            val pos = draft.indexOf(item.packageName)
-                                            if (pos > 0) {
-                                                val list = draft.toMutableList()
-                                                java.util.Collections.swap(list, pos, pos - 1)
-                                                draft = list
-                                            }
-                                        },
-                                        enabled = draft.indexOf(item.packageName) > 0
-                                    ) { Text("↑") }
-                                    TextButton(
-                                        onClick = {
-                                            val pos = draft.indexOf(item.packageName)
-                                            if (pos >= 0 && pos < draft.lastIndex) {
-                                                val list = draft.toMutableList()
-                                                java.util.Collections.swap(list, pos, pos + 1)
-                                                draft = list
-                                            }
-                                        },
-                                        enabled = draft.indexOf(item.packageName) < draft.lastIndex
-                                    ) { Text("↓") }
-                                }
-                                Checkbox(
-                                    checked = selected,
-                                    onCheckedChange = { checked ->
-                                        draft = if (checked) draft + item.packageName
-                                        else draft.filterNot { it == item.packageName }
+                    Row(modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Na minha TV", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            LazyColumn {
+                                items(displayed, key = { "tv:" + it.packageName }) { item ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = item.packageName in draft,
+                                            onCheckedChange = { checked ->
+                                                draft = if (checked) draft + item.packageName
+                                                    else draft.filterNot { it == item.packageName }
+                                            })
+                                        Text(item.name, fontSize = 11.sp, maxLines = 2,
+                                            modifier = Modifier.weight(1f))
                                     }
-                                )
+                                }
+                            }
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Outros streamings", fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                            LazyColumn {
+                                items(otherServices, key = { "catalog:" + it }) { name ->
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = name in catalogDraft,
+                                            onCheckedChange = { checked ->
+                                                catalogDraft = if (checked) catalogDraft + name
+                                                    else catalogDraft - name
+                                            })
+                                        Text(name, fontSize = 11.sp, maxLines = 2,
+                                            modifier = Modifier.weight(1f))
+                                    }
+                                }
                             }
                         }
                     }
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { draft = emptyList() }) { Text("Limpar") }
+                        TextButton(onClick = { draft = emptyList(); catalogDraft = emptySet() }) { Text("Limpar") }
                         TextButton(onClick = { showManager = false }) { Text("Cancelar") }
                         Spacer(Modifier.width(6.dp))
                         Button(onClick = {
@@ -581,6 +576,8 @@ fun TclInstalledAppsBar(
                             favorites = valid
                             hasUserFavorites = true
                             storeFavorites(valid)
+                            catalogFavorites = catalogDraft
+                            prefs.edit().putString("anytv_catalog_visible_services", catalogDraft.sorted().joinToString(",")).apply()
                             showManager = false
                         }) { Text("Salvar") }
                     }
