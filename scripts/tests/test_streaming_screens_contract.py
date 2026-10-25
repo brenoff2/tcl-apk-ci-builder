@@ -244,7 +244,7 @@ class StreamingScreens(unittest.TestCase):
     def test_watched_and_tracking_history_does_not_depend_on_heart(self):
         self.assertIn('fun restoreTrackedTitle(media: String, id: Int)', self.screen)
         self.assertIn('StreamingDiskCache.previousTitle(media, id)', self.screen)
-        self.assertIn('val history = watchedFilms.mapNotNull', self.screen)
+        self.assertIn('val history = (watchedFilms.mapNotNull', self.screen)
         self.assertIn('val trackedIds = trackedSeries +', self.screen)
         self.assertIn('val watching = trackedIds.mapNotNull', self.screen)
         self.assertIn('"Filmes e séries assistidos", history', self.screen)
