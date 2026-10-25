@@ -1475,7 +1475,7 @@ internal fun TclStreamingScreens(
             ?.takeIf { it in setOf("popular", "rating", "recent", "title") } ?: "popular")
     }
     var genreSortMenu by remember { mutableStateOf(false) }
-    var genreViewMode by remember { mutableStateOf("detalhado") }
+    var genreViewMode by remember { mutableStateOf("grade") }
     var genreSectionsMode by remember { mutableStateOf(false) }
     val catalogScrollState = rememberLazyListState()
     var showGenreSettings by remember { mutableStateOf(false) }
@@ -1792,53 +1792,6 @@ internal fun TclStreamingScreens(
     var trailerLink by remember { mutableStateOf<String?>(null) }
     var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     val offerCache = remember { mutableStateMapOf<String, List<StreamingOffer>>() }
-    // An addition is evidence only after this same title's BR provider list
-    // was observed previously. The first scan establishes the baseline.
-    var newArrivalTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
-    LaunchedEffect(offerCache.toMap()) {
-        val snapshot = runCatching {
-            JSONObject(prefs.getString("anytv_br_provider_snapshot_v1", "{}") ?: "{}")
-        }.getOrDefault(JSONObject())
-        val now = System.currentTimeMillis()
-        val history = runCatching {
-            JSONArray(prefs.getString("anytv_br_provider_arrivals_v1", "[]") ?: "[]")
-        }.getOrDefault(JSONArray())
-        val recentRecords = mutableListOf<JSONObject>()
-        val knownArrivalKeys = mutableSetOf<String>()
-        for (index in 0 until history.length()) {
-            val record = history.optJSONObject(index) ?: continue
-            val key = record.optString("media") + ":" + record.optInt("id")
-            if (now - record.optLong("observed_at", 0L) in 0L..2592000000L &&
-                knownArrivalKeys.add(key)) recentRecords.add(record)
-        }
-        for ((key, offers) in offerCache) {
-            val current = offers.map { it.id }.filter { it > 0 }.toSet()
-            val previous = snapshot.optString(key).split(",")
-                .mapNotNull { it.toIntOrNull() }.toSet()
-            if (snapshot.has(key) && (current - previous).isNotEmpty() &&
-                key !in knownArrivalKeys) {
-                val media = key.substringBefore(":")
-                val id = key.substringAfter(":").toIntOrNull() ?: 0
-                val title = restoreTrackedTitle(media, id)
-                if (title != null && !anyTvIsAnime(title) &&
-                    (media != "movie" || id !in cinemaIds)) {
-                    recentRecords.add(JSONObject().put("media", media).put("id", id)
-                        .put("observed_at", now))
-                    knownArrivalKeys.add(key)
-                }
-            }
-            snapshot.put(key, current.sorted().joinToString(","))
-        }
-        prefs.edit()
-            .putString("anytv_br_provider_snapshot_v1", snapshot.toString())
-            .putString("anytv_br_provider_arrivals_v1",
-                JSONArray(recentRecords.takeLast(48)).toString()).apply()
-        newArrivalTitles = recentRecords.asReversed().mapNotNull { record ->
-            restoreTrackedTitle(record.optString("media"), record.optInt("id"))
-        }.filterNot(::anyTvIsAnime).filterNot {
-            it.media == "movie" && it.id in cinemaIds
-        }.take(24)
-    }
     var detailsOffers by remember { mutableStateOf<List<StreamingOffer>?>(null) }
     var detailLoading by remember { mutableStateOf(false) }
     var seriesSeasons by remember { mutableStateOf<List<StreamingSeason>>(emptyList()) }
@@ -2027,7 +1980,7 @@ internal fun TclStreamingScreens(
     }
     LaunchedEffect(selectedHomeGenre) {
         if (selectedHomeGenre != 0) {
-            genreViewMode = "detalhado"
+            genreViewMode = "grade"
             genreSectionsMode = false
         }
     }
@@ -2461,11 +2414,15 @@ internal fun TclStreamingScreens(
                 verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 // Line 1: title; line 2: genres; line 3: official badges,
                 // year and confirmed BR subscription logos.
-                Text(title.name, fontSize = 14.sp,
+                Text(title.name, fontSize = 14.sp, lineHeight = 15.sp,
+                    style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                        includeFontPadding = false)),
                     fontWeight = FontWeight.SemiBold, maxLines = 2)
                 val genres = anyTvGenreLabels(title, allMovieGenres, tvGenres)
                 if (genres.isNotBlank()) {
-                    Text(genres, fontSize = 11.sp, maxLines = 2,
+                    Text(genres, fontSize = 11.sp, lineHeight = 12.sp, maxLines = 2,
+                        style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                            includeFontPadding = false)),
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 StreamingOfferIcons(title, offerCache, displayed,
@@ -2474,9 +2431,12 @@ internal fun TclStreamingScreens(
                 val summary = title.overview.trim()
                 if (summary.isNotBlank()) {
                     Text(summary, fontSize = 12.sp, lineHeight = 15.sp,
+                        style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(
+                            includeFontPadding = false)),
                         maxLines = 7, overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Spacer(Modifier.height(9.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     OutlinedButton(onClick = {
@@ -2627,7 +2587,7 @@ internal fun TclStreamingScreens(
                             selectedHomeGenre = 0; homeLibrary = false
                         }
                         AnyTvCompactChip("Anime", selectedHomeGenre == ANYTV_ANIME_FILTER) {
-                            selectedHomeGenre = ANYTV_ANIME_FILTER; homeLibrary = false
+                            selectedHomeGenre = ANYTV_ANIME_FILTER; selected = null; homeLibrary = false
                         }
                         if (homeContentType != "tv") {
                             AnyTvCompactChip("Cinema", selectedHomeGenre == ANYTV_CINEMA_FILTER) {
@@ -2639,7 +2599,7 @@ internal fun TclStreamingScreens(
                             val selectedKindId = anyTvResolvedGenre(selectedHomeGenre,
                                 selectedGenreKind, allMovieGenres, tvGenres)
                             AnyTvCompactChip(kind.name, selectedKindId == kind.id) {
-                                selectedHomeGenre = kind.id; homeLibrary = false
+                                selectedHomeGenre = kind.id; selected = null; homeLibrary = false
                             }
                         }
                         TextButton(onClick = {
@@ -2715,7 +2675,6 @@ internal fun TclStreamingScreens(
                             }
                         } else {
                             if (selectedHomeGenre == 0) {
-                                put("Recém-chegados ao Streaming", newArrivalTitles)
                                 discoveryShelves.forEach { (heading, titles) ->
                                     if (heading != ANYTV_CINEMA_SHELF) {
                                         val selectedTitles = titles.filter {
@@ -2867,7 +2826,7 @@ internal fun TclStreamingScreens(
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty() &&
                             heading !in setOf("Filmes recém-lançados", "Séries novas",
-                                "Novas temporadas", "Recém-chegados ao Streaming") &&
+                                "Novas temporadas") &&
                             !(heading == "Em breve · Filmes e séries" && upcomingStreamingMore) &&
                             !(activeServiceNames.isNotEmpty() && selected == null &&
                                 !homeLibrary && selectedHomeGenre == 0))
@@ -3099,7 +3058,7 @@ internal fun TclStreamingScreens(
                                             selectedHomeGenre != ANYTV_CINEMA_FILTER && !homeLibrary)) {
                                         OutlinedButton(onClick = {
                                             if (selected != null) providerListMode = !providerListMode
-                                            else genreSectionsMode = !genreSectionsMode
+                                            else { genreSectionsMode = !genreSectionsMode; genreViewMode = "grade" }
                                         }, shape = RoundedCornerShape(11.dp),
                                             modifier = Modifier.height(34.dp),
                                             contentPadding = PaddingValues(horizontal = 12.dp,
@@ -3777,13 +3736,6 @@ internal fun TclStreamingScreens(
                                             shape = RoundedCornerShape(20.dp)
                                         ) { Text("Mostrar mais") }
                                     }
-                                }
-                            } else if (shelf.isEmpty() &&
-                                heading == "Recém-chegados ao Streaming") {
-                                item {
-                                    Text("Ainda não houve entrada nova confirmada desde a última consulta. O AnyTV compara mudanças reais de disponibilidade nos serviços consultados.",
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             } else if (shelf.isEmpty() && heading in setOf(
                                 "Filmes recém-lançados", "Séries novas", "Novas temporadas")) {
