@@ -171,6 +171,30 @@ jobs:
               assert isinstance(results, list) and len(results) > 0, (kind, title)
               print("ANYTV_LIVE_GLOBAL_SEARCH_SUCCESS", kind, title, len(results))
           PY
+      - name: Verificar em tempo real as rotas Anime e lancamentos do Worker
+        run: |
+          python3 - <<'PY'
+          import json
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+          base = "https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/"
+          routes = (
+              ("discover/movie", {"language":"pt-BR", "include_adult":"false",
+                   "sort_by":"primary_release_date.desc", "page":"1"}),
+              ("discover/tv", {"language":"pt-BR", "include_adult":"false",
+                   "sort_by":"first_air_date.desc", "page":"1"}),
+              ("discover/tv", {"language":"pt-BR", "include_adult":"false",
+                   "with_genres":"16", "sort_by":"popularity.desc", "page":"1"}),
+          )
+          for route, args in routes:
+              url = base + route + "?" + urlencode(args)
+              with urlopen(Request(url, headers={"Accept":"application/json",
+                     "User-Agent":"AnyTV-Release-Integration-Test"}), timeout=20) as resp:
+                  assert resp.status == 200, (route, resp.status)
+                  payload = json.load(resp)
+              assert isinstance(payload.get("results"), list), (route, payload)
+              print("ANYTV_WORKER_ROUTE_CONFIRMED", route, args.get("with_genres", "all"))
+          PY
       - name: Auditar APK e guardar release nao assinado
         run: |
           set -euo pipefail
