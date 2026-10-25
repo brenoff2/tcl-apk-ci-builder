@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 71,
+  "expected_version_code": 72,
   "preserve_legacy_ota": true,
-  "source": "Anime exclusive by original Japanese language and animation genre, fix Anime sentinel filter, separate Anime from main/provider catalog and previews, genre/Anime detailed list default with Ver em seções toggle; preserve 90-day Novidades and compact detail. Legacy provider toggle text assertions reconciled to shared control, commit cc143d3.",
+  "source": "User-requested repair: separate Cinema from recent streaming releases, replace Novidades with BR-flatrate-confirmed recent movies, recently premiered series and verified new seasons, disclose missing provider arrival history; repair Anime discovery and exclusive Japanese animation filtering; remove duplicated genre rails.",
   "new_install_only": false,
-  "release_version": "2.9.42-AnyTV",
-  "release_scope": "Signed AnyTV 2.9.42/code71 OTA, original signer, protected CI, original cert2026 untouched; require signed APK and remote byte-readback.",
-  "ci_revision": 38
+  "release_version": "2.9.43-AnyTV",
+  "release_scope": "Official signed V2 2.9.43/code72 OTA, preserve original signer and legacy cert2026; require full contracts/build, signed artifact and GitHub HTTPS byte readback; no Worker deployment.",
+  "ci_revision": 39
 }
