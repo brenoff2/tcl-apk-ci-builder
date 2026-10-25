@@ -3,9 +3,9 @@
   "intent": "release-independent-phone-v2",
   "expected_version_code": 72,
   "preserve_legacy_ota": true,
-  "source": "User-requested repair: separate Cinema from recent streaming releases, replace Novidades with BR-flatrate-confirmed recent movies, recently premiered series and verified new seasons, disclose missing provider arrival history; repair Anime discovery and exclusive Japanese animation filtering; remove duplicated genre rails.",
+  "source": "User-requested repair: separate Cinema from recent streaming releases, replace Novidades with BR-flatrate-confirmed recent movies, recently premiered series and verified new seasons, disclose missing provider arrival history; repair Anime discovery and exclusive Japanese animation filtering; remove duplicated genre rails. Expand BR theatrical exclusion reference across first four cinema pages (commit 934cccdf).",
   "new_install_only": false,
   "release_version": "2.9.43-AnyTV",
   "release_scope": "Official signed V2 2.9.43/code72 OTA, preserve original signer and legacy cert2026; require full contracts/build, signed artifact and GitHub HTTPS byte readback; no Worker deployment.",
-  "ci_revision": 39
+  "ci_revision": 40
 }
