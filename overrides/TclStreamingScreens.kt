@@ -326,6 +326,9 @@ private object StreamingCatalog {
     }
 
     fun supportsSubscription(name: String): Boolean = provider(name) != null
+    fun matchesSelectedSubscription(offer: StreamingOffer, selections: List<String>): Boolean =
+        selections.any { service -> provider(service) != null &&
+            provider(service) == provider(offer.name) }
 
     fun streaming(app: TvOfficialApp): Boolean =
         provider(app.name) != null ||
@@ -1953,6 +1956,22 @@ internal fun TclStreamingScreens(
         }
     }
 
+    // Keep every editorial section when filtering subscriptions, but show only
+    // titles with a confirmed BR offer from one of the selected providers.
+    LaunchedEffect(discoveryShelves, upcomingStreaming, activeServiceNames) {
+        if (activeServiceNames.isNotEmpty()) {
+            val candidates = (discoveryShelves.values.flatten() + upcomingStreaming)
+                .distinctBy { "${it.media}:${it.id}" }.take(210)
+            for (title in candidates) {
+                val key = "${title.media}:${title.id}"
+                if (key !in offerCache) {
+                    runCatching { StreamingCatalog.offersInBrazil(title) }
+                        .onSuccess { offerCache[key] = it }
+                }
+            }
+        }
+    }
+
     // Provider pages reuse the home carousel, loading real provider results.
     LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre) {
         val app = selected ?: return@LaunchedEffect
@@ -2408,7 +2427,21 @@ internal fun TclStreamingScreens(
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
-                    val filteredShelves = visibleShelves
+                    val filteredShelves = if (activeServiceNames.isEmpty() || homeLibrary ||
+                        selected != null) visibleShelves else
+                        linkedMapOf<String, List<StreamingTitle>>().apply {
+                            visibleShelves.forEach { (heading, candidates) ->
+                                val confirmed = candidates.filter { item ->
+                                    val offers = offerCache["${item.media}:${item.id}"].orEmpty()
+                                    StreamingCatalog.matchesSelectedSubscription(
+                                        offers.firstOrNull { offer ->
+                                            StreamingCatalog.matchesSelectedSubscription(
+                                                offer, activeServiceNames)
+                                        } ?: StreamingOffer(-1, "", ""), activeServiceNames)
+                                }
+                                if (confirmed.isNotEmpty()) put(heading, confirmed)
+                            }
+                        }
                     val heroTitles = if (homeLibrary) emptyList() else {
                         val mixed = if (selected == null && selectedHomeGenre == 0 &&
                             homeContentType == "all" && activeServiceNames.isEmpty()) {
@@ -3374,7 +3407,9 @@ internal fun TclStreamingScreens(
                                         it in editingMyServices }) emptySet()
                                     else subscriptionNames.toSet()
                             }) { Text(if (subscriptionNames.all { it in editingMyServices })
-                                "Desmarcar todos" else "Marcar todos", fontSize = 10.sp) }
+                                "Desmarcar todos" else "Marcar todos", fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.SemiBold) }
                             subscriptionNames.forEach { name ->
                                 val legacy = displayed.firstOrNull {
                                     it.name.equals(name, ignoreCase = true)
@@ -3402,7 +3437,9 @@ internal fun TclStreamingScreens(
                                     else allGenreIds
                             }) { Text(if (allGenreIds.isNotEmpty() &&
                                 allGenreIds.all { it in editingFilterGenres })
-                                "Desmarcar todos" else "Marcar todos", fontSize = 10.sp) }
+                                "Desmarcar todos" else "Marcar todos", fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.SemiBold) }
                             availableGenres.forEach { (name, ids) ->
                                 val checked = ids.any { it in editingFilterGenres }
                                 Row(modifier = Modifier.fillMaxWidth().clickable {
