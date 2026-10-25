@@ -951,8 +951,8 @@ class StreamingScreens(unittest.TestCase):
             'suspend fun discoveryUpcomingStreamingPage(page: Int)', 1)[1].split(
             '/** International cinema preview', 1)[0]
         for part in (
-            'mapTitles(films.optJSONArray("results") ?: JSONArray(), "movie", 0)',
-            'mapTitles(shows.optJSONArray("results") ?: JSONArray(), "tv", 0)',
+            'films.optJSONArray("results") ?: JSONArray(), "movie", 0)',
+            'shows.optJSONArray("results") ?: JSONArray(), "tv", 0)',
             '.filter(::anyTvUpcoming)',
             'futureFilms.getOrNull(index)?.let { add(it) }',
             'futureShows.getOrNull(index)?.let { add(it) }',
@@ -1164,3 +1164,20 @@ class StreamingScreens(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_provider_list_mode_reuses_hero_and_paginates_both_kinds(self):
+        for fragment in (
+            'var providerListMode by remember',
+            'if (providerListMode) "Ver em seções"',
+            'else "Ver em lista"',
+            'selected != null && providerListMode',
+            'StreamingCatalog.discover(token, app.name, kind, 1, id, "")',
+            'providerListTitles[key] =',
+            'providerListMore[key] = result.more',
+            'providerListPages[key] = next',
+            'StreamingCatalog.discover(',
+            'genreViewMode == "detalhado"',
+            'if (genreViewMode == "detalhado")',
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, self.screen)
