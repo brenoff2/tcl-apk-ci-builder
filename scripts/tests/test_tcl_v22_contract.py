@@ -34,7 +34,7 @@ class PhoneUpdatesAndBack(unittest.TestCase):
         self.assertIn("Decorative unfilled rail", self.skin)
         self.assertIn("if (isConnected) onVolumeUp() else onOpenDiscovery()", self.skin)
         self.assertIn("if (isConnected) onVolumeDown() else onOpenDiscovery()", self.skin)
-        self.assertIn("Text(deviceBrand, color = TclMuted", self.skin)
+        self.assertIn("Text(tvName, color = TclText", self.skin)
 
     def test_update_button_and_signed_install(self):
         self.assertIn('title = "Buscar atualizações"', self.settings)
