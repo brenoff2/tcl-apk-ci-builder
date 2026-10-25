@@ -22,9 +22,11 @@
 
 ## Evidência de CI
 
-- [CI candidato Android unsigned #40169458180](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40169458180): **COMPLETED/SUCCESS: 71 testes Streaming PASS, 2 credenciais PASS, 11 visuais PASS; Gradle BUILD SUCCESSFUL in 4m13s; identidade com.tclremote.livre.v2/versionCode54 verificada**. Artefato: **#12589154176 (anytv-v2-2925-code54-unsigned-audit, 23.289.396 bytes)**.
-- [Prova isolada P0 #40169458164](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40169458164): **COMPLETED/SUCCESS: 55 testes PASS**.
+- [CI FINAL Android unsigned #40169560233](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40169560233): **COMPLETED/SUCCESS: 71 testes Streaming PASS, 2 credenciais PASS, 11 visuais PASS; Gradle BUILD SUCCESSFUL in 4m13s; identidade com.tclremote.livre.v2/versionCode54 verificada**. Artefato: **#12589154176 (anytv-v2-2925-code54-unsigned-audit, 23.289.396 bytes)**.
+- [Prova isolada P0 final #40169560291](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40169560291): **COMPLETED/SUCCESS: 55 testes PASS**.
 - Worker offline: **não houve mudança de código Worker** nesta etapa; último contrato Worker #40136181610 SUCCESS no commit 53c6b8d1; continua sem deploy em produção.
+
+**Errata auditada:** execução anterior [#40169458180](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40169458180) terminou **FAILED** por contrato textual obsoleto; a correção de teste \`ffb2c8d8\` antecede o CI **#40169560233 SUCCESS**. [Checkpoint integral](../handoffs/2026-10-25-ANYTV-TRANSICAO-INTEGRAL-POS-7E4B.md).
 
 ## Limitações e testes ainda necessários
 
