@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 73,
+  "expected_version_code": 74,
   "preserve_legacy_ota": true,
-  "source": "User-requested repair: separate Cinema from recent streaming releases, replace Novidades with BR-flatrate-confirmed recent movies, recently premiered series and verified new seasons, disclose missing provider arrival history; repair Anime discovery and exclusive Japanese animation filtering; remove duplicated genre rails. Expand BR theatrical exclusion reference across first four cinema pages (commit 934cccdf).",
+  "source": "Fix confirmed Worker HTTP400 incompatibility: only authorized sort_by/date query, filter anime locally after standard genre discovery; remove Novidades cinema/on_the_air conflation, add first-premiere recent movies, new series, season premieres, honest provider arrivals unavailable; expand cinema exclusion, preserve genre page lists.",
   "new_install_only": false,
-  "release_version": "2.9.44-AnyTV",
-  "release_scope": "Signed V2 code73 final release, succeeding any queued code72 run, preserving original signer and cert2026; verify tests, byte-readback and new OTA.",
-  "ci_revision": 41
+  "release_version": "2.9.45-AnyTV",
+  "release_scope": "Official signed V2 2.9.45/code74 Android OTA; test and compile sources; preserve V2 signer and cert2026, publish only if previous versionCode less than 74, require HTTPS byte readback.",
+  "ci_revision": 42
 }
