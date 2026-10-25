@@ -144,7 +144,7 @@ class StreamingScreens(unittest.TestCase):
             '"anytv_my_streamings"', '"anytv_discovery_genre_filter"',
             'subscriptionNames = remember', '"Netflix"', '"Prime Video"',
             '"Paramount+"', '"Disney+"', '"Max"',
-            'showMyStreamingSettings = true', 'Text("Filtros de descoberta")',
+            'showMyStreamingSettings = true', 'Text("Filtros de descoberta", fontWeight = FontWeight.Bold)',
             'Text("Streamings"', 'Text("Gêneros"',
             'myServices = editingMyServices', 'filterGenreIds = editingFilterGenres',
             'StreamingCatalog.discover(token, name, kind',
@@ -443,7 +443,7 @@ class StreamingScreens(unittest.TestCase):
             'Triple("Novidades em séries", "tv/on_the_air", "tv")',
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'Text(if (item.media == "tv") "S" else "F"',
-            'openedSection = heading', 'class AnyTvReleaseReminderReceiver',
+            'class AnyTvReleaseReminderReceiver',
             'Modifier.fillMaxWidth().aspectRatio(2f / 3f)',
             'ContentScale.Fit)', 'OfficialTvIcon(installed, 14.dp)',
         ):
@@ -539,8 +539,8 @@ class StreamingScreens(unittest.TestCase):
         # BR now-playing Cinema marker (when the movie is in cinemaIds).
         self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', self.screen)
         self.assertIn('inCinema = current.id in cinemaIds', self.screen)
-        self.assertIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
-        self.assertIn('AnyTvOneRowPreview("Em breve · Cinema"', self.screen)
+        self.assertIn('AnyTvCinemaHero(shelf)', self.screen)
+        self.assertNotIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
 
     def test_provider_genre_ver_mais_keeps_service_and_loads_next_24(self):
         page = self.screen.split('if (openedSection != null) {', 1)[1].split(
@@ -554,13 +554,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('selectedGenreProvider.first,', page)
         self.assertIn('selectedGenreProvider.second, next,', page)
         self.assertIn('selectedGenreProvider.third, "")', page)
-        nav = self.screen.split('val targetGenre = if (heading.startsWith("Por gênero: "))', 1)[1].split(
-            'modifier = Modifier.height(34.dp)', 1)[0]
-        self.assertLess(nav.index('heading.startsWith("Por gênero: ") &&'),
-                        nav.index('targetGenre != null ->'))
-        self.assertIn('selected != null -> {', nav)
-        self.assertIn('openedSection = heading', nav)
-        self.assertIn('selectedHomeGenre = targetGenre.id', nav)
+        # Section CTA was intentionally removed; paging stays inside filters.
+        self.assertNotIn('Text("Ver mais ›"', self.screen)
 
     def test_upcoming_streaming_state_is_declared_before_effect(self):
         self.assertLess(
@@ -857,7 +852,7 @@ class StreamingScreens(unittest.TestCase):
     def test_home_more_reminder_and_brand_are_real(self):
         self.assertIn('OutlinedButton(', self.screen)
         self.assertNotIn('"Ver mais ›"', self.screen)
-        self.assertIn('openedSection = heading', self.screen)
+        self.assertNotIn('Text("Ver mais ›"', self.screen)
         self.assertIn('items(sectionTitles.chunked(3)) { group ->', self.screen)
         self.assertNotIn('Text(if (enabled) "Lembrar ✓" else "Lembrar"', self.screen)
         self.assertIn('verticalArrangement = Arrangement.spacedBy(4.dp)', self.screen)
@@ -921,17 +916,13 @@ class StreamingScreens(unittest.TestCase):
             self.assertIn(part, self.screen)
         self.assertNotIn('"Mostrar mais 20"', self.screen)
 
-    def test_ver_mais_opens_genre_or_separate_page(self):
-        self.assertIn('val targetGenre = if (heading.startsWith("Por gênero: "))', self.screen)
-        self.assertIn('selectedHomeGenre = targetGenre.id', self.screen)
-        self.assertIn('selectedHomeGenre = ANYTV_CINEMA_FILTER', self.screen)
-        self.assertIn('else -> openedSection = heading', self.screen)
+    def test_section_cta_removed_but_pagination_kept(self):
+        self.assertNotIn('Text("Ver mais ›"', self.screen)
         self.assertIn('items(sectionTitles.chunked(3))', self.screen)
-        self.assertIn('Text("‹ Voltar às seções")', self.screen)
         self.assertIn('LaunchedEffect(openedSection) {', self.screen)
         self.assertIn('catalogScrollState.scrollToItem(0)', self.screen)
-        self.assertNotIn('expandedHomeShelf', self.screen)
-        self.assertNotIn('shelf.chunked(3).forEach', self.screen)
+        self.assertIn('Text("Mostrar mais")', self.screen)
+
 
     def test_saved_library_keeps_all_records_and_pages_in_24s(self):
         for snippet in (
