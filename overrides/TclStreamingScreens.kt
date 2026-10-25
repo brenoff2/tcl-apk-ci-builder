@@ -1028,8 +1028,8 @@ private fun AnyTvCinemaHero(
                         Color.Black.copy(alpha = 0.15f),
                         Color.Black.copy(alpha = 0.86f)
                     ))))
-                AnyTvRatingOverlay(film, Modifier.align(Alignment.TopEnd)
-                    .padding(top = 6.dp, end = 8.dp))
+                AnyTvRatingOverlay(film, Modifier.align(Alignment.TopStart)
+                    .padding(top = 6.dp, start = 8.dp))
                 Column(modifier = Modifier.align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
@@ -1099,13 +1099,15 @@ private fun AnyTvPosterCard(
                         contentDescription = if (title.media == "movie") "Marcar assistido"
                             else "Acompanhar série",
                         tint = if (marked) Color(0xFF1CB96B) else Color.White,
-                        modifier = Modifier.size(20.dp))
+                        modifier = Modifier.size(20.dp)
+                            .background(Color.Black.copy(alpha = 0.60f), RoundedCornerShape(16.dp)))
                 }
                 IconButton(onClick = onFavorite, modifier = Modifier.size(28.dp)) {
                     Icon(Icons.Filled.Favorite,
                         contentDescription = if (favorite) "Remover dos favoritos" else "Favoritar",
                         tint = if (favorite) Color(0xFFE04B57) else Color.White,
-                        modifier = Modifier.size(20.dp))
+                        modifier = Modifier.size(20.dp)
+                            .background(Color.Black.copy(alpha = 0.60f), RoundedCornerShape(16.dp)))
                 }
             }
         }
@@ -2393,9 +2395,7 @@ internal fun TclStreamingScreens(
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
                     val filteredShelves = visibleShelves
-                    val heroTitles = if (homeLibrary || (selected == null &&
-                        selectedHomeGenre == 0 && homeContentType == "all"))
-                        emptyList() else {
+                    val heroTitles = if (homeLibrary) emptyList() else {
                         val mixed = if (selected == null && selectedHomeGenre == 0 &&
                             homeContentType == "all") {
                             val films = discoveryShelves["Em alta nesta semana"].orEmpty()
@@ -2610,9 +2610,23 @@ internal fun TclStreamingScreens(
                         } else {
                         if (!homeLibrary) {
                             item {
-                                Text(selected?.name ?: "Início", fontSize = 17.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(top = 8.dp, bottom = 9.dp))
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .padding(top = 16.dp, bottom = 14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                    Box(modifier = Modifier.width(4.dp).height(24.dp)
+                                        .background(Color(0xFFE3383F), RoundedCornerShape(3.dp)))
+                                    val pageTitle = when {
+                                        selected != null -> selected!!.name
+                                        selectedHomeGenre == ANYTV_CINEMA_FILTER -> "Cinema"
+                                        selectedHomeGenre > 0 -> currentGenreList.firstOrNull {
+                                            it.id == selectedHomeGenre
+                                        }?.name ?: "Gênero"
+                                        else -> "Principal"
+                                    }
+                                    Text(pageTitle, fontSize = 17.sp,
+                                        fontWeight = FontWeight.SemiBold)
+                                }
                             }
                         }
                         if (homeLibrary) {
@@ -2631,6 +2645,7 @@ internal fun TclStreamingScreens(
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Icon(Icons.Filled.Search,
                                         contentDescription = "Buscar",
+                                        tint = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.size(19.dp))
                                     BasicTextField(
                                         value = libraryQuery,
@@ -2717,8 +2732,8 @@ internal fun TclStreamingScreens(
                                                     Color.Black.copy(alpha = 0.15f),
                                                     Color.Black.copy(alpha = 0.86f)
                                                 ))))
-                                            Box(modifier = Modifier.align(Alignment.TopEnd)
-                                                .padding(top = 7.dp, end = 8.dp)) {
+                                            Box(modifier = Modifier.align(Alignment.TopStart)
+                                                .padding(top = 7.dp, start = 8.dp)) {
                                                 AnyTvRatingOverlay(current)
                                             }
                                             Column(modifier = Modifier.align(Alignment.BottomStart)
@@ -2995,19 +3010,13 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         }
-                        uniqueShelves.forEach { (heading, shelf) ->
-                            if (heading == ANYTV_CINEMA_SHELF && selected == null &&
-                                selectedHomeGenre == 0 && homeContentType == "all" &&
-                                !homeLibrary) {
-                                item {
-                                    AnyTvCinemaHero(shelf, offerCache, displayed) { chosen ->
-                                        details = chosen
-                                        detailsPackage = null
-                                    }
-                                }
-                            }
+                        uniqueShelves.filterNot { (heading, _) ->
+                            !homeLibrary && selected == null && selectedHomeGenre == 0 &&
+                                homeContentType == "all" && heading == ANYTV_CINEMA_SHELF
+                        }.forEach { (heading, shelf) ->
                             item {
-                                Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .padding(top = 24.dp, bottom = 12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically) {
                                     Row(modifier = Modifier.weight(1f),
