@@ -35,3 +35,10 @@ Usuário quer resultado pronto, sem intermináveis «continue» e, quando pede a
 
 ## Ponteiros de canônico
 Este documento em `docs/qa/ANYTV_2939_HANDOFF_CANONICAL_20261025.md` é o checkpoint da transição; arquivo precedente `docs/qa/ANYTV_2933_PROVIDER_LIST_AND_OTA_DEV_20261025.md` e `docs/qa/ANYTV_STREAMING_EDIT_DUAL_SOURCE_DEV_20261025.md`. Fonte de verdade: histórico da branch, workflow e artefatos, não memória de chat.
+
+## Retomada após transição — QA automatizada de 25/10/2026
+- Branch DEV confirmou 2.9.39/code68 como última OTA assinada e byte-readback SUCCESS (run #40234628535). Nenhuma alteração funcional posterior ao APK ocorreu nesta retomada.
+- Novos contratos de regressão adicionados a `scripts/tests/test_streaming_screens_contract.py`: garantem que o card Detalhado tenha poster sem metadados duplicados, linhas na ordem título/gênero/indicadores, exatamente dois botões Trailer e Mais detalhes, e subtítulo do serviço com barra vermelha separado de Grade/Detalhado/Ordenar.
+- Commits de testes: `7d7e49c530095b321f79921c0355c5418a9f74ca`, ajuste da delimitação do teste `487711297c5c319810d1c5e8ed6f77a3c0771e29`.
+- CI canário de testes no último commit: #40235705174. Conferir seu resultado antes de declarar o novo conjunto validado. O teste não modifica APK de produção; sem motivo para gerar nova versão ou assinar novamente.
+- QA física/visual da 2.9.39 segue pendente, não foi simulada e não pode ser considerada aprovada por CI estático.
