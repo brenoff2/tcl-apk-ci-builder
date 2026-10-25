@@ -617,20 +617,29 @@ private object StreamingCatalog {
             val dateField = if (media == "tv") "first_air_date" else "primary_release_date"
             // Date-only sorting can be dominated by future entries. Merge bounded
             // popularity and date-sorted pages before applying the factual date gate.
+            // Fetch independent pages concurrently with a bounded request budget.
+            // Parsing and cache writes remain sequential after all responses arrive.
+            val gate = Semaphore(4)
+            val payloads = coroutineScope {
+                listOf("popularity.desc", "$dateField.desc").flatMap { sorting ->
+                    (1..8).map { sourcePage ->
+                        async {
+                            gate.withPermit {
+                                runCatching {
+                                    get("backend",
+                                        "discover/$media?language=pt-BR&include_adult=false" +
+                                        "&sort_by=$sorting&page=$sourcePage")
+                                }.getOrNull()
+                            }
+                        }
+                    }
+                }.awaitAll()
+            }
             val found = linkedMapOf<String, StreamingTitle>()
-            for (sorting in listOf("popularity.desc", "$dateField.desc")) {
-                for (sourcePage in 1..8) {
-                    val payload = runCatching {
-                        get("backend", "discover/$media?language=pt-BR&include_adult=false" +
-                            "&sort_by=$sorting&page=$sourcePage")
-                    }.getOrNull() ?: break
-                    mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
-                        .filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
-                        .forEach { title -> found.putIfAbsent("${title.media}:${title.id}", title) }
-                    if (found.size >= 72 ||
-                        sourcePage >= payload.optInt("total_pages", sourcePage)) break
-                }
-                if (found.size >= 72) break
+            payloads.filterNotNull().forEach { payload ->
+                mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+                    .filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
+                    .forEach { title -> found.putIfAbsent("${title.media}:${title.id}", title) }
             }
             val recent = found.values.sortedByDescending { it.date }.take(48)
             if (media != "movie") return@withContext recent
