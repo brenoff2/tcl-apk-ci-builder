@@ -2836,7 +2836,7 @@ internal fun TclStreamingScreens(
                                         details = current
                                         detailsPackage = null
                                     }) {
-                                        Box(modifier = Modifier.fillMaxWidth().height(150.dp)
+                                        Box(modifier = Modifier.fillMaxWidth().height(210.dp)
                                             .clip(RoundedCornerShape(12.dp))) {
                                             AnyTvPinnedImage(
                                                 model = "https://image.tmdb.org/t/p/w780" +
@@ -2960,23 +2960,37 @@ internal fun TclStreamingScreens(
                                 (if (selectedHomeGenre == ANYTV_ANIME_FILTER) ANYTV_ANIME_FILTER
                                  else anyTvResolvedGenre(selectedHomeGenre, selectedGenreKind,
                                     allMovieGenres, tvGenres)) + ":$genreSort"
-                            val genreTitles = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                                genreShelves[genreKey].orEmpty()
-                            else listOf("movie", "tv").filter {
-                                homeContentType == "all" || it == homeContentType
-                            }.flatMap { mediaKind ->
+                            val genreMedia = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                listOf("movie") else listOf("movie", "tv").filter {
+                                    homeContentType == "all" || it == homeContentType
+                                }
+                            val genreSources = genreMedia.mapNotNull { mediaKind ->
                                 val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                    ANYTV_ANIME_FILTER else anyTvResolvedGenre(selectedHomeGenre, mediaKind,
-                                    allMovieGenres, tvGenres)
-                                if (id == 0) emptyList() else
-                                    genreShelves["$mediaKind:$id:$genreSort"].orEmpty()
-                            }.distinctBy { "${it.media}:${it.id}" }.filter { title ->
-                                activeServiceNames.isEmpty() ||
-                                    offerCache["${title.media}:${title.id}"].orEmpty().any { offer ->
-                                        StreamingCatalog.matchesSelectedSubscription(
-                                            offer, activeServiceNames)
-                                    }
+                                    ANYTV_ANIME_FILTER else anyTvResolvedGenre(selectedHomeGenre,
+                                        mediaKind, allMovieGenres, tvGenres)
+                                if (id == 0) null else {
+                                    val key = "$mediaKind:$id:$genreSort"
+                                    key to genreShelves[key].orEmpty()
+                                }
                             }
+                            // Interleave movies and series before BR subscription filtering.
+                            val genreCandidates = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                genreShelves[genreKey].orEmpty() else buildList {
+                                val maxSize = genreSources.maxOfOrNull { it.second.size } ?: 0
+                                for (index in 0 until maxSize) {
+                                    genreSources.forEach { (_, titles) ->
+                                        titles.getOrNull(index)?.let { add(it) }
+                                    }
+                                }
+                            }
+                            val genreTitles = genreCandidates
+                                .distinctBy { "${it.media}:${it.id}" }.filter { title ->
+                                    activeServiceNames.isEmpty() ||
+                                        offerCache["${title.media}:${title.id}"].orEmpty().any { offer ->
+                                            StreamingCatalog.matchesSelectedSubscription(
+                                                offer, activeServiceNames)
+                                        }
+                                }
                             item {
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .padding(top = 24.dp, bottom = 12.dp),
@@ -3093,44 +3107,54 @@ internal fun TclStreamingScreens(
                                 }
                             }
                             item {
-                                if (genreMore[genreKey] == true) {
-                                    OutlinedButton(enabled = genreLoading[genreKey] != true,
+                                if (genreSources.any { (key, _) -> genreMore[key] == true }) {
+                                    OutlinedButton(enabled = genreSources.none { (key, _) ->
+                                        genreLoading[key] == true },
                                         onClick = {
-                                            if (genreLoading[genreKey] != true) {
-                                                genreLoading[genreKey] = true
-                                                val pageMedia = selectedGenreKind
-                                                val pageGenreId = anyTvResolvedGenre(
-                                                    selectedHomeGenre, pageMedia,
-                                                    allMovieGenres, tvGenres)
-                                                val pageSort = genreSort
-                                                scope.launch {
-                                                    val next = (genrePage[genreKey] ?: 1) + 1
-                                                    runCatching {
-                                                        if (pageGenreId == ANYTV_CINEMA_FILTER)
-                                                            StreamingCatalog.discoveryCinemaPage(next)
-                                                        else StreamingCatalog.discoveryGenrePage(
-                                                            pageGenreId, pageMedia, next, pageSort)
-                                                    }.onSuccess { result ->
-                                                        if (pageGenreId == ANYTV_CINEMA_FILTER) {
-                                                            cinemaIds = cinemaIds + result.titles.map { it.id }
-                                                        }
-                                                        genreShelves[genreKey] =
-                                                            (genreShelves[genreKey].orEmpty() +
-                                                                result.titles).distinctBy {
-                                                                "${it.media}:${it.id}"
-                                                            }
-                                                        genrePage[genreKey] = next
-                                                        genreMore[genreKey] = result.more
-                                                        genreErrors.remove(genreKey)
-                                                    }.onFailure {
-                                                        genreErrors[genreKey] =
-                                                            "Não foi possível carregar mais títulos."
+                                            if (genreSources.none { (key, _) ->
+                                                    genreLoading[key] == true }) {
+                                                val requests = genreSources.mapNotNull { (key, _) ->
+                                                    if (genreMore[key] != true) null else {
+                                                        val mediaKind = key.substringBefore(":")
+                                                        val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                                            ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                                                selectedHomeGenre, mediaKind,
+                                                                allMovieGenres, tvGenres)
+                                                        Triple(key, mediaKind, id)
                                                     }
-                                                    genreLoading[genreKey] = false
+                                                }
+                                                requests.forEach { (key, _, _) -> genreLoading[key] = true }
+                                                scope.launch {
+                                                    requests.forEach { (key, mediaKind, id) ->
+                                                        val next = (genrePage[key] ?: 1) + 1
+                                                        try {
+                                                            val result = if (id == ANYTV_CINEMA_FILTER)
+                                                                StreamingCatalog.discoveryCinemaPage(next)
+                                                            else StreamingCatalog.discoveryGenrePage(
+                                                                id, mediaKind, next, genreSort)
+                                                            if (id == ANYTV_CINEMA_FILTER)
+                                                                cinemaIds = cinemaIds + result.titles.map { it.id }
+                                                            genreShelves[key] =
+                                                                (genreShelves[key].orEmpty() +
+                                                                    result.titles).distinctBy {
+                                                                    "${it.media}:${it.id}"
+                                                                }
+                                                            genrePage[key] = next
+                                                            genreMore[key] = result.more
+                                                            genreErrors.remove(key)
+                                                        } catch (error: java.util.concurrent.CancellationException) {
+                                                            throw error
+                                                        } catch (error: Exception) {
+                                                            genreErrors[key] =
+                                                                "Não foi possível carregar mais títulos."
+                                                        } finally {
+                                                            genreLoading[key] = false
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }, modifier = Modifier.fillMaxWidth()) {
-                                        Text(if (genreLoading[genreKey] == true)
+                                        Text(if (genreSources.any { (key, _) -> genreLoading[key] == true })
                                             "Carregando…" else "Mostrar mais",
                                             fontSize = 13.sp)
                                     }
