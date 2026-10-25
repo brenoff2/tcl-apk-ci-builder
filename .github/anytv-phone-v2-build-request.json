@@ -3,9 +3,9 @@
   "intent": "release-independent-phone-v2",
   "expected_version_code": 62,
   "preserve_legacy_ota": true,
-  "source": "User-authorized 25/10/2026: corrected film/TV genre pagination, mixed home editorial, future release discovery, stable card heights and genre-first layout. Existing V2 signer retained.",
+  "source": "User approved streaming provider list toggle 25/10/2026: keep hero, Ver em lista / Ver em seções, genre and movie/TV filters, own paginated BR provider catalog; plus previous corrections.",
   "new_install_only": false,
   "release_version": "2.9.33-AnyTV",
   "release_scope": "Signed official phone V2 OTA 2.9.33/code62 over code61. Execute full workflow regressions/Gradle/IME/catalog/signature and HTTPS byte readback; preserve legacy OTA, worker, D1, companion TV, personal user records.",
-  "ci_revision": 24
+  "ci_revision": 25
 }
