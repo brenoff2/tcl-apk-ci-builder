@@ -112,7 +112,7 @@ class StreamingScreens(unittest.TestCase):
             'if (showGlobalSearch)',
             'OfficialTvIcon(app, 56.dp)',
             'suspend fun discoveryGenre(id: Int)',
-            'with_genres=$id&page=$sourcePage',
+            'with_original_language=ja',
             'StreamingCatalog.genres(token, "movie")',
             'selectedHomeGenre = kind.id',
             'Text("⚙ Listas", fontSize = 11.sp)',
