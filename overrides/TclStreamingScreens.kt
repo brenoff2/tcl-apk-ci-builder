@@ -2967,6 +2967,16 @@ internal fun TclStreamingScreens(
                             }
                         }
                         uniqueShelves.forEach { (heading, shelf) ->
+                            if (heading == ANYTV_CINEMA_SHELF && selected == null &&
+                                selectedHomeGenre == 0 && homeContentType == "all" &&
+                                !homeLibrary) {
+                                item {
+                                    AnyTvCinemaHero(shelf) { chosen ->
+                                        details = chosen
+                                        detailsPackage = null
+                                    }
+                                }
+                            }
                             item {
                                 Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
