@@ -971,7 +971,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('background(Color(0xFF1769E0))', self.screen)
         self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', self.screen)
         self.assertIn('if (item.media == "movie" && inCinema)', self.screen)
-        self.assertIn('"Cinema · Filmes em cartaz no Brasil"', self.screen)
+        self.assertIn('"Em cartaz no Brasil"', self.screen)
         self.assertIn('"Em cartaz · Brasil · TMDB"', self.screen)
         self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()', self.screen)
         self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', self.screen)
