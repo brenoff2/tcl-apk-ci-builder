@@ -490,40 +490,19 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Modifier.horizontalScroll(actionScroll)', nav)
         self.assertEqual(nav.count('TclHeaderAction(Icons.Filled.'), 6)
 
-    def test_provider_ver_mais_uses_same_media_genre_as_initial_shelf(self):
-        # Movies filter by movie genre on All/Movies; TV filters by TV genre
-        # only on Series. Every shelf and its next page share this decision.
-        helper = self.screen.split('private fun anyTvProviderGenre(', 1)[1].split(
+    def test_provider_genre_persists_for_both_media_types(self):
+        helper = self.screen.split('private fun anyTvResolvedGenre(', 1)[1].split(
             'private fun anyTvToday()', 1)[0]
-        for part in (
-            'selectedGenre > 0',
-            'contentType == "tv" && media == "tv"',
-            'contentType != "tv" && media == "movie"',
-            'selectedGenre else 0',
-        ):
-            self.assertIn(part, helper)
-        source = self.screen.split('LaunchedEffect(activeServiceNames,', 1)[1].split(
-            '// Provider pages reuse the home carousel', 1)[0]
-        self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', source)
-        first_page = self.screen.split(
-            '// Provider pages reuse the home carousel', 1)[1].split(
-            'LaunchedEffect(token) {', 1)[0]
-        self.assertIn('selectedHomeGenre)', first_page)
-        self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', first_page)
-        self.assertIn('StreamingCatalog.discover(token, app.name, kind, 1, chosenGenre, "")',
-                      first_page)
-        next_page = self.screen.split('homeProvider != null -> {', 1)[1].split(
-            'else -> StreamingResults(emptyList(), false)', 1)[0]
-        self.assertIn('val homeKind = if (sectionTitle.endsWith("· Séries"))', next_page)
-        self.assertIn('anyTvProviderGenre(', next_page)
-        self.assertIn('homeKind, homeContentType, selectedHomeGenre)', next_page)
-        self.assertIn('homeProvider, homeKind, next,', next_page)
-        self.assertIn('homeGenre, "")', next_page)
-        self.assertIn('else anyTvProviderGenre(selectedProvider.second,', self.screen)
-        self.assertIn('homeContentType, selectedHomeGenre),', self.screen)
-        # "Em destaque" still honors the provider-specific search.
-        self.assertIn('"Em destaque ·")) genre', self.screen)
-        self.assertIn('searchTerm else "")', self.screen)
+        self.assertIn('movieGenres: List<StreamingGenre>, tvGenres: List<StreamingGenre>', helper)
+        self.assertIn('return candidates.firstOrNull', helper)
+        self.assertIn('"ação", "aventura", "action & adventure"', helper)
+        self.assertIn('anyTvResolvedGenre(selectedGenre, media, movieGenres, tvGenres)', helper)
+        self.assertIn('anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)',
+                      self.screen)
+        self.assertIn('homeKind, selectedHomeGenre, allMovieGenres, tvGenres)', self.screen)
+        self.assertIn('selectedProvider.second,', self.screen)
+        self.assertIn('selectedHomeGenre, allMovieGenres, tvGenres)', self.screen)
+
 
     def test_international_and_future_rails_never_invent_cinema_br(self):
         preview = self.screen.split('private fun AnyTvOneRowPreview(', 1)[1].split(
@@ -615,14 +594,21 @@ class StreamingScreens(unittest.TestCase):
     def test_selected_provider_uses_genre_keys_consistent_with_tv_tab(self):
         provider = self.screen.split('if (selected != null && !homeLibrary) {', 1)[1].split(
             '} else if (homeLibrary)', 1)[0]
-        self.assertIn('val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)',
+        self.assertIn('anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)',
                       provider)
         self.assertIn('val key = app.name + ":" + kind + ":" + chosenGenre', provider)
-        home = self.screen.split('if (!homeLibrary && selected == null) {', 1)[1].split(
-            'if (selectedHomeGenre != 0 &&', 1)[0]
-        self.assertIn('anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)', home)
-        self.assertNotIn('if (kind == "movie" && selectedHomeGenre > 0)', self.screen)
-        self.assertNotIn('selectedHomeGenre.coerceAtLeast(0)', self.screen)
+        self.assertIn('selectedHomeGenre == 0 && titles.isNotEmpty()', provider)
+        self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
+        self.assertIn('homeContentType = kind', self.screen)
+        self.assertNotIn('homeContentType = kind; selectedHomeGenre = 0', self.screen)
+
+    def test_genre_page_combines_movies_and_series_only_when_all_selected(self):
+        self.assertIn('if (homeContentType == "all") listOf("movie", "tv")', self.screen)
+        self.assertIn('anyTvResolvedGenre(selectedHomeGenre, mediaKind,', self.screen)
+        self.assertIn('val genreTitles = listOf("movie", "tv").filter {', self.screen)
+        self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
+        self.assertIn('val selectedKindId = anyTvResolvedGenre(selectedHomeGenre,', self.screen)
+
 
     def test_upcoming_streaming_ver_mais_preserves_overflow_and_future_filter(self):
         for piece in (
