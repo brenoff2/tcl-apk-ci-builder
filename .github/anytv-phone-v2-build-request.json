@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 63,
+  "expected_version_code": 64,
   "preserve_legacy_ota": true,
-  "source": "User approved final production release after replacing the home + with Edit, two-column installed/other streaming picker, saved selection, per-provider red selection border and uninstalled streaming catalog navigation.",
+  "source": "User-identified Crystal Lake 2026 Universal+ Amazon Channel logo missing: allow BR flatrate add-on channels with exact provider IDs/logo while retaining distinction from base Amazon Prime. Recognize Universal+ in filters.",
   "new_install_only": false,
-  "release_version": "2.9.34-AnyTV",
-  "release_scope": "Signed official V2 OTA 2.9.34/code63 on top of validated 2.9.33/code62. Preserve V2 signer, package, Worker, companion and legacy OTA. Fail closed on UI contracts, Kotlin compile, signer and remote byte readback.",
-  "ci_revision": 27
+  "release_version": "2.9.35-AnyTV",
+  "release_scope": "Signed V2 2.9.35/code64 OTA superseding 2.9.34/code63; preserve signer, package, existing user settings, Worker/D1 and TV companion. Gate on contract, compile, signer and byte readback.",
+  "ci_revision": 28
 }
