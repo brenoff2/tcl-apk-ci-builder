@@ -3225,7 +3225,7 @@ internal fun TclStreamingScreens(
                         }
                         uniqueShelves.filterNot { (heading, _) ->
                             !homeLibrary && selected == null && selectedHomeGenre == 0 &&
-                                homeContentType == "all" && heading == ANYTV_CINEMA_SHELF
+                                heading == ANYTV_CINEMA_SHELF
                         }.forEach { (heading, shelf) ->
                             item {
                                 Row(modifier = Modifier.fillMaxWidth()
