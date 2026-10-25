@@ -609,49 +609,38 @@ private object StreamingCatalog {
             }
         }
 
-    /** Recently premiered movies and first-run series; never reuse theatrical now_playing. */
+    /** First premieres within 90 days. Never confuse theatrical now_playing with a release shelf. */
     suspend fun recentPremieres(media: String): List<StreamingTitle> =
         withContext(Dispatchers.IO) {
             require(media == "movie" || media == "tv")
             val dateField = if (media == "tv") "first_air_date" else "primary_release_date"
-            // The deployed Worker intentionally allows sorting, not date-range
-            // query params. Apply the 90-day window only after receiving TMDB data.
-            val cutoffCalendar = java.util.Calendar.getInstance().apply {
-                add(java.util.Calendar.DAY_OF_YEAR, -90)
-            }
-            val cutoff = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                .format(cutoffCalendar.time)
-            val titles = catalogPage24(1) { sourcePage ->
-                val route = "discover/$media?language=pt-BR&include_adult=false" +
-                    "&sort_by=$dateField.desc&page=$sourcePage"
-                val payload = get("backend", route)
-                val candidates = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
-                StreamingResults(candidates.filter(::anyTvRecentPremiere)
-                    .filterNot(::anyTvIsAnime),
-                    sourcePage < 10 &&
-                        sourcePage < payload.optInt("total_pages", sourcePage) &&
-                        candidates.none { anyTvHasDate(it) && it.date < cutoff })
-            }.titles
-            if (media == "movie") {
-                // Only confirmed BR flatrate titles qualify as new streaming films;
-                // an item currently in cinemas is not a streaming premiere claim.
-                // Collect theatrical BR pages separately. If this check fails,
-                // do not mislabel a film as a streaming premiere.
-                val theatrical = runCatching {
-                    (1..4).flatMap { page ->
-                        discoveryShelfPage("movie/now_playing", "movie", page).titles
-                    }.map { it.id }.toSet()
-                }.getOrNull() ?: return@withContext emptyList()
-                val gate = Semaphore(4)
-                coroutineScope {
-                    titles.filterNot { it.id in theatrical }.map { title -> async {
-                        gate.withPermit {
-                            val offers = runCatching { offersInBrazil(title) }.getOrDefault(emptyList())
-                            title.takeIf { offers.isNotEmpty() }
-                        }
-                    }}.awaitAll().filterNotNull()
+            // Date-only sorting can be dominated by future entries. Merge bounded
+            // popularity and date-sorted pages before applying the factual date gate.
+            val found = linkedMapOf<String, StreamingTitle>()
+            for (sorting in listOf("popularity.desc", "$dateField.desc")) {
+                for (sourcePage in 1..8) {
+                    val payload = runCatching {
+                        get("backend", "discover/$media?language=pt-BR&include_adult=false" +
+                            "&sort_by=$sorting&page=$sourcePage")
+                    }.getOrNull() ?: break
+                    mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+                        .filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
+                        .forEach { title -> found.putIfAbsent("${title.media}:${title.id}", title) }
+                    if (found.size >= 72 ||
+                        sourcePage >= payload.optInt("total_pages", sourcePage)) break
                 }
-            } else titles
+                if (found.size >= 72) break
+            }
+            val recent = found.values.sortedByDescending { it.date }.take(48)
+            if (media != "movie") return@withContext recent
+            // Only Cinema owns current theatrical titles. Subscription availability
+            // is shown on each card, but is not a prerequisite for being a premiere.
+            val theatrical = runCatching {
+                (1..4).flatMap { page ->
+                    discoveryShelfPage("movie/now_playing", "movie", page).titles
+                }.map { it.id }.toSet()
+            }.getOrNull() ?: return@withContext emptyList()
+            recent.filterNot { it.id in theatrical }
         }
 
     /** Confirm a newly premiered season of a previously established series. */
