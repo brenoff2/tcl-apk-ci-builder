@@ -1006,7 +1006,7 @@ class StreamingScreens(unittest.TestCase):
             'items(inProgress.take(sectionVisibleCount).chunked(3))',
             'sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })',
             'value = libraryQuery',
-            'placeholder = { Text("Buscar nesta lista") }',
+            'Text("Buscar nesta lista",',
             '"watching" -> "Séries acompanhadas"',
             'Text("Mostrar mais")',
         ):
