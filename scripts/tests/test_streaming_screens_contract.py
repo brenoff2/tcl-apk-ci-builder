@@ -914,7 +914,9 @@ class StreamingScreens(unittest.TestCase):
     def test_cinema_and_future_are_not_mixed_into_regular_streaming(self):
         self.assertIn('if (heading != ANYTV_CINEMA_SHELF)', self.screen)
         self.assertIn('if (future.isNotEmpty() || upcomingStreamingMore)', self.screen)
-        self.assertIn('if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)', self.screen)
+        # Cinema remains on its own destination, never on Principal.
+        self.assertNotIn('if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)', self.screen)
+        self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
         self.assertIn('anyTvReleased(title)', self.screen)
         self.assertIn('anyTvUpcoming(title)', self.screen)
         self.assertIn('else -> titles.filter(::anyTvReleased)', self.screen)
