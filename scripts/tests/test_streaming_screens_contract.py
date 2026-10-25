@@ -34,7 +34,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_genre_sections_toggle_and_hero_single_badge(self):
         self.assertIn('else genreSectionsMode = !genreSectionsMode', self.screen)
-        self.assertIn('else genreSectionsMode)\\n                                                "Ver em seções"', self.screen)
+        self.assertIn('else genreSectionsMode)\n                                                "Ver em seções"', self.screen)
         self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
         self.assertNotIn('Text(if (current.media == "movie") "F" else "S"', self.screen)
         self.assertIn('showRating = false, showYear = true,', self.screen)
@@ -546,7 +546,7 @@ class StreamingScreens(unittest.TestCase):
         for value in (
             'style = TextStyle(shadow = Shadow(',
             'Offset(0f, 2f), blurRadius = 6f',
-            'val year = current.date.take(4)',
+            'showRating = false, showYear = true,',
             'AnyTvRatingOverlay(current)',
             'current.id in cinemaIds',
             'Text("Cinema", modifier = Modifier',
@@ -1246,7 +1246,7 @@ class StreamingScreens(unittest.TestCase):
     def test_provider_list_mode_reuses_hero_and_paginates_both_kinds(self):
         for fragment in (
             'var providerListMode by remember',
-            'if (if (selected != null) providerListMode else !genreSectionsMode)',
+            'if (if (selected != null) providerListMode else genreSectionsMode)',
             'else "Ver em lista"',
             'selected != null && providerListMode',
             'StreamingCatalog.discover(token, app.name, kind, 1, id, "")',
