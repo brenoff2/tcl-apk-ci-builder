@@ -3,9 +3,9 @@
   "intent": "release-independent-phone-v2",
   "expected_version_code": 60,
   "preserve_legacy_ota": true,
-  "source": "AnyTV 2.9.31/code60: provider page matches Principal; genre heading dynamically shows Filmes/Séries/Filmes e séries; restored Grade/Detalhado; removed Android TV subtitle from home; magnifier and X controls on internal library/provider/genre search; TMDB genre names below poster title and each shared hero title.",
+  "source": "AnyTV 2.9.31/code60 verified source, including removal of obsolete Android TV subtitle; updated both visual contract suites to reflect user-approved UI; genre labels below cards and shared hero; restored genre Grade/Detalhado and internal search icon/clear controls.",
   "new_install_only": false,
   "release_version": "2.9.31-AnyTV",
   "release_scope": "Official V2 signed OTA only, package com.tclremote.livre.v2, original certificate, code60 over code59, full regressions/Gradle/IME/TMDB/HTTPS byte readback; preserve worker, D1, companion TCL, legacy OTA and existing favorites/assistidos.",
-  "ci_revision": 20
+  "ci_revision": 21
 }
