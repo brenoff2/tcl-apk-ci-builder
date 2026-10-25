@@ -455,14 +455,10 @@ class StreamingScreens(unittest.TestCase):
             'Modifier.size(width = 116.dp, height = 158.dp)',
         ):
             self.assertNotIn(forbidden, self.screen)
-    def test_cinema_br_hero_has_verified_metadata_over_artwork(self):
-        cinema = self.screen.split('private fun AnyTvCinemaHero(', 1)[1].split(
-            '/** Shadowed score over original poster artwork.', 1)[0]
-        self.assertIn('AnyTvRatingOverlay(film, Modifier.align(Alignment.TopStart)', cinema)
-        self.assertIn('StreamingOfferIcons(film, offerCache, apps, showRating = false,', cinema)
-        self.assertIn('inCinema = true, showYear = true', cinema)
-        self.assertIn('style = TextStyle(shadow = Shadow(', cinema)
-        self.assertIn('contentScale = ContentScale.Crop', cinema)
+    def test_cinema_uses_the_same_hero_as_principal(self):
+        self.assertNotIn('private fun AnyTvCinemaHero(', self.screen)
+        self.assertIn('if (heroTitles.isNotEmpty())', self.screen)
+        self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
 
     def test_hero_overlays_title_year_rating_verified_cinema_and_small_progress(self):
         hero = self.screen.split('val current = heroTitles[pageIndex]', 1)[1].split(
@@ -1098,11 +1094,10 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('items(inProgress.take(sectionVisibleCount).chunked(3))', self.screen)
         self.assertIn('items(shelf.take(sectionVisibleCount).chunked(3))', self.screen)
         self.assertIn('contentScale = ContentScale.Fit)', self.screen)
-        cinema = self.screen.split('private fun AnyTvCinemaHero(', 1)[1].split(
-            '/**\\n * The one poster/card specification', 1)[0]
-        self.assertIn('Brush.verticalGradient(listOf(', cinema)
-        self.assertIn('Color.Black.copy(alpha = 0.86f)', cinema)
-        self.assertNotIn('RoundedCornerShape(topEnd = 8.dp)', cinema)
+        self.assertNotIn('private fun AnyTvCinemaHero(', self.screen)
+        self.assertIn('Brush.verticalGradient(listOf(', self.screen)
+        self.assertIn('Color.Black.copy(alpha = 0.86f)', self.screen)
+
 
 if __name__ == "__main__":
     unittest.main()
