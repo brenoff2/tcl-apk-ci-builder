@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 66,
+  "expected_version_code": 67,
   "preserve_legacy_ota": true,
-  "source": "Final release after 2.9.36/code65 published: TMDB BR streaming list, Netflix/Max-HBO Max canonical dedup, dynamic TMDB provider-ID fallback, and strict OTA versionCode monotonicity.",
+  "source": "Restore home TV remote to detected installed applications only; one canonical streaming provider logo per movie/TV card; render actual TMDB BR provider logo for uninstalled provider in streaming rail.",
   "new_install_only": false,
-  "release_version": "2.9.37-AnyTV",
-  "release_scope": "Signed 2.9.37/code66 OTA superseding 2.9.36/code65. Preserve original signer and protected OTA, no backend changes. Full contracts, Gradle, signer and remote byte verification.",
-  "ci_revision": 31
+  "release_version": "2.9.38-AnyTV",
+  "release_scope": "Signed official V2 2.9.38/code67 OTA replacing 2.9.37/code66; preserve V2 signer, app identity and legacy OTA. Guard all tests, Android build and signed remote byte readback.",
+  "ci_revision": 32
 }
