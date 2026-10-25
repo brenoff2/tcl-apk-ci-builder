@@ -27,7 +27,16 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
 
     def test_detailed_card_has_compact_metadata_spacing(self):
-        self.assertIn('verticalArrangement = Arrangement.spacedBy(3.dp)) {', self.screen)
+        self.assertIn('verticalArrangement = Arrangement.spacedBy(1.dp)) {', self.screen)
+
+    def test_genre_sections_toggle_and_hero_single_badge(self):
+        self.assertIn('else genreSectionsMode = !genreSectionsMode', self.screen)
+        self.assertIn('else genreSectionsMode)\\n                                                "Ver em seções"', self.screen)
+        self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertNotIn('Text(if (current.media == "movie") "F" else "S"', self.screen)
+        self.assertIn('showRating = false, showYear = true,', self.screen)
+        self.assertIn('heightIn(min = 16.dp)', self.screen)
+        self.assertIn('Text(summary, fontSize = 12.sp, lineHeight = 15.sp,', self.screen)
 
     def test_recent_sections_have_distinct_verified_sources(self):
         self.assertIn('suspend fun recentPremieres(media: String)', self.screen)
@@ -39,7 +48,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('"Novas temporadas" to newSeasons', self.screen)
         self.assertIn('title.takeIf { offers.isNotEmpty() }', self.screen)
         self.assertIn('titles.filterNot { it.id in theatrical }', self.screen)
-        self.assertIn('Text("Recém-chegados ao Streaming"', self.screen)
+        self.assertNotIn('Entradas recentes ainda não verificadas:', self.screen)
         self.assertNotIn('"Novidades" to news', self.screen)
         self.assertNotIn('Triple("Novidades em filmes",', self.screen)
         self.assertNotIn('Triple("Novidades em séries",', self.screen)
