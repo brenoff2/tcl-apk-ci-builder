@@ -617,11 +617,11 @@ private object StreamingCatalog {
                 add(java.util.Calendar.DAY_OF_YEAR, -90)
             }.time
             val formatter = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-            val lower = formatter.format(cutoff)
             val dateField = if (media == "tv") "first_air_date" else "primary_release_date"
+            // The deployed Worker intentionally allows sorting, not date-range
+            // query params. Apply the 90-day window only after receiving TMDB data.
             val route = "discover/$media?language=pt-BR&include_adult=false" +
-                "&sort_by=$dateField.desc&$dateField.gte=$lower" +
-                "&$dateField.lte=${anyTvToday()}&page=1"
+                "&sort_by=$dateField.desc&page=1"
             val payload = get("backend", route)
             val titles = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
                 .filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
@@ -914,12 +914,13 @@ private object StreamingCatalog {
                     URLEncoder.encode(query, "UTF-8") + "&page=$sourcePage"
             else "discover/$media?language=pt-BR&watch_region=BR" +
                 "&with_watch_providers=$providerId&with_watch_monetization_types=flatrate" +
-                (if (genre == ANYTV_ANIME_FILTER) "&with_genres=16&with_original_language=ja"
+                (if (genre == ANYTV_ANIME_FILTER) "&with_genres=16"
                  else if (genre > 0) "&with_genres=$genre" else "") +
                 "&include_adult=false&sort_by=popularity.desc&page=$sourcePage"
             val result = get(token, url)
             val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media, genre)
                 .filter(::anyTvReleased)
+                .filter { genre != ANYTV_ANIME_FILTER || anyTvIsAnime(it) }
             // Search endpoints have no provider filter: verify BR subscription offers.
             val titles = if (search) coroutineScope {
                 val limit = Semaphore(4)
