@@ -3,9 +3,9 @@
   "intent": "release-independent-phone-v2",
   "expected_version_code": 70,
   "preserve_legacy_ota": true,
-  "source": "Recent first premieres (last 90 days) in Novidades, and compact 3dp vertical spacing in detailed list cards; targeted regression tests.",
+  "source": "Recent first premieres (last 90 days) in Novidades, and compact 3dp vertical spacing in detailed list cards; targeted regression tests. Corrected detailed-card regression assertion in cb28fe7f.",
   "new_install_only": false,
   "release_version": "2.9.41-AnyTV",
   "release_scope": "Official signed V2 2.9.41/code70 OTA after tests, compilation, original signer verification and remote byte readback; preserve cert2026 legacy OTA.",
-  "ci_revision": 35
+  "ci_revision": 36
 }
