@@ -41,6 +41,14 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('heightIn(min = 16.dp)', self.screen)
         self.assertIn('Text(summary, fontSize = 12.sp, lineHeight = 15.sp,', self.screen)
 
+    def test_new_streaming_arrivals_require_real_provider_change(self):
+        self.assertIn('anytv_br_provider_snapshot_v1', self.screen)
+        self.assertIn('anytv_br_provider_arrivals_v1', self.screen)
+        self.assertIn('snapshot.has(key) && (current - previous).isNotEmpty()', self.screen)
+        self.assertIn('put("Recém-chegados ao Streaming", newArrivalTitles)', self.screen)
+        self.assertIn('originalLanguage = cached.optString("original_language")', self.screen)
+        self.assertNotIn('TMDB não fornece histórico', self.screen)
+
     def test_recent_sections_have_distinct_verified_sources(self):
         self.assertIn('suspend fun recentPremieres(media: String)', self.screen)
         self.assertNotIn('&$dateField.gte=', self.screen)
@@ -49,8 +57,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('"Filmes recém-lançados" to recentMovies', self.screen)
         self.assertIn('"Séries novas" to newSeries', self.screen)
         self.assertIn('"Novas temporadas" to newSeasons', self.screen)
-        self.assertIn('title.takeIf { offers.isNotEmpty() }', self.screen)
-        self.assertIn('titles.filterNot { it.id in theatrical }', self.screen)
+        self.assertIn('for (sorting in listOf("popularity.desc", "$dateField.desc"))', self.screen)
+        self.assertIn('recent.filterNot { it.id in theatrical }', self.screen)
         self.assertNotIn('Entradas recentes ainda não verificadas:', self.screen)
         self.assertNotIn('"Novidades" to news', self.screen)
         self.assertNotIn('Triple("Novidades em filmes",', self.screen)
