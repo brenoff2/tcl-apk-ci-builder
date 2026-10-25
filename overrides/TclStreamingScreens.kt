@@ -2683,15 +2683,16 @@ internal fun TclStreamingScreens(
                                                 innerTextField()
                                             }
                                         })
-                                    if (libraryQuery.isNotEmpty()) {
-                                        IconButton(onClick = {
-                                            libraryQuery = ""
-                                            watchingQuery = ""
-                                        }, modifier = Modifier.size(30.dp)) {
-                                            Icon(Icons.Filled.Close,
-                                                contentDescription = "Limpar busca",
-                                                modifier = Modifier.size(18.dp))
-                                        }
+                                    IconButton(onClick = {
+                                        libraryQuery = ""
+                                        watchingQuery = ""
+                                    }, enabled = libraryQuery.isNotEmpty(),
+                                        modifier = Modifier.size(30.dp)) {
+                                        Icon(Icons.Filled.Close,
+                                            contentDescription = "Limpar busca",
+                                            tint = MaterialTheme.colorScheme.onSurface.copy(
+                                                alpha = if (libraryQuery.isNotEmpty()) 1f else 0.45f),
+                                            modifier = Modifier.size(18.dp))
                                     }
                                 }
                                 if (visibleShelves.isEmpty()) {
