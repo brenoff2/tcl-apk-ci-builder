@@ -288,6 +288,10 @@
     {
       "date": "2026-10-25",
       "event": "AnyTV V2 2.9.29/code58: remover badges circulares sob coração/assistido, aplicar contorno preto no ícone e usar uma única implementação de hero em Cinema/Principal, normalizar cabeçalhos. Actions #40202285198 SUCCESS; commit OTA 71afa4a, HTTPS byte readback PASS. Sem homologação física, progresso 7/11 preservado."
+    },
+    {
+      "date": "2026-10-25",
+      "event": "AnyTV 2.9.30/code59 assinada e publicada OTA: filtros de gênero preservados na Principal, em Filmes/Séries e dentro de streamings; gênero pode reunir filmes e séries com IDs TMDB próprios; rota Cinema BR preservada e sombra grafite nos ícones. Actions #40205466794 SUCCESS, OTA commit 6c49b2e, HTTPS byte readback PASS. QA físico pendente, 7/11 e F0-F8 inalterados."
     }
   ],
   "discovery_v3": {
