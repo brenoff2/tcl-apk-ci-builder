@@ -13,6 +13,15 @@ class StreamingScreens(unittest.TestCase):
         cls.apps = (UI / "TclInstalledApps.kt").read_text(encoding="utf-8")
         cls.gradle = Path("source/app/build.gradle.kts").read_text()
 
+    def test_novidades_only_contains_recent_first_premieres(self):
+        self.assertIn('private fun anyTvRecentPremiere(item: StreamingTitle)', self.screen)
+        self.assertIn('calendar.add(java.util.Calendar.DAY_OF_YEAR, -90)', self.screen)
+        self.assertIn('.filter(::anyTvRecentPremiere).sortedByDescending { it.date }', self.screen)
+        self.assertIn('heading == "Novidades" -> anyTvRecentPremiere(title)', self.screen)
+        self.assertIn('if (sectionTitle == "Novidades")', self.screen)
+        # A currently airing series is not necessarily a new series.
+        self.assertIn('Triple("Novidades em séries", "tv/on_the_air", "tv")', self.screen)
+
     def test_real_installed_apps_are_the_source(self):
         self.assertIn('request(host, code, "/apps")', self.apps)
         self.assertIn("TclStreamingScreens(apps = allApps", self.apps)
