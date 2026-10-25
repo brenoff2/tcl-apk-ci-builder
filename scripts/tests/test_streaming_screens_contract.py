@@ -432,7 +432,7 @@ class StreamingScreens(unittest.TestCase):
         for fragment in (
             'suspend fun discoveryGenrePage(id: Int, media: String, page: Int,',
             'sourcePage < payload.optInt("total_pages", sourcePage)',
-            'genreMore[key] = it.more',
+            'genreMore[key] = result.more',
             'items(shelf.take(ANYTV_LIST_BATCH)) { title ->',
             'items(shelf.take(sectionVisibleCount).chunked(3))',
             'items(genreTitles.chunked(3))',
