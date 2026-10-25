@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 55,
+  "expected_version_code": 56,
   "preserve_legacy_ota": true,
-  "source": "AnyTV 2.9.26/code55: base 2.9.25 + padronizacao DEV de cards 3x/2:3, hero Cinema, Series acompanhadas e botoes Mostrar mais, preservando filtros, historico e controles TCL; release sujeito aos gates automaticos da workflow.",
+  "source": "AnyTV V2 2.9.27/code56: correções de UI solicitadas em 25/10/2026; topo único, card F/ano/serviços com estrela sobre pôster, coração/assistido overlay, título 2 linhas, hero cinema Brasil, busca local e barras vermelhas.",
   "new_install_only": false,
-  "release_version": "2.9.26-AnyTV",
-  "release_scope": "Atualizacao solicitada para AnyTV V2 2.9.26/code55 com pacote com.tclremote.livre.v2 e mesmo certificado V2, preservando dados e OTA legada. Publicar exclusivamente updates/android/v2/current.apk mediante testes, assinatura, identidade, readback HTTPS byte a byte. Worker/D1/companion sem alteracao. QA fisico ainda pendente.",
-  "ci_revision": 14
+  "release_version": "2.9.27-AnyTV",
+  "release_scope": "Publicar somente AnyTV V2 com.tclremote.livre.v2 2.9.27/code56 via workflow protegido, certificado original, validar todos os testes Kotlin/IME/streaming, manter dados/OTA legado, readback HTTP byte a byte; não tocar Worker/D1/companion TCL; homologação física permanece pendente.",
+  "ci_revision": 15
 }
