@@ -572,30 +572,34 @@ class StreamingScreens(unittest.TestCase):
             self.screen.index('LaunchedEffect(openedSection) {'))
         self.assertEqual(self.screen.count('var upcomingStreamingMore by remember'), 1)
 
-    def test_upcoming_streaming_page_fetches_both_sources_and_verifies_br_offer(self):
+    def test_upcoming_combines_real_future_film_and_tv_without_fake_br_offers(self):
         impl = self.screen.split('suspend fun discoveryUpcomingStreamingPage(', 1)[1].split(
             '/** International cinema preview', 1)[0]
-        self.assertIn('require(page in 1..50)', impl)
         for value in (
+            'require(page in 1..50)',
             '"movie/upcoming?language=pt-BR&page=$page"',
             '"discover/tv?language=pt-BR&include_adult=false"',
-            '"&sort_by=first_air_date.desc&page=$page"',
             'movieSource.await()', 'seriesSource.await()',
-            '.filter(::anyTvUpcoming).distinctBy',
-            'Semaphore(4)',
-            'runCatching { offersInBrazil(title).isNotEmpty() }',
-            '.getOrDefault(false)',
-            'title.takeIf { offered }',
-            'StreamingResults(verified, page < 50 && (',
-            'page < films.optInt("total_pages", page)',
-            'page < shows.optInt("total_pages", page)',
+            'futureFilms', 'futureShows', 'filter(::anyTvUpcoming)',
+            'futureFilms.getOrNull(index)?.let { add(it) }',
+            'futureShows.getOrNull(index)?.let { add(it) }',
+            'StreamingResults(upcoming, page < 50 && (',
         ):
             with self.subTest(value=value):
                 self.assertIn(value, impl)
+        # Upcoming must not require a streaming deal already announced.
+        self.assertNotIn('offersInBrazil(', impl)
+        self.assertNotIn('title.takeIf { offered }', impl)
         self.assertNotIn('with_watch_providers=', impl)
-        # No 24-title truncation here: one source page may have more verified
-        # than 24, and the section must retain it for subsequent reveal clicks.
         self.assertNotIn('.take(ANYTV_LIST_BATCH)', impl)
+
+    def test_card_genre_first_and_stable_two_line_title(self):
+        card = self.screen.split('private fun AnyTvPosterCard(', 1)[1].split(
+            '/** One horizontal strip', 1)[0]
+        self.assertLess(card.index('Text(genreLabel,'), card.index('StreamingOfferIcons('))
+        self.assertLess(card.index('StreamingOfferIcons('), card.index('Text(title.name,'))
+        self.assertIn('minLines = 1, maxLines = 1', card)
+        self.assertIn('minLines = 2, maxLines = 2', card)
 
     def test_future_streaming_empty_first_page_can_browse_later_source_pages(self):
         # A verified-but-empty first page is not the end of the real catalogue.
