@@ -1857,32 +1857,38 @@ internal fun TclStreamingScreens(
     }
     LaunchedEffect(mainGenres, tvGenres, filterGenreIds, selectedHomeGenre,
         homeContentType, genreSort, genreFirstPageRetry) {
-        val mediaKind = if (homeContentType == "tv") "tv" else "movie"
-        val choices = if (mediaKind == "tv") tvGenres else mainGenres
-        val requested = if (selectedHomeGenre == 0) {
-            choices.filter { it.id in filterGenreIds ||
-                mainGenres.any { movie -> movie.id in filterGenreIds && movie.name == it.name } }
-                .map { it.id }
-        } else if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()
-          else listOf(selectedHomeGenre)
-        for (id in requested) {
-            val key = "$mediaKind:$id" +
-                if (selectedHomeGenre > 0) ":$genreSort" else ""
-            if (key !in genreShelves) {
-                genreLoading[key] = true
-                try {
-                    val result = StreamingCatalog.discoveryGenrePage(id, mediaKind, 1,
-                        if (selectedHomeGenre > 0) genreSort else "popular")
-                    genreShelves[key] = result.titles
-                    genrePage[key] = 1
-                    genreMore[key] = result.more
-                    genreErrors.remove(key)
-                } catch (error: java.util.concurrent.CancellationException) {
-                    throw error
-                } catch (error: Exception) {
-                    genreErrors[key] = "Não foi possível consultar este gênero."
-                } finally {
-                    genreLoading[key] = false
+        val kinds = if (homeContentType == "all") listOf("movie", "tv")
+            else listOf(homeContentType)
+        for (mediaKind in kinds) {
+            val choices = if (mediaKind == "tv") tvGenres else mainGenres
+            val requested = if (selectedHomeGenre == 0) {
+                filterGenreIds.mapNotNull { selectedId ->
+                    anyTvResolvedGenre(selectedId, mediaKind, allMovieGenres, tvGenres)
+                        .takeIf { it > 0 }
+                }.distinct()
+            } else if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()
+              else listOfNotNull(
+                  anyTvResolvedGenre(selectedHomeGenre, mediaKind,
+                      allMovieGenres, tvGenres).takeIf { it > 0 })
+            for (id in requested) {
+                val key = "$mediaKind:$id" +
+                    if (selectedHomeGenre > 0) ":$genreSort" else ""
+                if (key !in genreShelves) {
+                    genreLoading[key] = true
+                    try {
+                        val result = StreamingCatalog.discoveryGenrePage(id, mediaKind, 1,
+                            if (selectedHomeGenre > 0) genreSort else "popular")
+                        genreShelves[key] = result.titles
+                        genrePage[key] = 1
+                        genreMore[key] = result.more
+                        genreErrors.remove(key)
+                    } catch (error: java.util.concurrent.CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        genreErrors[key] = "Não foi possível consultar este gênero."
+                    } finally {
+                        genreLoading[key] = false
+                    }
                 }
             }
         }
