@@ -18,3 +18,14 @@
 - Release anterior `#40223579006` falhou no contrato obsoleto de 'Em breve'; contrato corrigido antes da retomada.
 - Versão OTA comprovada antes deste run: `2.9.32/code61`, commit `e7cd7d1`. Sem evidência de code62 até SUCCESS e readback.
 - QA física Android/TCL ainda pendente; PR #3 DRAFT, sem merge.
+
+## Fechamento verificado da publicação
+- Run oficial **#40224219849 SUCCESS**, SHA-fonte `7510fa10019ea859c5a21c90edd1a29e07693218`.
+- Run unsigned **#40224211903 SUCCESS**, após atualização dos testes de cabeçalho e navegação.
+- OTA commit **`b772861ef5bcfbcb3597b9f563b60a9a32a28245`**, substituindo somente `updates/android/v2/current.apk` no canal independente.
+- Assinatura V2 original validada: `ANYTV_V2_SIGNER_VALIDATED_f182088c93fa4ea6b3b16a4e0b6020a8d793d0e6f0ba664fca83e907972847c7`.
+- SHA256 do APK assinado: `f182088c93fa4ea6b3b16a4e0b6020a8d793d0e6f0ba664fca83e907972847c7`.
+- **`ANYTV_V2_GITHUB_OTA_BYTE_READBACK_SUCCESS`**, confirmação do arquivo publicado pelo próprio workflow.
+- Artefato assinado: `anytv-v2-2933-signed-update`, ID **12610915808**, 23.467.193 bytes (arquivo ZIP do GitHub Actions).
+- Testes de busca TMDB ao vivo para filme e série: SUCCESS (Titanic 20, Breaking Bad 5).
+- **Publicação aprovada em CI não equivale a instalação/homologação física do usuário.** PR #3 mantém Draft sem merge. Worker, D1, companion e OTA legado inalterados.
