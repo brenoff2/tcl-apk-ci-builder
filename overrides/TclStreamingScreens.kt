@@ -126,7 +126,8 @@ private fun anyTvResolvedGenre(
 private fun anyTvProviderGenre(
     media: String, selectedGenre: Int,
     movieGenres: List<StreamingGenre>, tvGenres: List<StreamingGenre>
-): Int = anyTvResolvedGenre(selectedGenre, media, movieGenres, tvGenres)
+): Int = if (selectedGenre == ANYTV_ANIME_FILTER) ANYTV_ANIME_FILTER
+    else anyTvResolvedGenre(selectedGenre, media, movieGenres, tvGenres)
 private fun anyTvToday(): String =
     java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 private fun anyTvHasDate(item: StreamingTitle): Boolean =
@@ -2986,12 +2987,33 @@ internal fun TclStreamingScreens(
                                             verticalArrangement = Arrangement.spacedBy(5.dp)) {
                                             Text(title.name, fontSize = 14.sp,
                                                 fontWeight = FontWeight.SemiBold, maxLines = 2)
+                                            Row(modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                                verticalAlignment = Alignment.CenterVertically) {
+                                                Text((if (title.media == "movie") "F" else "S") +
+                                                    " · " + title.date.take(4),
+                                                    fontSize = 10.sp,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                                val offers = offerCache["${title.media}:${title.id}"].orEmpty()
+                                                Text(offers.take(2).joinToString(", ") { it.name },
+                                                    fontSize = 10.sp, maxLines = 1,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                            Text(anyTvGenreLabels(title, allMovieGenres, tvGenres),
+                                                fontSize = 10.sp, maxLines = 1,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
                                             val summary = title.overview.trim()
                                             if (summary.isNotBlank()) {
                                                 Text(summary, fontSize = 12.sp,
                                                     lineHeight = 17.sp, maxLines = 7,
                                                     overflow = TextOverflow.Ellipsis,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                            TextButton(onClick = {
+                                                details = title
+                                                detailsPackage = null
+                                            }, contentPadding = PaddingValues(0.dp)) {
+                                                Text("Trailer e mais detalhes", fontSize = 11.sp)
                                             }
                                         }
                                     }
