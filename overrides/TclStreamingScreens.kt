@@ -2182,6 +2182,9 @@ internal fun TclStreamingScreens(
                         showMyStreamingSettings = true },
                     onContentType = { kind ->
                         homeContentType = kind
+                        if (kind == "tv" && selectedHomeGenre == ANYTV_CINEMA_FILTER) {
+                            selectedHomeGenre = 0 // Cinema is movie-only, not a genre.
+                        }
                         if (kind != "all") {
                             media = kind; genre = 0; page = 1; showSaved = false
                         } else media = "movie"
