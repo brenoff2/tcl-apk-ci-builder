@@ -1095,19 +1095,27 @@ private fun AnyTvPosterCard(
             Row(modifier = Modifier.align(Alignment.TopEnd)
                 .padding(top = 3.dp, end = 3.dp)) {
                 IconButton(onClick = onMarked, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Filled.CheckCircle,
-                        contentDescription = if (title.media == "movie") "Marcar assistido"
-                            else "Acompanhar série",
-                        tint = if (marked) Color(0xFF1CB96B) else Color.White,
-                        modifier = Modifier.size(20.dp)
-                            .background(Color.Black.copy(alpha = 0.60f), RoundedCornerShape(16.dp)))
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = null,
+                            tint = Color.Black.copy(alpha = 0.85f),
+                            modifier = Modifier.size(24.dp))
+                        Icon(Icons.Filled.CheckCircle,
+                            contentDescription = if (title.media == "movie") "Marcar assistido"
+                                else "Acompanhar série",
+                            tint = if (marked) Color(0xFF1CB96B) else Color.White,
+                            modifier = Modifier.size(19.dp))
+                    }
                 }
                 IconButton(onClick = onFavorite, modifier = Modifier.size(28.dp)) {
-                    Icon(Icons.Filled.Favorite,
-                        contentDescription = if (favorite) "Remover dos favoritos" else "Favoritar",
-                        tint = if (favorite) Color(0xFFE04B57) else Color.White,
-                        modifier = Modifier.size(20.dp)
-                            .background(Color.Black.copy(alpha = 0.60f), RoundedCornerShape(16.dp)))
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Favorite, contentDescription = null,
+                            tint = Color.Black.copy(alpha = 0.85f),
+                            modifier = Modifier.size(24.dp))
+                        Icon(Icons.Filled.Favorite,
+                            contentDescription = if (favorite) "Remover dos favoritos" else "Favoritar",
+                            tint = if (favorite) Color(0xFFE04B57) else Color.White,
+                            modifier = Modifier.size(19.dp))
+                    }
                 }
             }
         }
@@ -2830,12 +2838,18 @@ internal fun TclStreamingScreens(
                             val genreTitles = genreShelves[genreKey].orEmpty()
                                 .distinctBy { "${it.media}:${it.id}" }
                             item {
-                                Text(if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                                    "Cinema · Filmes em cartaz no Brasil"
-                                else "Filmes e séries · " + (currentGenreList.firstOrNull {
-                                    it.id == selectedHomeGenre }?.name ?: "Gênero"),
-                                    fontWeight = FontWeight.SemiBold,
-                                    modifier = Modifier.padding(top = 15.dp, bottom = 8.dp))
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .padding(top = 24.dp, bottom = 12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.width(3.dp).height(22.dp)
+                                        .background(Color(0xFFE3383F), RoundedCornerShape(3.dp)))
+                                    Text(if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                        "Em cartaz no Brasil"
+                                    else "Filmes e séries · " + (currentGenreList.firstOrNull {
+                                        it.id == selectedHomeGenre }?.name ?: "Gênero"),
+                                        fontWeight = FontWeight.SemiBold)
+                                }
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .horizontalScroll(rememberScrollState()),
                                     verticalAlignment = Alignment.CenterVertically,
