@@ -2,17 +2,22 @@
 Atualizado em 2026-10-25. Mapeamento por arquivos reais consultados na branch `feat/anytv-p0-device-proof-verifier-20261020` e checkpoint `docs/qa/ANYTV_2939_HANDOFF_CANONICAL_20261025.md`.
 
 ## Âncora da revisão
-HEAD consultado antes da criação: `905117a9cfa9f39bc0b82d3afb28cb149a86f181`. O SHA ficará histórico após o primeiro commit de documentação; atualizar o mapa após alterações de código.
+Código da release 2.9.48/code77 ancorado no HEAD de build `faffb1ff8a52bbbab5c9cc25afebac3bc6071914`. Os commits de documentação posteriores não alteram esses blobs de implementação. Conferir HEAD antes de editar.
 
 ## Arquivos inspecionados
 | Arquivo | Responsabilidade observada | Blob SHA da consulta |
 | --- | --- | --- |
-| `overrides/TclStreamingScreens.kt` | Composables de catálogo, Streaming, descoberta e interface de filmes/séries. | `9b76d4ff21d5309034e7a6a3a79da44fa520e39e` |
+| `overrides/TclStreamingScreens.kt` | Composables de catálogo, Streaming, descoberta e interface de filmes/séries. | `a6fd933377cfda94545522ee0a9e1c40d6e9aea9` |
 | `overrides/TclInstalledApps.kt` | Apps reais detectados na TCL, controle remoto e integração de abertura. | `e50466912a7310d254954e00ebc77e92cc82ad57` |
-| `scripts/tests/test_streaming_screens_contract.py` | Testes de contrato do Streaming e da integração com apps; seu cabeçalho ressalva teste físico. | `281d604cc4b62b62bbc32277d3a4850d1d13995b` |
-| `.github/anytv-phone-v2-build-request.json` | Pedido declarativo de publicação da 2.9.39/code68. | `f2effd08941410497f0a86f19955fb9e467cdc60` |
-| `.github/workflows/release-anytv-phone-v2-new-package.yml` | Workflow de atualização oficial V2, disparado por alteração no build-request e com preservação de signer. | `f53af528e01fa420dcc3e8646b499f81b5eb8908` |
+| `scripts/tests/test_streaming_screens_contract.py` | Testes de contrato do Streaming e da integração com apps; seu cabeçalho ressalva teste físico. | `fa3fc33ec267cb2ad0feff8dadd225c7d2a9a5ae` |
+| `.github/anytv-phone-v2-build-request.json` | Pedido declarativo de publicação da 2.9.48/code77. | `84c893df7fb17a5a18da080923414f1d57eef26c` |
+| `.github/workflows/release-anytv-phone-v2-new-package.yml` | Workflow de atualização oficial V2, disparado por alteração no build-request e com preservação de signer. | `b4968f28e08cb5e30d33ff38d83e30d0d0a256dd` |
 | `docs/qa/ANYTV_2939_HANDOFF_CANONICAL_20261025.md` | Histórico, release, decisões e checklist de homologação. | `5fdabc09d9045554af423a3defcb61b7a0579534` |
+
+## Mudanças rastreadas na release 2.9.48
+- `TclStreamingScreens.kt`: páginas Gênero/Anime com lista padrão e quatro seções reais; badges do hero compartilhados sem duplicação; metadados detalhados compactos; estreias de 90 dias via discover multiordenação limitada, Cinema BR separado; detecção de novos provedores BR por snapshots persistidos do mesmo título (primeiro scan faz baseline).
+- `test_streaming_screens_contract.py`: regressões de toggle/seções, badges, espaçamento, estreia recente e histórico BR.
+- Workflow V2: testes do Worker real e readback HTTPS por SHA imutável do commit da OTA; preservação de signer e cert2026.
 
 ## Integrações identificadas, sem auditoria exaustiva
 - App Android utiliza Kotlin/Jetpack Compose; `TclStreamingScreens.kt` concentra a UI dos catálogos.
