@@ -704,7 +704,7 @@ class StreamingScreens(unittest.TestCase):
                 self.assertIn(token, block)
         self.assertIn('preserveWatchedMovieTitles(listOf(title))', self.screen)
         migration = self.screen.split(
-            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection)', 1)[1].split(
+            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection, watchedMoviesRetry)', 1)[1].split(
             'var watchedEpisodes by remember', 1)[0]
         self.assertIn('watchedFilms.mapNotNull(String::toIntOrNull)', migration)
         self.assertIn('.filter { it !in watchedMovieTitles }', migration)
@@ -755,7 +755,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_remote_history_restore_is_bounded_and_old_worker_fails_closed(self):
         effect = self.screen.split(
-            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection)', 1)[1].split(
+            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection, watchedMoviesRetry)', 1)[1].split(
             'var watchedEpisodes by remember', 1)[0]
         for fragment in (
             'if (homeLibrary && librarySection == "watched")',
@@ -781,7 +781,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_missing_tmdb_film_does_not_block_later_valid_watched_ids(self):
         effect = self.screen.split(
-            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection)', 1)[1].split(
+            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection, watchedMoviesRetry)', 1)[1].split(
             'var watchedEpisodes by remember', 1)[0]
         for marker in (
             'absentWatchedMovieIds by remember',
@@ -806,6 +806,50 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('error("Catálogo temporariamente indisponível (HTTP $status).")',
                       self.screen)
         self.assertNotIn('watchedFilms = watchedFilms -', effect)
+
+    def test_watched_legacy_empty_message_and_manual_next_batch(self):
+        for fragment in (
+            'var watchedMoviesRetry by remember { mutableIntStateOf(0) }',
+            'LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection, watchedMoviesRetry)',
+            'Os filmes marcados como assistidos estão salvos, ',
+            'mas os cartazes ainda não foram recuperados.',
+            'if (movieDetailRouteUnsupported) {',
+            'Recuperação online ainda indisponível.',
+            'missingIds.any { it !in absentWatchedMovieIds }',
+            'TextButton(onClick = { watchedMoviesRetry++ })',
+            'Text("Recuperar mais 12")',
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, self.screen)
+        self.assertIn('val missing = ids.filter {', self.screen)
+        self.assertIn('}.take(12)', self.screen)
+        self.assertNotIn('LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection) {',
+                         self.screen)
+
+    def test_genre_first_page_failure_is_finite_and_retryable(self):
+        for fragment in (
+            'var genreFirstPageRetry by remember { mutableIntStateOf(0) }',
+            'homeContentType, genreSort, genreFirstPageRetry)',
+            'LaunchedEffect(selectedHomeGenre, homeContentType, genreSort, genreFirstPageRetry)',
+            'genreLoading[key] = true',
+            'genreErrors[key] = "Não foi possível consultar este gênero."',
+            'genreErrors[key] = "Não foi possível consultar cinemas no Brasil."',
+            'genreErrors.remove(key)',
+            'genreLoading[key] = false',
+            'genreLoading[currentGenreKey] == true',
+            'genreShelves[genreKey] == null',
+            'TextButton(onClick = { genreFirstPageRetry++ })',
+            'Text("Tentar novamente")',
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, self.screen)
+        self.assertGreaterEqual(self.screen.count(
+            'catch (error: java.util.concurrent.CancellationException) {'), 3)
+        self.assertNotIn(
+            '"$selectedGenreKind:$selectedHomeGenre:$genreSort" !in genreShelves',
+            self.screen)
+        self.assertIn('genreMore[genreKey] == true', self.screen)
+        self.assertIn('genrePage[genreKey] = next', self.screen)
 
     def test_watched_poster_preserves_title_without_favorite_or_cache_ttl(self):
         self.assertIn('fun toggleFilmWatched(title: StreamingTitle)', self.screen)

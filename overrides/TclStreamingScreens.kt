@@ -1483,6 +1483,7 @@ internal fun TclStreamingScreens(
     val genreMore = remember { mutableStateMapOf<String, Boolean>() }
     val genreLoading = remember { mutableStateMapOf<String, Boolean>() }
     val genreErrors = remember { mutableStateMapOf<String, String>() }
+    var genreFirstPageRetry by remember { mutableIntStateOf(0) }
     val premiereReminders = remember { mutableStateMapOf<String, Boolean>() }
     var globalSearchDraft by remember { mutableStateOf("") }
     var globalSearchTerm by remember { mutableStateOf("") }
@@ -1683,6 +1684,8 @@ internal fun TclStreamingScreens(
     // A nonexistent/invalid ID must not monopolize each later batch of 12.
     var absentWatchedMovieIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var restoringWatchedMovies by remember { mutableStateOf(false) }
+    // Explicitly request another bounded batch without leaving Assistidos.
+    var watchedMoviesRetry by remember { mutableIntStateOf(0) }
     fun toggleFilmWatched(title: StreamingTitle) {
         val key = title.id.toString()
         if (key !in watchedFilms) {
@@ -1703,7 +1706,7 @@ internal fun TclStreamingScreens(
     // Recover legitimate local records first; only unknown IDs need the new
     // server-side metadata lookup. Do not remove IDs, guess film titles or
     // contact unapproved third-party APIs from the Android application.
-    LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection) {
+    LaunchedEffect(watchedFilms, favorites, homeLibrary, librarySection, watchedMoviesRetry) {
         if (homeLibrary && librarySection == "watched") {
             val ids = watchedFilms.mapNotNull(String::toIntOrNull)
                 .filter { it > 0 }.distinct().sorted()
@@ -1853,7 +1856,7 @@ internal fun TclStreamingScreens(
         openedSection = null
     }
     LaunchedEffect(mainGenres, tvGenres, filterGenreIds, selectedHomeGenre,
-        homeContentType, genreSort) {
+        homeContentType, genreSort, genreFirstPageRetry) {
         val mediaKind = if (homeContentType == "tv") "tv" else "movie"
         val choices = if (mediaKind == "tv") tvGenres else mainGenres
         val requested = if (selectedHomeGenre == 0) {
@@ -1866,32 +1869,44 @@ internal fun TclStreamingScreens(
             val key = "$mediaKind:$id" +
                 if (selectedHomeGenre > 0) ":$genreSort" else ""
             if (key !in genreShelves) {
-                runCatching {
-                    StreamingCatalog.discoveryGenrePage(id, mediaKind, 1,
+                genreLoading[key] = true
+                try {
+                    val result = StreamingCatalog.discoveryGenrePage(id, mediaKind, 1,
                         if (selectedHomeGenre > 0) genreSort else "popular")
+                    genreShelves[key] = result.titles
+                    genrePage[key] = 1
+                    genreMore[key] = result.more
+                    genreErrors.remove(key)
+                } catch (error: java.util.concurrent.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    genreErrors[key] = "Não foi possível consultar este gênero."
+                } finally {
+                    genreLoading[key] = false
                 }
-                    .onSuccess {
-                        genreShelves[key] = it.titles
-                        genrePage[key] = 1
-                        genreMore[key] = it.more
-                    }
             }
         }
     }
 
-    LaunchedEffect(selectedHomeGenre, homeContentType, genreSort) {
+    LaunchedEffect(selectedHomeGenre, homeContentType, genreSort, genreFirstPageRetry) {
         if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
             val key = "movie:$ANYTV_CINEMA_FILTER:$genreSort"
             if (key !in genreShelves) {
-                runCatching { StreamingCatalog.discoveryCinemaPage(1) }
-                    .onSuccess {
-                        genreShelves[key] = it.titles
-                        cinemaIds = cinemaIds + it.titles.map { title -> title.id }
-                        genrePage[key] = 1
-                        genreMore[key] = it.more
-                    }.onFailure {
-                        genreErrors[key] = "Não foi possível consultar cinemas no Brasil."
-                    }
+                genreLoading[key] = true
+                try {
+                    val result = StreamingCatalog.discoveryCinemaPage(1)
+                    genreShelves[key] = result.titles
+                    cinemaIds = cinemaIds + result.titles.map { title -> title.id }
+                    genrePage[key] = 1
+                    genreMore[key] = result.more
+                    genreErrors.remove(key)
+                } catch (error: java.util.concurrent.CancellationException) {
+                    throw error
+                } catch (error: Exception) {
+                    genreErrors[key] = "Não foi possível consultar cinemas no Brasil."
+                } finally {
+                    genreLoading[key] = false
+                }
             }
         }
     }
@@ -2217,8 +2232,10 @@ internal fun TclStreamingScreens(
                             Text("⚙ Listas", fontSize = 11.sp)
                         }
                     }
+                    val currentGenreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"
+                    // A failed first-page request must not leave an endless spinner.
                     if (discoveryLoading || (selectedHomeGenre != 0 &&
-                            "$selectedGenreKind:$selectedHomeGenre:$genreSort" !in genreShelves)) {
+                            genreLoading[currentGenreKey] == true)) {
                         CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     }
                     if (discoveryError != null && selectedHomeGenre == 0) {
@@ -2586,7 +2603,11 @@ internal fun TclStreamingScreens(
                                     Text(when (librarySection) {
                                         "watching" -> if (watchingRefreshing) "Recuperando séries acompanhadas…"
                                             else "Você ainda não acompanha nenhuma série."
-                                        "watched" -> "Nenhum filme marcado como assistido."
+                                        "watched" -> if (watchedFilms.any {
+                                                it.toIntOrNull()?.let { id -> id > 0 } == true
+                                            }) "Os filmes marcados como assistidos estão salvos, " +
+                                                "mas os cartazes ainda não foram recuperados."
+                                            else "Nenhum filme marcado como assistido."
                                         else -> "Sua lista está vazia. Salve filmes e séries para vê-los aqui."
                                     }, color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 13.sp)
@@ -2819,6 +2840,12 @@ internal fun TclStreamingScreens(
                                 genreErrors[genreKey]?.let { error ->
                                     Text(error, color = MaterialTheme.colorScheme.error,
                                         fontSize = 12.sp)
+                                    if (genreShelves[genreKey] == null &&
+                                        genreLoading[genreKey] != true) {
+                                        TextButton(onClick = { genreFirstPageRetry++ }) {
+                                            Text("Tentar novamente")
+                                        }
+                                    }
                                 }
                             }
                         } else if (homeLibrary && librarySection == "watching") {
@@ -2879,6 +2906,21 @@ internal fun TclStreamingScreens(
                                             " (+${missingIds.size - 12} outros)" else ""),
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 11.sp)
+                                }
+                                if (movieDetailRouteUnsupported) {
+                                    item {
+                                        Text("Recuperação online ainda indisponível. " +
+                                            "Seus registros continuam salvos.",
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            fontSize = 11.sp)
+                                    }
+                                } else if (!restoringWatchedMovies &&
+                                    missingIds.any { it !in absentWatchedMovieIds }) {
+                                    item {
+                                        TextButton(onClick = { watchedMoviesRetry++ }) {
+                                            Text("Recuperar mais 12")
+                                        }
+                                    }
                                 }
                             }
                         }
