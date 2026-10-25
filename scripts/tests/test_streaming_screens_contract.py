@@ -149,7 +149,7 @@ class StreamingScreens(unittest.TestCase):
             'myServices = editingMyServices', 'filterGenreIds = editingFilterGenres',
             'StreamingCatalog.discover(token, name, kind',
             'activeServiceNames.forEach { name ->',
-            'val filteredShelves = if (internalSearchQuery.isBlank()) visibleShelves else',
+            'val filteredShelves = if (activeServiceNames.isEmpty() || homeLibrary ||',
             'val uniqueShelves = filteredShelves.mapNotNull',
             '"Marcar todos"', '"Desmarcar todos"',
             'editingFilterGenres = if (allGenreIds.isNotEmpty()',
@@ -166,7 +166,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('@Composable\ninternal fun TclStreamingScreens(', self.screen)
         self.assertNotIn('@Composable\n/** Same one-row navigation', self.screen)
         self.assertIn('onFilters = { editingMyServices = myServices', self.screen)
-        self.assertIn('AnyTvCompactChip("Filmes", !library && contentType == "movie")', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", !library && contentType != "tv")', self.screen)
         self.assertIn('onHome = { selected = null; homeLibrary = false', self.screen)
         self.assertIn('onWatching = { selected = null; homeLibrary = true', self.screen)
         self.assertIn('onWatched = { selected = null; homeLibrary = true', self.screen)
@@ -391,10 +391,27 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('collected.filter(::anyTvReleased).distinctBy {', self.screen)
         self.assertIn('successfulRequests == 0', self.screen)
 
+    def test_media_chips_both_active_by_default_and_off_independently(self):
+        self.assertIn('contentType != "tv"', self.screen)
+        self.assertIn('contentType != "movie"', self.screen)
+        self.assertIn('if (contentType == "all") "tv" else "all"', self.screen)
+        self.assertIn('if (contentType == "all") "movie" else "all"', self.screen)
+
+    def test_anime_uses_japanese_animation_not_generic_animation(self):
+        self.assertIn('ANYTV_ANIME_FILTER = -2', self.screen)
+        self.assertIn('with_original_language=ja', self.screen)
+        self.assertIn('AnyTvCompactChip("Anime"', self.screen)
+
+    def test_editorial_shelves_and_streaming_offers_remain_separate(self):
+        self.assertIn('Filmes e séries mais assistidos', self.screen)
+        self.assertIn('StreamingCatalog.matchesSelectedSubscription(', self.screen)
+        self.assertIn('if (selectedHomeGenre == 0) {', self.screen)
+        self.assertNotIn('if (selectedHomeGenre == 0 && activeServiceNames.isEmpty()) {', self.screen)
+
     def test_new_genre_details_and_search_consistency(self):
         self.assertIn('var genreViewMode by remember', self.screen)
-        self.assertIn('AnyTvCompactChip("Grade", genreViewMode == "grade")', self.screen)
-        self.assertIn('AnyTvCompactChip("Detalhado", genreViewMode == "detalhado")', self.screen)
+        self.assertIn('AnyTvGenreViewIcon(Icons.Filled.GridView, "Grade", genreViewMode == "grade")', self.screen)
+        self.assertIn('AnyTvGenreViewIcon(Icons.Filled.ViewList, "Detalhado", genreViewMode == "detalhado")', self.screen)
         self.assertIn('if (genreViewMode == "detalhado"', self.screen)
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
         self.assertIn('"movie" -> "Filmes"', self.screen)
@@ -403,8 +420,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('anyTvGenreLabels(', self.screen)
         self.assertIn('Text(genreLabel, fontSize = 10.sp', self.screen)
         self.assertIn('Text(heroGenres, fontSize = 11.sp', self.screen)
-        self.assertIn('internalSearchQuery', self.screen)
-        self.assertIn('contentDescription = "Buscar nesta página"', self.screen)
+        self.assertNotIn('internalSearchQuery', self.screen)
+        self.assertIn('contentDescription = "Buscar"', self.screen)
         self.assertIn('contentDescription = "Limpar busca"', self.screen)
 
     def test_screenshot_38dp_icons_system_bars_and_full_bleed_banner(self):
