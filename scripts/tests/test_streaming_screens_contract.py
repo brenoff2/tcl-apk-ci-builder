@@ -92,7 +92,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('.optJSONObject("BR")?.optJSONArray("flatrate")', self.screen)
         self.assertIn('offer.optString("logo_path")', self.screen)
         self.assertIn('StreamingOfferIcons(title, offerCache, apps,', self.screen)
-        self.assertIn('StreamingOfferIcons(current, offerCache, displayed', self.screen)
+        self.assertIn('AnyTvRatingOverlay(current)', self.screen)
         self.assertIn('StreamingCatalog.appHasOffer(app, it)', self.screen)
         self.assertIn('Nenhuma oferta de assinatura confirmada no Brasil.', self.screen)
         self.assertNotIn('displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->\n                                FilterChip(', self.screen)
@@ -125,7 +125,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Text("Explorar por plataforma"', self.screen)
         self.assertNotIn('Text("Streaming", fontSize = 20.sp', self.screen)
         self.assertNotIn('Text("Filtrar destaques por plataforma instalada na TV"', self.screen)
-        self.assertIn('val heroTitles = if (homeLibrary) emptyList()', self.screen)
+        self.assertIn('val heroTitles = if (homeLibrary || (selected == null &&', self.screen)
 
     def test_bounded_persistent_quota_saving_metadata_cache(self):
         for fragment in (
@@ -863,7 +863,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_home_more_reminder_and_brand_are_real(self):
         self.assertIn('OutlinedButton(', self.screen)
-        self.assertIn('"Ver mais ›"', self.screen)
+        self.assertNotIn('"Ver mais ›"', self.screen)
         self.assertIn('openedSection = heading', self.screen)
         self.assertIn('items(sectionTitles.chunked(3)) { group ->', self.screen)
         self.assertNotIn('Text(if (enabled) "Lembrar ✓" else "Lembrar"', self.screen)
@@ -1028,8 +1028,8 @@ class StreamingScreens(unittest.TestCase):
             '!it.name.startsWith("saved_title_")',
             'items(inProgress.take(sectionVisibleCount).chunked(3))',
             'sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })',
-            'value = watchingQuery',
-            'placeholder = { Text("Buscar nas minhas séries") }',
+            'value = libraryQuery',
+            'placeholder = { Text("Buscar nesta lista") }',
             '"watching" -> "Séries acompanhadas"',
             'Text("Mostrar mais")',
         ):
@@ -1089,6 +1089,19 @@ class StreamingScreens(unittest.TestCase):
     def test_update_identity_is_31(self):
         self.assertIn('applicationId = "com.tclremote.livre"', self.gradle)
         self.assertIn("versionCode = " + ("39" if os.environ.get("TCL_V39") == "1" else "38" if os.environ.get("TCL_V38") == "1" else "37" if os.environ.get("TCL_V37") == "1" else "36" if os.environ.get("TCL_V36") == "1" else "35" if os.environ.get("TCL_V35") == "1" else "34"), self.gradle)
+
+    def test_new_compact_streaming_contract(self):
+        self.assertIn('Box(modifier = Modifier.weight(1f)) { actions() }', self.screen)
+        self.assertIn('AnyTvRatingOverlay(title, Modifier.align(Alignment.TopStart)', self.screen)
+        self.assertIn('Color(0xFFFFD54F)', self.screen)
+        self.assertIn('showYear = true', self.screen)
+        self.assertIn('maxLines = 2', self.screen)
+        self.assertIn('"watched" -> "Filmes e séries assistidos"', self.screen)
+        self.assertIn('value = libraryQuery', self.screen)
+        self.assertIn('libraryQuery.isBlank()', self.screen)
+        self.assertNotIn('"Ver mais ›"', self.screen)
+        self.assertIn('AnyTvCinemaHero(shelf)', self.screen)
+        self.assertIn('Box(modifier = Modifier.width(3.dp).height(22.dp)', self.screen)
 
     def test_library_labels_and_cinema_overlay_share_home_visual_contract(self):
         self.assertIn('"Séries acompanhadas"', self.screen)
