@@ -322,6 +322,7 @@ private object StreamingCatalog {
             "plutotv" in v -> "plutotv"
             "mubi" in v -> "mubi"
             "telecine" in v -> "telecine"
+            "universalplus" in v -> "universalplus"
             "looke" in v -> "looke"
             "clarovideo" in v -> "clarovideo"
             else -> null
@@ -442,13 +443,12 @@ private object StreamingCatalog {
                 val id = offer.optInt("provider_id")
                 val name = offer.optString("provider_name").trim()
                 if (id <= 0 || name.isBlank()) return@mapNotNull null
-                val normalized = norm(name)
-                // An Amazon/Apple add-on channel is not the base Paramount/Max subscription.
-                if (normalized.contains("channel") || normalized.contains("canal") ||
-                    normalized.contains("addon")) return@mapNotNull null
+                // An additional subscription channel is a valid BR offer.
+                // Keep its exact name/provider ID; never claim that an add-on
+                // is included in the Amazon/Apple base subscription.
                 StreamingOffer(id, name,
                     offer.optString("logo_path").takeIf { it.startsWith("/") } ?: "")
-            }.distinctBy { provider(it.name) ?: norm(it.name) }
+            }.distinctBy { it.id }
         }
 
     fun appHasOffer(app: TvOfficialApp, offers: List<StreamingOffer>): Boolean {
@@ -1394,7 +1394,7 @@ internal fun TclStreamingScreens(
     val catalogScrollState = rememberLazyListState()
     var showGenreSettings by remember { mutableStateOf(false) }
     var showMyStreamingSettings by remember { mutableStateOf(false) }
-    val subscriptionNames = remember { listOf("Netflix", "Prime Video", "Disney+", "Max", "Paramount+", "Apple TV+", "Globoplay", "Crunchyroll", "Mubi", "Telecine", "Looke", "Claro Video") }
+    val subscriptionNames = remember { listOf("Netflix", "Prime Video", "Disney+", "Max", "Paramount+", "Apple TV+", "Globoplay", "Crunchyroll", "Mubi", "Telecine", "Looke", "Claro Video", "Universal+") }
     var filterGenreIds by remember(prefs) {
         mutableStateOf(prefs.getString("anytv_discovery_genre_filter", null)
             ?.split(",")?.mapNotNull { it.toIntOrNull() }?.toSet()
