@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 61,
+  "expected_version_code": 62,
   "preserve_legacy_ota": true,
-  "source": "User-authorized release 25/10/2026: post-2.9.31 DEV filter/media/BR offer/Anime/detail corrections and Cinema exclusion fix, verified unsigned candidate #40218997820 SUCCESS (code61).",
+  "source": "User-authorized 25/10/2026: corrected film/TV genre pagination, mixed home editorial, future release discovery, stable card heights and genre-first layout. Existing V2 signer retained.",
   "new_install_only": false,
-  "release_version": "2.9.32-AnyTV",
-  "release_scope": "Official V2 signed OTA code61 over code60, original V2 certificate, full regressions/Gradle/IME/TMDB and HTTPS byte readback; preserve Worker, D1, TV companion, legacy OTA, favorites and watched states.",
-  "ci_revision": 23
+  "release_version": "2.9.33-AnyTV",
+  "release_scope": "Signed official phone V2 OTA 2.9.33/code62 over code61. Execute full workflow regressions/Gradle/IME/catalog/signature and HTTPS byte readback; preserve legacy OTA, worker, D1, companion TV, personal user records.",
+  "ci_revision": 24
 }
