@@ -591,13 +591,12 @@ private object StreamingCatalog {
             }
         }
 
-    /** Future streaming titles require a confirmed BR subscription offer. */
+    /** Future film/TV releases are factual TMDB dates, not confirmed subscriptions. */
     suspend fun discoveryUpcomingStreaming(): List<StreamingTitle> =
         discoveryUpcomingStreamingPage(1).titles
 
-    /** Follow TMDB source pages without skipping titles removed by BR offer checks.
-     * One source page is up to 20 films plus 20 series; the UI reveals the
-     * verified results in batches of 24. Never infer an offer from a future date.
+    /** Page both future film and TV sources without claiming streaming availability.
+     * Provider-specific filters remain fail-closed in the UI, based on BR offers.
      */
     suspend fun discoveryUpcomingStreamingPage(page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
@@ -612,22 +611,19 @@ private object StreamingCatalog {
                 }
                 val films = movieSource.await()
                 val shows = seriesSource.await()
-                val sources = (
-                    mapTitles(films.optJSONArray("results") ?: JSONArray(), "movie", 0) +
-                    mapTitles(shows.optJSONArray("results") ?: JSONArray(), "tv", 0)
-                ).filter(::anyTvUpcoming).distinctBy { "${it.media}:${it.id}" }
-                val limit = Semaphore(4)
-                val verified = sources.map { title ->
-                    async {
-                        // A request failure is not proof of BR subscription rights.
-                        val offered = limit.withPermit {
-                            runCatching { offersInBrazil(title).isNotEmpty() }
-                                .getOrDefault(false)
-                        }
-                        title.takeIf { offered }
+                val futureFilms = mapTitles(
+                    films.optJSONArray("results") ?: JSONArray(), "movie", 0)
+                    .filter(::anyTvUpcoming)
+                val futureShows = mapTitles(
+                    shows.optJSONArray("results") ?: JSONArray(), "tv", 0)
+                    .filter(::anyTvUpcoming)
+                val upcoming = buildList {
+                    for (index in 0 until maxOf(futureFilms.size, futureShows.size)) {
+                        futureFilms.getOrNull(index)?.let { add(it) }
+                        futureShows.getOrNull(index)?.let { add(it) }
                     }
-                }.awaitAll().filterNotNull()
-                StreamingResults(verified, page < 50 && (
+                }.distinctBy { "${it.media}:${it.id}" }
+                StreamingResults(upcoming, page < 50 && (
                     page < films.optInt("total_pages", page) ||
                     page < shows.optInt("total_pages", page)))
             }
@@ -1094,16 +1090,17 @@ private fun AnyTvPosterCard(
                 }
             }
         }
+        // Fixed metadata and two-line title footprints prevent horizontal
+        // rails from shifting vertically when the active title changes.
+        Text(genreLabel, modifier = Modifier.fillMaxWidth(),
+            fontSize = 10.sp, lineHeight = 13.sp, minLines = 1, maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         StreamingOfferIcons(title, offerCache, apps, showRating = false,
             inCinema = inCinema, showYear = true)
         Text(title.name, modifier = Modifier.fillMaxWidth(),
-            fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2,
+            fontSize = 11.sp, lineHeight = 14.sp, minLines = 2, maxLines = 2,
             overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
-        if (genreLabel.isNotBlank()) {
-            Text(genreLabel, fontSize = 10.sp, maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }
 
