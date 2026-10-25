@@ -272,19 +272,25 @@ jobs:
           mkdir -p ota-v2/updates/android/v2
           cp signed-v2/AnyTV_V2_2.9.47_UPDATE.apk ota-v2/updates/android/v2/current.apk
           (cd ota-v2 && git config user.name 'github-actions[bot]' && git config user.email '41898282+github-actions[bot]@users.noreply.github.com' && git add -f updates/android/v2/current.apk && git diff --cached --check && git commit -m 'release(anytv-v2): verified signed V2 2.9.47 OTA update' && git push origin HEAD:feat/tcl-v22-updates-back-bluetooth)
-      - name: Verify published V2 APK bytes through GitHub HTTPS
+      - name: Verify published V2 APK bytes through immutable GitHub commit HTTPS
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in 1 2 3 4 5 6 7 8; do
-            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/feat/tcl-v22-updates-back-bluetooth/updates/android/v2/current.apk?check=$attempt" -o signed-v2/remote.apk || true
+          expected_commit="$(git -C ota-v2 rev-parse HEAD)"
+          published_commit="$(git ls-remote origin refs/heads/feat/tcl-v22-updates-back-bluetooth | cut -f1)"
+          test -n "$published_commit" && test "$published_commit" = "$expected_commit"
+          echo "ANYTV_V2_OTA_REF_CONFIRMED_$expected_commit"
+          # GitHub's branch-name raw URL can serve stale CDN bytes after a push.
+          # An immutable commit URL gives a content-addressed readback.
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/$expected_commit/updates/android/v2/current.apk?check=$attempt" -o signed-v2/remote.apk || true
             if test -s signed-v2/remote.apk && cmp -s signed-v2/remote.apk signed-v2/AnyTV_V2_2.9.47_UPDATE.apk; then
               echo 'ANYTV_V2_GITHUB_OTA_BYTE_READBACK_SUCCESS'
               exit 0
             fi
             sleep 10
           done
-          echo "::error::V2 remote readback failed"
+          echo "::error::V2 immutable remote readback failed"
           exit 1
       - name: Audit signed V2 app as independent artifact
         uses: actions/upload-artifact@v4
