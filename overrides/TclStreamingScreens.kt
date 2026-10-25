@@ -85,6 +85,16 @@ import java.security.MessageDigest
 import java.text.Normalizer
 
 internal data class StreamingTitle(val id: Int, val name: String, val overview: String, val poster: String, val media: String, val rating: Double = 0.0, val votes: Int = 0, val backdrop: String = "", val date: String = "", val genreIds: List<Int> = emptyList())
+private fun anyTvGenreLabels(
+    title: StreamingTitle,
+    movieGenres: List<StreamingGenre>,
+    tvGenres: List<StreamingGenre>
+): String {
+    val source = if (title.media == "tv") tvGenres else movieGenres
+    return title.genreIds.mapNotNull { id ->
+        source.firstOrNull { it.id == id }?.name
+    }.distinct().take(3).joinToString(" · ")
+}
 private const val ANYTV_CINEMA_FILTER = -1
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
 private const val ANYTV_LIST_BATCH = 24
@@ -1033,6 +1043,7 @@ private fun AnyTvPosterCard(
     favorite: Boolean,
     marked: Boolean,
     inCinema: Boolean,
+    genreLabel: String,
     onOpen: () -> Unit,
     onMarked: () -> Unit,
     onFavorite: () -> Unit
@@ -1079,6 +1090,11 @@ private fun AnyTvPosterCard(
         Text(title.name, modifier = Modifier.fillMaxWidth().height(30.dp),
             fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2,
             overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+        if (genreLabel.isNotBlank()) {
+            Text(genreLabel, fontSize = 10.sp, maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -2146,6 +2162,7 @@ internal fun TclStreamingScreens(
                     title.id.toString() in watchedFilms
                 else title.id.toString() in trackedSeries,
                 inCinema = cinemaSection || title.id in cinemaIds,
+                genreLabel = anyTvGenreLabels(title, allMovieGenres, tvGenres),
                 onOpen = {
                     details = title; detailsPackage = null
                     if (showGlobalSearch) {
@@ -2765,6 +2782,16 @@ internal fun TclStreamingScreens(
                                                             fontSize = 9.sp, color = Color.White,
                                                             fontWeight = FontWeight.SemiBold)
                                                     }
+                                                }
+                                                val heroGenres = anyTvGenreLabels(
+                                                    current, allMovieGenres, tvGenres)
+                                                if (heroGenres.isNotBlank()) {
+                                                    Text(heroGenres, fontSize = 11.sp,
+                                                        color = Color.White, maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis,
+                                                        style = TextStyle(shadow = Shadow(
+                                                            color = Color.Black,
+                                                            offset = Offset(0f, 2f), blurRadius = 5f)))
                                                 }
                                             }
                                             // Minimal progress bars; no large text dots on artwork.
