@@ -121,7 +121,7 @@ class ApprovedUiContract(unittest.TestCase):
             'private val TclBlue = Color(0xFFE9003B)',
             'val systemBg = TclBg',
             'TclApprovedHeader(',
-            'Text(deviceBrand, color = TclMuted',
+            'Text(tvName, color = TclText',
             'modifier = Modifier.size(38.dp)',
             'verticalArrangement = Arrangement.spacedBy(6.dp)',
             'TclResponsivePad(',
