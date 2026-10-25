@@ -2483,7 +2483,7 @@ internal fun TclStreamingScreens(
                                     (sectionAll.isNotEmpty() ||
                                         sectionTitle == "Em breve · Streaming"))) {
                                 item {
-                                    TextButton(
+                                    OutlinedButton(
                                         enabled = !sectionLoading,
                                         onClick = {
                                             if (sectionAll.size > sectionVisibleCount) {
@@ -2803,7 +2803,7 @@ internal fun TclStreamingScreens(
                             }
                             item {
                                 if (genreMore[genreKey] == true) {
-                                    TextButton(enabled = genreLoading[genreKey] != true,
+                                    OutlinedButton(enabled = genreLoading[genreKey] != true,
                                         onClick = {
                                             if (genreLoading[genreKey] != true) {
                                                 genreLoading[genreKey] = true
