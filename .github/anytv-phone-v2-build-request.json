@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 75,
+  "expected_version_code": 76,
   "preserve_legacy_ota": true,
-  "source": "Correct genre list/sections toggle (inverted label), render four genuine filtered genre editorial rails, remove duplicate F/S in home hero, tighten detail metadata spacing and remove misleading unverified arrivals warning.",
+  "source": "User-requested definitive fix: real genre editorial sections and correct toggle; compact details and single styled hero F/S; populated recent films/new series via bounded dual-sort TMDB discovery; evidence-based newcomer section comparing persisted BR provider snapshots, not fake recent arrivals.",
   "new_install_only": false,
-  "release_version": "2.9.46-AnyTV",
-  "release_scope": "Signed Android AnyTV 2.9.46/code75 official OTA, with Worker integration gate, original V2 signer/legacy cert2026 preserved, verified GitHub HTTPS byte readback.",
-  "ci_revision": 45
+  "release_version": "2.9.47-AnyTV",
+  "release_scope": "Official V2 2.9.47/code76 signed OTA, preserve signer and legacy cert2026, run tests and live Worker request gates, byte-for-byte HTTPS readback.",
+  "ci_revision": 46
 }
