@@ -284,6 +284,10 @@
     {
       "date": "2026-10-25",
       "event": "AnyTV 2.9.28/code57: hero Principal restaurado e cinema removido da Principal, notas acima esquerda e ajustes de títulos/espacos/contraste. Actions #40200384627 sucesso; OTA commit a4f671d, bytes HTTPS verificados. QA físico pendente, sem alteração de progresso 7/11 ou gates."
+    },
+    {
+      "date": "2026-10-25",
+      "event": "AnyTV V2 2.9.29/code58: remover badges circulares sob coração/assistido, aplicar contorno preto no ícone e usar uma única implementação de hero em Cinema/Principal, normalizar cabeçalhos. Actions #40202285198 SUCCESS; commit OTA 71afa4a, HTTPS byte readback PASS. Sem homologação física, progresso 7/11 preservado."
     }
   ],
   "discovery_v3": {
