@@ -462,13 +462,6 @@ private fun TclApprovedHeader(
     onCast: () -> Unit,
     onSettings: () -> Unit
 ) {
-    // Connection identity on two lines: status and title, then Android TV.
-    val deviceBrand = remember(tvName) {
-        listOf("TCL", "Sony", "Philips", "Hisense", "Xiaomi", "Google TV",
-            "Android TV", "Samsung", "LG").firstOrNull {
-            tvName.contains(it, ignoreCase = true)
-        } ?: "Android TV"
-    }
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -478,7 +471,6 @@ private fun TclApprovedHeader(
             verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(tvName, color = TclText, fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(deviceBrand, color = TclMuted, fontSize = 11.sp, maxLines = 1)
         }
         TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar", TclBlue, onPower)
         TclHeaderAction(Icons.Filled.Cast, "Transmitir", TclBlue, onCast)
