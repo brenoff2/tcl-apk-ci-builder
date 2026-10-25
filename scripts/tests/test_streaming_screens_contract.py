@@ -610,7 +610,11 @@ class StreamingScreens(unittest.TestCase):
     def test_genre_page_combines_movies_and_series_only_when_all_selected(self):
         self.assertIn('if (homeContentType == "all") listOf("movie", "tv")', self.screen)
         self.assertIn('anyTvResolvedGenre(selectedHomeGenre, mediaKind,', self.screen)
-        self.assertIn('val genreTitles = listOf("movie", "tv").filter {', self.screen)
+        self.assertIn('val genreTitles = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('genreShelves[genreKey].orEmpty()', self.screen)
+        self.assertIn('val genreTitles = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('else listOf("movie", "tv").filter {', self.screen)
+        self.assertIn('kind == "tv" && selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
         self.assertIn('val selectedKindId = anyTvResolvedGenre(selectedHomeGenre,', self.screen)
 
