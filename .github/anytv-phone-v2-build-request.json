@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 54,
+  "expected_version_code": 55,
   "preserve_legacy_ota": true,
-  "source": "AnyTV V2 2.9.25/code54: nova interface controle grafite/vermelho aprovada, catalogo streaming e Cinema BR, busca global fullscreen com historico, series em andamento duraveis, cartoes internos e 24 por lote; fonte DEV validada em CI unsigned #40104547392.",
+  "source": "AnyTV 2.9.26/code55: base 2.9.25 + padronizacao DEV de cards 3x/2:3, hero Cinema, Series acompanhadas e botoes Mostrar mais, preservando filtros, historico e controles TCL; release sujeito aos gates automaticos da workflow.",
   "new_install_only": false,
-  "release_version": "2.9.25-AnyTV",
-  "release_scope": "Atualizar somente o aplicativo AnyTV para telefone com o pacote com.tclremote.livre.v2, versionCode 54 e versionName 2.9.25-AnyTV, preservando certificado V2 original, dados locais, vinculo com TCL, OTA exclusiva updates/android/v2/current.apk e backup inalterado updates/android/cert2026/current.apk; incluir redesign preto/grafite, direcional OK vermelho, banner cinema e melhorias recentes de busca/series/24 titulos. Exigir CI de contratos, Kotlin, IME, catalogo, signer SHA256, verificacao OTA HTTPS byte por byte, rollforward so code54; TV companion e Worker inalterados. QA fisica posterior.",
-  "ci_revision": 13
+  "release_version": "2.9.26-AnyTV",
+  "release_scope": "Atualizacao solicitada para AnyTV V2 2.9.26/code55 com pacote com.tclremote.livre.v2 e mesmo certificado V2, preservando dados e OTA legada. Publicar exclusivamente updates/android/v2/current.apk mediante testes, assinatura, identidade, readback HTTPS byte a byte. Worker/D1/companion sem alteracao. QA fisico ainda pendente.",
+  "ci_revision": 14
 }
