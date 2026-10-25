@@ -1005,8 +1005,13 @@ private fun AnyTvCinemaHero(
     }
     Column(modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Cinema · Em cartaz no Brasil", fontWeight = FontWeight.Bold,
-            fontSize = 16.sp)
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(modifier = Modifier.width(3.dp).height(22.dp)
+                .background(Color(0xFFE3383F), RoundedCornerShape(3.dp)))
+            Text("Cinema · Em cartaz no Brasil",
+                fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        }
         HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth()) { index ->
             val film = movies[index]
             Box(modifier = Modifier.fillMaxWidth().height(155.dp)
@@ -1122,7 +1127,12 @@ private fun AnyTvOneRowPreview(
     if (titles.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(7.dp),
         modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
-        Text(heading, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        Row(verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(modifier = Modifier.width(3.dp).height(20.dp)
+                .background(Color(0xFFE3383F), RoundedCornerShape(3.dp)))
+            Text(heading, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+        }
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val cardWidth = (maxWidth - 18.dp) / 3f
             LazyRow(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -2612,30 +2622,49 @@ internal fun TclStreamingScreens(
                                     "watched" -> "Filmes e séries assistidos"
                                     else -> "Minha lista"
                                 }, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                                OutlinedTextField(
-                                    value = libraryQuery,
-                                    onValueChange = {
-                                        libraryQuery = it.take(90)
-                                        watchingQuery = libraryQuery
-                                    },
-                                    modifier = Modifier.fillMaxWidth()
-                                        .padding(top = 8.dp).height(52.dp),
-                                    singleLine = true,
-                                    placeholder = { Text("Buscar nesta lista") },
-                                    leadingIcon = { Icon(Icons.Filled.Search,
+                                Row(modifier = Modifier.fillMaxWidth()
+                                    .padding(top = 8.dp).height(44.dp)
+                                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant,
+                                        RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Filled.Search,
                                         contentDescription = "Buscar",
-                                        modifier = Modifier.size(19.dp)) },
-                                    trailingIcon = {
-                                        if (libraryQuery.isNotEmpty()) {
-                                            IconButton(onClick = {
-                                                libraryQuery = ""
-                                                watchingQuery = ""
-                                            }) {
-                                                Icon(Icons.Filled.Close,
-                                                    contentDescription = "Limpar busca")
+                                        modifier = Modifier.size(19.dp))
+                                    BasicTextField(
+                                        value = libraryQuery,
+                                        onValueChange = { value ->
+                                            libraryQuery = value.take(90)
+                                            watchingQuery = libraryQuery
+                                        },
+                                        singleLine = true,
+                                        textStyle = TextStyle(
+                                            fontSize = 13.sp,
+                                            color = MaterialTheme.colorScheme.onSurface),
+                                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                        modifier = Modifier.weight(1f),
+                                        decorationBox = { innerTextField ->
+                                            Box(contentAlignment = Alignment.CenterStart) {
+                                                if (libraryQuery.isEmpty()) {
+                                                    Text("Buscar nesta lista",
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        fontSize = 13.sp)
+                                                }
+                                                innerTextField()
                                             }
+                                        })
+                                    if (libraryQuery.isNotEmpty()) {
+                                        IconButton(onClick = {
+                                            libraryQuery = ""
+                                            watchingQuery = ""
+                                        }, modifier = Modifier.size(30.dp)) {
+                                            Icon(Icons.Filled.Close,
+                                                contentDescription = "Limpar busca",
+                                                modifier = Modifier.size(18.dp))
                                         }
-                                    })
+                                    }
+                                }
                                 if (visibleShelves.isEmpty()) {
                                     Spacer(Modifier.height(16.dp))
                                     Text(when (librarySection) {
