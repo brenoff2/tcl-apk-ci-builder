@@ -2434,11 +2434,6 @@ internal fun TclStreamingScreens(
                             // Even if page one has no BR offers, later source pages can.
                             if (future.isNotEmpty() || upcomingStreamingMore)
                                 put("Em breve · Streaming", future)
-                            if (homeContentType != "tv") {
-                                discoveryShelves[ANYTV_CINEMA_SHELF]?.let { cinema ->
-                                    if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)
-                                }
-                            }
                                 filterGenreIds.forEach { id ->
                                     val label = (allMovieGenres + tvGenres).firstOrNull {
                                         it.id == id
