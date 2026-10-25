@@ -1067,13 +1067,13 @@ private fun AnyTvOneRowPreview(
     card: @Composable (StreamingTitle, Modifier, Boolean) -> Unit
 ) {
     if (titles.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp),
-        modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 24.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(modifier = Modifier.width(3.dp).height(20.dp)
+            Box(modifier = Modifier.width(3.dp).height(22.dp)
                 .background(Color(0xFFE3383F), RoundedCornerShape(3.dp)))
-            Text(heading, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            Text(heading, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
         }
         BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
             val cardWidth = (maxWidth - 18.dp) / 3f
