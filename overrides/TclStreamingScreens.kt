@@ -616,11 +616,22 @@ private object StreamingCatalog {
             val dateField = if (media == "tv") "first_air_date" else "primary_release_date"
             // The deployed Worker intentionally allows sorting, not date-range
             // query params. Apply the 90-day window only after receiving TMDB data.
-            val route = "discover/$media?language=pt-BR&include_adult=false" +
-                "&sort_by=$dateField.desc&page=1"
-            val payload = get("backend", route)
-            val titles = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
-                .filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
+            val cutoffCalendar = java.util.Calendar.getInstance().apply {
+                add(java.util.Calendar.DAY_OF_YEAR, -90)
+            }
+            val cutoff = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+                .format(cutoffCalendar.time)
+            val titles = catalogPage24(1) { sourcePage ->
+                val route = "discover/$media?language=pt-BR&include_adult=false" +
+                    "&sort_by=$dateField.desc&page=$sourcePage"
+                val payload = get("backend", route)
+                val candidates = mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
+                StreamingResults(candidates.filter(::anyTvRecentPremiere)
+                    .filterNot(::anyTvIsAnime),
+                    sourcePage < 10 &&
+                        sourcePage < payload.optInt("total_pages", sourcePage) &&
+                        candidates.none { anyTvHasDate(it) && it.date < cutoff })
+            }.titles
             if (media == "movie") {
                 // Only confirmed BR flatrate titles qualify as new streaming films;
                 // an item currently in cinemas is not a streaming premiere claim.
