@@ -276,6 +276,10 @@
     {
       "date": "2026-10-25",
       "event": "AnyTV DEV PR#3: codigo 182a97de resolve mensagem falsa de Assistidos vazios quando IDs legados sao preservados, acrescenta Recuperar mais 12 manual sob limite do Worker e bloqueio de HTTP400, e corrige spinner infinito na primeira pagina de genero/Cinema (loading/error/retry/cancelamento). Teste textual antigo corrigido isoladamente em ffb2c8d8 apos CI inicial #40169458180 FAILED sem falha Kotlin demonstrada. CI Android unsigned #40169560233 COMPLETED/SUCCESS (71 contratos streaming +2 credenciais +11 visuais; Gradle BUILD SUCCESSFUL in 4m13s; artifact #12589154176 (23.289.396 bytes unsigned)); prova isolada #40169560291 SUCCESS; Worker #40136181610 SUCCESS sem novos arquivos Worker. QA docs/qa/ANYTV_20261025_WATCHED_RETRY_GENRE_FAILURE.md. Publicada 2.9.25/code54 permanece intocada, sem merge/deploy/assinatura/OTA. Android/TCL fisicos nao testados, progresso 7/11=63%, F0-F8 NAO_HOMOLOGADO. Plano fisico OTA assinada atual docs/qa/ANYTV_V2_2.9.25_DEVICE_HOMOLOGATION_PLAN_20261025.md substitui ponteiro ativo antigo 2.9.22, preservando arquivo historico."
+    },
+    {
+      "date": "2026-10-25",
+      "event": "AnyTV V2 2.9.27/code56 assinado, publicado e verificado byte a byte na OTA exclusiva v2; GitHub Actions #40197414429 SUCCESS, commit OTA 6b85cfb. Inclui ajustes de UI solicitados, sem alterar Worker/D1/companion ou OTA legado. Homologação física ainda pendente, preservados 7/11 e gates F0-F8 NAO_HOMOLOGADO."
     }
   ],
   "discovery_v3": {
