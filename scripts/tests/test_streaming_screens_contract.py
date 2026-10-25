@@ -27,14 +27,18 @@ class StreamingScreens(unittest.TestCase):
     def test_detailed_card_has_compact_metadata_spacing(self):
         self.assertIn('verticalArrangement = Arrangement.spacedBy(3.dp)) {', self.screen)
 
-    def test_novidades_only_contains_recent_first_premieres(self):
-        self.assertIn('private fun anyTvRecentPremiere(item: StreamingTitle)', self.screen)
-        self.assertIn('calendar.add(java.util.Calendar.DAY_OF_YEAR, -90)', self.screen)
-        self.assertIn('.filter(::anyTvRecentPremiere).sortedByDescending { it.date }', self.screen)
-        self.assertIn('heading == "Novidades" -> anyTvRecentPremiere(title)', self.screen)
-        self.assertIn('if (sectionTitle == "Novidades")', self.screen)
-        # A currently airing series is not necessarily a new series.
-        self.assertIn('Triple("Novidades em séries", "tv/on_the_air", "tv")', self.screen)
+    def test_recent_sections_have_distinct_verified_sources(self):
+        self.assertIn('suspend fun recentPremieres(media: String)', self.screen)
+        self.assertIn('suspend fun recentlyStartedSeasons()', self.screen)
+        self.assertIn('"Filmes recém-lançados" to recentMovies', self.screen)
+        self.assertIn('"Séries novas" to newSeries', self.screen)
+        self.assertIn('"Novas temporadas" to newSeasons', self.screen)
+        self.assertIn('title.takeIf { offers.isNotEmpty() }', self.screen)
+        self.assertIn('titles.filterNot { it.id in theatrical }', self.screen)
+        self.assertIn('Text("Recém-chegados ao Streaming"', self.screen)
+        self.assertNotIn('"Novidades" to news', self.screen)
+        self.assertNotIn('Triple("Novidades em filmes",', self.screen)
+        self.assertNotIn('Triple("Novidades em séries",', self.screen)
 
     def test_real_installed_apps_are_the_source(self):
         self.assertIn('request(host, code, "/apps")', self.apps)
@@ -496,7 +500,6 @@ class StreamingScreens(unittest.TestCase):
             '"Mostrar mais"', 'genreShelves[genreKey] =',
             'val films = discoveryShelves["Em alta nesta semana"]',
             'val shows = discoveryShelves["Em alta nesta semana"]',
-            'Triple("Novidades em séries", "tv/on_the_air", "tv")',
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'Text(if (item.media == "tv") "S" else "F"',
             'class AnyTvReleaseReminderReceiver',
