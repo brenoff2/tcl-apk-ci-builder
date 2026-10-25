@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 69,
+  "expected_version_code": 70,
   "preserve_legacy_ota": true,
-  "source": "User-requested next signed APK following canonical documentation synchronization (STATUS, DECISIONS, CODEBASE_MAP, AGENTS). No new UI behavior claimed; current 2.9.39 functional code retained.",
+  "source": "Recent first premieres (last 90 days) in Novidades, and compact 3dp vertical spacing in detailed list cards; targeted regression tests.",
   "new_install_only": false,
-  "release_version": "2.9.40-AnyTV",
-  "release_scope": "Signed V2 2.9.40/code69 maintenance update. Preserve app identity, original signer, legacy OTA; pass regression, Android compilation, signing and GitHub OTA byte-readback.",
-  "ci_revision": 34
+  "release_version": "2.9.41-AnyTV",
+  "release_scope": "Official signed V2 2.9.41/code70 OTA after tests, compilation, original signer verification and remote byte readback; preserve cert2026 legacy OTA.",
+  "ci_revision": 35
 }
