@@ -3,9 +3,9 @@
   "intent": "release-independent-phone-v2",
   "expected_version_code": 65,
   "preserve_legacy_ota": true,
-  "source": "User-reported missing noninstalled providers and duplicated Netflix/HBO Max. Use TMDB BR watch/providers/movie + tv provider lists, canonical identity dedup and installed exclusion in home and streaming Edit. Preserve subscriptions and original signer.",
+  "source": "User-reported missing noninstalled providers and duplicated Netflix/HBO Max. Use TMDB BR watch/providers/movie + tv provider lists, canonical identity dedup and installed exclusion in home and streaming Edit. Preserve subscriptions and original signer. Correct dynamic providerId early return to allow all TMDB BR services, not only hardcoded aliases.",
   "new_install_only": false,
   "release_version": "2.9.36-AnyTV",
   "release_scope": "Guarded V2 OTA 2.9.36/code65, supersedes 2.9.35/code64. Require full tests, Gradle build, V2 signer verification and GitHub OTA remote byte readback. No backend or companion modifications.",
-  "ci_revision": 29
+  "ci_revision": 30
 }
