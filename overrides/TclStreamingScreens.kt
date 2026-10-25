@@ -88,10 +88,32 @@ private const val ANYTV_CINEMA_FILTER = -1
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
 private const val ANYTV_LIST_BATCH = 24
 /** Movie genres drive 'All'; TV genres drive the 'Series' tab. */
-private fun anyTvProviderGenre(media: String, contentType: String, selectedGenre: Int): Int =
-    if (selectedGenre > 0 &&
-        ((contentType == "tv" && media == "tv") ||
-         (contentType != "tv" && media == "movie"))) selectedGenre else 0
+private fun anyTvResolvedGenre(
+    selectedGenre: Int, media: String,
+    movieGenres: List<StreamingGenre>, tvGenres: List<StreamingGenre>
+): Int {
+    if (selectedGenre <= 0) return 0
+    val source = (movieGenres + tvGenres).firstOrNull { it.id == selectedGenre }
+        ?: return 0
+    val candidates = if (media == "tv") tvGenres else movieGenres
+    candidates.firstOrNull { it.id == selectedGenre }?.let { return it.id }
+    val name = source.name.lowercase(java.util.Locale.ROOT)
+    val synonyms = when (name) {
+        "ação", "aventura", "action & adventure" ->
+            listOf("ação", "aventura", "action & adventure")
+        "ficção científica", "sci-fi & fantasy", "fantasia" ->
+            listOf("ficção científica", "sci-fi & fantasy", "fantasia")
+        else -> listOf(name)
+    }
+    return candidates.firstOrNull {
+        it.name.lowercase(java.util.Locale.ROOT) in synonyms
+    }?.id ?: 0
+}
+
+private fun anyTvProviderGenre(
+    media: String, selectedGenre: Int,
+    movieGenres: List<StreamingGenre>, tvGenres: List<StreamingGenre>
+): Int = anyTvResolvedGenre(selectedGenre, media, movieGenres, tvGenres)
 private fun anyTvToday(): String =
     java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date())
 private fun anyTvHasDate(item: StreamingTitle): Boolean =
@@ -1895,7 +1917,7 @@ internal fun TclStreamingScreens(
                 homeContentType == "all" || it == homeContentType
             }
             for (kind in kinds) {
-                val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)
+                val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
                 val key = name + ":" + kind + ":" + chosenGenre
                 if (key !in myServiceShelves) {
                     runCatching {
@@ -1913,7 +1935,7 @@ internal fun TclStreamingScreens(
             homeContentType == "all" || it == homeContentType
         }
         for (kind in kinds) {
-            val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)
+            val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
             val key = app.name + ":" + kind + ":" + chosenGenre
             if (key !in myServiceShelves) {
                 runCatching {
@@ -2151,7 +2173,7 @@ internal fun TclStreamingScreens(
                         editingFilterGenres = filterGenreIds
                         showMyStreamingSettings = true },
                     onContentType = { kind ->
-                        homeContentType = kind; selectedHomeGenre = 0
+                        homeContentType = kind
                         if (kind != "all") {
                             media = kind; genre = 0; page = 1; showSaved = false
                         } else media = "movie"
@@ -2166,7 +2188,7 @@ internal fun TclStreamingScreens(
                         displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
                             Column(modifier = Modifier.width(62.dp).clickable {
                                 selected = app; media = "movie"; genre = 0; page = 1
-                                selectedHomeGenre = 0; homeContentType = "all"
+                                homeContentType = "all"
                                 homeLibrary = false; showGlobalSearch = false
                                 searchDraft = ""; searchTerm = ""; showSaved = false; message = null
                             }.semantics { contentDescription = "Explorar " + app.name },
@@ -2226,7 +2248,7 @@ internal fun TclStreamingScreens(
                                 homeContentType == "all" || it == homeContentType
                             }
                             kinds.forEach { kind ->
-                                val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)
+                                val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
                                 val key = app.name + ":" + kind + ":" + chosenGenre
                                 myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
                                     put(if (kind == "tv") "Séries · " + app.name
@@ -2319,7 +2341,7 @@ internal fun TclStreamingScreens(
                                     homeContentType == "all" || it == homeContentType
                                 }
                                 kinds.forEach { kind ->
-                                    val chosenGenre = anyTvProviderGenre(kind, homeContentType, selectedHomeGenre)
+                                    val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
                                     val key = name + ":" + kind + ":" + chosenGenre
                                     myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
                                         put("Destaques " + name +
