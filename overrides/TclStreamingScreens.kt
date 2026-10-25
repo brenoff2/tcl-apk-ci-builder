@@ -3518,9 +3518,9 @@ internal fun TclStreamingScreens(
                                         it in editingMyServices }) emptySet()
                                     else subscriptionNames.toSet()
                             }) { Text(if (subscriptionNames.all { it in editingMyServices })
-                                "Desmarcar todos" else "Marcar todos", fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.SemiBold) }
+                                "Desmarcar todos" else "Marcar todos", fontSize = 13.sp,
+                                color = Color(0xFFFF5368),
+                                fontWeight = FontWeight.Bold) }
                             subscriptionNames.forEach { name ->
                                 val legacy = displayed.firstOrNull {
                                     it.name.equals(name, ignoreCase = true)
@@ -3548,9 +3548,9 @@ internal fun TclStreamingScreens(
                                     else allGenreIds
                             }) { Text(if (allGenreIds.isNotEmpty() &&
                                 allGenreIds.all { it in editingFilterGenres })
-                                "Desmarcar todos" else "Marcar todos", fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                fontWeight = FontWeight.SemiBold) }
+                                "Desmarcar todos" else "Marcar todos", fontSize = 13.sp,
+                                color = Color(0xFFFF5368),
+                                fontWeight = FontWeight.Bold) }
                             availableGenres.forEach { (name, ids) ->
                                 val checked = ids.any { it in editingFilterGenres }
                                 Row(modifier = Modifier.fillMaxWidth().clickable {
