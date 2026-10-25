@@ -2471,7 +2471,7 @@ internal fun TclStreamingScreens(
                                 item {
                                     Text(if (sectionMore)
                                         "Nenhuma assinatura BR confirmada nesta seleção. " +
-                                            "Mostrar mais 24 consulta as próximas páginas."
+                                            "Mostrar mais consulta as próximas páginas."
                                     else "Nenhum lançamento futuro com assinatura BR confirmada.",
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         fontSize = 12.sp)
@@ -2558,7 +2558,7 @@ internal fun TclStreamingScreens(
                                         modifier = Modifier.fillMaxWidth()
                                     ) {
                                         Text(if (sectionLoading) "Carregando…"
-                                            else "Mostrar mais 24")
+                                            else "Mostrar mais")
                                     }
                                 }
                             }
@@ -2838,7 +2838,7 @@ internal fun TclStreamingScreens(
                                             }
                                         }, modifier = Modifier.fillMaxWidth()) {
                                         Text(if (genreLoading[genreKey] == true)
-                                            "Carregando…" else "Mostrar mais 24",
+                                            "Carregando…" else "Mostrar mais",
                                             fontSize = 13.sp)
                                     }
                                 }
@@ -2879,10 +2879,11 @@ internal fun TclStreamingScreens(
                             }
                             if (inProgress.size > sectionVisibleCount) {
                                 item {
-                                    TextButton(onClick = {
+                                    OutlinedButton(onClick = {
                                         sectionVisibleCount += ANYTV_LIST_BATCH
-                                    }, modifier = Modifier.fillMaxWidth()) {
-                                        Text("Mostrar mais 24")
+                                    }, modifier = Modifier.fillMaxWidth().height(38.dp),
+                                        shape = RoundedCornerShape(20.dp)) {
+                                        Text("Mostrar mais")
                                     }
                                 }
                             }
@@ -3010,10 +3011,11 @@ internal fun TclStreamingScreens(
                                 }
                                 if (shelf.size > sectionVisibleCount) {
                                     item {
-                                        TextButton(
+                                        OutlinedButton(
                                             onClick = { sectionVisibleCount += ANYTV_LIST_BATCH },
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) { Text("Mostrar mais 24") }
+                                            modifier = Modifier.fillMaxWidth().height(38.dp),
+                                            shape = RoundedCornerShape(20.dp)
+                                        ) { Text("Mostrar mais") }
                                     }
                                 }
                             } else if (shelf.isEmpty() && heading == "Em breve · Streaming") {
