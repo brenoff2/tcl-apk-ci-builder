@@ -2195,7 +2195,7 @@ internal fun TclStreamingScreens(
                         displayed.filter { StreamingCatalog.streaming(it) }.forEach { app ->
                             Column(modifier = Modifier.width(62.dp).clickable {
                                 selected = app; media = "movie"; genre = 0; page = 1
-                                homeContentType = "all"
+                                // Keep the active Filmes/Séries and gênero filters when opening a provider.
                                 homeLibrary = false; showGlobalSearch = false
                                 searchDraft = ""; searchTerm = ""; showSaved = false; message = null
                             }.semantics { contentDescription = "Explorar " + app.name },
