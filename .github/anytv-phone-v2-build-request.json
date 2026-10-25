@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 57,
+  "expected_version_code": 58,
   "preserve_legacy_ota": true,
-  "source": "AnyTV V2 2.9.28/code57: restaurar slider principal de destaques, retirar carrossel/bloco Cinema da pagina Principal, nota estrela canto superior esquerdo, busca interna e estilos/sessoes uniformes conforme correcoes expressas do usuario.",
+  "source": "AnyTV 2.9.29/code58: fundo redondo dos ícones de favoritos e assistido substituído por contorno escuro no próprio ícone; Cinema deixa de ter hero divergente e recebe fonte/espaçamento equivalentes à Principal em trilhos e seções.",
   "new_install_only": false,
-  "release_version": "2.9.28-AnyTV",
-  "release_scope": "OTA canal V2 exclusivamente, assinatura original, verificação byte a byte, versionCode 57 sobre code56, sem Worker/D1/companion, preservar dados e legado, QA fisico pendente.",
-  "ci_revision": 16
+  "release_version": "2.9.29-AnyTV",
+  "release_scope": "Atualização do app V2 apenas, com assinatura original e verificação de OTA code58; sem Worker/D1/companion TCL; preservar 2.9.28 e arquivos legados, publicar apenas após testes e readback HTTPS.",
+  "ci_revision": 17
 }
