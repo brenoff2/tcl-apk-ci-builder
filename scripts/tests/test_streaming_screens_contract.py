@@ -65,7 +65,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_compact_catalog_layout_regression(self):
         self.assertIn('AnyTvStreamNavBar(', self.screen)
-        self.assertIn('Text(pageTitle, modifier = Modifier.weight(1f, fill = false)', self.screen)
+        self.assertIn('Text(pageTitle, modifier = Modifier.weight(1f)', self.screen)
         self.assertIn('val app = selected!!', self.screen)
         self.assertIn('// Home and individual provider use ONE identical catalogue layout.', self.screen)
         self.assertNotIn('} else {\n                    val app = selected!!', self.screen)
@@ -453,7 +453,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_provider_and_main_share_actual_slider_and_sections(self):
         self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
-        self.assertIn('Text(pageTitle, modifier = Modifier.weight(1f, fill = false)', self.screen)
+        self.assertIn('Text(pageTitle, modifier = Modifier.weight(1f)', self.screen)
         self.assertIn('if (selected != null && !homeLibrary)', self.screen)
         self.assertIn('LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre)', self.screen)
         self.assertIn('myServiceShelves[key] = it.titles', self.screen)
@@ -903,7 +903,7 @@ class StreamingScreens(unittest.TestCase):
                       self.screen)
         self.assertIn('.put("rating", title.rating)', self.screen)
         self.assertIn('.put("votes", title.votes)', self.screen)
-        self.assertEqual(self.screen.count('toggleFilmWatched(title)'), 2)
+        self.assertEqual(self.screen.count('toggleFilmWatched(title)'), 3)
         self.assertNotIn('toggleFilmWatched(title.id)', self.screen)
         self.assertIn('!it.name.startsWith("saved_title_")', self.screen)
 
@@ -1160,6 +1160,20 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('private fun AnyTvCinemaHero(', self.screen)
         self.assertIn('Brush.verticalGradient(listOf(', self.screen)
         self.assertIn('Color.Black.copy(alpha = 0.86f)', self.screen)
+
+    def test_streaming_list_controls_and_detailed_card_consistency(self):
+        # Both provider and genre pages use one detailed-card implementation.
+        self.assertIn('val detailedListCard: @Composable (StreamingTitle) -> Unit', self.screen)
+        self.assertIn('items(combined) { title -> detailedListCard(title) }', self.screen)
+        self.assertIn('items(genreTitles) { title -> detailedListCard(title) }', self.screen)
+        self.assertIn('posterOnly = true', self.screen)
+        self.assertIn('if (!posterOnly) {', self.screen)
+        self.assertIn('Text("▶ Trailer"', self.screen)
+        self.assertIn('Text("Mais detalhes"', self.screen)
+        self.assertIn('StreamingCatalog.trailer(title.media, title.id)', self.screen)
+        self.assertIn('AnyTvCompactChip("Ordenar: $sortLabel ▾", false)', self.screen)
+        self.assertIn('Text("Catálogo · " + app.name', self.screen)
+        self.assertIn('OutlinedButton(onClick = {\n                                            providerListMode', self.screen)
 
     def test_provider_list_mode_reuses_hero_and_paginates_both_kinds(self):
         for fragment in (
