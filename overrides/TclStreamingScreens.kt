@@ -1051,6 +1051,19 @@ private fun AnyTvCinemaHero(
     }
 }
 
+/** Shadowed score over original poster artwork. */
+@Composable
+private fun AnyTvRatingOverlay(title: StreamingTitle, modifier: Modifier = Modifier) {
+    if (title.votes <= 0) return
+    Text("★ " + String.format(java.util.Locale.US, "%.1f", title.rating),
+        modifier = modifier.background(Color.Black.copy(alpha = 0.45f),
+            RoundedCornerShape(6.dp)).padding(horizontal = 4.dp, vertical = 2.dp),
+        fontSize = 11.sp, maxLines = 1, color = Color(0xFFFFD54F),
+        fontWeight = FontWeight.Bold,
+        style = TextStyle(shadow = Shadow(color = Color.Black,
+            offset = Offset(0f, 2f), blurRadius = 5f)))
+}
+
 /**
  * The one poster/card specification for every streaming page and shelf.
  * Preserve the complete 2:3 artwork instead of clipping the bottom of posters
@@ -1071,19 +1084,36 @@ private fun AnyTvPosterCard(
 ) {
     Column(modifier = modifier.clickable(onClick = onOpen),
         verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        AnyTvPinnedImage(
-            model = "https://image.tmdb.org/t/p/w342" + title.poster,
-            contentDescription = "Cartaz: " + title.name,
-            modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)
-                .clip(RoundedCornerShape(5.dp)).background(Color.Black),
-            contentScale = ContentScale.Fit)
-        AnyTvCardMetaRow(title, favorite = favorite, marked = marked,
-            compact = true, onMarked = onMarked, onFavorite = onFavorite)
-        Text(title.name, modifier = Modifier.fillMaxWidth().height(42.dp),
-            fontSize = 11.sp, lineHeight = 14.sp, maxLines = 3,
-            overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
+        Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)
+            .clip(RoundedCornerShape(5.dp)).background(Color.Black)) {
+            AnyTvPinnedImage(
+                model = "https://image.tmdb.org/t/p/w342" + title.poster,
+                contentDescription = "Cartaz: " + title.name,
+                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            AnyTvRatingOverlay(title, Modifier.align(Alignment.TopStart)
+                .padding(start = 5.dp, top = 5.dp))
+            Row(modifier = Modifier.align(Alignment.TopEnd)
+                .padding(top = 3.dp, end = 3.dp)) {
+                IconButton(onClick = onMarked, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.CheckCircle,
+                        contentDescription = if (title.media == "movie") "Marcar assistido"
+                            else "Acompanhar série",
+                        tint = if (marked) Color(0xFF1CB96B) else Color.White,
+                        modifier = Modifier.size(20.dp))
+                }
+                IconButton(onClick = onFavorite, modifier = Modifier.size(28.dp)) {
+                    Icon(Icons.Filled.Favorite,
+                        contentDescription = if (favorite) "Remover dos favoritos" else "Favoritar",
+                        tint = if (favorite) Color(0xFFE04B57) else Color.White,
+                        modifier = Modifier.size(20.dp))
+                }
+            }
+        }
         StreamingOfferIcons(title, offerCache, apps, showRating = false,
-            inCinema = inCinema)
+            inCinema = inCinema, showYear = true)
+        Text(title.name, modifier = Modifier.fillMaxWidth().height(30.dp),
+            fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2,
+            overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -1120,7 +1150,8 @@ private fun StreamingOfferIcons(
     apps: List<TvOfficialApp>,
     expanded: Boolean = false,
     showRating: Boolean = true,
-    inCinema: Boolean = false
+    inCinema: Boolean = false,
+    showYear: Boolean = false
 ) {
     val key = "${item.media}:${item.id}"
     LaunchedEffect(key) {
@@ -1146,6 +1177,11 @@ private fun StreamingOfferIcons(
                     style = TextStyle(platformStyle = androidx.compose.ui.text.PlatformTextStyle(
                         includeFontPadding = false)),
                     fontWeight = FontWeight.Bold, color = Color.White)
+            }
+            if (showYear) {
+                val year = item.date.take(4).takeIf { it.matches(Regex("[0-9]{4}")) }
+                if (year != null) Text(year, fontSize = 10.sp, maxLines = 1,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (item.media == "movie" && inCinema) {
                 Text("Cinema", modifier = Modifier
@@ -1288,22 +1324,11 @@ private fun AnyTvStreamNavBar(
             TclHeaderAction(Icons.Filled.Close, "Fechar streaming", neutral, onDismiss)
         }
     }
-    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-        // Six 38dp actions plus the content chips exceed a narrow phone width.
-        if (maxWidth < 390.dp) {
-            Column(modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                chips()
-                actions()
-            }
-        } else {
-            Row(modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                chips()
-                actions()
-            }
-        }
+    Row(modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        chips()
+        Box(modifier = Modifier.weight(1f)) { actions() }
     }
 }
 
