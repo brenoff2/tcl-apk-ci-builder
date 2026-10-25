@@ -7,6 +7,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.verticalScroll
@@ -1051,8 +1052,8 @@ private fun AnyTvPosterCard(
                 IconButton(onClick = onMarked, modifier = Modifier.size(28.dp)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.CheckCircle, contentDescription = null,
-                            tint = Color.Black.copy(alpha = 0.85f),
-                            modifier = Modifier.size(24.dp))
+                            tint = Color(0xFF353535).copy(alpha = 0.85f),
+                            modifier = Modifier.size(24.dp).blur(1.dp))
                         Icon(Icons.Filled.CheckCircle,
                             contentDescription = if (title.media == "movie") "Marcar assistido"
                                 else "Acompanhar série",
@@ -1063,8 +1064,8 @@ private fun AnyTvPosterCard(
                 IconButton(onClick = onFavorite, modifier = Modifier.size(28.dp)) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.Favorite, contentDescription = null,
-                            tint = Color.Black.copy(alpha = 0.85f),
-                            modifier = Modifier.size(24.dp))
+                            tint = Color(0xFF353535).copy(alpha = 0.85f),
+                            modifier = Modifier.size(24.dp).blur(1.dp))
                         Icon(Icons.Filled.Favorite,
                             contentDescription = if (favorite) "Remover dos favoritos" else "Favoritar",
                             tint = if (favorite) Color(0xFFE04B57) else Color.White,
@@ -2228,7 +2229,9 @@ internal fun TclStreamingScreens(
                             }
                         }
                         currentGenreList.forEach { kind ->
-                            AnyTvCompactChip(kind.name, selectedHomeGenre == kind.id) {
+                            val selectedKindId = anyTvResolvedGenre(selectedHomeGenre,
+                                selectedGenreKind, allMovieGenres, tvGenres)
+                            AnyTvCompactChip(kind.name, selectedKindId == kind.id) {
                                 selectedHomeGenre = kind.id; homeLibrary = false
                             }
                         }
@@ -2598,7 +2601,7 @@ internal fun TclStreamingScreens(
                                     val pageTitle = when {
                                         selected != null -> selected!!.name
                                         selectedHomeGenre == ANYTV_CINEMA_FILTER -> "Cinema"
-                                        selectedHomeGenre > 0 -> currentGenreList.firstOrNull {
+                                        selectedHomeGenre > 0 -> (allMovieGenres + tvGenres).firstOrNull {
                                             it.id == selectedHomeGenre
                                         }?.name ?: "Gênero"
                                         else -> "Principal"
