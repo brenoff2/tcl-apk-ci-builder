@@ -149,7 +149,7 @@ class StreamingScreens(unittest.TestCase):
             'myServices = editingMyServices', 'filterGenreIds = editingFilterGenres',
             'StreamingCatalog.discover(token, name, kind',
             'activeServiceNames.forEach { name ->',
-            'val filteredShelves = visibleShelves',
+            'val filteredShelves = if (internalSearchQuery.isBlank()) visibleShelves else',
             'val uniqueShelves = filteredShelves.mapNotNull',
             '"Marcar todos"', '"Desmarcar todos"',
             'editingFilterGenres = if (allGenreIds.isNotEmpty()',
