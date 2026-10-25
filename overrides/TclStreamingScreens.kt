@@ -136,6 +136,15 @@ private fun anyTvReleased(item: StreamingTitle): Boolean =
     anyTvHasDate(item) && item.date <= anyTvToday()
 private fun anyTvUpcoming(item: StreamingTitle): Boolean =
     anyTvHasDate(item) && item.date > anyTvToday()
+/** Novidades means a first release within the last 90 calendar days, not on-air status. */
+private fun anyTvRecentPremiere(item: StreamingTitle): Boolean {
+    if (!anyTvReleased(item)) return false
+    val calendar = java.util.Calendar.getInstance()
+    calendar.add(java.util.Calendar.DAY_OF_YEAR, -90)
+    val cutoff = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+        .format(calendar.time)
+    return item.date >= cutoff
+}
 internal data class StreamingGenre(val id: Int, val name: String)
 internal data class StreamingSeason(val number: Int, val name: String, val count: Int)
 internal data class StreamingEpisode(val number: Int, val name: String, val airDate: String)
@@ -2086,6 +2095,7 @@ internal fun TclStreamingScreens(
             shelves.remove("Séries em destaque").orEmpty())
         val news = interleave(shelves.remove("Novidades em filmes").orEmpty(),
             shelves.remove("Novidades em séries").orEmpty())
+            .filter(::anyTvRecentPremiere).sortedByDescending { it.date }
         val popular = interleave(shelves.remove("Filmes e séries mais assistidos · Filmes").orEmpty(),
             shelves.remove("Filmes e séries mais assistidos · Séries").orEmpty())
         val best = interleave(shelves.remove("Mais bem avaliados").orEmpty(),
@@ -2704,6 +2714,7 @@ internal fun TclStreamingScreens(
                                 heading == ANYTV_CINEMA_SHELF ->
                                     title.media == "movie" // Source is now_playing BR
                                 heading.startsWith("Em breve") -> anyTvUpcoming(title)
+                                heading == "Novidades" -> anyTvRecentPremiere(title)
                                 else -> anyTvReleased(title) &&
                                     (title.media != "movie" || title.id !in cinemaIds)
                             }
@@ -2888,7 +2899,8 @@ internal fun TclStreamingScreens(
                                                                 anyTvUpcoming(it) &&
                                                                     (homeContentType == "all" ||
                                                                         it.media == homeContentType)
-                                                            else anyTvReleased(it) &&
+                                                            else (if (sectionTitle == "Novidades")
+                                                                anyTvRecentPremiere(it) else anyTvReleased(it)) &&
                                                                 (it.media != "movie" ||
                                                                     it.id !in cinemaIds)
                                                         }
