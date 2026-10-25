@@ -3182,7 +3182,10 @@ internal fun TclStreamingScreens(
                                     films.getOrNull(index)?.let { add(it) }
                                     shows.getOrNull(index)?.let { add(it) }
                                 }
-                            }.distinctBy { "${it.media}:${it.id}" }.let { results ->
+                            }.distinctBy { "${it.media}:${it.id}" }.filter { title ->
+                                if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(title)
+                                else !anyTvIsAnime(title)
+                            }.let { results ->
                                 when (genreSort) {
                                     "rating" -> results.sortedByDescending { it.rating }
                                     "recent" -> results.sortedByDescending { it.date }
@@ -3307,7 +3310,10 @@ internal fun TclStreamingScreens(
                         // the paginated list below contains only the selected genre.
                         if (!homeLibrary && selected == null && selectedHomeGenre != 0) {
                             val previews = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                                cinemaComingSoon else upcomingStreaming.filter { candidate ->
+                                cinemaComingSoon.filterNot(::anyTvIsAnime) else upcomingStreaming.filter { candidate ->
+                                    if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(candidate)
+                                    else !anyTvIsAnime(candidate)
+                                }.filter { candidate ->
                                     (homeContentType == "all" || candidate.media == homeContentType) &&
                                     (selectedHomeGenre in candidate.genreIds ||
                                         (candidate.media == "tv" && tvGenres.any { tv ->
