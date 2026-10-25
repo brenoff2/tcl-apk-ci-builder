@@ -21,7 +21,11 @@
 - Branch de desenvolvimento `feat/anytv-p0-device-proof-verifier-20261020`, PR #3 draft, sem merge.
 
 ## Limites e validação
-- Candidato CI unsigned: [GitHub Actions #40215557037](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40215557037). Aguardar resultado definitivo para promover estado técnico; ausência de resultado não é aprovação.
-- Nenhum deploy Worker, D1, companion TCL ou OTA de APK realizado nesta etapa. Última OTA confirmada no histórico: **2.9.31/code60**.
+- Candidato CI unsigned **#40215965755**: [GitHub Actions](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40215965755) **COMPLETED/SUCCESS**; contratos, regressões, Gradle e identidade unsigned verificados. Este artefato não foi assinado nem publicado.
+- Nenhum deploy Worker, D1, companion TCL ou OTA de APK realizado nesta etapa. O botão de atualização continuará oferecendo a última versão oficial até nova autorização de publicação. Última OTA confirmada no histórico: **2.9.31/code60**.
 - Necessária homologação física no telefone para conferir chips combinados, filtros persistidos, busca auxiliar apenas nas bibliotecas, ícones Grade/Detalhado, contraste, anime e serviços BR.
 - Permanecem gates **7/11 (63%)**, M08/M09 IN_QA, F0–F8 NAO_HOMOLOGADO, até prova física.
+
+## Checkpoint pós-CI
+- Commits adicionais: `1e4e1a2` (ofertas BR até 4 consultas concorrentes), `2d81526` (contraste do Marcar/Desmarcar todos), `d88b544` (Cinema ausente da Principal também no modo Filmes), `3e44795` (contrato de Cinema alinhado ao requisito); teste final `40215965755` PASS.
+- `docs/handoffs/CURRENT_HANDOFF.md` mantém a referência a esta revisão. Nenhuma evidência física foi recebida para estas mudanças.
