@@ -25,6 +25,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('var genreSectionsMode by remember { mutableStateOf(false) }', self.screen)
         self.assertIn('else genreSectionsMode = !genreSectionsMode', self.screen)
         self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('"Lançamentos recentes · $genreName"', self.screen)
+        self.assertIn('"Mais bem avaliados · $genreName"', self.screen)
+        self.assertIn('AnyTvOneRowPreview(heading, sectionTitles, posterCard)', self.screen)
 
     def test_detailed_card_has_compact_metadata_spacing(self):
         self.assertIn('verticalArrangement = Arrangement.spacedBy(1.dp)) {', self.screen)
