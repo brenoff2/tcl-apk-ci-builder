@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 58,
+  "expected_version_code": 59,
   "preserve_legacy_ota": true,
-  "source": "AnyTV 2.9.29/code58: fundo redondo dos ícones de favoritos e assistido substituído por contorno escuro no próprio ícone; Cinema deixa de ter hero divergente e recebe fonte/espaçamento equivalentes à Principal em trilhos e seções.",
+  "source": "AnyTV 2.9.30/code59: gênero permanece selecionado ao alternar Filmes/Séries e entrar em streaming, páginas de gênero exibem filmes e séries quando Todos, IDs TMDB resolvidos por mídia, sem prateleiras sem filtro; ícones com blur grafite.",
   "new_install_only": false,
-  "release_version": "2.9.29-AnyTV",
-  "release_scope": "Atualização do app V2 apenas, com assinatura original e verificação de OTA code58; sem Worker/D1/companion TCL; preservar 2.9.28 e arquivos legados, publicar apenas após testes e readback HTTPS.",
-  "ci_revision": 17
+  "release_version": "2.9.30-AnyTV",
+  "release_scope": "Somente atualização Android V2 assinada com certificado original, mantendo package e dados, versionCode59; preservar Worker/D1/companion e OTA legado; publicar exclusivamente após testes, assinatura e HTTPS byte readback. Homologação física pendente.",
+  "ci_revision": 18
 }
