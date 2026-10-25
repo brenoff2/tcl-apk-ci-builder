@@ -1021,6 +1021,8 @@ private fun AnyTvCinemaHero(
                         Color.Black.copy(alpha = 0.15f),
                         Color.Black.copy(alpha = 0.86f)
                     ))))
+                AnyTvRatingOverlay(film, Modifier.align(Alignment.TopEnd)
+                    .padding(top = 6.dp, end = 8.dp))
                 Column(modifier = Modifier.align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
@@ -1489,6 +1491,7 @@ internal fun TclStreamingScreens(
             trackedSeries.sorted().joinToString(",")).apply()
     }
     var watchingQuery by remember { mutableStateOf("") }
+    var libraryQuery by remember { mutableStateOf("") }
     LaunchedEffect(librarySection, homeLibrary) {
         if (homeLibrary) {
             sectionVisibleCount = ANYTV_LIST_BATCH
@@ -2420,8 +2423,10 @@ internal fun TclStreamingScreens(
                         if (unique.isEmpty() &&
                             !(heading == "Em breve · Streaming" && upcomingStreamingMore))
                             null
-                        else heading to (if (homeLibrary) unique
-                            else unique.take(ANYTV_LIST_BATCH))
+                        else heading to (if (homeLibrary) unique.filter {
+                            libraryQuery.isBlank() ||
+                                it.name.contains(libraryQuery.trim(), ignoreCase = true)
+                        } else unique.take(ANYTV_LIST_BATCH))
                     }
                     LazyColumn(state = catalogScrollState,
                         modifier = Modifier.weight(1f)) {
@@ -2605,29 +2610,33 @@ internal fun TclStreamingScreens(
                             item {
                                 Text(when (librarySection) {
                                     "watching" -> "Séries acompanhadas"
-                                    "watched" -> "Assistidos"
+                                    "watched" -> "Filmes e séries assistidos"
                                     else -> "Minha lista"
                                 }, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
-                                if (librarySection == "watching") {
-                                    OutlinedTextField(
-                                        value = watchingQuery,
-                                        onValueChange = { watchingQuery = it.take(90) },
-                                        modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-                                        singleLine = true,
-                                        placeholder = { Text("Buscar nas minhas séries") },
-                                        leadingIcon = {
-                                            Icon(Icons.Filled.Search,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp))
-                                        },
-                                        trailingIcon = {
-                                            if (watchingQuery.isNotEmpty()) {
-                                                IconButton(onClick = { watchingQuery = "" }) {
-                                                    Icon(Icons.Filled.Close, "Limpar busca em andamento")
-                                                }
+                                OutlinedTextField(
+                                    value = libraryQuery,
+                                    onValueChange = {
+                                        libraryQuery = it.take(90)
+                                        watchingQuery = libraryQuery
+                                    },
+                                    modifier = Modifier.fillMaxWidth()
+                                        .padding(top = 8.dp).height(52.dp),
+                                    singleLine = true,
+                                    placeholder = { Text("Buscar nesta lista") },
+                                    leadingIcon = { Icon(Icons.Filled.Search,
+                                        contentDescription = "Buscar",
+                                        modifier = Modifier.size(19.dp)) },
+                                    trailingIcon = {
+                                        if (libraryQuery.isNotEmpty()) {
+                                            IconButton(onClick = {
+                                                libraryQuery = ""
+                                                watchingQuery = ""
+                                            }) {
+                                                Icon(Icons.Filled.Close,
+                                                    contentDescription = "Limpar busca")
                                             }
-                                        })
-                                }
+                                        }
+                                    })
                                 if (visibleShelves.isEmpty()) {
                                     Spacer(Modifier.height(16.dp))
                                     Text(when (librarySection) {
@@ -2731,9 +2740,7 @@ internal fun TclStreamingScreens(
                                                 }
                                             }
                                         }
-                                        Spacer(Modifier.height(4.dp))
-                                        StreamingOfferIcons(current, offerCache, displayed, expanded = true,
-                                            inCinema = current.id in cinemaIds)
+
                                     }
                                 }
                             }
@@ -2980,43 +2987,15 @@ internal fun TclStreamingScreens(
                                 Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically) {
-                                    Text(heading, fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.weight(1f))
-                                    if (!homeLibrary && (shelf.size > 6 ||
-                                        (heading == "Em breve · Streaming" &&
-                                            upcomingStreamingMore))) {
-                                        OutlinedButton(
-                                            onClick = {
-                                                val genreName = heading.removePrefix("Por gênero: ")
-                                                val targetGenre = if (heading.startsWith("Por gênero: "))
-                                                    currentGenreList.firstOrNull { it.name == genreName }
-                                                else null
-                                                when {
-                                                    heading == ANYTV_CINEMA_SHELF -> {
-                                                        selected = null
-                                                        homeContentType = "movie"
-                                                        selectedHomeGenre = ANYTV_CINEMA_FILTER
-                                                        openedSection = null
-                                                    }
-                                                    heading.startsWith("Por gênero: ") &&
-                                                        selected != null -> {
-                                                        // Keep this streaming's own genre catalog.
-                                                        openedSection = heading
-                                                    }
-                                                    targetGenre != null -> {
-                                                        selected = null
-                                                        selectedHomeGenre = targetGenre.id
-                                                        openedSection = null
-                                                    }
-                                                    else -> openedSection = heading
-                                                }
-                                            },
-                                            modifier = Modifier.height(34.dp),
-                                            shape = RoundedCornerShape(21.dp),
-                                            contentPadding = PaddingValues(
-                                                horizontal = 10.dp, vertical = 0.dp)
-                                        ) { Text("Ver mais ›", fontSize = 11.sp) }
+                                    Row(modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Box(modifier = Modifier.width(3.dp).height(22.dp)
+                                            .background(Color(0xFFE3383F),
+                                                RoundedCornerShape(3.dp)))
+                                        Text(heading, fontWeight = FontWeight.SemiBold)
                                     }
+
                                 }
                             }
                             if (homeLibrary) {
