@@ -418,7 +418,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('"tv" -> "Séries"', self.screen)
         self.assertIn('anyTvGenreLabels(title, allMovieGenres, tvGenres)', self.screen)
         self.assertIn('anyTvGenreLabels(', self.screen)
-        self.assertIn('Text(genreLabel, fontSize = 10.sp', self.screen)
+        self.assertIn('Text(genreLabel, modifier = Modifier.fillMaxWidth()', self.screen)
         self.assertIn('Text(heroGenres, fontSize = 11.sp', self.screen)
         self.assertNotIn('internalSearchQuery', self.screen)
         self.assertIn('contentDescription = "Buscar"', self.screen)
@@ -945,7 +945,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertLess(self.screen.index('if (previews.isNotEmpty()) {'),
                         self.screen.index('// Genre page: ten-image hero above'))
 
-    def test_future_streaming_rejects_unverified_theatrical_titles(self):
+    def test_future_releases_do_not_claim_unverified_streaming_offers(self):
         self.assertIn('suspend fun discoveryUpcomingStreamingPage(page: Int)', self.screen)
         upcoming = self.screen.split(
             'suspend fun discoveryUpcomingStreamingPage(page: Int)', 1)[1].split(
@@ -954,11 +954,11 @@ class StreamingScreens(unittest.TestCase):
             'mapTitles(films.optJSONArray("results") ?: JSONArray(), "movie", 0)',
             'mapTitles(shows.optJSONArray("results") ?: JSONArray(), "tv", 0)',
             '.filter(::anyTvUpcoming)',
-            'runCatching { offersInBrazil(title).isNotEmpty() }',
-            '.getOrDefault(false)',
-            'title.takeIf { offered }',
+            'futureFilms.getOrNull(index)?.let { add(it) }',
+            'futureShows.getOrNull(index)?.let { add(it) }',
         ):
             self.assertIn(part, upcoming)
+        self.assertNotIn('offersInBrazil(title)', upcoming)
         self.assertNotIn('title.takeIf { confirmed }', upcoming)
 
     def test_24_item_batches_and_stable_filtered_pagination(self):
