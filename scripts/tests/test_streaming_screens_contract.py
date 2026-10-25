@@ -458,7 +458,7 @@ class StreamingScreens(unittest.TestCase):
     def test_cinema_br_hero_has_verified_metadata_over_artwork(self):
         cinema = self.screen.split('private fun AnyTvCinemaHero(', 1)[1].split(
             '/** Shadowed score over original poster artwork.', 1)[0]
-        self.assertIn('AnyTvRatingOverlay(film, Modifier.align(Alignment.TopEnd)', cinema)
+        self.assertIn('AnyTvRatingOverlay(film, Modifier.align(Alignment.TopStart)', cinema)
         self.assertIn('StreamingOfferIcons(film, offerCache, apps, showRating = false,', cinema)
         self.assertIn('inCinema = true, showYear = true', cinema)
         self.assertIn('style = TextStyle(shadow = Shadow(', cinema)
