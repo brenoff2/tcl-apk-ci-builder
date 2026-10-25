@@ -455,13 +455,12 @@ class StreamingScreens(unittest.TestCase):
             'Modifier.size(width = 116.dp, height = 158.dp)',
         ):
             self.assertNotIn(forbidden, self.screen)
-    def test_cinema_br_hero_retains_real_year_and_blue_cinema_label(self):
+    def test_cinema_br_hero_has_verified_metadata_over_artwork(self):
         cinema = self.screen.split('private fun AnyTvCinemaHero(', 1)[1].split(
-            '/**\n * The one poster/card specification', 1)[0]
-        self.assertIn('val year = film.date.take(4)', cinema)
-        self.assertIn('if (year != null)', cinema)
-        self.assertIn('Text("Cinema", modifier = Modifier', cinema)
-        self.assertIn('.background(Color(0xFF1769E0))', cinema)
+            '/** Shadowed score over original poster artwork.', 1)[0]
+        self.assertIn('AnyTvRatingOverlay(film, Modifier.align(Alignment.TopEnd)', cinema)
+        self.assertIn('StreamingOfferIcons(film, offerCache, apps, showRating = false,', cinema)
+        self.assertIn('inCinema = true, showYear = true', cinema)
         self.assertIn('style = TextStyle(shadow = Shadow(', cinema)
         self.assertIn('contentScale = ContentScale.Crop', cinema)
 
@@ -539,7 +538,7 @@ class StreamingScreens(unittest.TestCase):
         # BR now-playing Cinema marker (when the movie is in cinemaIds).
         self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', self.screen)
         self.assertIn('inCinema = current.id in cinemaIds', self.screen)
-        self.assertIn('AnyTvCinemaHero(shelf)', self.screen)
+        self.assertIn('AnyTvCinemaHero(shelf, offerCache, displayed)', self.screen)
         # International preview remains available on dedicated cinema filter pages,
         # but the home section now keeps only the verified Brazil cinema hero.
         self.assertIn('AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional"', self.screen)
@@ -1078,7 +1077,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('value = libraryQuery', self.screen)
         self.assertIn('libraryQuery.isBlank()', self.screen)
         self.assertNotIn('"Ver mais ›"', self.screen)
-        self.assertIn('AnyTvCinemaHero(shelf)', self.screen)
+        self.assertIn('AnyTvCinemaHero(shelf, offerCache, displayed)', self.screen)
         self.assertIn('Box(modifier = Modifier.width(3.dp).height(22.dp)', self.screen)
 
     def test_library_labels_and_cinema_overlay_share_home_visual_contract(self):
