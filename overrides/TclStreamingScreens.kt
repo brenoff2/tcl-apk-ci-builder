@@ -2017,6 +2017,7 @@ internal fun TclStreamingScreens(
             Triple("Mais bem avaliados", "movie/top_rated", "movie"),
             Triple("Mais bem avaliados · Séries", "tv/top_rated", "tv"),
             Triple("Séries em destaque", "trending/tv/week", "tv"),
+            Triple("Novidades em filmes", "movie/now_playing", "movie"),
             Triple("Novidades em séries", "tv/on_the_air", "tv"),
             Triple("Filmes e séries mais assistidos · Filmes", "movie/popular", "movie"),
             Triple("Filmes e séries mais assistidos · Séries", "tv/popular", "tv")
@@ -2025,24 +2026,27 @@ internal fun TclStreamingScreens(
                 .onSuccess { if (it.isNotEmpty()) shelves[name] = it }
                 .onFailure { discoveryError = "Algumas seções não puderam carregar." }
         }
-        val popularFilms = shelves.remove("Filmes e séries mais assistidos · Filmes").orEmpty()
-        val popularSeries = shelves.remove("Filmes e séries mais assistidos · Séries").orEmpty()
-        val popularMixed = buildList {
-            for (index in 0 until maxOf(popularFilms.size, popularSeries.size)) {
-                popularFilms.getOrNull(index)?.let { add(it) }
-                popularSeries.getOrNull(index)?.let { add(it) }
+        fun interleave(films: List<StreamingTitle>, series: List<StreamingTitle>) =
+            buildList {
+                for (index in 0 until maxOf(films.size, series.size)) {
+                    films.getOrNull(index)?.let { add(it) }
+                    series.getOrNull(index)?.let { add(it) }
+                }
             }
-        }
-        if (popularMixed.isNotEmpty()) shelves["Filmes e séries mais assistidos"] = popularMixed
-        val bestFilms = shelves.remove("Mais bem avaliados").orEmpty()
-        val bestSeries = shelves.remove("Mais bem avaliados · Séries").orEmpty()
-        val bestMixed = buildList {
-            for (index in 0 until maxOf(bestFilms.size, bestSeries.size)) {
-                bestFilms.getOrNull(index)?.let { add(it) }
-                bestSeries.getOrNull(index)?.let { add(it) }
+        val weekly = interleave(shelves.remove("Em alta nesta semana").orEmpty(),
+            shelves.remove("Séries em destaque").orEmpty())
+        val news = interleave(shelves.remove("Novidades em filmes").orEmpty(),
+            shelves.remove("Novidades em séries").orEmpty())
+        val popular = interleave(shelves.remove("Filmes e séries mais assistidos · Filmes").orEmpty(),
+            shelves.remove("Filmes e séries mais assistidos · Séries").orEmpty())
+        val best = interleave(shelves.remove("Mais bem avaliados").orEmpty(),
+            shelves.remove("Mais bem avaliados · Séries").orEmpty())
+        shelves.clear()
+        linkedMapOf("Em alta nesta semana" to weekly, "Novidades" to news,
+            "Filmes e séries mais assistidos" to popular, "Mais bem avaliados" to best)
+            .forEach { (heading, titles) ->
+                if (titles.isNotEmpty()) shelves[heading] = titles
             }
-        }
-        if (bestMixed.isNotEmpty()) shelves["Mais bem avaliados"] = bestMixed
         discoveryShelves = shelves
         discoveryLoading = false
     }
@@ -2493,7 +2497,9 @@ internal fun TclStreamingScreens(
                         val mixed = if (selected == null && selectedHomeGenre == 0 &&
                             homeContentType == "all" && activeServiceNames.isEmpty()) {
                             val films = discoveryShelves["Em alta nesta semana"].orEmpty()
-                            val shows = discoveryShelves["Séries em destaque"].orEmpty()
+                                .filter { it.media == "movie" }
+                            val shows = discoveryShelves["Em alta nesta semana"].orEmpty()
+                                .filter { it.media == "tv" }
                             buildList {
                                 for (i in 0 until 10) {
                                     films.getOrNull(i)?.let { add(it) }
@@ -2551,6 +2557,7 @@ internal fun TclStreamingScreens(
                             val sectionPageLimit = if (sectionTitle == "Em breve · Streaming") 50 else 42
                             val editorialRoute = when (sectionTitle) {
                                 "Em alta nesta semana" -> "trending/movie/week" to "movie"
+                                "Novidades" -> "movie/now_playing" to "movie"
                                 "Mais bem avaliados" -> "movie/top_rated" to "movie"
                                 "Séries em destaque" -> "trending/tv/week" to "tv"
                                 "Novidades em séries" -> "tv/on_the_air" to "tv"
@@ -2631,14 +2638,25 @@ internal fun TclStreamingScreens(
                                                 scope.launch {
                                                     runCatching {
                                                         when {
-                                                            sectionTitle == "Filmes e séries mais assistidos" ||
-                                                                sectionTitle == "Mais bem avaliados" -> {
-                                                                val base = if (sectionTitle ==
-                                                                    "Mais bem avaliados") "top_rated" else "popular"
+                                                            sectionTitle in setOf("Em alta nesta semana", "Novidades",
+                                                                "Filmes e séries mais assistidos",
+                                                                "Mais bem avaliados") -> {
+                                                                val movieRoute = when (sectionTitle) {
+                                                                    "Em alta nesta semana" -> "trending/movie/week"
+                                                                    "Novidades" -> "movie/now_playing"
+                                                                    "Mais bem avaliados" -> "movie/top_rated"
+                                                                    else -> "movie/popular"
+                                                                }
+                                                                val seriesRoute = when (sectionTitle) {
+                                                                    "Em alta nesta semana" -> "trending/tv/week"
+                                                                    "Novidades" -> "tv/on_the_air"
+                                                                    "Mais bem avaliados" -> "tv/top_rated"
+                                                                    else -> "tv/popular"
+                                                                }
                                                                 val moviePage = StreamingCatalog.discoveryShelfPage(
-                                                                    "movie/$base", "movie", next)
+                                                                    movieRoute, "movie", next)
                                                                 val seriesPage = StreamingCatalog.discoveryShelfPage(
-                                                                    "tv/$base", "tv", next)
+                                                                    seriesRoute, "tv", next)
                                                                 val mixed = buildList {
                                                                     for (idx in 0 until maxOf(
                                                                             moviePage.titles.size,
