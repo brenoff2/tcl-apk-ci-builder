@@ -427,8 +427,9 @@ fun TclInstalledAppsBar(
         val byPackage = remember(allApps) { allApps.associateBy { it.packageName } }
         // First connection: show only packages actually reported by this TV.
         // The user chooses favorites; never invent Netflix/Prime/etc placeholders.
-        val selectedApps = if (!hasUserFavorites) allApps.take(6)
-            else favorites.mapNotNull { byPackage[it] }
+        val selectedApps = (if (!hasUserFavorites) allApps.take(6)
+            else favorites.mapNotNull { byPackage[it] })
+            .distinctBy { anyTvServiceKey(it.name) }
         if (selectedApps.isNotEmpty()) {
             Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)) {
