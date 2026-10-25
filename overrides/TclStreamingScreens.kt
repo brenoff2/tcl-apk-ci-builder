@@ -2386,7 +2386,9 @@ internal fun TclStreamingScreens(
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
                     val filteredShelves = visibleShelves
-                    val heroTitles = if (homeLibrary) emptyList() else {
+                    val heroTitles = if (homeLibrary || (selected == null &&
+                        selectedHomeGenre == 0 && homeContentType == "all"))
+                        emptyList() else {
                         val mixed = if (selected == null && selectedHomeGenre == 0 &&
                             homeContentType == "all") {
                             val films = discoveryShelves["Em alta nesta semana"].orEmpty()
@@ -2689,6 +2691,10 @@ internal fun TclStreamingScreens(
                                                     Color.Black.copy(alpha = 0.15f),
                                                     Color.Black.copy(alpha = 0.86f)
                                                 ))))
+                                            Box(modifier = Modifier.align(Alignment.TopEnd)
+                                                .padding(top = 7.dp, end = 8.dp)) {
+                                                AnyTvRatingOverlay(current)
+                                            }
                                             Column(modifier = Modifier.align(Alignment.BottomStart)
                                                 .fillMaxWidth()
                                                 .padding(start = 12.dp, end = 12.dp, bottom = 22.dp),
@@ -2704,13 +2710,11 @@ internal fun TclStreamingScreens(
                                                     verticalAlignment = Alignment.CenterVertically) {
                                                     val year = current.date.take(4)
                                                         .takeIf { it.matches(Regex("[0-9]{4}")) }
+                                                    Text(if (current.media == "movie") "F" else "S",
+                                                        color = Color.White, fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold)
                                                     if (year != null) {
                                                         Text(year, fontSize = 11.sp, color = Color.White)
-                                                    }
-                                                    if (current.votes > 0) {
-                                                        Text(String.format(java.util.Locale.US,
-                                                            "%.1f", current.rating),
-                                                            fontSize = 11.sp, color = Color.White)
                                                     }
                                                     if (current.media == "movie" &&
                                                         current.id in cinemaIds) {
@@ -2963,26 +2967,6 @@ internal fun TclStreamingScreens(
                             }
                         }
                         uniqueShelves.forEach { (heading, shelf) ->
-                            if (heading == ANYTV_CINEMA_SHELF && selected == null &&
-                                selectedHomeGenre == 0) {
-                                item {
-                                    AnyTvCinemaHero(shelf) { chosen ->
-                                        details = chosen; detailsPackage = null
-                                    }
-                                }
-                                if (cinemaWorldwide.isNotEmpty()) {
-                                    item {
-                                        AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
-                                            cinemaWorldwide, posterCard)
-                                    }
-                                }
-                                if (cinemaComingSoon.isNotEmpty()) {
-                                    item {
-                                        AnyTvOneRowPreview("Em breve · Cinema",
-                                            cinemaComingSoon, posterCard)
-                                    }
-                                }
-                            }
                             item {
                                 Row(modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
