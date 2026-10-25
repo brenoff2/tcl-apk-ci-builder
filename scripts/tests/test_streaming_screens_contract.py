@@ -65,7 +65,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_compact_catalog_layout_regression(self):
         self.assertIn('AnyTvStreamNavBar(', self.screen)
-        self.assertIn('Text(pageTitle, fontSize = 17.sp', self.screen)
+        self.assertIn('Text(pageTitle, modifier = Modifier.weight(1f, fill = false)', self.screen)
         self.assertIn('val app = selected!!', self.screen)
         self.assertIn('// Home and individual provider use ONE identical catalogue layout.', self.screen)
         self.assertNotIn('} else {\n                    val app = selected!!', self.screen)
@@ -453,7 +453,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_provider_and_main_share_actual_slider_and_sections(self):
         self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
-        self.assertIn('Text(pageTitle, fontSize = 17.sp', self.screen)
+        self.assertIn('Text(pageTitle, modifier = Modifier.weight(1f, fill = false)', self.screen)
         self.assertIn('if (selected != null && !homeLibrary)', self.screen)
         self.assertIn('LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre)', self.screen)
         self.assertIn('myServiceShelves[key] = it.titles', self.screen)
@@ -665,7 +665,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) continue', self.screen)
         self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach', self.screen)
         self.assertNotIn('homeContentType = kind; selectedHomeGenre = 0', self.screen)
-        provider_entry = self.screen.split('selected = app; media = "movie"; genre = 0; page = 1', 1)[1].split(
+        provider_entry = self.screen.split('selected = app; providerListMode = false', 1)[1].split(
             'homeLibrary = false; showGlobalSearch = false', 1)[0]
         self.assertNotIn('homeContentType = "all"', provider_entry)
 
