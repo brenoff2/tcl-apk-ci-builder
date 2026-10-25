@@ -2840,7 +2840,7 @@ internal fun TclStreamingScreens(
                                         .background(Color(0xFFE3383F), RoundedCornerShape(3.dp)))
                                     Text(if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                         "Em cartaz no Brasil"
-                                    else "Filmes e séries · " + (currentGenreList.firstOrNull {
+                                    else "Filmes e séries · " + ((allMovieGenres + tvGenres).firstOrNull {
                                         it.id == selectedHomeGenre }?.name ?: "Gênero"),
                                         fontWeight = FontWeight.SemiBold)
                                 }
