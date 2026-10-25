@@ -1175,6 +1175,33 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Text("Catálogo · " + app.name', self.screen)
         self.assertIn('OutlinedButton(onClick = {\n                                            providerListMode', self.screen)
 
+    def test_detailed_poster_metadata_not_repeated(self):
+        poster = self.screen.split('private fun AnyTvPosterCard(', 1)[1].split(
+            '/** One horizontal strip', 1)[0]
+        self.assertIn('if (!posterOnly) {', poster)
+        conditional = poster.split('if (!posterOnly) {', 1)[1]
+        for snippet in ['Text(genreLabel,', 'StreamingOfferIcons(title,', 'Text(title.name,']:
+            self.assertIn(snippet, conditional)
+        details = self.screen.split(
+            'val detailedListCard: @Composable (StreamingTitle) -> Unit', 1)[1].split(
+            '    Dialog(onDismissRequest', 1)[0]
+        ordered = ['Text(title.name,', 'Text(genres,', 'StreamingOfferIcons(title,',
+                   'Text(summary,', 'Text("▶ Trailer"', 'Text("Mais detalhes"']
+        offsets = [details.index(item) for item in ordered]
+        self.assertEqual(offsets, sorted(offsets))
+        self.assertEqual(details.count('OutlinedButton(onClick = {'), 2)
+        self.assertNotIn('Text("Trailer e mais detalhes")', details)
+
+    def test_streaming_subtitle_controls_are_separate_rows(self):
+        section = self.screen.split('Text("Catálogo · " + app.name', 1)[1].split(
+            'if (genreViewMode == "detalhado")', 1)[0]
+        self.assertIn('Box(modifier = Modifier.width(3.dp).height(22.dp)', section.split(
+            'Row(modifier = Modifier.fillMaxWidth()\n                                    .horizontalScroll', 1)[0])
+        self.assertIn('AnyTvGenreViewIcon(Icons.Filled.GridView', section)
+        self.assertIn('AnyTvGenreViewIcon(Icons.Filled.ViewList', section)
+        self.assertIn('AnyTvCompactChip("Ordenar: $sortLabel ▾"', section)
+        self.assertIn('.padding(top = 24.dp, bottom = 12.dp)', self.screen)
+
     def test_provider_list_mode_reuses_hero_and_paginates_both_kinds(self):
         for fragment in (
             'var providerListMode by remember',
