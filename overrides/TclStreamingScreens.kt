@@ -1965,10 +1965,11 @@ internal fun TclStreamingScreens(
 
     // Keep every editorial section when filtering subscriptions, but show only
     // titles with a confirmed BR offer from one of the selected providers.
-    LaunchedEffect(discoveryShelves, upcomingStreaming, activeServiceNames) {
+    LaunchedEffect(discoveryShelves, upcomingStreaming, genreShelves.toMap(), activeServiceNames) {
         if (activeServiceNames.isNotEmpty()) {
-            val candidates = (discoveryShelves.values.flatten() + upcomingStreaming)
-                .distinctBy { "${it.media}:${it.id}" }.take(210)
+            val candidates = (discoveryShelves.values.flatten() +
+                genreShelves.values.flatten() + upcomingStreaming)
+                .distinctBy { "${it.media}:${it.id}" }.take(300)
             for (title in candidates) {
                 val key = "${title.media}:${title.id}"
                 if (key !in offerCache) {
@@ -2428,14 +2429,21 @@ internal fun TclStreamingScreens(
                                     if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)
                                 }
                             }
-                                currentGenreList.filter { it.id in filterGenreIds ||
-                                    mainGenres.any { m -> m.id in filterGenreIds && m.name == it.name } }
-                                    .forEach { kind ->
-                                        genreShelves["$selectedGenreKind:${kind.id}"]
-                                            ?.takeIf { it.isNotEmpty() }?.let {
-                                                put("Por gênero: " + kind.name, it)
-                                            }
+                                filterGenreIds.forEach { id ->
+                                    val label = (allMovieGenres + tvGenres).firstOrNull {
+                                        it.id == id
+                                    }?.name ?: return@forEach
+                                    val mediaKinds = listOf("movie", "tv").filter {
+                                        homeContentType == "all" || homeContentType == it
                                     }
+                                    val mixedGenre = mediaKinds.flatMap { mediaKind ->
+                                        val resolved = anyTvResolvedGenre(
+                                            id, mediaKind, allMovieGenres, tvGenres)
+                                        if (resolved > 0) genreShelves["$mediaKind:$resolved"].orEmpty()
+                                        else emptyList()
+                                    }.distinctBy { "${it.media}:${it.id}" }
+                                    if (mixedGenre.isNotEmpty()) put("Por gênero: $label", mixedGenre)
+                                }
                         }
                         if (!homeLibrary && selected == null) {
                             activeServiceNames.forEach { name ->
