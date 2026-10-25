@@ -1384,6 +1384,7 @@ internal fun TclStreamingScreens(
             ?.takeIf { it in setOf("popular", "rating", "recent", "title") } ?: "popular")
     }
     var genreSortMenu by remember { mutableStateOf(false) }
+    var genreViewMode by remember { mutableStateOf("grade") }
     val catalogScrollState = rememberLazyListState()
     var showGenreSettings by remember { mutableStateOf(false) }
     var showMyStreamingSettings by remember { mutableStateOf(false) }
@@ -2873,7 +2874,11 @@ internal fun TclStreamingScreens(
                                         .background(Color(0xFFE3383F), RoundedCornerShape(3.dp)))
                                     Text(if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                         "Em cartaz no Brasil"
-                                    else "Filmes e séries · " + ((allMovieGenres + tvGenres).firstOrNull {
+                                    else (when (homeContentType) {
+                                        "movie" -> "Filmes"
+                                        "tv" -> "Séries"
+                                        else -> "Filmes e séries"
+                                    }) + " · " + ((allMovieGenres + tvGenres).firstOrNull {
                                         it.id == selectedHomeGenre }?.name ?: "Gênero"),
                                         fontWeight = FontWeight.SemiBold)
                                 }
@@ -2881,7 +2886,15 @@ internal fun TclStreamingScreens(
                                     .horizontalScroll(rememberScrollState()),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    // All streaming pages follow the three-column master grid.
+                                    if (selectedHomeGenre != ANYTV_CINEMA_FILTER) {
+                                        AnyTvCompactChip("Grade", genreViewMode == "grade") {
+                                            genreViewMode = "grade"
+                                        }
+                                        AnyTvCompactChip("Detalhado", genreViewMode == "detalhado") {
+                                            genreViewMode = "detalhado"
+                                        }
+                                    }
+                                    // Preserve the three-column grid or show a detailed list.
                                     if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                                         Text("Em cartaz · Brasil · TMDB", fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -2911,15 +2924,39 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                             }
-                            items(genreTitles.chunked(3)) { group ->
-                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(9.dp),
-                                    verticalAlignment = Alignment.Top) {
-                                    group.forEach { title ->
-                                        posterCard(title, Modifier.weight(1f),
-                                            selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                            if (genreViewMode == "detalhado" &&
+                                selectedHomeGenre != ANYTV_CINEMA_FILTER) {
+                                items(genreTitles) { title ->
+                                    Row(modifier = Modifier.fillMaxWidth()
+                                        .padding(vertical = 8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.Top) {
+                                        posterCard(title, Modifier.width(112.dp), false)
+                                        Column(modifier = Modifier.weight(1f),
+                                            verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                            Text(title.name, fontSize = 14.sp,
+                                                fontWeight = FontWeight.SemiBold, maxLines = 2)
+                                            val summary = title.overview.trim()
+                                            if (summary.isNotBlank()) {
+                                                Text(summary, fontSize = 12.sp,
+                                                    lineHeight = 17.sp, maxLines = 7,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        }
                                     }
-                                    repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            } else {
+                                items(genreTitles.chunked(3)) { group ->
+                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                        verticalAlignment = Alignment.Top) {
+                                        group.forEach { title ->
+                                            posterCard(title, Modifier.weight(1f),
+                                                selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                                        }
+                                        repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
+                                    }
                                 }
                             }
                             item {
