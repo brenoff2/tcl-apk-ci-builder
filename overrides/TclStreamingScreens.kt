@@ -628,9 +628,16 @@ private object StreamingCatalog {
             if (media == "movie") {
                 // Only confirmed BR flatrate titles qualify as new streaming films;
                 // an item currently in cinemas is not a streaming premiere claim.
+                // Collect theatrical BR pages separately. If this check fails,
+                // do not mislabel a film as a streaming premiere.
+                val theatrical = runCatching {
+                    (1..4).flatMap { page ->
+                        discoveryShelfPage("movie/now_playing", "movie", page).titles
+                    }.map { it.id }.toSet()
+                }.getOrNull() ?: return@withContext emptyList()
                 val gate = Semaphore(4)
                 coroutineScope {
-                    titles.map { title -> async {
+                    titles.filterNot { it.id in theatrical }.map { title -> async {
                         gate.withPermit {
                             val offers = runCatching { offersInBrazil(title) }.getOrDefault(emptyList())
                             title.takeIf { offers.isNotEmpty() }
@@ -3386,6 +3393,15 @@ internal fun TclStreamingScreens(
                                     AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
                                         cinemaWorldwide, posterCard)
                                 }
+                            }
+                        }
+                        if (!homeLibrary && selected == null && selectedHomeGenre == 0) {
+                            item {
+                                Text("Recém-chegados ao Streaming",
+                                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                                Text("Entradas recentes ainda não verificadas: o TMDB não fornece histórico de quando cada serviço adicionou um título. Nenhum catálogo antigo será anunciado como novidade sem essa evidência.",
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         // Genre page: ten-image hero above either a detailed vertical list
