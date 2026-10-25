@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 67,
+  "expected_version_code": 68,
   "preserve_legacy_ota": true,
-  "source": "Restore home TV remote to detected installed applications only; one canonical streaming provider logo per movie/TV card; render actual TMDB BR provider logo for uninstalled provider in streaming rail.",
+  "source": "User-approved streaming list visual parity: right aligned outlined Ver em lista/Ver em seções, provider subtitle red bar and genre-identical spacing, independent view+sort control row, no F/year/provider logos below detailed poster, details rows ordered title/genres/badges, separate Trailer and Mais detalhes outlined buttons.",
   "new_install_only": false,
-  "release_version": "2.9.38-AnyTV",
-  "release_scope": "Signed official V2 2.9.38/code67 OTA replacing 2.9.37/code66; preserve V2 signer, app identity and legacy OTA. Guard all tests, Android build and signed remote byte readback.",
-  "ci_revision": 32
+  "release_version": "2.9.39-AnyTV",
+  "release_scope": "Official signed V2 2.9.39/code68 OTA replacing 2.9.38/code67. Preserve signer, app identity, legacy OTA; require tests, Android compile, signed remote byte readback.",
+  "ci_revision": 33
 }
