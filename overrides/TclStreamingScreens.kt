@@ -96,6 +96,7 @@ private fun anyTvGenreLabels(
     }.distinct().take(3).joinToString(" · ")
 }
 private const val ANYTV_CINEMA_FILTER = -1
+private const val ANYTV_ANIME_FILTER = -2
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
 private const val ANYTV_LIST_BATCH = 24
 /** Movie genres drive 'All'; TV genres drive the 'Series' tab. */
@@ -103,6 +104,7 @@ private fun anyTvResolvedGenre(
     selectedGenre: Int, media: String,
     movieGenres: List<StreamingGenre>, tvGenres: List<StreamingGenre>
 ): Int {
+    if (selectedGenre == ANYTV_ANIME_FILTER) return 16
     if (selectedGenre <= 0) return 0
     val source = (movieGenres + tvGenres).firstOrNull { it.id == selectedGenre }
         ?: return 0
@@ -668,7 +670,7 @@ private object StreamingCatalog {
         withContext(Dispatchers.IO) {
             require(media == "movie" || media == "tv")
             require(page in 1..42)
-            require(id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14,
+            require(id == ANYTV_ANIME_FILTER || id in setOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14,
                 10759, 80, 10765, 10766, 10768, 10762))
             val sorting = when (sort) {
                 "rating" -> "vote_average.desc"
@@ -679,7 +681,9 @@ private object StreamingCatalog {
             }
             catalogPage24(page) { sourcePage ->
                 val route = "discover/$media?language=pt-BR&include_adult=false" +
-                    "&sort_by=$sorting&with_genres=$id&page=$sourcePage"
+                    "&sort_by=$sorting&with_genres=${if (id == ANYTV_ANIME_FILTER) 16 else id}" +
+                    (if (id == ANYTV_ANIME_FILTER) "&with_original_language=ja" else "") +
+                    "&page=$sourcePage"
                 val payload = get("backend", route)
                 StreamingResults(
                     mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id)
@@ -837,7 +841,8 @@ private object StreamingCatalog {
                     URLEncoder.encode(query, "UTF-8") + "&page=$sourcePage"
             else "discover/$media?language=pt-BR&watch_region=BR" +
                 "&with_watch_providers=$providerId&with_watch_monetization_types=flatrate" +
-                (if (genre > 0) "&with_genres=$genre" else "") +
+                (if (genre == ANYTV_ANIME_FILTER) "&with_genres=16&with_original_language=ja"
+                 else if (genre > 0) "&with_genres=$genre" else "") +
                 "&include_adult=false&sort_by=popularity.desc&page=$sourcePage"
             val result = get(token, url)
             val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media, genre)
@@ -1888,17 +1893,18 @@ internal fun TclStreamingScreens(
                         .takeIf { it > 0 }
                 }.distinct()
             } else if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()
+              else if (selectedHomeGenre == ANYTV_ANIME_FILTER) listOf(ANYTV_ANIME_FILTER)
               else listOfNotNull(
                   anyTvResolvedGenre(selectedHomeGenre, mediaKind,
                       allMovieGenres, tvGenres).takeIf { it > 0 })
             for (id in requested) {
                 val key = "$mediaKind:$id" +
-                    if (selectedHomeGenre > 0) ":$genreSort" else ""
+                    if (selectedHomeGenre != 0) ":$genreSort" else ""
                 if (key !in genreShelves) {
                     genreLoading[key] = true
                     try {
                         val result = StreamingCatalog.discoveryGenrePage(id, mediaKind, 1,
-                            if (selectedHomeGenre > 0) genreSort else "popular")
+                            if (selectedHomeGenre != 0) genreSort else "popular")
                         genreShelves[key] = result.titles
                         genrePage[key] = 1
                         genreMore[key] = result.more
@@ -2263,6 +2269,9 @@ internal fun TclStreamingScreens(
                         AnyTvCompactChip("Todos", selectedHomeGenre == 0) {
                             selectedHomeGenre = 0; homeLibrary = false
                         }
+                        AnyTvCompactChip("Anime", selectedHomeGenre == ANYTV_ANIME_FILTER) {
+                            selectedHomeGenre = ANYTV_ANIME_FILTER; homeLibrary = false
+                        }
                         if (homeContentType != "tv") {
                             AnyTvCompactChip("Cinema", selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                                 selected = null; homeContentType = "movie"
@@ -2372,13 +2381,15 @@ internal fun TclStreamingScreens(
                                 listOf("movie", "tv").filter {
                                     homeContentType == "all" || homeContentType == it
                                 }.forEach { mediaKind ->
-                                    val resolved = anyTvResolvedGenre(selectedHomeGenre,
+                                    val resolved = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                        ANYTV_ANIME_FILTER else anyTvResolvedGenre(selectedHomeGenre,
                                         mediaKind, allMovieGenres, tvGenres)
                                     if (resolved > 0) {
                                         genreShelves["$mediaKind:$resolved:$genreSort"]
                                             ?.takeIf { it.isNotEmpty() }?.let {
                                                 put((if (mediaKind == "tv") "Séries" else "Filmes") +
-                                                    " · " + (kind?.name ?: "Gênero"), it)
+                                                    " · " + (if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                                        "Anime" else kind?.name ?: "Gênero"), it)
                                             }
                                     }
                                 }
@@ -2666,6 +2677,7 @@ internal fun TclStreamingScreens(
                                     val pageTitle = when {
                                         selected != null -> selected!!.name
                                         selectedHomeGenre == ANYTV_CINEMA_FILTER -> "Cinema"
+                                        selectedHomeGenre == ANYTV_ANIME_FILTER -> "Anime"
                                         selectedHomeGenre > 0 -> (allMovieGenres + tvGenres).firstOrNull {
                                             it.id == selectedHomeGenre
                                         }?.name ?: "Gênero"
@@ -2888,14 +2900,16 @@ internal fun TclStreamingScreens(
                             val genreKey = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                 "movie:$ANYTV_CINEMA_FILTER:$genreSort"
                             else "$selectedGenreKind:" +
-                                anyTvResolvedGenre(selectedHomeGenre, selectedGenreKind,
-                                    allMovieGenres, tvGenres) + ":$genreSort"
+                                (if (selectedHomeGenre == ANYTV_ANIME_FILTER) ANYTV_ANIME_FILTER
+                                 else anyTvResolvedGenre(selectedHomeGenre, selectedGenreKind,
+                                    allMovieGenres, tvGenres)) + ":$genreSort"
                             val genreTitles = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                 genreShelves[genreKey].orEmpty()
                             else listOf("movie", "tv").filter {
                                 homeContentType == "all" || it == homeContentType
                             }.flatMap { mediaKind ->
-                                val id = anyTvResolvedGenre(selectedHomeGenre, mediaKind,
+                                val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                    ANYTV_ANIME_FILTER else anyTvResolvedGenre(selectedHomeGenre, mediaKind,
                                     allMovieGenres, tvGenres)
                                 if (id == 0) emptyList() else
                                     genreShelves["$mediaKind:$id:$genreSort"].orEmpty()
@@ -2914,7 +2928,8 @@ internal fun TclStreamingScreens(
                                         "tv" -> "Séries"
                                         else -> "Filmes e séries"
                                     }) + " · " + ((allMovieGenres + tvGenres).firstOrNull {
-                                        it.id == selectedHomeGenre }?.name ?: "Gênero"),
+                                        it.id == selectedHomeGenre }?.name ?:
+                                        if (selectedHomeGenre == ANYTV_ANIME_FILTER) "Anime" else "Gênero"),
                                         fontWeight = FontWeight.SemiBold)
                                 }
                                 Row(modifier = Modifier.fillMaxWidth()
