@@ -1243,7 +1243,7 @@ private fun StreamingOfferIcons(
     // No row jumps while provider details are loading.
     Row(verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-            modifier = Modifier.fillMaxWidth().heightIn(min = 20.dp)) {
+            modifier = Modifier.fillMaxWidth().heightIn(min = 16.dp)) {
             Box(modifier = Modifier.size(16.dp)
                 .clip(RoundedCornerShape(if (item.media == "tv") 8.dp else 3.dp))
                 .background(if (item.media == "tv") Color(0xFFD62828) else Color(0xFF1769E0)),
@@ -2406,12 +2406,12 @@ internal fun TclStreamingScreens(
         }
 
     val detailedListCard: @Composable (StreamingTitle) -> Unit = { title ->
-        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        Row(modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.Top) {
             detailedPosterCard(title, Modifier.width(112.dp))
             Column(modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 // Line 1: title; line 2: genres; line 3: official badges,
                 // year and confirmed BR subscription logos.
                 Text(title.name, fontSize = 14.sp,
@@ -2426,7 +2426,7 @@ internal fun TclStreamingScreens(
                     inCinema = title.media == "movie" && title.id in cinemaIds)
                 val summary = title.overview.trim()
                 if (summary.isNotBlank()) {
-                    Text(summary, fontSize = 12.sp, lineHeight = 17.sp,
+                    Text(summary, fontSize = 12.sp, lineHeight = 15.sp,
                         maxLines = 7, overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -3055,7 +3055,7 @@ internal fun TclStreamingScreens(
                                             modifier = Modifier.height(34.dp),
                                             contentPadding = PaddingValues(horizontal = 12.dp,
                                                 vertical = 0.dp)) {
-                                            Text(if (if (selected != null) providerListMode else !genreSectionsMode)
+                                            Text(if (if (selected != null) providerListMode else genreSectionsMode)
                                                 "Ver em seções" else "Ver em lista", fontSize = 12.sp,
                                                 maxLines = 1)
                                         }
@@ -3185,16 +3185,8 @@ internal fun TclStreamingScreens(
                                                         offset = Offset(0f, 2f), blurRadius = 6f)))
                                                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
                                                     verticalAlignment = Alignment.CenterVertically) {
-                                                    val year = current.date.take(4)
-                                                        .takeIf { it.matches(Regex("[0-9]{4}")) }
-                                                    Text(if (current.media == "movie") "F" else "S",
-                                                        color = Color.White, fontSize = 11.sp,
-                                                        fontWeight = FontWeight.Bold)
-                                                    if (year != null) {
-                                                        Text(year, fontSize = 11.sp, color = Color.White)
-                                                    }
                                                     StreamingOfferIcons(current, offerCache,
-                                                        displayed, showRating = false,
+                                                        displayed, showRating = false, showYear = true,
                                                         inCinema = current.id in cinemaIds)
                                                     if (current.media == "movie" &&
                                                         current.id in cinemaIds) {
@@ -3416,15 +3408,6 @@ internal fun TclStreamingScreens(
                                     AnyTvOneRowPreview("Cinema pelo mundo · seleção internacional",
                                         cinemaWorldwide, posterCard)
                                 }
-                            }
-                        }
-                        if (!homeLibrary && selected == null && selectedHomeGenre == 0) {
-                            item {
-                                Text("Recém-chegados ao Streaming",
-                                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                                Text("Entradas recentes ainda não verificadas: o TMDB não fornece histórico de quando cada serviço adicionou um título. Nenhum catálogo antigo será anunciado como novidade sem essa evidência.",
-                                    fontSize = 12.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                         // Genre page: ten-image hero above either a detailed vertical list
