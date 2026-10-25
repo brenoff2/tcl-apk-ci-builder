@@ -1196,7 +1196,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('StreamingCatalog.trailer(title.media, title.id)', self.screen)
         self.assertIn('AnyTvCompactChip("Ordenar: $sortLabel ▾", false)', self.screen)
         self.assertIn('Text("Catálogo · " + app.name', self.screen)
-        self.assertIn('OutlinedButton(onClick = {\n                                            providerListMode', self.screen)
+        self.assertIn('if (selected != null) providerListMode = !providerListMode', self.screen)
 
     def test_detailed_poster_metadata_not_repeated(self):
         poster = self.screen.split('private fun AnyTvPosterCard(', 1)[1].split(
@@ -1228,7 +1228,7 @@ class StreamingScreens(unittest.TestCase):
     def test_provider_list_mode_reuses_hero_and_paginates_both_kinds(self):
         for fragment in (
             'var providerListMode by remember',
-            'if (providerListMode) "Ver em seções"',
+            'if (if (selected != null) providerListMode else !genreSectionsMode)',
             'else "Ver em lista"',
             'selected != null && providerListMode',
             'StreamingCatalog.discover(token, app.name, kind, 1, id, "")',
