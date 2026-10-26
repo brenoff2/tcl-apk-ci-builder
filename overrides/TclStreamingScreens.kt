@@ -799,6 +799,26 @@ private object StreamingCatalog {
             }
         }
 
+    /** Only TMDB's explicit Miniseries classification qualifies, no guesswork. */
+    suspend fun confirmedMiniseries(candidates: List<StreamingTitle>): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+            val gate = Semaphore(4)
+            coroutineScope {
+                candidates.filter { it.media == "tv" && it.id > 0 }
+                    .distinctBy { it.id }.take(36).map { title ->
+                        async {
+                            gate.withPermit {
+                                val metadata = runCatching {
+                                    get("backend", "tv/${title.id}?language=pt-BR")
+                                }.getOrNull()
+                                title.takeIf { metadata?.optString("type")
+                                    ?.equals("Miniseries", ignoreCase = true) == true }
+                            }
+                        }
+                    }.awaitAll().filterNotNull()
+            }
+        }
+
     /** Future film/TV releases are factual TMDB dates, not confirmed subscriptions. */
     suspend fun discoveryUpcomingStreaming(): List<StreamingTitle> =
         discoveryUpcomingStreamingPage(1).titles
@@ -1769,6 +1789,15 @@ internal fun TclStreamingScreens(
 
     var discoveryShelves by remember {
         mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap())
+    }
+    var confirmedMiniseries by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    LaunchedEffect(discoveryShelves) {
+        val pool = discoveryShelves.values.flatten()
+            .filter { it.media == "tv" && !anyTvIsAnime(it) }
+            .distinctBy { it.id }.sortedByDescending { it.votes }
+        confirmedMiniseries = runCatching {
+            StreamingCatalog.confirmedMiniseries(pool)
+        }.getOrDefault(emptyList())
     }
     var discoveryLoading by remember { mutableStateOf(false) }
     var discoveryError by remember { mutableStateOf<String?>(null) }
@@ -2875,6 +2904,9 @@ internal fun TclStreamingScreens(
                                     },
                                     "Vale a pena assistir$service" to selectedPools.filter {
                                         it.votes >= 150 && it.rating >= 7.0
+                                    },
+                                    "Minisséries imperdíveis$service" to selectedPools.filter { title ->
+                                        title.media == "tv" && confirmedMiniseries.any { it.id == title.id }
                                     }
                                 )
                                 groups.forEach { (heading, candidates) ->
@@ -2924,6 +2956,8 @@ internal fun TclStreamingScreens(
                             }
                         } else {
                             if (selectedHomeGenre == 0) {
+                                if (confirmedMiniseries.isNotEmpty())
+                                    put("Minisséries imperdíveis", confirmedMiniseries)
                                 discoveryShelves.forEach { (heading, titles) ->
                                     if (heading != ANYTV_CINEMA_SHELF) {
                                         val selectedTitles = titles.filter {
