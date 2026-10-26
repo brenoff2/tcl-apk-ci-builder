@@ -1,3 +1,7 @@
+## 26/10/2026 — decisao sobre Cloudflare override 0%
+- Fontes oficiais verificadas: docs Version Overrides permitem 0% e header direcionado (`https://developers.cloudflare.com/workers/versions-and-deployments/version-overrides/`), mas API Deployments estabelece percentual minimo 0.01% (`https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/deployments/`). Esta contradicao permanece nao resolvida e impede executar POST API sem risco.
+- Cloudflare Trakt candidata `f927d4e0-c4fd-4a30-a5e3-12910a9664a9` em staging sem trafego; prod `88779b1b-9dbd-4dc6-9884-eff52769ded2` a 100% conforme ultima leitura confirmada. Nao promover nem distribuir APK ate smoke HTTP real e QA editorial/TCL. Watchmode excluido da release.
+
 ## Cloudflare version override — alternativa de smoke Trakt (26/10/2026)
 - Documentacao oficial https://developers.cloudflare.com/workers/versions-and-deployments/version-overrides/ confirma deploy de candidato em 0% com versao antiga 100% e header Cloudflare-Workers-Version-Overrides para teste direcionado. Nao habilita Preview URLs nem muda trafego normal. A versao DEVE estar no deployment; se override falhar, Cloudflare pode responder pela antiga, portanto validar deployment e versao antes de concluir PASS.
 - `anytv-resolver/scripts/check-trakt-live.mjs` agora aceita `ANYTV_TRAKT_TEST_VERSION` opcional e envia header de override para `anytv-link-resolver-pilot` em testes movie/tv; commit `18d7980044d1574141c36fe5b2800ed7379f9462`. Ferramenta local nao confirmou acesso DNS/HTTP; NAO_EXECUTADO.
