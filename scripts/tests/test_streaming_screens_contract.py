@@ -138,7 +138,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val app = selected!!', self.screen)
         self.assertIn('// Home and individual provider use ONE identical catalogue layout.', self.screen)
         self.assertNotIn('} else {\n                    val app = selected!!', self.screen)
-        self.assertIn('Text("ⓘ Fontes: TMDB / JustWatch"', self.screen)
+        self.assertIn('Text(if (traktSignals.isEmpty()) "ⓘ Fontes: TMDB / JustWatch"', self.screen)
         self.assertNotIn('Text("Catálogo brasileiro"', self.screen)
         self.assertNotIn('Text("Streaming", fontSize = 21.sp', self.screen)
         self.assertNotIn('Button(onClick = { openOnTv(app) }, modifier = Modifier.fillMaxWidth())', self.screen)
@@ -540,7 +540,7 @@ class StreamingScreens(unittest.TestCase):
             'StreamingCatalog.discoveryGenrePage(',
             '"Mostrar mais"', 'genreShelves[genreKey] =',
             'val films = discoveryShelves["Destaques da semana"]',
-            'val shows = discoveryShelves["Destaques da semana"]',
+            'val shows = discoveryShelves["Em alta nesta semana"].orEmpty()',
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'Text(if (item.media == "tv") "S" else "F"',
             'class AnyTvReleaseReminderReceiver',
