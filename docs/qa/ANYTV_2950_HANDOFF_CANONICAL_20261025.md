@@ -1,3 +1,11 @@
+## Decisão aprovada — Watchmode Developer não comercial (25/10/2026)
+- O usuário AUTORIZOU EXPRESSAMENTE a integração Watchmode para uso **não comercial**, com plano Developer gratuito; não é apenas possibilidade futura. Integrar ao AnyTV em DEV, priorizando disponibilidade brasileira e dados de catálogo elegíveis ao plano, sem pagamento nem deploy automático.
+- Respeitar limites oficiais: 2.500 créditos/mês, no máximo três países escolhidos, atribuição visível Watchmode quando seus dados forem exibidos, cache gratuito renovado/excluído em até 30 dias; sem presumir deep links móveis ou endpoints premium. Não copiar ou distribuir imagens de terceiros por presunção de licença.
+- Guardar API key APENAS no Cloudflare Worker como segredo; nunca no APK, GitHub ou logs. Requer emissão/configuração legítima da chave e HTTP live para declarar ATIVO; enquanto isso, INTEGRACAO_APROVADA, ATIVACAO_PENDENTE.
+- Se o projeto virar comercial, antes de uso comercial decidir entre contratar plano com direitos adequados ou desabilitar/remover Watchmode. Não contratar nenhum plano sem autorização específica.
+- Trakt continua previsto e obrigatório para o gate da próxima APK. Preservar signer/OTA e não gerar release antes da homologação exigida.
+- Fonte contratual verificada: https://api.watchmode.com/ e https://api.watchmode.com/tc .
+
 > **ADENDO DE LIBERACAO 25/10/2026:** próxima APK condicionada ao [gate de curadoria/Trakt/Watchmode](ANYTV_2951_INTEGRATION_RELEASE_GATE_20261025.md) commit b820b2ee7652031841d58514cbc1a7dc42a2ec6a; nenhuma credencial ou licença presumida; sem build ou OTA.
 
 ## Adendo DEV — 25/10/2026, posterior a release 2.9.50
