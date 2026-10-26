@@ -665,6 +665,15 @@ private object StreamingCatalog {
     suspend fun discoveryShelf(route: String, media: String): List<StreamingTitle> =
         discoveryShelfPage(route, media, 1).titles
 
+    /** Fetch up to three genuine pages, never clone cards to fill a shelf. */
+    suspend fun discoveryEditorialPool(route: String, media: String): List<StreamingTitle> =
+        coroutineScope {
+            (1..3).map { page -> async {
+                runCatching { discoveryShelfPage(route, media, page).titles }
+                    .getOrDefault(emptyList())
+            } }.awaitAll().flatten().distinctBy { "${it.media}:${it.id}" }
+        }
+
     /** Stable 24-title pages for dedicated editorial sections. */
     suspend fun discoveryShelfPage(route: String, media: String, page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
@@ -1003,8 +1012,11 @@ private object StreamingCatalog {
     }
 
     suspend fun discover(
-        token: String, app: String, media: String, page: Int, genre: Int, query: String
+        token: String, app: String, media: String, page: Int, genre: Int, query: String,
+        sort: String = "popularity.desc"
     ): StreamingResults = withContext(Dispatchers.IO) {
+        require(sort in setOf("popularity.desc", "primary_release_date.desc",
+            "first_air_date.desc"))
         val providerId = providerId(token, app, media)
         if (providerId == 0) return@withContext StreamingResults(emptyList(), false)
         val search = query.isNotBlank()
@@ -1016,7 +1028,7 @@ private object StreamingCatalog {
                 "&with_watch_providers=$providerId&with_watch_monetization_types=flatrate" +
                 (if (genre == ANYTV_ANIME_FILTER) "&with_genres=16"
                  else if (genre > 0) "&with_genres=$genre" else "") +
-                "&include_adult=false&sort_by=popularity.desc&page=$sourcePage"
+                "&include_adult=false&sort_by=$sort&page=$sourcePage"
             val result = get(token, url)
             val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media, genre)
                 .filter(::anyTvReleased)
@@ -2254,7 +2266,7 @@ internal fun TclStreamingScreens(
             Triple("Filmes e séries mais assistidos · Filmes", "movie/popular", "movie"),
             Triple("Filmes e séries mais assistidos · Séries", "tv/popular", "tv")
         )) {
-            runCatching { StreamingCatalog.discoveryShelf(route, kind) }
+            runCatching { StreamingCatalog.discoveryEditorialPool(route, kind) }
                 .onSuccess { if (it.isNotEmpty()) shelves[name] = it }
                 .onFailure { discoveryError = "Algumas seções não puderam carregar." }
         }
