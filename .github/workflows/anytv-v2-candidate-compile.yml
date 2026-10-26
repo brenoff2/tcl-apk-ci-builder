@@ -27,7 +27,7 @@ permissions:
   contents: read
 concurrency:
   group: anytv-v2-candidate-compile-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   phone-compile:
     runs-on: ubuntu-latest
