@@ -1,3 +1,8 @@
+## Mapa incremental — DEV apos 2.9.50 (25/10/2026)
+- `overrides/TclStreamingScreens.kt`: `anyTvCurate` filtra filmes assistidos antes de ordenar e do retorno antecipado em estreias; blob `eee69a330624e455bd5f5771b434711e02a1c556`, commit `8d61aed11cfe5fcaf2b7c19071639203255724c0`.
+- `scripts/tests/test_streaming_screens_contract.py`: contrato de ordenacao do filtro para secoes recentes; blob `e6260625db94b61fefe94e45b3ea912aed09f62e`, commit `09e8b8e6d1c01e3ded31278722e67d05c4dc2a3f`.
+- Nenhuma modificacao do Worker, build-request, workflow ou TV. SHAs sao de blobs consultados/atualizados; HEAD da branch nao foi independentemente verificado.
+
 ## Regra obrigatoria de sincronizacao documental (25/10/2026)
 - Em toda tarefa de desenvolvimento ou transicao, ler e reconciliar `AGENTS.md`, `docs/dev-context/STATUS.md`, `docs/dev-context/DECISIONS.md`, `docs/dev-context/CODEBASE_MAP.md` e o checkpoint canonico vigente. Antes de alterar codigo, identificar branch, HEAD, blobs relevantes e release/OTA verificadas; nao pressupor que o ultimo status documental e o estado live.
 - Toda mudanca relevante (codigo, contratos, arquitetura, dependencias, tests, releases, Worker/OTA, interfaces, decisoes, bloqueios ou homologacoes) exige atualizar, NA MESMA ENTREGA, os arquivos afetados: AGENTS (regras e ponteiro canonico), STATUS (estado e evidencias), DECISIONS (decisoes vigentes e substituicoes), CODEBASE_MAP (paths, responsabilidades e SHAs/ancoras), e checkpoint canonico (handoff). Nao basta atualizar somente um arquivo. Se algum nao sofrer mudanca material, registrar explicitamente a verificacao de nao-necessidade.
