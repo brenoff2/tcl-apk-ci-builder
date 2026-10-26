@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { handleRequest, catalogRequest, inspectOffers, validateLink } from "./worker.mjs";
+import { handleRequest, catalogRequest, traktSignalsRequest, inspectOffers, validateLink } from "./worker.mjs";
 
 const FIX = Object.freeze({
   disney: "https://www.disneyplus.com/browse/entity-8f08a8df-8b2f-49e1-9130-1e842b90f185",
@@ -633,4 +633,37 @@ test("English metadata is permitted only for trailer videos", async () => {
     }});
   assert.equal(response.status, 200);
   assert.equal(new URL(upstream).searchParams.get("language"), "en-US");
+});
+
+test("Trakt discovery is optional and never publishes a missing API key", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "test-tmdb-token";
+  const noKey = await traktSignalsRequest(request("/v1/catalog/signals/trakt/movie"), env);
+  assert.equal(noKey.status, 503);
+  assert.deepEqual(await noKey.json(), { status: "trakt_not_configured" });
+  const invalid = await traktSignalsRequest(
+    request("/v1/catalog/signals/trakt/tv?limit=1000"), { ...env, TRAKT_CLIENT_ID: "test-key" });
+  assert.equal(invalid.status, 400);
+});
+
+test("Trakt proxy returns only bounded TMDB IDs and watcher signals", async () => {
+  const env = { ...makeEnv(), TMDB_READ_TOKEN: "test-tmdb", TRAKT_CLIENT_ID: "secret-test-id" };
+  const transport = async (url, opts) => {
+    assert.equal(url, "https://api.trakt.tv/movies/trending?limit=50&page=1");
+    assert.equal(opts.headers["trakt-api-key"], "secret-test-id");
+    assert.equal(opts.headers["trakt-api-version"], "2");
+    return response([
+      { watchers: 91, movie: { title: "Valid", ids: { tmdb: 812 } } },
+      { watchers: 42, movie: { title: "Duplicate", ids: { tmdb: 812 } } },
+      { watchers: 3, movie: { title: "Invalid", ids: { tmdb: -1 } } },
+    ]);
+  };
+  const result = await catalogRequest(request("/v1/catalog/signals/trakt/movie"), env,
+    { fetch: transport });
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(),
+    { source: "trakt", kind: "movie", results: [{ id: 812, watchers: 91 }] });
+  const unavailable = await catalogRequest(request("/v1/catalog/signals/trakt/tv"), env,
+    { fetch: async () => response({ status: "unavailable" }, 429) });
+  assert.equal(unavailable.status, 503);
 });
