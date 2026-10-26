@@ -1,3 +1,8 @@
+## 26/10/2026 — verificacao segura de preview e efeito editorial Trakt
+- Readback oficial Cloudflare: versao candidata Trakt `f927d4e0-c4fd-4a30-a5e3-12910a9664a9` permanece STAGED, etag `edcb31819f13b037b47b9dc513ea3d936024c23c55cd0355a854050cbc7b1e9e`; producao continua `88779b1b-9dbd-4dc6-9884-eff52769ded2` a 100%; Version URLs `previews_enabled=false`.
+- API oficial Cloudflare nao ofereceu endpoint de execucao privada direta de versao preparada. Documentacao oficial indica URLs de versao publicas quando habilitadas; nao habilitar sem Access ou outro isolamento. Nao criar aplicativo de Access sem politica de identidade validada; nenhum trafego/OTA alterado.
+- Revisao do Android `overrides/TclStreamingScreens.kt` confirmou `anyTvEditorialScore` usa peso logaritmico de watchers Trakt (maximo 12 pontos) e `anyTvCurate` repassa mapa de sinais para ordenar resultados reais. A inspecao de teste fonte detectou somente verificacoes de presenca da integracao; QA editorial/TCL permanece pendente. Nao declarar Trakt funcional live sem ver resposta de endpoints movie e tv.
+
 ## Gate de preview protegido — 26/10/2026
 - Cloudflare API oficial confirmou a versao candidata `f927d4e0-c4fd-4a30-a5e3-12910a9664a9` armazenada e producao 100% na versao `88779b1b-9dbd-4dc6-9884-eff52769ded2`, sem mudanca de trafego.
 - Verificacao Cloudflare Access `GET /accounts/{account_id}/access/apps` retornou 10 aplicativos, nenhum correspondente a AnyTV, dominio brenoff.workers.dev ou anytv-link-resolver-pilot. A configuracao do Worker segue `previews_enabled=false`. Conforme documentacao oficial, Version URLs ficam publicamente acessiveis quando habilitadas sem Access; por isso preview nao foi ativado nem endpoint exposto.
