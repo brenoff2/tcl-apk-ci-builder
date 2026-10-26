@@ -28,8 +28,8 @@ jobs:
           node --check src/worker.mjs
           node --check src/watchmode.mjs
           node --check src/watchmode.test.mjs
-      - name: Watchmode non-commercial adapter regression (no external API credits)
-        run: node --test src/watchmode.test.mjs
+      - name: Trakt and Watchmode adapter regressions (no external API credits)
+        run: node --test src/worker.test.mjs src/watchmode.test.mjs
       - name: SQLite activation transaction regressions
         run: python3 -m unittest discover -s tests -p 'test_device_activation_sql.py' -v
       - name: Cloudflare D1 local migration and activation smoke
