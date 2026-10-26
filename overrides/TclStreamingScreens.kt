@@ -108,7 +108,8 @@ private const val ANYTV_EDITORIAL_LIMIT = 50
  * well-established titles. This score is NOT a TMDB/Trakt user rating.
  */
 private fun anyTvEditorialScore(
-    title: StreamingTitle, heading: String, interests: Set<Int>
+    title: StreamingTitle, heading: String, interests: Set<Int>,
+    trakt: Map<String, Int> = emptyMap()
 ): Double {
     val confidence = title.votes.toDouble() / (title.votes + 120.0)
     val quality = (title.rating * confidence + 6.0 * (1.0 - confidence)) / 10.0
@@ -127,15 +128,20 @@ private fun anyTvEditorialScore(
     }
     val confidenceSignal = (kotlin.math.ln(1.0 + title.votes.toDouble()) /
         kotlin.math.ln(10001.0)).coerceIn(0.0, 1.0)
+    val recentViewers = trakt["${title.media}:${title.id}"] ?: 0
+    val traktSignal = if (recentViewers > 0)
+        (kotlin.math.ln(1.0 + recentViewers) / kotlin.math.ln(1001.0))
+            .coerceIn(0.0, 1.0) * 12.0 else 0.0
     val newSection = heading.contains("lançad", true) ||
         heading.contains("novas", true) || heading.contains("temporadas", true)
     val highlights = heading.contains("destaque", true) ||
         heading.contains("alta", true) || heading.contains("agora", true)
-    return if (newSection) freshness * 55 + quality * 18 +
+    val tmdbScore = if (newSection) freshness * 55 + quality * 18 +
         confidenceSignal * 10 + interest * 17
     else if (highlights) freshness * 38 + quality * 26 +
         confidenceSignal * 16 + interest * 20
     else quality * 40 + confidenceSignal * 17 + freshness * 20 + interest * 23
+    return tmdbScore + traktSignal
 }
 /**
  * 40% preference, 35% editorial consensus, 25% discovery are target proportions,
@@ -143,12 +149,13 @@ private fun anyTvEditorialScore(
  */
 private fun anyTvCurate(
     candidates: List<StreamingTitle>, heading: String, interests: Set<Int>,
-    watched: Set<String> = emptySet(), limit: Int = ANYTV_EDITORIAL_LIMIT
+    watched: Set<String> = emptySet(), limit: Int = ANYTV_EDITORIAL_LIMIT,
+    trakt: Map<String, Int> = emptyMap()
 ): List<StreamingTitle> {
     val base = candidates.filter { it.id > 0 && it.name.isNotBlank() &&
         it.poster.isNotBlank() }.distinctBy { "${it.media}:${it.id}" }
     val ranked = base.sortedWith(compareByDescending<StreamingTitle> {
-        anyTvEditorialScore(it, heading, interests)
+        anyTvEditorialScore(it, heading, interests, trakt)
     }.thenByDescending { it.votes }.thenBy { it.id })
     if (heading.contains("lançad", true) ||
         heading.contains("novas", true) || heading.contains("temporadas", true))
@@ -662,6 +669,21 @@ private object StreamingCatalog {
     }
 
     /** Global editorial shelves independent of the TV's installed providers. */
+    /** Optional, server-key-only Trakt discovery signal. Never invent rankings. */
+    suspend fun traktTrendingSignals(): Map<String, Int> = withContext(Dispatchers.IO) {
+        listOf("movie", "tv").flatMap { kind ->
+            val records = runCatching {
+                get("backend", "signals/trakt/$kind").optJSONArray("results") ?: JSONArray()
+            }.getOrDefault(JSONArray())
+            (0 until records.length()).mapNotNull { index ->
+                val entry = records.optJSONObject(index) ?: return@mapNotNull null
+                val id = entry.optInt("id")
+                val watchers = entry.optInt("watchers")
+                if (id > 0 && watchers >= 0) "$kind:$id" to watchers else null
+            }
+        }.toMap()
+    }
+
     suspend fun discoveryShelf(route: String, media: String): List<StreamingTitle> =
         discoveryShelfPage(route, media, 1).titles
 
@@ -1900,6 +1922,11 @@ internal fun TclStreamingScreens(
     var trailerLink by remember { mutableStateOf<String?>(null) }
     var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     val offerCache = remember { mutableStateMapOf<String, List<StreamingOffer>>() }
+    var traktSignals by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    LaunchedEffect(Unit) {
+        traktSignals = runCatching { StreamingCatalog.traktTrendingSignals() }
+            .getOrDefault(emptyMap())
+    }
     var detailsOffers by remember { mutableStateOf<List<StreamingOffer>?>(null) }
     var detailLoading by remember { mutableStateOf(false) }
     var seriesSeasons by remember { mutableStateOf<List<StreamingSeason>>(emptyList()) }
@@ -2998,7 +3025,8 @@ internal fun TclStreamingScreens(
                     val seenPreview = mutableSetOf<String>()
                     filteredShelves.forEach { (heading, candidates) ->
                         val ranked = if (homeLibrary) candidates else
-                            anyTvCurate(candidates, heading, editorialInterests, watchedFilms)
+                            anyTvCurate(candidates, heading, editorialInterests, watchedFilms,
+                                ANYTV_EDITORIAL_LIMIT, traktSignals)
                         // Reserve the first posters of each editorial rail for new discoveries.
                         val fresh = ranked.filterNot { "${it.media}:${it.id}" in seenPreview }
                         val arranged = (fresh + ranked).distinctBy { "${it.media}:${it.id}" }
@@ -4007,7 +4035,8 @@ internal fun TclStreamingScreens(
                         } // standalone section or main catalogue
                     }
                 // Links oficiais são mostrados quando disponíveis; nenhum código é exigido.
-                Text("ⓘ Fontes: TMDB / JustWatch",
+                Text(if (traktSignals.isEmpty()) "ⓘ Fontes: TMDB / JustWatch"
+                    else "ⓘ TMDB / JustWatch / Trakt (não endossado pelo Trakt)",
                     modifier = Modifier.clickable { showCredits = true },
                     fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1)
