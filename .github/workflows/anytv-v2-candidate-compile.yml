@@ -115,3 +115,62 @@ jobs:
             candidate-NOT-INSTALL.txt
           retention-days: 14
           if-no-files-found: error
+      - name: Recover new V2 signer from encrypted GitHub backup and sign APK
+        shell: bash
+        env:
+          V2_RECOVERY_HEX: ${{ secrets.ANYTV_SIGNER_V2_RECOVERY_HEX }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install -q 'cryptography==46.0.3'
+          umask 077
+          mkdir -m 700 -p signing-v2-private signed-v2
+          trap 'rm -rf signing-v2-private' EXIT
+          python3 - <<'PY'
+          import base64,hashlib,hmac,json,os,pathlib
+          from cryptography import x509
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.serialization import pkcs12
+          k=os.environ.get('V2_RECOVERY_HEX','')
+          if len(k)!=64 or any(c not in '0123456789abcdefABCDEF' for c in k):
+              raise RuntimeError('V2 recovery secret missing; signed candidate unavailable')
+          key=bytes.fromhex(k)
+          root=pathlib.Path('signing-recovery/v2')
+          ciphertext=(root/'phone-signer.aesgcm').read_bytes()
+          meta=json.loads((root/'identity.json').read_text())
+          assert ciphertext[:9]==b'ANYTVV2G1'
+          assert hashlib.sha256(ciphertext).hexdigest()==meta['ciphertext_sha256']
+          p12=AESGCM(key).decrypt(ciphertext[9:21],ciphertext[21:],None)
+          pw=base64.urlsafe_b64encode(hmac.new(key,b'AnyTV-Phone-V2-PKCS12-Pass-v1',hashlib.sha256).digest())
+          signer,cert,_=pkcs12.load_key_and_certificates(p12,pw)
+          assert signer is not None
+          assert cert.fingerprint(hashes.SHA256()).hex()==meta['certificate_sha256']
+          (pathlib.Path('signing-v2-private')/'phone.p12').write_bytes(p12)
+          (pathlib.Path('signing-v2-private')/'password').write_bytes(pw)
+          print('ANYTV_V2_ENCRYPTED_BACKUP_RECOVERED_WITH_GITHUB_ACTIONS_SECRET')
+          PY
+          export P12_V2_PASSWORD
+          P12_V2_PASSWORD="$(cat signing-v2-private/password)"
+          echo "::add-mask::$P12_V2_PASSWORD"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
+            --ks signing-v2-private/phone.p12 --ks-type PKCS12 \
+            --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD \
+            --out signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk output/source/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk > signed-v2/audit.txt
+          EXPECTED_CERT="$(jq -r .certificate_sha256 signing-recovery/v2/identity.json)"
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-v2/audit.txt
+          grep -qi "$EXPECTED_CERT" signed-v2/audit.txt
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c 4 signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk > signed-v2/badging.txt
+          grep -q "package: name='com.tclremote.livre.v2' versionCode='80'" signed-v2/badging.txt
+          echo "ANYTV_V2_SIGNER_VALIDATED_$(sha256sum signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk | cut -d ' ' -f1)"
+      - name: Archive signed 2.9.51 candidate without publishing OTA
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-v2-2951-code80-signed-candidate
+          path: |
+            signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk
+            signed-v2/audit.txt
+            signed-v2/badging.txt
+          retention-days: 14
+          if-no-files-found: error
