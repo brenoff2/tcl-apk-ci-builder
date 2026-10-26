@@ -84,6 +84,16 @@ class StreamingScreens(unittest.TestCase):
                         curate.index("return ranked.take(limit)"))
         self.assertIn('it.media != "movie" || it.id.toString() !in watched', curate)
 
+    def test_returning_seasons_include_trending_and_on_air_candidates(self):
+        start = self.screen.index("suspend fun recentlyStartedSeasons()")
+        end = self.screen.index("suspend fun confirmedMiniseries(", start)
+        season_source = self.screen[start:end]
+        self.assertIn('listOf("tv/on_the_air", "trending/tv/week")', season_source)
+        self.assertIn('}.distinctBy { it.id }', season_source)
+        self.assertIn("val gate = Semaphore(4)", season_source)
+        self.assertIn("it.number > 1 && it.airDate.isNotBlank()", season_source)
+        self.assertIn("anyTvRecentPremiere(title.copy(date = it.airDate))", season_source)
+
     def test_recent_sections_have_distinct_verified_sources(self):
         self.assertIn('suspend fun recentPremieres(media: String)', self.screen)
         self.assertNotIn('&$dateField.gte=', self.screen)
