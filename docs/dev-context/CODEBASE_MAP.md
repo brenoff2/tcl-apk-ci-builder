@@ -1,3 +1,6 @@
+## DEV 25/10/2026 — fontes de novas temporadas (nao publicado)
+- `recentlyStartedSeasons` passou a combinar `tv/on_the_air` e `trending/tv/week`, deduplicados por TMDB ID, antes de verificar temporada posterior com data de estreia nos ultimos 90 dias. Preserva maximo de 60 candidatas, concorrencia de 4 consultas de temporadas, exclusao de Anime e series estreantes. Codigo [00b850ad](https://github.com/brenoff2/tcl-apk-ci-builder/commit/00b850ad61521f6052986e75f1937c51000b77b2), teste [5efce875](https://github.com/brenoff2/tcl-apk-ci-builder/commit/5efce875570d0c4311ea37461eb4192c7d6d4370). Blobs Kotlin d14f8bd5fda064535ea599de3a53ac4e9335549b, teste 058a742ce71bb11194a3e75eedc1ea067c046a1c. CI/Gradle=NAO_TESTADO nesta etapa; assinatura/OTA=NAO; QA fisico/editorial=NAO_HOMOLOGADO; release documentada permanece 2.9.50/code79.
+
 ## Mapa incremental — DEV apos 2.9.50 (25/10/2026)
 - `overrides/TclStreamingScreens.kt`: `anyTvCurate` filtra filmes assistidos antes de ordenar e do retorno antecipado em estreias; blob `eee69a330624e455bd5f5771b434711e02a1c556`, commit `8d61aed11cfe5fcaf2b7c19071639203255724c0`.
 - `scripts/tests/test_streaming_screens_contract.py`: contrato de ordenacao do filtro para secoes recentes; blob `e6260625db94b61fefe94e45b3ea912aed09f62e`, commit `09e8b8e6d1c01e3ded31278722e67d05c4dc2a3f`.
