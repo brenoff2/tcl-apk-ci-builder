@@ -1,3 +1,8 @@
+## Trakt-only: dependencia removida — 25/10/2026
+- `catalogRequest` agora despacha `signals/trakt/{movie|tv}` ANTES do gate TMDB_READ_TOKEN/DB; endpoint Trakt depende somente de `TRAKT_CLIENT_ID`, nao exige OAuth/login/codigo do usuario. Codigo commit `5fb495efa5eda99025ab5369c44893a95422b17a`; regressao pelo roteador real para sinais TV com apenas Client ID e erro fail-closed sem chave: `a86639b231d30f9f400fa0f48746bb76b3eb2978`.
+- Watchmode FORA do release segundo decisao atual do usuario; nao reintroduzir sua rota. Live Worker ainda NAO_DEPLOYED/NÃO_VERIFICADO nesta etapa; tentativa de consultar dominio resultou em erro DNS do ambiente. Testes de unidade/CI sem PASS confirmado. Nova APK/OTA NAO publicada.
+- Proximo gate: CI real com logs e resposta live dos endpoints /v1/catalog/signals/trakt/movie e /tv; verificar efeito editorial no Android, regressao e QA TCL antes de novo release.
+
 ## DECISAO SUPERSEDE ANTERIORES — 25/10/2026: ENTREGA TRAKT-ONLY
 - Usuario decidiu implementar somente Trakt nesta entrega. WATCHMODE ESTA FORA DO ESCOPO DA APK, DA ATIVACAO DO WORKER E DOS GATES DE RELEASE; instrucoes historicas contraditorias sobre obrigatoriedade Watchmode estao REVOGADAS. Secret Watchmode eventualmente existente nao autoriza seu uso; nao consultar a API. Arquivo experimental `src/watchmode.mjs` e teste retidos para estudo futuro, mas rota ingress removida de `src/worker.mjs` (commit `e24054783ccf31b346c05abc5231a7d01abefe0d`), impedindo o servico nesta candidata.
 - `anytv-resolver/package.json` nao executa mais testes Watchmode no `npm test` (commit `9ba0baa19c9fea6ee1b7e71e0e88109b2b057da7`). Workflow P0 executa apenas teste Trakt/Worker na etapa de sinais (commit `ebf0933b7d6c2f21358662e7c3ace82e07037242`).
