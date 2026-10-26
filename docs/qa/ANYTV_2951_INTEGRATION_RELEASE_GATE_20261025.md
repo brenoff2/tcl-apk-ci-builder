@@ -1,3 +1,7 @@
+## 26/10/2026 — AUTONOMOUS GOAL: correcao do workflow APK 2.9.51
+- Corrigido erro verificavel no workflow `.github/workflows/anytv-2951-unsigned-candidate.yml`: `aapt dump badging` era comparado equivocadamente a versionCode `61` (versao anterior); agora compara a `80`, coerente com `versionName=2.9.51-AnyTV` e package V2. Commit `17f27639904d725bac23dfdbdd7f554ac787ec1b`; readback do GitHub confirmou `versionCode='80'` e ausencia do teste antigo `61`.
+- GitHub Actions: tentativa de workflow_dispatch bloqueada pelo gate do conector `DESTRUCTIVE_CONFIRMATION_REQUIRED`; nenhum build executado, nenhuma APK gerada. CI P0 unit previamente PASS (execucoes mais recentes) mas nao equivale a build 2.9.51 nem teste na TCL. Trakt staging Cloudflare e producao preservadas; nenhum deploy/OTA.
+
 ## 26/10/2026 — build APK 2.9.51 preparada, execucao bloqueada
 - Criado `.github/workflows/anytv-2951-unsigned-candidate.yml` (commit f8d8dae530cabbc0bbcef60c656eee82842c3c11) derivado do pipeline de compilacao Android existente: package V2 preservado, versionCode 80, versionName 2.9.51-AnyTV, artifact unsigned audit-only, SEM ASSINATURA/OTA. Readback confirmou estas declaracoes. Ainda NAO HOUVE APK gerada ou CI da candidata PASS.
 - Tentativa de `workflow_dispatch` via GitHub MCP foi BLOQUEADA `DESTRUCTIVE_CONFIRMATION_REQUIRED`; nao repetir atraves de desvio de autorizacao. Necessita operacao autorizada para executar CI e baixar/inspecionar artefato.
