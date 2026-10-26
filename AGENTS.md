@@ -1,3 +1,6 @@
+## DEV apos 2.9.50 (25/10/2026)
+- Correcao DEV: filmes assistidos sao removidos antes do ranking de TODAS as secoes editoriais, inclusive lancamentos que retornavam antecipadamente. Codigo commit `8d61aed11cfe5fcaf2b7c19071639203255724c0`; teste de regressao commit `09e8b8e6d1c01e3ded31278722e67d05c4dc2a3f`. Somente DEV, sem compilacao ou OTA; QA fisico NAO_TESTADO. Release vigente documentada continua 2.9.50/code79.
+
 ## Referencia vigente (reconciliada em 25/10/2026)
 - Ultima release documentada: **AnyTV 2.9.50 / versionCode 79**, [Actions #40250636867](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40250636867), artefato `anytv-v2-2950-signed-update` ID `12621265708`, OTA V2 commit `7ef4e20b6b0e9a414455d8c1babf10664311ea1e` em `feat/tcl-v22-updates-back-bluetooth:updates/android/v2/current.apk`. Evidencia registrada no [checkpoint 2.9.50](docs/qa/ANYTV_2950_HANDOFF_CANONICAL_20261025.md); verificar estado live independentemente antes de proxima release.
 - DEV `feat/anytv-p0-device-proof-verifier-20261020`, PR #3 (Draft conforme ultimo checkpoint), fonte principal `overrides/TclStreamingScreens.kt`; testes `scripts/tests/test_streaming_screens_contract.py`; Worker `anytv-resolver/src/worker.mjs`.
