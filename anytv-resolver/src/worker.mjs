@@ -159,12 +159,65 @@ function report(result, fromCache) {
  * This endpoint stays inaccessible until deployed behind a dedicated route
  * with TMDB_READ_TOKEN configured as a Cloudflare Worker Secret.
  */
+/**
+ * Optional Trakt Standard public discovery signal. Only TMDB IDs and current
+ * watcher counts are returned; artwork, user activity and bulk catalog copies
+ * are not retained. Requires TRAKT_CLIENT_ID as a Cloudflare Worker secret.
+ * Trakt attribution: AnyTV uses Trakt but is not endorsed or certified by Trakt.
+ */
+export async function traktSignalsRequest(request, env, deps = {}) {
+  if (!env?.TRAKT_CLIENT_ID) {
+    return asJson({ status: "trakt_not_configured" }, 503);
+  }
+  const parsed = new URL(request.url);
+  if (parsed.search !== "") return asJson({ status: "bad_request" }, 400);
+  const match = parsed.pathname.match(/^\/v1\/catalog\/signals\/trakt\/(movie|tv)$/);
+  if (!match) return asJson({ status: "bad_request" }, 400);
+  const kind = match[1];
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const cached = cache ? await cache.match(request) : null;
+  if (cached) return cached;
+  const path = kind === "movie" ? "movies/trending" : "shows/trending";
+  try {
+    const transport = deps.fetch || fetch;
+    const upstream = await transport("https://api.trakt.tv/" + path + "?limit=50&page=1", {
+      headers: {
+        "trakt-api-version": "2",
+        "trakt-api-key": env.TRAKT_CLIENT_ID,
+        Accept: "application/json",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(6500),
+    });
+    if (!upstream.ok) return asJson({ status: "trakt_unavailable" }, 503);
+    const response = await upstream.json();
+    if (!Array.isArray(response)) return asJson({ status: "trakt_invalid_response" }, 503);
+    const seen = new Set();
+    const results = response.slice(0, 50).map(entry => {
+      const id = entry?.[kind === "movie" ? "movie" : "show"]?.ids?.tmdb;
+      const watchers = entry?.watchers;
+      if (!Number.isSafeInteger(id) || id < 1 || id > 999999999 ||
+          !Number.isSafeInteger(watchers) || watchers < 0 || seen.has(id)) return null;
+      seen.add(id);
+      return { id, watchers: Math.min(watchers, 1000000) };
+    }).filter(Boolean);
+    const body = asJson({ source: "trakt", kind, results }, 200,
+      { "cache-control": "public, max-age=900" });
+    if (cache) await cache.put(request, body.clone());
+    return body;
+  } catch {
+    return asJson({ status: "trakt_unavailable" }, 503);
+  }
+}
+
 export async function catalogRequest(request, env, deps = {}) {
   if (!env?.TMDB_READ_TOKEN || !env?.DB) {
     return asJson({ status: "catalog_not_configured" }, 503);
   }
   const parsed = new URL(request.url);
   const route = parsed.pathname.replace(/^\/v1\/catalog\//, "");
+  if (/^signals\/trakt\/(movie|tv)$/.test(route))
+    return traktSignalsRequest(request, env, deps);
   const patterns = [
     /^genre\/(movie|tv)\/list$/,
     /^watch\/providers\/(movie|tv)$/,
