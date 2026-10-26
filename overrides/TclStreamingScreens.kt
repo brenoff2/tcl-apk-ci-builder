@@ -154,7 +154,11 @@ private fun anyTvCurate(
 ): List<StreamingTitle> {
     val base = candidates.filter { it.id > 0 && it.name.isNotBlank() &&
         it.poster.isNotBlank() }.distinctBy { "${it.media}:${it.id}" }
-    val ranked = base.sortedWith(compareByDescending<StreamingTitle> {
+    // Apply watched-history filtering to every shelf, including recent premieres.
+    val unwatched = base.filter {
+        it.media != "movie" || it.id.toString() !in watched
+    }
+    val ranked = unwatched.sortedWith(compareByDescending<StreamingTitle> {
         anyTvEditorialScore(it, heading, interests, trakt)
     }.thenByDescending { it.votes }.thenBy { it.id })
     if (heading.contains("lançad", true) ||
@@ -169,9 +173,7 @@ private fun anyTvCurate(
             if (seen.add(key)) chosen.add(title)
         }
     }
-    val notWatched = ranked.filter {
-        it.media != "movie" || it.id.toString() !in watched
-    }
+    val notWatched = ranked
     val preferred = notWatched.filter { title ->
         title.genreIds.any { it in interests }
     }
