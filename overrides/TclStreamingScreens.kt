@@ -784,7 +784,13 @@ private object StreamingCatalog {
     /** Confirm a newly premiered season of a previously established series. */
     suspend fun recentlyStartedSeasons(): List<StreamingTitle> =
         withContext(Dispatchers.IO) {
-            val ongoing = discoveryEditorialPool("tv/on_the_air", "tv")
+            // An older returning series may trend without being in on_the_air yet.
+            // Merge two already-allowed TMDB pools, then keep the season check factual.
+            val ongoing = coroutineScope {
+                listOf("tv/on_the_air", "trending/tv/week").map { route ->
+                    async { discoveryEditorialPool(route, "tv") }
+                }.awaitAll().flatten()
+            }.distinctBy { it.id }
                 .filter { !anyTvIsAnime(it) && anyTvReleased(it) && !anyTvRecentPremiere(it) }
                 .take(60)
             val gate = Semaphore(4)
