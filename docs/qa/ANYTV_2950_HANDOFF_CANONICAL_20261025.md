@@ -1,3 +1,5 @@
+> **ADENDO DE LIBERACAO 25/10/2026:** próxima APK condicionada ao [gate de curadoria/Trakt/Watchmode](ANYTV_2951_INTEGRATION_RELEASE_GATE_20261025.md) commit b820b2ee7652031841d58514cbc1a7dc42a2ec6a; nenhuma credencial ou licença presumida; sem build ou OTA.
+
 ## Adendo DEV — 25/10/2026, posterior a release 2.9.50
 - Foi corrigido o filtro de filmes assistidos nas secoes de lancamentos, antes da saida antecipada de `anyTvCurate`: commit de codigo `8d61aed11cfe5fcaf2b7c19071639203255724c0` e regressao `09e8b8e6d1c01e3ded31278722e67d05c4dc2a3f`. Mudanca nao publicada: BUILD/CI=NAO_TESTADO, ASSINATURA=NAO, OTA=NAO; ultima distribuicao documentada permanece 2.9.50/code79; QA fisico e editorial real pendentes. Nenhuma credencial ou rota de producao modificada.
 
