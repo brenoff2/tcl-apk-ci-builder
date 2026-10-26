@@ -1,3 +1,11 @@
+## Decisão aprovada — Watchmode Developer não comercial (25/10/2026)
+- O usuário AUTORIZOU EXPRESSAMENTE a integração Watchmode para uso **não comercial**, com plano Developer gratuito; não é apenas possibilidade futura. Integrar ao AnyTV em DEV, priorizando disponibilidade brasileira e dados de catálogo elegíveis ao plano, sem pagamento nem deploy automático.
+- Respeitar limites oficiais: 2.500 créditos/mês, no máximo três países escolhidos, atribuição visível Watchmode quando seus dados forem exibidos, cache gratuito renovado/excluído em até 30 dias; sem presumir deep links móveis ou endpoints premium. Não copiar ou distribuir imagens de terceiros por presunção de licença.
+- Guardar API key APENAS no Cloudflare Worker como segredo; nunca no APK, GitHub ou logs. Requer emissão/configuração legítima da chave e HTTP live para declarar ATIVO; enquanto isso, INTEGRACAO_APROVADA, ATIVACAO_PENDENTE.
+- Se o projeto virar comercial, antes de uso comercial decidir entre contratar plano com direitos adequados ou desabilitar/remover Watchmode. Não contratar nenhum plano sem autorização específica.
+- Trakt continua previsto e obrigatório para o gate da próxima APK. Preservar signer/OTA e não gerar release antes da homologação exigida.
+- Fonte contratual verificada: https://api.watchmode.com/ e https://api.watchmode.com/tc .
+
 # AnyTV — Gate da próxima APK (pós 2.9.50) — 25/10/2026
 
 Status: BLOQUEADA PARA RELEASE. Não alterar OTA/assinatura ou gerar APK de distribuição até cumprir gates.
@@ -16,7 +24,7 @@ Concluir pendências editoriais verificáveis e **ativar, testar e homologar Tra
 1. Verificar SHA HEAD, PR #3 e última OTA live com readback; preservar `com.tclremote.livre.v2`, signer, `updates/android/cert2026/current.apk`.
 2. Curadoria: amostra REAL, com ID, nome, mídia, datas, votos, nota, gênero, provedor e tipo de assinatura BR; Principal + pelo menos três streamings, contagens até 50 e duplicação/recência; corrigir problemas encontrados e regressões.
 3. Trakt: registrar aplicativo legítimo, configurar Client ID como segredo somente no Worker, verificar termos/atribuição, testar 200 real nos dois endpoints, degradação sem sinal, cache e 429. Deploy condicionado à autorização operacional aplicável.
-4. Watchmode: licença válida para finalidade efetiva do AnyTV, credencial legítima, escopo Brasil/cobertura, fontes e tipos de oferta por assinatura; projetar e implementar adaptador de backend sem chave no APK, testes offline e HTTP real; sem contratação não se declara ativo.
+4. Watchmode: integração APROVADA no plano Developer não comercial, sem custo; obter credencial legítima, confirmar Brasil entre até 3 países, atribuição, cache <= 30 dias e orçamento de 2500 créditos/mês; implementar backend sem chave no APK, testes offline e HTTP real. Em eventual uso comercial, contratar licença adequada com autorização expressa OU desabilitar/remover Watchmode antes do uso comercial.
 5. Executar testes Kotlin/Python/Node relevantes e compilação Android unsigned em CI; distinguir testes de fonte de testes comportamentais. Não promover sem relatórios PASS do commit específico.
 6. Validar interface e conteúdo no dispositivo, incluindo desempenho, navegação, favoritos, assistidos e seções de catálogo. QA_FISICO NAO_TESTADO até evidência.
 7. Só depois de tudo aprovado: novo versionCode >79, assinatura com identidade original, publicação OTA V2 expressamente autorizada, readback imutável. Não tocar na OTA legada nem fazer merge automático.
