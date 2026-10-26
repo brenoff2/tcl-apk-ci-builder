@@ -1,4 +1,4 @@
-name: AnyTV V2 candidate | unsigned compile and contracts (no OTA)
+name: AnyTV V2 2.9.51 candidate | unsigned compile and contracts (no OTA)
 on:
   push:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
@@ -86,8 +86,8 @@ jobs:
           s=p.read_text()
           assert s.count('versionCode = 39') == 1
           assert s.count('versionName = "2.9.10-AnyTV"') == 1
-          p.write_text(s.replace('versionCode = 39','versionCode = 61')
-                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.32-AnyTV"'))
+          p.write_text(s.replace('versionCode = 39','versionCode = 80')
+                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.51-AnyTV"'))
           PY
           python3 scripts/apply_anytv_phone_v2_identity.py
           cd source
@@ -99,15 +99,15 @@ jobs:
           APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
-          grep -q "name='com.tclremote.livre.v2' versionCode='61'" candidate-identity.txt
-          grep -q "versionName='2.9.32-AnyTV'" candidate-identity.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='80'" candidate-identity.txt
+          grep -q "versionName='2.9.51-AnyTV'" candidate-identity.txt
           sha256sum "$APK" > candidate-sha256.txt
           printf '%s\n' 'AUDITORIA APENAS: APK sem assinatura. NAO instalar como atualizacao da V2 assinada.' > candidate-NOT-INSTALL.txt
-          echo 'V2_2932_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
+          echo 'V2_2951_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
       - name: Store unsigned code61 candidate for audit only
         uses: actions/upload-artifact@v4
         with:
-          name: anytv-v2-2932-code61-unsigned-audit
+          name: anytv-v2-2951-code80-unsigned-audit
           path: |
             source/app/build/outputs/apk/release/app-release-unsigned.apk
             candidate-identity.txt
