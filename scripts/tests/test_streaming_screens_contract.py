@@ -568,7 +568,7 @@ class StreamingScreens(unittest.TestCase):
             'suspend fun discoveryGenrePage(id: Int, media: String, page: Int,',
             'sourcePage < payload.optInt("total_pages", sourcePage)',
             'genreMore[key] = result.more',
-            'items(shelf.take(ANYTV_EDITORIAL_LIMIT)) { title ->',
+            'items(shelf.take(ANYTV_EDITORIAL_LIMIT),',
             'items(shelf.take(sectionVisibleCount).chunked(3))',
             'items(genreTitles.chunked(3))',
             'StreamingCatalog.discoveryGenrePage(',
