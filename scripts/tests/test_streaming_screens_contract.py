@@ -48,6 +48,25 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('includeFontPadding = false', self.screen)
         self.assertIn('(1..25).map { sourcePage ->', self.screen)
 
+    def test_personalized_editorial_and_service_feeds(self):
+        self.assertIn('private const val ANYTV_EDITORIAL_LIMIT = 50', self.screen)
+        self.assertIn('private fun anyTvCurate(', self.screen)
+        self.assertIn('private fun anyTvEditorialScore(', self.screen)
+        self.assertIn('favorites.flatMap { it.title.genreIds }', self.screen)
+        self.assertIn('anyTvCurate(candidates, heading, editorialInterests, watchedFilms,', self.screen)
+        self.assertIn('val providerEditorialPools = remember', self.screen)
+        self.assertIn('(1..3).map { page ->', self.screen)
+        self.assertIn('StreamingCatalog.discover(token, app.name, kind, page, id, "", sort)', self.screen)
+        self.assertIn('"Filmes recém-lançados$service"', self.screen)
+        self.assertIn('"Séries novas$service"', self.screen)
+        self.assertIn('"Novas temporadas$service"', self.screen)
+        self.assertIn('"Recomendados para você$service"', self.screen)
+        self.assertIn('"Em alta agora" to daily', self.screen)
+        self.assertIn('"Surpresas do catálogo" to cataloguePool', self.screen)
+        self.assertIn('suspend fun traktTrendingSignals()', self.screen)
+        self.assertIn('traktSignals = runCatching', self.screen)
+        self.assertNotIn('Trakt client secret', self.screen)
+
     def test_recent_sections_have_distinct_verified_sources(self):
         self.assertIn('suspend fun recentPremieres(media: String)', self.screen)
         self.assertNotIn('&$dateField.gte=', self.screen)
@@ -199,7 +218,7 @@ class StreamingScreens(unittest.TestCase):
             'StreamingCatalog.discover(token, name, kind',
             'activeServiceNames.forEach { name ->',
             'val filteredShelves = if (activeServiceNames.isEmpty() || homeLibrary ||',
-            'val uniqueShelves = filteredShelves.mapNotNull',
+            'val uniqueShelves = curatedShelves.mapNotNull',
             '"Marcar todos"', '"Desmarcar todos"',
             'editingFilterGenres = if (allGenreIds.isNotEmpty()',
             'val requested = if (selectedHomeGenre == 0)',
@@ -515,13 +534,13 @@ class StreamingScreens(unittest.TestCase):
             'suspend fun discoveryGenrePage(id: Int, media: String, page: Int,',
             'sourcePage < payload.optInt("total_pages", sourcePage)',
             'genreMore[key] = result.more',
-            'items(shelf.take(ANYTV_LIST_BATCH)) { title ->',
+            'items(shelf.take(ANYTV_EDITORIAL_LIMIT)) { title ->',
             'items(shelf.take(sectionVisibleCount).chunked(3))',
             'items(genreTitles.chunked(3))',
             'StreamingCatalog.discoveryGenrePage(',
             '"Mostrar mais"', 'genreShelves[genreKey] =',
-            'val films = discoveryShelves["Em alta nesta semana"]',
-            'val shows = discoveryShelves["Em alta nesta semana"]',
+            'val films = discoveryShelves["Destaques da semana"]',
+            'val shows = discoveryShelves["Destaques da semana"]',
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'Text(if (item.media == "tv") "S" else "F"',
             'class AnyTvReleaseReminderReceiver',
@@ -1036,7 +1055,7 @@ class StreamingScreens(unittest.TestCase):
         for snippet in (
             'homeLibrary -> true // Saved/watched records',
             'else heading to (if (homeLibrary) unique',
-            'else unique.take(ANYTV_LIST_BATCH))',
+            'else unique.take(ANYTV_EDITORIAL_LIMIT))',
             'val sectionTitles = sectionAll.take(sectionVisibleCount)',
             'sectionVisibleCount += ANYTV_LIST_BATCH',
             'items(shelf.take(sectionVisibleCount).chunked(3))',
