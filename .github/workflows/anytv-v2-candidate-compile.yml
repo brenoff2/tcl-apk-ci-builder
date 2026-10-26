@@ -155,7 +155,7 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
             --ks signing-v2-private/phone.p12 --ks-type PKCS12 \
             --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD \
-            --out signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk output/source/app/build/outputs/apk/release/app-release-unsigned.apk
+            --out signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk source/app/build/outputs/apk/release/app-release-unsigned.apk
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs signed-v2/AnyTV_V2_2.9.51_SIGNED_CANDIDATE.apk > signed-v2/audit.txt
           EXPECTED_CERT="$(jq -r .certificate_sha256 signing-recovery/v2/identity.json)"
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-v2/audit.txt
