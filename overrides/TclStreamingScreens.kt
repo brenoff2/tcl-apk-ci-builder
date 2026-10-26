@@ -157,9 +157,7 @@ private fun anyTvCurate(
     // Keep a poster visible after its watched marker changes. Prioritize
     // unwatched films instead of removing a card during user interaction.
     val unwatched = base
-    val ranked = unwatched.sortedWith(compareBy<StreamingTitle> {
-        if (it.media == "movie" && it.id.toString() in watched) 1 else 0
-    }.thenByDescending {
+    val ranked = unwatched.sortedWith(compareByDescending<StreamingTitle> {
         anyTvEditorialScore(it, heading, interests, trakt)
     }.thenByDescending { it.votes }.thenBy { it.id })
     if (heading.contains("lançad", true) ||
@@ -3147,9 +3145,16 @@ internal fun TclStreamingScreens(
                     // Preserve the full section data for "Ver mais".
                     val previewSeen = mutableSetOf<String>()
                     val previewShelves = uniqueShelves.map { (heading, shelf) ->
-                        heading to shelf.filter { title ->
-                            previewSeen.add("${title.media}:${title.id}")
-                        }.take(ANYTV_EDITORIAL_LIMIT)
+                        if (homeLibrary || selected != null || selectedHomeGenre != 0) {
+                            heading to shelf
+                        } else {
+                            // Reserve only cards actually displayed in this rail.
+                            val preview = shelf.asSequence().filter { title ->
+                                "${title.media}:${title.id}" !in previewSeen
+                            }.take(ANYTV_EDITORIAL_LIMIT).toList()
+                            preview.forEach { previewSeen.add("${it.media}:${it.id}") }
+                            heading to preview
+                        }
                     }
                     LazyColumn(state = catalogScrollState,
                         modifier = Modifier.weight(1f)) {
