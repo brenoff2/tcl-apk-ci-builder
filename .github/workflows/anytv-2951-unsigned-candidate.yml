@@ -1,0 +1,117 @@
+name: AnyTV 2.9.51 unsigned APK compile (no OTA)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths:
+      - '.github/workflows/anytv-v2-candidate-compile.yml'
+      - 'overrides/TclStreamingScreens.kt'
+      - 'overrides/TclApprovedHomeScreen.kt'
+      - 'overrides/TclResponsivePad.kt'
+      - 'scripts/apply_tcl_sticky_controls.py'
+      - 'overrides/TclInstalledApps.kt'
+      - 'overrides/PlaybackTransportBar.kt'
+      - 'overrides/AnyTvSplashScreen.kt'
+      - 'scripts/apply_anytv_brand.py'
+      - 'scripts/apply_anytv_phone_v2_identity.py'
+      - 'assets/anytv_icon.png'
+      - 'assets/anytv_logo.png'
+      - 'assets/anytv_horizontal.png'
+      - 'scripts/tests/test_approved_visual_contract.py'
+      - 'scripts/tests/test_rescue_contract.py'
+      - 'overrides/AnyTvPersonalLinks.kt'
+      - 'overrides/AnyTvDeviceIdentity.kt'
+      - 'overrides/tv_safe/TvAppBridge.java'
+      - 'scripts/tests/test_streaming_screens_contract.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: anytv-v2-candidate-compile-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  phone-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Prepare pinned upstream and AnyTV extensions
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+          TCL_RESCUE_STABLE=1 TCL_APPROVED_UI=1 TCL_RELEASE_SINGLE_APP=1 python3 scripts/prepare_tcl.py
+          python3 scripts/apply_tcl_v21.py
+          python3 scripts/apply_tcl_v22.py
+          python3 scripts/apply_tcl_ptbr_cleanup.py
+          python3 scripts/apply_tcl_i18n.py
+          python3 scripts/apply_tcl_sticky_controls.py
+          python3 scripts/apply_anytv_brand.py
+          python3 scripts/apply_anytv_tv_tls_alias_isolation.py
+          python3 scripts/apply_anytv_restore_connection.py
+          python3 scripts/apply_anytv_premiere_reminder_manifest.py
+      - name: Prepare current V2 version without signing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('source/app/build.gradle.kts')
+          source=p.read_text()
+          assert source.count('versionCode = 34') == 1
+          assert source.count('versionName = "2.9.5-AnyTV"') == 1
+          p.write_text(source.replace('versionCode = 34','versionCode = 39')
+                      .replace('versionName = "2.9.5-AnyTV"','versionName = "2.9.10-AnyTV"'))
+          PY
+      - name: Existing UI, link and safety contract tests
+        env:
+          TCL_V39: '1'
+          TCL_V37: '1'
+          TCL_V36: '1'
+          TCL_V35: '1'
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
+      - name: Apply V2 package identity and compile current candidate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('source/app/build.gradle.kts')
+          s=p.read_text()
+          assert s.count('versionCode = 39') == 1
+          assert s.count('versionName = "2.9.10-AnyTV"') == 1
+          p.write_text(s.replace('versionCode = 39','versionCode = 80')
+                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.51-AnyTV"'))
+          PY
+          python3 scripts/apply_anytv_phone_v2_identity.py
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Verify unsigned candidate identity; never sign or publish
+        run: |
+          set -euo pipefail
+          APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='61'" candidate-identity.txt
+          grep -q "versionName='2.9.51-AnyTV'" candidate-identity.txt
+          sha256sum "$APK" > candidate-sha256.txt
+          printf '%s\n' 'AUDITORIA APENAS: APK sem assinatura. NAO instalar como atualizacao da V2 assinada.' > candidate-NOT-INSTALL.txt
+          echo 'V2_2951_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
+      - name: Store unsigned code80 candidate for audit only
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-v2-2951-code80-unsigned-audit
+          path: |
+            source/app/build/outputs/apk/release/app-release-unsigned.apk
+            candidate-identity.txt
+            candidate-sha256.txt
+            candidate-NOT-INSTALL.txt
+          retention-days: 14
+          if-no-files-found: error
