@@ -2,6 +2,12 @@
 
 > **Estado comprovado no GitHub:** AnyTV **2.9.50 / versionCode 79** assinado e publicado na OTA V2. GitHub Actions [#40250636867](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40250636867) **completed/success**; artefato [anytv-v2-2950-signed-update](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40250636867/artifacts/12621265708), ID `12621265708`; commit OTA `7ef4e20b6b0e9a414455d8c1babf10664311ea1e`. **Trakt preparado mas NÃO ativo; Watchmode não integrado; QA física/editorial não homologada**. Este documento revoga qualquer referência histórica que identifique 2.9.49 ou versões anteriores como release atual.
 
+## Governanca documental obrigatoria — reconciliação de 25/10/2026
+
+A cada entrega tecnica, antes de alterar o aplicativo, consultar e apos a mudanca reconciliar `AGENTS.md`, `docs/dev-context/STATUS.md`, `docs/dev-context/DECISIONS.md`, `docs/dev-context/CODEBASE_MAP.md` e este checkpoint canonico vigente. Quando um desses documentos nao necessitar de mudanca material, registrar essa verificacao; nao manter referencias antigas como atuais. O AGENTS deve indicar o checkpoint mais recente, STATUS as evidencias, DECISIONS as regras vigentes e CODEBASE_MAP as rotas e blobs verificados no mesmo ref. Confirmar readback apos commits.
+
+**Reconciliacao documental registrada (sem mudancas funcionais):** AGENTS `ce1b7830882a66febf6433b5ef058643699e4b18`; STATUS `ec02c8e480d4b1efe2bb36053610e7e9c129cacd`; DECISIONS `278b9fedee7e3e58d4f35b8597c1ffbf4dbdbf24`; CODEBASE_MAP `ce532321735d8eb1b6e33f1fd96cd69ec651616d`. Release de referencia documentada 2.9.50/code79, CI #40250636867; Trakt nao ativo; Watchmode nao integrado; QA fisico/editorial pendentes. HEAD DEV e estado OTA live nao foram comprovados neste ciclo, nao inventar SHA nem homologacao. Build, assinatura, OTA e QA sao fases distintas. Nenhuma nova release, deploy, merge, chave ou assinatura foi alterada nesta reconciliação.
+
 ## Objetivo de produto
 
 AnyTV para Android/TCL: transformar a exploração de filmes e séries de catálogos genéricos do TMDB em recomendações editoriais realmente interessantes, recentes, personalizadas, diversificadas e disponíveis no Brasil quando a página se refere a um streaming específico. Preservar identidade visual aprovada, streaming/controle remoto, favoritos, assistidos, acompanhamento, Cinema e Anime isolados, provedor BR e OTA V2.
