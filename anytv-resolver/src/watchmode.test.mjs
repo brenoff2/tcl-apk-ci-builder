@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { watchmodeSourcesRequest } from "./watchmode.mjs";
+import { handleRequest } from "./worker.mjs";
 const request = new Request("https://example.test/v1/catalog/watchmode/movie/278/sources");
 const base = { ANYTV_WATCHMODE_ENABLED: "true", WATCHMODE_API_KEY: "unit-test-placeholder", ANYTV_RESOLVER_AUTH_MODE: "device" };
 test("disabled without credentials and explicit switch", async () => {
@@ -49,4 +50,20 @@ test("does not use shared cache for device-protected replies", async () => {
     fetch: async () => new Response(JSON.stringify([]), { status: 200 }),
   });
   assert.equal(result.status, 200);
+});
+
+// Exercise the actual Worker router, not just the isolated adapter.
+test("Worker Watchmode ingress remains disabled without device mode", async () => {
+  const res = await handleRequest(request, {
+    ...base, ANYTV_RESOLVER_AUTH_MODE: "pilot"
+  }, { fetch: () => { throw Error("must not contact Watchmode"); } });
+  assert.equal(res.status, 503);
+  assert.deepEqual(await res.json(), { status: "watchmode_device_auth_required" });
+});
+test("Worker Watchmode ingress remains disabled without explicit enable flag", async () => {
+  const res = await handleRequest(request, {
+    ...base, ANYTV_WATCHMODE_ENABLED: "false"
+  }, { fetch: () => { throw Error("must not contact Watchmode"); } });
+  assert.equal(res.status, 503);
+  assert.deepEqual(await res.json(), { status: "watchmode_not_configured" });
 });
