@@ -1,3 +1,7 @@
+## Auditoria runtime Cloudflare: Trakt nao implantado — 25/10/2026 (UTC 26/10)
+- Cloudflare API oficial leu versao de producao 88779b1b-9dbd-4dc6-9884-eff52769ded2 (100% do trafego), etag do script `ead5ef5a0897670cdf6070a85220693ca0dfef7eff327a4811189d0388fa26f7`; GET `/content/v2` retornou multipart de 31108 caracteres com partes `worker.mjs`, `device-proof.mjs`, `device-request.mjs`, `device-activation.mjs`. Verificacoes no conteudo: contem catalogo e dispositivo, NAO contem `trakt-api-key` nem rota Trakt, NAO contem Watchmode. Portanto, TRAKT **NAO IMPLANTADO** apesar de `TRAKT_CLIENT_ID` constar como Secret.
+- GitHub DEV ja possui rota Trakt e CI P0 PASS no run 40259987249; diferenca entre branch e Worker ativo confirmada. Nao substituir producao sem conservar os modulos e bindings atuais e definir rollback pela versao `88779b1b-9dbd-4dc6-9884-eff52769ded2`; release gate segue fechado ate teste live e QA editorial/TCL. Nenhum deploy executado nesta auditoria.
+
 ## Cloudflare LIVE — leitura verificada 25/10/2026 (UTC 26/10)
 - API oficial Cloudflare Worker `anytv-link-resolver-pilot`: `TRAKT_CLIENT_ID` e `WATCHMODE_API_KEY` presentes como `secret_text`, sem exibir valores. Watchmode fora de escopo da entrega, NAO ativar.
 - Deployment mais recente ID `e94c3bad-bcac-4b40-bad9-a317d7967563`, versao `88779b1b-9dbd-4dc6-9884-eff52769ded2` a 100%, source `dash`, criado 2026-10-26T02:01:56Z. NAO comprovado que contem commit GitHub da branch DEV, portanto nao afirmar Trakt publicado.
