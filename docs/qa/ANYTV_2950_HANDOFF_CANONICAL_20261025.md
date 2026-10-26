@@ -1,3 +1,7 @@
+## CI conjunto Trakt + Watchmode — 25/10/2026
+- Workflow isolado `.github/workflows/anytv-p0-device-proof-ci.yml` executa testes Trakt (`src/worker.test.mjs`) e Watchmode (`src/watchmode.test.mjs`) na mesma etapa; commit `b2870c0289676cc570bda41bc33d7adeef8fa7a7`, blob `431ba7476265328c0484f931bab6b771c517c883`.
+- Nenhum PASS de CI nem resposta HTTP live validado por esta anotacao; OTA/assinatura intactas. Trakt secret previamente confirmado; Watchmode secret informado pelo usuario, mas readback atual pendente. Sem limitador proprio de creditos ou prompt de chave no APK.
+
 ## DEV 25/10/2026 — isolamento de cache Watchmode e decisao de credito
 - `watchmode.mjs` removeu o cache edge compartilhado de respostas autenticadas por dispositivo: codigo commit `3c1dd8d7554300809799317851aab7e33cb46f6c`, blob `9901bc63b464d62de175a1f9642b335e4b06cd82`; teste de regressao `6b34a41e466ad1969767af09fe6dfe75a2630eee`, blob `08410af7888ed55d89752fd6782a87a977921a60`.
 - Decisao do usuario: nao incluir contador/limitador mensal proprio; a franquia gratuita e controlada pelo Watchmode. Nenhuma chave ou login Trakt/Watchmode deve ser solicitado na interface APK. Credenciais pertencem exclusivamente ao Worker; preservar a seguranca do dispositivo existente e evitar nova tela de codigo.
