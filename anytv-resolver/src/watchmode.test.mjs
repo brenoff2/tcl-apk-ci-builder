@@ -40,3 +40,13 @@ test("upstream unavailable never pretends subscription", async () => {
   });
   assert.equal(result.status, 503);
 });
+
+test("does not use shared cache for device-protected replies", async () => {
+  const cache = { match: () => { throw Error("shared cache read"); },
+    put: () => { throw Error("shared cache write"); } };
+  const result = await watchmodeSourcesRequest(request, base, {
+    cache, verifyDeviceProof: async () => true,
+    fetch: async () => new Response(JSON.stringify([]), { status: 200 }),
+  });
+  assert.equal(result.status, 200);
+});
