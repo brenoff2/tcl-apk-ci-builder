@@ -96,3 +96,29 @@ Os resultados `not_available`, `no_supported_link`, `ambiguous` e `resolver_unav
 4. Implantar em ambiente próprio, com monitoramento de custos, logs mínimos, alertas de cota e proteção contra tráfego malicioso.
 5. Em cada provedor: validar intent + pacote de destino em TV TCL real, inclusive Apple `playableId`. Não declarar "aberto na ficha" só porque `startActivity` não lançou exceção.
 6. Preservar versão anterior dos APKs, paridade de assinatura e rollback, sem mexer no branch `main` nem nos ambientes CLFCJ.
+
+## Optional Trakt Standard trend signals — requires deployment
+
+The backend contains a fail-closed, public **read-only** route:
+`GET /v1/catalog/signals/trakt/movie` and
+`GET /v1/catalog/signals/trakt/tv`. It calls only
+`https://api.trakt.tv/movies/trending` or `shows/trending`, returns
+at most 50 deduplicated TMDB IDs with current watcher counts, and caches
+responses for 15 minutes. No Trakt user account or watch history is copied.
+
+**Activation is not automatic.** Register the AnyTV application with
+[Trakt Developer](https://developer.trakt.tv/docs/create-an-app) and store its
+Client ID as the Cloudflare Worker secret `TRAKT_CLIENT_ID`. Deploy the
+approved Worker revision after passing `npm test` and live route checks.
+Never place a Client ID or Client Secret in the Android APK; do not
+log or display them. Without the secret or deployment, the Android app
+continues to use TMDB-only curation; do **not** claim Trakt signals are
+live. Developer Standard is free for permitted public discovery, subject
+to endpoint limits and the Trakt API policy. Attribution shown by the app
+when Trakt data is actually returned: "AnyTV uses Trakt but is not
+endorsed or certified by Trakt".
+
+Watchmode has **not** been deployed or activated. Its relevant
+commercial/historical catalog features require a separately reviewed plan,
+credentials and licensing, so no paid service is enabled by default.
+
