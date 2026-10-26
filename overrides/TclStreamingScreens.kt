@@ -767,7 +767,7 @@ private object StreamingCatalog {
                     .filter(::anyTvRecentPremiere).filterNot(::anyTvIsAnime)
                     .forEach { title -> found.putIfAbsent("${title.media}:${title.id}", title) }
             }
-            val recent = found.values.sortedByDescending { it.date }.take(48)
+            val recent = found.values.sortedByDescending { it.date }.take(ANYTV_EDITORIAL_LIMIT)
             if (media != "movie") return@withContext recent
             // Only Cinema owns current theatrical titles. Subscription availability
             // is shown on each card, but is not a prerequisite for being a premiere.
@@ -2855,15 +2855,6 @@ internal fun TclStreamingScreens(
                             val kinds = listOf("movie", "tv").filter {
                                 homeContentType == "all" || it == homeContentType
                             }
-                            kinds.forEach { kind ->
-                                val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
-                                if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach
-                                val key = app.name + ":" + kind + ":" + chosenGenre
-                                myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
-                                    put(if (kind == "tv") "Séries · " + app.name
-                                        else "Filmes · " + app.name, it)
-                                }
-                            }
                             val selectedPools = kinds.flatMap { kind ->
                                 val genreId = anyTvProviderGenre(kind, selectedHomeGenre,
                                     allMovieGenres, tvGenres)
@@ -2911,6 +2902,15 @@ internal fun TclStreamingScreens(
                                 )
                                 groups.forEach { (heading, candidates) ->
                                     if (candidates.isNotEmpty()) put(heading, candidates)
+                                }
+                            }
+                            kinds.forEach { kind ->
+                                val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
+                                if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach
+                                val key = app.name + ":" + kind + ":" + chosenGenre
+                                myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
+                                    put(if (kind == "tv") "Séries · " + app.name
+                                        else "Filmes · " + app.name, it)
                                 }
                             }
                             if (selectedHomeGenre == 0 && titles.isNotEmpty() &&
