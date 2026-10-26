@@ -1,3 +1,8 @@
+## Cloudflare LIVE — leitura verificada 25/10/2026 (UTC 26/10)
+- API oficial Cloudflare Worker `anytv-link-resolver-pilot`: `TRAKT_CLIENT_ID` e `WATCHMODE_API_KEY` presentes como `secret_text`, sem exibir valores. Watchmode fora de escopo da entrega, NAO ativar.
+- Deployment mais recente ID `e94c3bad-bcac-4b40-bad9-a317d7967563`, versao `88779b1b-9dbd-4dc6-9884-eff52769ded2` a 100%, source `dash`, criado 2026-10-26T02:01:56Z. NAO comprovado que contem commit GitHub da branch DEV, portanto nao afirmar Trakt publicado.
+- HTTP real `GET /v1/catalog/signals/trakt/movie` e `/tv`: tentativas sem sucesso por falha DNS da ferramenta e do runtime (`Temporary failure in name resolution`), resultado FUNCIONAL NAO_COMPROVADO. Nao fazer deploy ou OTA sem correspondencia conteudo/versao + homologacao. CI PASS comprovado run 40259987249, commit 8ee169ad.
+
 ## CI Trakt-only COMPROVADO — 25/10/2026 (run UTC 26/10)
 - API GitHub Actions oficial confirmou run 40259987249 `https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40259987249` status completed/conclusion success, workflow P0 device-proof, head `8ee169ad3f85cf4eb3ff06020c15adc21f79acc8` na branch DEV. Job 121370058446 success e steps `Trakt signal adapter regression (no external API credits)` + `Resolver and device-proof regressions` + `Syntax` + D1 smoke todos success.
 - Importante: CI foi confirmado para esse head; nenhum teste HTTP real contra Trakt/Worker publicado ocorreu nesta validacao, nenhum deploy/OTA e APK gerados. Trakt secret e Watchmode secret constam como nomes de bindings do Worker via readback Cloudflare, mas Watchmode permanece FORA DO ESCOPO e nao deve ser ativado.
