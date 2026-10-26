@@ -782,9 +782,9 @@ private object StreamingCatalog {
     /** Confirm a newly premiered season of a previously established series. */
     suspend fun recentlyStartedSeasons(): List<StreamingTitle> =
         withContext(Dispatchers.IO) {
-            val ongoing = discoveryShelf("tv/on_the_air", "tv")
+            val ongoing = discoveryEditorialPool("tv/on_the_air", "tv")
                 .filter { !anyTvIsAnime(it) && anyTvReleased(it) && !anyTvRecentPremiere(it) }
-                .take(24)
+                .take(60)
             val gate = Semaphore(4)
             coroutineScope {
                 ongoing.map { title -> async {
@@ -2351,9 +2351,21 @@ internal fun TclStreamingScreens(
             }.getOrDefault(emptyList()) }
             interleave(movies.await(), series.await())
         }
-        val recentMovies = runCatching { StreamingCatalog.recentPremieres("movie") }.getOrDefault(emptyList())
-        val newSeries = runCatching { StreamingCatalog.recentPremieres("tv") }.getOrDefault(emptyList())
-        val newSeasons = runCatching { StreamingCatalog.recentlyStartedSeasons() }.getOrDefault(emptyList())
+        val (recentMovies, newSeries, newSeasons) = coroutineScope {
+            val movies = async {
+                runCatching { StreamingCatalog.recentPremieres("movie") }
+                    .getOrDefault(emptyList())
+            }
+            val shows = async {
+                runCatching { StreamingCatalog.recentPremieres("tv") }
+                    .getOrDefault(emptyList())
+            }
+            val seasons = async {
+                runCatching { StreamingCatalog.recentlyStartedSeasons() }
+                    .getOrDefault(emptyList())
+            }
+            Triple(movies.await(), shows.await(), seasons.await())
+        }
         val popular = interleave(shelves.remove("Filmes e séries mais assistidos · Filmes").orEmpty(),
             shelves.remove("Filmes e séries mais assistidos · Séries").orEmpty())
         val best = interleave(shelves.remove("Mais bem avaliados").orEmpty(),
