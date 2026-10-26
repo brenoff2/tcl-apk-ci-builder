@@ -101,6 +101,81 @@ private fun anyTvIsAnime(title: StreamingTitle): Boolean =
     title.originalLanguage == "ja" && 16 in title.genreIds
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
 private const val ANYTV_LIST_BATCH = 24
+private const val ANYTV_EDITORIAL_LIMIT = 50
+/**
+ * Editorial candidate ranking; the upstream feed proposes candidates but does not
+ * decide their order. The quality prior prevents a 10/10 with one vote outranking
+ * well-established titles. This score is NOT a TMDB/Trakt user rating.
+ */
+private fun anyTvEditorialScore(
+    title: StreamingTitle, heading: String, interests: Set<Int>
+): Double {
+    val confidence = title.votes.toDouble() / (title.votes + 120.0)
+    val quality = (title.rating * confidence + 6.0 * (1.0 - confidence)) / 10.0
+    val interest = if (title.genreIds.any { it in interests }) 1.0 else 0.0
+    val ageDays = if (anyTvHasDate(title)) runCatching {
+        val parsed = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
+            .parse(title.date)?.time ?: 0L
+        ((System.currentTimeMillis() - parsed) / 86400000L).coerceAtLeast(0L)
+    }.getOrDefault(99999L) else 99999L
+    val freshness = when {
+        ageDays <= 30L -> 1.0
+        ageDays <= 90L -> 0.90
+        ageDays <= 365L -> 0.65
+        ageDays <= 730L -> 0.40
+        else -> 0.10
+    }
+    val confidenceSignal = (kotlin.math.ln(1.0 + title.votes.toDouble()) /
+        kotlin.math.ln(10001.0)).coerceIn(0.0, 1.0)
+    val newSection = heading.contains("lançad", true) ||
+        heading.contains("novas", true) || heading.contains("temporadas", true)
+    val highlights = heading.contains("destaque", true) ||
+        heading.contains("alta", true) || heading.contains("agora", true)
+    return if (newSection) freshness * 55 + quality * 18 +
+        confidenceSignal * 10 + interest * 17
+    else if (highlights) freshness * 38 + quality * 26 +
+        confidenceSignal * 16 + interest * 20
+    else quality * 40 + confidenceSignal * 17 + freshness * 20 + interest * 23
+}
+/**
+ * 40% preference, 35% editorial consensus, 25% discovery are target proportions,
+ * not fictitious quotas. Short pools fall back to the remaining genuine items.
+ */
+private fun anyTvCurate(
+    candidates: List<StreamingTitle>, heading: String, interests: Set<Int>,
+    watched: Set<String> = emptySet(), limit: Int = ANYTV_EDITORIAL_LIMIT
+): List<StreamingTitle> {
+    val base = candidates.filter { it.id > 0 && it.name.isNotBlank() &&
+        it.poster.isNotBlank() }.distinctBy { "${it.media}:${it.id}" }
+    val ranked = base.sortedWith(compareByDescending<StreamingTitle> {
+        anyTvEditorialScore(it, heading, interests)
+    }.thenByDescending { it.votes }.thenBy { it.id })
+    if (heading.contains("lançad", true) ||
+        heading.contains("novas", true) || heading.contains("temporadas", true))
+        return ranked.take(limit)
+    val chosen = mutableListOf<StreamingTitle>()
+    val seen = mutableSetOf<String>()
+    fun add(pool: List<StreamingTitle>, count: Int) {
+        pool.forEach { title ->
+            if (chosen.size >= count) return@forEach
+            val key = "${title.media}:${title.id}"
+            if (seen.add(key)) chosen.add(title)
+        }
+    }
+    val notWatched = ranked.filter {
+        it.media != "movie" || it.id.toString() !in watched
+    }
+    val preferred = notWatched.filter { title ->
+        title.genreIds.any { it in interests }
+    }
+    val count = limit.coerceAtMost(notWatched.size)
+    add(preferred, (count * 0.40).toInt())
+    add(notWatched.filter { it.votes >= 50 }, (count * 0.75).toInt())
+    add(notWatched.filter { it.votes >= 15 && it.rating >= 6.5 }, count)
+    add(notWatched, count)
+    return chosen.take(limit)
+}
+
 /** Movie genres drive 'All'; TV genres drive the 'Series' tab. */
 private fun anyTvResolvedGenre(
     selectedGenre: Int, media: String,
