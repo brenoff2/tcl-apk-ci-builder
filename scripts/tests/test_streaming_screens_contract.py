@@ -73,6 +73,17 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('traktSignals = runCatching', self.screen)
         self.assertNotIn('Trakt client secret', self.screen)
 
+    def test_recent_editorial_shelves_exclude_watched_films(self):
+        start = self.screen.index("private fun anyTvCurate(")
+        end = self.screen.index("private fun anyTvResolvedGenre(", start)
+        curate = self.screen[start:end]
+        # Recent shelves return early, so the watched filter must precede ranking.
+        self.assertLess(curate.index("val unwatched = base.filter"),
+                        curate.index("val ranked = unwatched.sortedWith"))
+        self.assertLess(curate.index("val ranked = unwatched.sortedWith"),
+                        curate.index("return ranked.take(limit)"))
+        self.assertIn('it.media != "movie" || it.id.toString() !in watched', curate)
+
     def test_recent_sections_have_distinct_verified_sources(self):
         self.assertIn('suspend fun recentPremieres(media: String)', self.screen)
         self.assertNotIn('&$dateField.gte=', self.screen)
