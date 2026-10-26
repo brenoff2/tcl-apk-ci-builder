@@ -1,3 +1,7 @@
+## CI Trakt-only COMPROVADO — 25/10/2026 (run UTC 26/10)
+- API GitHub Actions oficial confirmou run 40259987249 `https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40259987249` status completed/conclusion success, workflow P0 device-proof, head `8ee169ad3f85cf4eb3ff06020c15adc21f79acc8` na branch DEV. Job 121370058446 success e steps `Trakt signal adapter regression (no external API credits)` + `Resolver and device-proof regressions` + `Syntax` + D1 smoke todos success.
+- Importante: CI foi confirmado para esse head; nenhum teste HTTP real contra Trakt/Worker publicado ocorreu nesta validacao, nenhum deploy/OTA e APK gerados. Trakt secret e Watchmode secret constam como nomes de bindings do Worker via readback Cloudflare, mas Watchmode permanece FORA DO ESCOPO e nao deve ser ativado.
+
 ## Trakt-only: dependencia removida — 25/10/2026
 - `catalogRequest` agora despacha `signals/trakt/{movie|tv}` ANTES do gate TMDB_READ_TOKEN/DB; endpoint Trakt depende somente de `TRAKT_CLIENT_ID`, nao exige OAuth/login/codigo do usuario. Codigo commit `5fb495efa5eda99025ab5369c44893a95422b17a`; regressao pelo roteador real para sinais TV com apenas Client ID e erro fail-closed sem chave: `a86639b231d30f9f400fa0f48746bb76b3eb2978`.
 - Watchmode FORA do release segundo decisao atual do usuario; nao reintroduzir sua rota. Live Worker ainda NAO_DEPLOYED/NÃO_VERIFICADO nesta etapa; tentativa de consultar dominio resultou em erro DNS do ambiente. Testes de unidade/CI sem PASS confirmado. Nova APK/OTA NAO publicada.
