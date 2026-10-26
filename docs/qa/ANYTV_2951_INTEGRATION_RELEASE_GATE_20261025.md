@@ -1,3 +1,7 @@
+## 26/10/2026 — APK 2.9.51 ASSINADA: resultado confirmado
+- GitHub Actions run `40374559310` concluido SUCCESS; etapas Android Gradle, identidade do pacote code80, recuperacao do signer V2, `apksigner verify --print-certs` + comparacao com certificado SHA256 do `signing-recovery/v2/identity.json`, zipalign e arquivo de auditoria PASS. Artefato signed id `12673988165`, nome `anytv-v2-2951-code80-signed-candidate`, ZIP 23.503.413 bytes, digest zip `sha256:2647fdab93b881a4241cc82bcbc572ff407715b5de6034f568c6d2bcb236f55c`; link https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40374559310/artifacts/12673988165 . Esse arquivo ZIP contem APK assinada; digest e tamanho sao do ZIP, nao do APK interno.
+- Artefato unsigned id `12674112952` armazenado separadamente. NENHUMA OTA publicada. Worker Trakt permanece somente na versao staged; smoke HTTP real, QA editorial/TCL e teste upgrade fisico ainda nao homologados. Nao declarar release geral concluida.
+
 ## Assinatura APK 2.9.51 — 26/10/2026
 - Run 40372132442 concluiu FAILURE somente na etapa de assinatura, apos APK e demais testes PASS. Logs confirmaram `ANYTV_V2_ENCRYPTED_BACKUP_RECOVERED_WITH_GITHUB_ACTIONS_SECRET`; falha real foi `FileNotFoundException output/source/app/build/outputs/apk/release/app-release-unsigned.apk`, path errado. Certificado e secret nao foram a causa.
 - Corrigido path no workflow `.github/workflows/anytv-v2-candidate-compile.yml` commit 94903080872cc1ee9f5492d2af7c15f7b5c01dca, utilizando `source/app/build/outputs/apk/release/app-release-unsigned.apk` no apksigner.
