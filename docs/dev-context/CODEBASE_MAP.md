@@ -1,3 +1,7 @@
+## 25/10/2026 — Teste de ingresso Watchmode no Worker
+- Teste real do roteador `handleRequest` adicionado a `anytv-resolver/src/watchmode.test.mjs`: verifica resposta 503 sem modo `device` e 503 sem `ANYTV_WATCHMODE_ENABLED=true`, sem atingir a API externa. Commit `a55a3ce0f51ca56d1dde9bd92a2577b2d3ee1dc4`; blob `78770b25578c11d8873a170b719e5bfc9c779dbc`. Ainda NAO_EXECUTADO/CI_NAO_COMPROVADO; nao e validacao HTTP live.
+- Dois checkpoints canonicos antes pendentes agora sincronizados (`dae0c5534f11c1d0e855443216af284df66b2aa8`, `07d59e0f4d9bde9155266c6c211a2b6297fe5ece`). Segredo Watchmode informado pelo usuario, readback Cloudflare bloqueado. APK, signer e OTA inalterados.
+
 ## DEV — 25/10/2026 — CI Trakt + Watchmode
 - CI isolado agora executa juntos `src/worker.test.mjs` (inclui testes de sinais Trakt) e `src/watchmode.test.mjs`: commit `b2870c0289676cc570bda41bc33d7adeef8fa7a7`, workflow blob `431ba7476265328c0484f931bab6b771c517c883`.
 - Documentacao oficial do SDK Watchmode confirma ID TMDB `movie-278` e `tv-1396` diretamente no endpoint title; portanto NÃO exigir conversão previa para ID Watchmode no endpoint em uso. Verificar respostas live antes de liberar.
