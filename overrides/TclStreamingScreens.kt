@@ -154,11 +154,12 @@ private fun anyTvCurate(
 ): List<StreamingTitle> {
     val base = candidates.filter { it.id > 0 && it.name.isNotBlank() &&
         it.poster.isNotBlank() }.distinctBy { "${it.media}:${it.id}" }
-    // Apply watched-history filtering to every shelf, including recent premieres.
-    val unwatched = base.filter {
-        it.media != "movie" || it.id.toString() !in watched
-    }
-    val ranked = unwatched.sortedWith(compareByDescending<StreamingTitle> {
+    // Keep a poster visible after its watched marker changes. Prioritize
+    // unwatched films instead of removing a card during user interaction.
+    val unwatched = base
+    val ranked = unwatched.sortedWith(compareBy<StreamingTitle> {
+        if (it.media == "movie" && it.id.toString() in watched) 1 else 0
+    }.thenByDescending {
         anyTvEditorialScore(it, heading, interests, trakt)
     }.thenByDescending { it.votes }.thenBy { it.id })
     if (heading.contains("lançad", true) ||
@@ -3142,6 +3143,14 @@ internal fun TclStreamingScreens(
                                 it.name.contains(libraryQuery.trim(), ignoreCase = true)
                         } else unique.take(ANYTV_EDITORIAL_LIMIT))
                     }
+                    // Cross-rail uniqueness applies to the home previews only.
+                    // Preserve the full section data for "Ver mais".
+                    val previewSeen = mutableSetOf<String>()
+                    val previewShelves = uniqueShelves.map { (heading, shelf) ->
+                        heading to shelf.filter { title ->
+                            previewSeen.add("${title.media}:${title.id}")
+                        }.take(ANYTV_EDITORIAL_LIMIT)
+                    }
                     LazyColumn(state = catalogScrollState,
                         modifier = Modifier.weight(1f)) {
                         if (openedSection != null) {
@@ -3998,7 +4007,7 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         }
-                        uniqueShelves.filterNot { (heading, _) ->
+                        previewShelves.filterNot { (heading, _) ->
                             // Genre and Anime have their own dedicated list/sections below;
                             // repeating source rails here pollutes their pages.
                             (!homeLibrary && selected == null && selectedHomeGenre != 0) ||
@@ -4076,7 +4085,8 @@ internal fun TclStreamingScreens(
                                         val cardWidth = (maxWidth - 18.dp) / 3f
                                         LazyRow(horizontalArrangement =
                                             Arrangement.spacedBy(9.dp)) {
-                                            items(shelf.take(ANYTV_EDITORIAL_LIMIT)) { title ->
+                                            items(shelf.take(ANYTV_EDITORIAL_LIMIT),
+                                                key = { "${it.media}:${it.id}" }) { title ->
                                                 posterCard(title, Modifier.width(cardWidth),
                                                     heading == ANYTV_CINEMA_SHELF)
                                             }
