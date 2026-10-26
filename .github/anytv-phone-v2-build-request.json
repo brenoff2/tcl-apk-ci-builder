@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 78,
+  "expected_version_code": 79,
   "preserve_legacy_ota": true,
-  "source": "Remove Recém-chegados ao Streaming completely; open genres in grid and show genuine Streaming-style sections on toggle; eliminate font padding between title/genre/year and reserve proper gap before Trailer/More details; expand 90-day movie/new-series feeds with bounded multiple TMDB routes and 25 discovery pages.",
+  "source": "Editorial upgrade: 50 true titles per shelf, favor chosen/favorited genres with target 40/35/25 blend, credible Bayesian rating, contemporary highlights, cross-rail dedup prioritization, additional discovery and quality shelves, explicit miniseries, country/provider-specific release shelves, deeper Brazilian flatrate discovery, optional Trakt Standard trend signal (backend only, activation separately gated).",
   "new_install_only": false,
-  "release_version": "2.9.49-AnyTV",
-  "release_scope": "Signed AnyTV V2 2.9.49/code78 OTA after full tests and Android compile, original signer intact and immutable commit-addressed GitHub HTTPS byte readback.",
-  "ci_revision": 51
+  "release_version": "2.9.50-AnyTV",
+  "release_scope": "Signed AnyTV V2 2.9.50/code79 official OTA; full UI contracts, Android compilation, original signer/cert2026 preservation, Worker live route safety tests, GitHub immutable signed APK readback. Trakt remains disabled until registered client ID/Worker deployment.",
+  "ci_revision": 52
 }
