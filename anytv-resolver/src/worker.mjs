@@ -211,13 +211,15 @@ export async function traktSignalsRequest(request, env, deps = {}) {
 }
 
 export async function catalogRequest(request, env, deps = {}) {
+  const parsed = new URL(request.url);
+  const route = parsed.pathname.replace(/^\/v1\/catalog\//, "");
+  // Trakt public trends require only the server-side Trakt Client ID.
+  // TMDB and D1 outages must not disable these independent signals.
+  if (/^signals\/trakt\/(movie|tv)$/.test(route))
+    return traktSignalsRequest(request, env, deps);
   if (!env?.TMDB_READ_TOKEN || !env?.DB) {
     return asJson({ status: "catalog_not_configured" }, 503);
   }
-  const parsed = new URL(request.url);
-  const route = parsed.pathname.replace(/^\/v1\/catalog\//, "");
-  if (/^signals\/trakt\/(movie|tv)$/.test(route))
-    return traktSignalsRequest(request, env, deps);
   const patterns = [
     /^genre\/(movie|tv)\/list$/,
     /^watch\/providers\/(movie|tv)$/,
