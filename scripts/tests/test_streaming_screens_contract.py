@@ -471,7 +471,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('AnyTvCompactChip("Anime"', self.screen)
 
     def test_editorial_shelves_and_streaming_offers_remain_separate(self):
-        self.assertIn('Filmes e séries mais assistidos', self.screen)
+        self.assertIn('Populares no TMDB', self.screen)
         self.assertIn('StreamingCatalog.matchesSelectedSubscription(', self.screen)
         self.assertIn('if (selectedHomeGenre == 0) {', self.screen)
         self.assertNotIn('if (selectedHomeGenre == 0 && activeServiceNames.isEmpty()) {', self.screen)
@@ -540,7 +540,7 @@ class StreamingScreens(unittest.TestCase):
             'StreamingCatalog.discoveryGenrePage(',
             '"Mostrar mais"', 'genreShelves[genreKey] =',
             'val films = discoveryShelves["Destaques da semana"]',
-            'val shows = discoveryShelves["Em alta nesta semana"].orEmpty()',
+            'val shows = discoveryShelves["Destaques da semana"].orEmpty()',
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'Text(if (item.media == "tv") "S" else "F"',
             'class AnyTvReleaseReminderReceiver',
