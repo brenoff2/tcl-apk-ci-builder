@@ -1603,6 +1603,7 @@ internal fun TclStreamingScreens(
     LaunchedEffect(myServices) { onlyMyStreaming = myServices.isNotEmpty() }
     var editingMyServices by remember { mutableStateOf(storedMyServices) }
     val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val providerEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var providerListMode by remember { mutableStateOf(false) }
     var showCatalogEditor by remember { mutableStateOf(false) }
     val catalogPrefs = remember(context) { context.getSharedPreferences("tcl_tv_installed_apps", Context.MODE_PRIVATE) }
@@ -2230,6 +2231,40 @@ internal fun TclStreamingScreens(
         }
     }
 
+    // The provider's real BR flatrate catalogue must be the candidate source.
+    // Three pages of both popularity and premiere-date sorted discovery are
+    // merged before editorial scoring; no global title can be misattributed.
+    LaunchedEffect(selected?.packageName, selectedHomeGenre, homeContentType, token) {
+        val app = selected ?: return@LaunchedEffect
+        for (kind in listOf("movie", "tv").filter {
+            homeContentType == "all" || it == homeContentType
+        }) {
+            val id = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
+            if (selectedHomeGenre > 0 && id == 0) continue
+            val poolKey = "${app.name}:$kind:$id"
+            if (poolKey in providerEditorialPools) continue
+            val dateSort = if (kind == "movie") "primary_release_date.desc"
+                else "first_air_date.desc"
+            val pages = coroutineScope {
+                listOf("popularity.desc", dateSort).flatMap { sort ->
+                    (1..3).map { page ->
+                        async {
+                            runCatching {
+                                StreamingCatalog.discover(token, app.name, kind, page, id, "", sort)
+                                    .titles
+                            }.getOrDefault(emptyList())
+                        }
+                    }
+                }.awaitAll()
+            }
+            providerEditorialPools[poolKey] = pages.flatten()
+                .filter { title ->
+                    anyTvReleased(title) && if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                        anyTvIsAnime(title) else !anyTvIsAnime(title)
+                }.distinctBy { "${it.media}:${it.id}" }
+        }
+    }
+
     // Provider pages reuse the home carousel, loading real provider results.
     LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre) {
         val app = selected ?: return@LaunchedEffect
@@ -2761,6 +2796,52 @@ internal fun TclStreamingScreens(
                                         else "Filmes · " + app.name, it)
                                 }
                             }
+                            val selectedPools = kinds.flatMap { kind ->
+                                val genreId = anyTvProviderGenre(kind, selectedHomeGenre,
+                                    allMovieGenres, tvGenres)
+                                providerEditorialPools["${app.name}:$kind:$genreId"].orEmpty()
+                            }.distinctBy { "${it.media}:${it.id}" }.filter {
+                                it.media != "movie" || it.id !in cinemaIds
+                            }
+                            if (selectedPools.isNotEmpty()) {
+                                val service = " · " + app.name
+                                val weeklyIds = discoveryShelves["Destaques da semana"].orEmpty()
+                                    .map { "${it.media}:${it.id}" }.toSet()
+                                val dailyIds = discoveryShelves["Em alta agora"].orEmpty()
+                                    .map { "${it.media}:${it.id}" }.toSet()
+                                val seasonsIds = discoveryShelves["Novas temporadas"].orEmpty()
+                                    .map { "${it.media}:${it.id}" }.toSet()
+                                val groups = linkedMapOf(
+                                    "Destaques da semana$service" to selectedPools.filter {
+                                        "${it.media}:${it.id}" in weeklyIds
+                                    },
+                                    "Filmes recém-lançados$service" to selectedPools.filter {
+                                        it.media == "movie" && anyTvRecentPremiere(it)
+                                    },
+                                    "Séries novas$service" to selectedPools.filter {
+                                        it.media == "tv" && anyTvRecentPremiere(it)
+                                    },
+                                    "Novas temporadas$service" to selectedPools.filter {
+                                        "${it.media}:${it.id}" in seasonsIds
+                                    },
+                                    "Em alta agora$service" to selectedPools.filter {
+                                        "${it.media}:${it.id}" in dailyIds
+                                    },
+                                    "Recomendados para você$service" to selectedPools,
+                                    "Você pode gostar$service" to selectedPools.filter {
+                                        it.votes >= 25
+                                    },
+                                    "Surpresas do catálogo$service" to selectedPools.filter {
+                                        it.votes in 30..3000 && it.rating >= 7.0
+                                    },
+                                    "Vale a pena assistir$service" to selectedPools.filter {
+                                        it.votes >= 150 && it.rating >= 7.0
+                                    }
+                                )
+                                groups.forEach { (heading, candidates) ->
+                                    if (candidates.isNotEmpty()) put(heading, candidates)
+                                }
+                            }
                             if (selectedHomeGenre == 0 && titles.isNotEmpty() &&
                                 (homeContentType == "all" || homeContentType == media)) {
                                 put("Em destaque · " + app.name, titles)
@@ -2959,9 +3040,10 @@ internal fun TclStreamingScreens(
                                 heading == ANYTV_CINEMA_SHELF ->
                                     title.media == "movie" // Source is now_playing BR
                                 heading.startsWith("Em breve") -> anyTvUpcoming(title)
-                                heading in setOf("Filmes recém-lançados", "Séries novas") ->
+                                (heading.startsWith("Filmes recém-lançados") ||
+                                    heading.startsWith("Séries novas")) ->
                                     anyTvRecentPremiere(title) && (title.media != "movie" || title.id !in cinemaIds)
-                                heading == "Novas temporadas" -> title.media == "tv"
+                                heading.startsWith("Novas temporadas") -> title.media == "tv"
                                 else -> anyTvReleased(title) &&
                                     (title.media != "movie" || title.id !in cinemaIds)
                             }
