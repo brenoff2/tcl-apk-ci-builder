@@ -73,16 +73,23 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('traktSignals = runCatching', self.screen)
         self.assertNotIn('Trakt client secret', self.screen)
 
-    def test_recent_editorial_shelves_exclude_watched_films(self):
+    def test_watched_films_remain_visible_after_marking(self):
         start = self.screen.index("private fun anyTvCurate(")
         end = self.screen.index("private fun anyTvResolvedGenre(", start)
         curate = self.screen[start:end]
-        # Recent shelves return early, so the watched filter must precede ranking.
-        self.assertLess(curate.index("val unwatched = base.filter"),
-                        curate.index("val ranked = unwatched.sortedWith"))
-        self.assertLess(curate.index("val ranked = unwatched.sortedWith"),
-                        curate.index("return ranked.take(limit)"))
-        self.assertIn('it.media != "movie" || it.id.toString() !in watched', curate)
+        self.assertIn("val unwatched = base", curate)
+        self.assertNotIn("val unwatched = base.filter", curate)
+        self.assertIn("val ranked = unwatched.sortedWith", curate)
+        self.assertNotIn("it.id.toString() !in watched", curate)
+
+    def test_home_rails_do_not_repeat_visible_posters(self):
+        self.assertIn("val previewSeen = mutableSetOf<String>()", self.screen)
+        self.assertIn("val previewShelves = uniqueShelves.map", self.screen)
+        self.assertIn("shelf.asSequence().filter { title ->", self.screen)
+        self.assertIn("}.take(ANYTV_EDITORIAL_LIMIT).toList()", self.screen)
+        self.assertIn('preview.forEach { previewSeen.add("${it.media}:${it.id}") }', self.screen)
+        self.assertIn("previewShelves.filterNot { (heading, _) ->", self.screen)
+        self.assertIn("if (homeLibrary || selected != null || selectedHomeGenre != 0)", self.screen)
 
     def test_returning_seasons_include_trending_and_on_air_candidates(self):
         start = self.screen.index("suspend fun recentlyStartedSeasons()")
