@@ -678,6 +678,7 @@ private object StreamingCatalog {
     suspend fun discoveryShelfPage(route: String, media: String, page: Int): StreamingResults =
         withContext(Dispatchers.IO) {
             require(route in setOf("trending/movie/week", "trending/tv/week",
+                "trending/movie/day", "trending/tv/day",
                 "movie/now_playing", "movie/top_rated", "tv/on_the_air",
                 "movie/upcoming", "movie/popular", "tv/popular", "tv/top_rated"))
             val suffix = if (route == "movie/now_playing") "&region=BR" else ""
@@ -2279,6 +2280,15 @@ internal fun TclStreamingScreens(
             }
         val weekly = interleave(shelves.remove("Em alta nesta semana").orEmpty(),
             shelves.remove("Séries em destaque").orEmpty())
+        val daily = coroutineScope {
+            val movies = async { runCatching {
+                StreamingCatalog.discoveryEditorialPool("trending/movie/day", "movie")
+            }.getOrDefault(emptyList()) }
+            val series = async { runCatching {
+                StreamingCatalog.discoveryEditorialPool("trending/tv/day", "tv")
+            }.getOrDefault(emptyList()) }
+            interleave(movies.await(), series.await())
+        }
         val recentMovies = runCatching { StreamingCatalog.recentPremieres("movie") }.getOrDefault(emptyList())
         val newSeries = runCatching { StreamingCatalog.recentPremieres("tv") }.getOrDefault(emptyList())
         val newSeasons = runCatching { StreamingCatalog.recentlyStartedSeasons() }.getOrDefault(emptyList())
@@ -2287,11 +2297,24 @@ internal fun TclStreamingScreens(
         val best = interleave(shelves.remove("Mais bem avaliados").orEmpty(),
             shelves.remove("Mais bem avaliados · Séries").orEmpty())
         shelves.clear()
-        linkedMapOf("Em alta nesta semana" to weekly,
+        val cataloguePool = (daily + weekly + recentMovies + newSeries +
+            newSeasons + popular + best).distinctBy { "${it.media}:${it.id}" }
+        linkedMapOf(
+            "Destaques da semana" to weekly,
             "Filmes recém-lançados" to recentMovies,
             "Séries novas" to newSeries,
             "Novas temporadas" to newSeasons,
-            "Filmes e séries mais assistidos" to popular, "Mais bem avaliados" to best)
+            "Em alta agora" to daily,
+            "Recomendados para você" to cataloguePool,
+            "Você pode gostar" to cataloguePool.filter { it.votes >= 25 },
+            "Surpresas do catálogo" to cataloguePool.filter {
+                it.votes in 30..3000 && it.rating >= 7.0
+            },
+            "Vale a pena assistir" to cataloguePool.filter {
+                it.votes >= 150 && it.rating >= 7.0
+            },
+            "Populares no TMDB" to popular,
+            "Mais bem avaliados" to best)
             .forEach { (heading, titles) ->
                 if (titles.isNotEmpty() || heading in setOf(
                     "Filmes recém-lançados", "Séries novas", "Novas temporadas"))
@@ -2888,10 +2911,23 @@ internal fun TclStreamingScreens(
                                 put(heading, confirmed)
                             }
                         }
+                    val editorialInterests = preferredGenreIds +
+                        favorites.flatMap { it.title.genreIds }
+                    val curatedShelves = linkedMapOf<String, List<StreamingTitle>>()
+                    val seenPreview = mutableSetOf<String>()
+                    filteredShelves.forEach { (heading, candidates) ->
+                        val ranked = if (homeLibrary) candidates else
+                            anyTvCurate(candidates, heading, editorialInterests, watchedFilms)
+                        // Reserve the first posters of each editorial rail for new discoveries.
+                        val fresh = ranked.filterNot { "${it.media}:${it.id}" in seenPreview }
+                        val arranged = (fresh + ranked).distinctBy { "${it.media}:${it.id}" }
+                        arranged.take(6).forEach { seenPreview.add("${it.media}:${it.id}") }
+                        curatedShelves[heading] = arranged.take(ANYTV_EDITORIAL_LIMIT)
+                    }
                     val heroTitles = if (homeLibrary) emptyList() else {
                         val mixed = if (selected == null && selectedHomeGenre == 0 &&
                             homeContentType == "all" && activeServiceNames.isEmpty()) {
-                            val films = discoveryShelves["Em alta nesta semana"].orEmpty()
+                            val films = discoveryShelves["Destaques da semana"].orEmpty()
                                 .filter { it.media == "movie" }
                             val shows = discoveryShelves["Em alta nesta semana"].orEmpty()
                                 .filter { it.media == "tv" }
@@ -2901,7 +2937,7 @@ internal fun TclStreamingScreens(
                                     shows.getOrNull(i)?.let { add(it) }
                                 }
                             }
-                        } else filteredShelves.values.flatMap { it }
+                        } else curatedShelves.values.flatMap { it }
                         mixed.distinctBy { "${it.media}:${it.id}" }.filter {
                             if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(it)
                             else !anyTvIsAnime(it)
@@ -2914,7 +2950,7 @@ internal fun TclStreamingScreens(
                             it.media == "movie" && it.id.toString() in watchedFilms
                         }.take(10)
                     }
-                    val uniqueShelves = filteredShelves.mapNotNull { (heading, shelf) ->
+                    val uniqueShelves = curatedShelves.mapNotNull { (heading, shelf) ->
                         // Keep cards visible when marked so the green check reflects
                         // the new state immediately; Assistidos keeps its own view.
                         val unique = shelf.filter { title ->
@@ -2940,7 +2976,7 @@ internal fun TclStreamingScreens(
                         else heading to (if (homeLibrary) unique.filter {
                             libraryQuery.isBlank() ||
                                 it.name.contains(libraryQuery.trim(), ignoreCase = true)
-                        } else unique.take(ANYTV_LIST_BATCH))
+                        } else unique.take(ANYTV_EDITORIAL_LIMIT))
                     }
                     LazyColumn(state = catalogScrollState,
                         modifier = Modifier.weight(1f)) {
@@ -2959,10 +2995,11 @@ internal fun TclStreamingScreens(
                             val sectionTitles = sectionAll.take(sectionVisibleCount)
                             val sectionPageLimit = if (sectionTitle == "Em breve · Filmes e séries") 50 else 42
                             val editorialRoute = when (sectionTitle) {
-                                "Em alta nesta semana" -> "trending/movie/week" to "movie"
+                                "Destaques da semana" -> "trending/movie/week" to "movie"
+                                "Em alta agora" -> "trending/movie/day" to "movie"
                                 "Mais bem avaliados" -> "movie/top_rated" to "movie"
                                 "Séries em destaque" -> "trending/tv/week" to "tv"
-                                "Filmes e séries mais assistidos" -> "movie/popular" to "movie"
+                                "Populares no TMDB" -> "movie/popular" to "movie"
                                 else -> null
                             }
                             val selectedProvider = selected?.let { app ->
@@ -3039,16 +3076,18 @@ internal fun TclStreamingScreens(
                                                 scope.launch {
                                                     runCatching {
                                                         when {
-                                                            sectionTitle in setOf("Em alta nesta semana",
+                                                            sectionTitle in setOf("Destaques da semana", "Em alta agora",
                                                                 "Filmes e séries mais assistidos",
                                                                 "Mais bem avaliados") -> {
                                                                 val movieRoute = when (sectionTitle) {
-                                                                    "Em alta nesta semana" -> "trending/movie/week"
+                                                                    "Destaques da semana" -> "trending/movie/week"
+                                                                    "Em alta agora" -> "trending/movie/day"
                                                                     "Mais bem avaliados" -> "movie/top_rated"
                                                                     else -> "movie/popular"
                                                                 }
                                                                 val seriesRoute = when (sectionTitle) {
-                                                                    "Em alta nesta semana" -> "trending/tv/week"
+                                                                    "Destaques da semana" -> "trending/tv/week"
+                                                                    "Em alta agora" -> "trending/tv/day"
                                                                     "Mais bem avaliados" -> "tv/top_rated"
                                                                     else -> "tv/popular"
                                                                 }
@@ -3873,7 +3912,7 @@ internal fun TclStreamingScreens(
                                         val cardWidth = (maxWidth - 18.dp) / 3f
                                         LazyRow(horizontalArrangement =
                                             Arrangement.spacedBy(9.dp)) {
-                                            items(shelf.take(ANYTV_LIST_BATCH)) { title ->
+                                            items(shelf.take(ANYTV_EDITORIAL_LIMIT)) { title ->
                                                 posterCard(title, Modifier.width(cardWidth),
                                                     heading == ANYTV_CINEMA_SHELF)
                                             }
