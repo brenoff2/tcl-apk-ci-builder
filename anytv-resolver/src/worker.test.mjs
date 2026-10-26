@@ -667,3 +667,26 @@ test("Trakt proxy returns only bounded TMDB IDs and watcher signals", async () =
     { fetch: async () => response({ status: "unavailable" }, 429) });
   assert.equal(unavailable.status, 503);
 });
+
+test("Trakt works with only its Client ID when TMDB and D1 are unavailable", async () => {
+  const env = { TRAKT_CLIENT_ID: "server-only-client-id" };
+  let calls = 0;
+  const result = await handleRequest(request("/v1/catalog/signals/trakt/tv"), env, {
+    fetch: async (url, options) => {
+      calls++;
+      assert.equal(url, "https://api.trakt.tv/shows/trending?limit=50&page=1");
+      assert.equal(options.headers["trakt-api-key"], "server-only-client-id");
+      return response([{ watchers: 7, show: { ids: { tmdb: 1396 } } }]);
+    }
+  });
+  assert.equal(result.status, 200);
+  assert.equal(calls, 1);
+  assert.deepEqual(await result.json(), {
+    source: "trakt", kind: "tv", results: [{ id: 1396, watchers: 7 }]
+  });
+});
+test("Trakt never requires user login but fails closed without server Client ID", async () => {
+  const result = await handleRequest(request("/v1/catalog/signals/trakt/movie"), {});
+  assert.equal(result.status, 503);
+  assert.deepEqual(await result.json(), { status: "trakt_not_configured" });
+});
