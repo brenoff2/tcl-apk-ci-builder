@@ -3038,7 +3038,7 @@ internal fun TclStreamingScreens(
                             homeContentType == "all" && activeServiceNames.isEmpty()) {
                             val films = discoveryShelves["Destaques da semana"].orEmpty()
                                 .filter { it.media == "movie" }
-                            val shows = discoveryShelves["Em alta nesta semana"].orEmpty()
+                            val shows = discoveryShelves["Destaques da semana"].orEmpty()
                                 .filter { it.media == "tv" }
                             buildList {
                                 for (i in 0 until 10) {
