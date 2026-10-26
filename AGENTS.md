@@ -1,3 +1,8 @@
+## DEV — 25/10/2026 — CI Trakt + Watchmode
+- CI isolado agora executa juntos `src/worker.test.mjs` (inclui testes de sinais Trakt) e `src/watchmode.test.mjs`: commit `b2870c0289676cc570bda41bc33d7adeef8fa7a7`, workflow blob `431ba7476265328c0484f931bab6b771c517c883`.
+- Documentacao oficial do SDK Watchmode confirma ID TMDB `movie-278` e `tv-1396` diretamente no endpoint title; portanto NÃO exigir conversão previa para ID Watchmode no endpoint em uso. Verificar respostas live antes de liberar.
+- Cloudflare readback desta etapa BLOQUEADO pela ferramenta; chaves Trakt anteriormente confirmada e Watchmode informada pelo usuario, sem verificação atual. Testes CI criados mas PASS NAO_COMPROVADO, endpoints LIVE NAO_VERIFICADOS, APK NAO_GERADA. Sem contador de creditos local e sem prompt de chaves no APK.
+
 ## DEV 25/10/2026 — isolamento de cache Watchmode e decisao de credito
 - `watchmode.mjs` removeu o cache edge compartilhado de respostas autenticadas por dispositivo: codigo commit `3c1dd8d7554300809799317851aab7e33cb46f6c`, blob `9901bc63b464d62de175a1f9642b335e4b06cd82`; teste de regressao `6b34a41e466ad1969767af09fe6dfe75a2630eee`, blob `08410af7888ed55d89752fd6782a87a977921a60`.
 - Decisao do usuario: nao incluir contador/limitador mensal proprio; a franquia gratuita e controlada pelo Watchmode. Nenhuma chave ou login Trakt/Watchmode deve ser solicitado na interface APK. Credenciais pertencem exclusivamente ao Worker; preservar a seguranca do dispositivo existente e evitar nova tela de codigo.
