@@ -1,6 +1,7 @@
 import { activateDevice } from "./device-activation.mjs";
 import { requestDeviceEnrollment } from "./device-request.mjs";
 import { verifyDeviceProof } from "./device-proof.mjs";
+import { watchmodeSourcesRequest } from "./watchmode.mjs";
 /**
  * AnyTV commercial resolver pilot.
  * Never deploy credentials or a permanent client token in an APK.
@@ -404,6 +405,8 @@ export async function handleRequest(request, env, deps = {}) {
       authorized ? 200 : 401);
   }
   if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
+  if (parsed.pathname.startsWith("/v1/catalog/watchmode/"))
+    return watchmodeSourcesRequest(request, env, { ...deps, verifyDeviceProof });
   if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
   if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB ||
       ((env.ANYTV_RESOLVER_AUTH_MODE || "pilot") === "pilot" &&
