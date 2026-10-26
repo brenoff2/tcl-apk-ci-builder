@@ -14,10 +14,9 @@ export async function watchmodeSourcesRequest(request, env, deps = {}) {
   const match = uri.pathname.match(/^\/v1\/catalog\/watchmode\/(movie|tv)\/([1-9][0-9]{0,9})\/sources$/);
   if (!match || uri.search) return json({ status: "bad_request" }, 400);
   const [, kind, tmdbId] = match;
-  const cache = deps.cache || (typeof caches !== "undefined" ? caches.default : null);
-  const key = new Request(uri.origin + uri.pathname);
-  const hit = cache ? await cache.match(key) : null;
-  if (hit) return hit;
+  // Do not cache private device-authenticated responses in shared edge cache.
+  // The provider enforces its own monthly allowance; no local credit quota.
+
   // TMDB-formatted IDs use 'movie-' and 'tv-' on Watchmode.
   const title = kind + "-" + tmdbId;
   const endpoint = "https://api.watchmode.com/v1/title/" + title + "/sources/?regions=BR";
@@ -43,7 +42,6 @@ export async function watchmodeSourcesRequest(request, env, deps = {}) {
       "content-type": "application/json; charset=utf-8",
       "cache-control": "private, max-age=3600",
     } });
-    if (cache) await cache.put(key, result.clone());
     return result;
   } catch {
     return json({ status: "watchmode_unavailable" }, 503);
