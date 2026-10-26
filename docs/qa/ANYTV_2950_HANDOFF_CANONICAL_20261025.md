@@ -1,3 +1,6 @@
+## Adendo DEV — 25/10/2026, posterior a release 2.9.50
+- Foi corrigido o filtro de filmes assistidos nas secoes de lancamentos, antes da saida antecipada de `anyTvCurate`: commit de codigo `8d61aed11cfe5fcaf2b7c19071639203255724c0` e regressao `09e8b8e6d1c01e3ded31278722e67d05c4dc2a3f`. Mudanca nao publicada: BUILD/CI=NAO_TESTADO, ASSINATURA=NAO, OTA=NAO; ultima distribuicao documentada permanece 2.9.50/code79; QA fisico e editorial real pendentes. Nenhuma credencial ou rota de producao modificada.
+
 # ANYTV — TRANSIÇÃO CANÔNICA / CONTINUIDADE — 25/10/2026
 
 > **Estado comprovado no GitHub:** AnyTV **2.9.50 / versionCode 79** assinado e publicado na OTA V2. GitHub Actions [#40250636867](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40250636867) **completed/success**; artefato [anytv-v2-2950-signed-update](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/40250636867/artifacts/12621265708), ID `12621265708`; commit OTA `7ef4e20b6b0e9a414455d8c1babf10664311ea1e`. **Trakt preparado mas NÃO ativo; Watchmode não integrado; QA física/editorial não homologada**. Este documento revoga qualquer referência histórica que identifique 2.9.49 ou versões anteriores como release atual.
