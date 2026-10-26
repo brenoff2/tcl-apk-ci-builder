@@ -48,6 +48,12 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('includeFontPadding = false', self.screen)
         self.assertIn('(1..25).map { sourcePage ->', self.screen)
 
+    def test_miniseries_require_explicit_tmdb_classification(self):
+        self.assertIn('suspend fun confirmedMiniseries(candidates:', self.screen)
+        self.assertIn('?.equals("Miniseries", ignoreCase = true) == true', self.screen)
+        self.assertIn('put("Minisséries imperdíveis", confirmedMiniseries)', self.screen)
+        self.assertIn('"Minisséries imperdíveis$service"', self.screen)
+
     def test_personalized_editorial_and_service_feeds(self):
         self.assertIn('private const val ANYTV_EDITORIAL_LIMIT = 50', self.screen)
         self.assertIn('private fun anyTvCurate(', self.screen)
