@@ -1,3 +1,8 @@
+## 27/10/2026 — Handoff canonico AnyTV para novo chat
+- Documento principal: `docs/dev-context/HANDOFF_ANYTV_2026-10-27.md` (commit `82f4092b3c234896ce86e625e54d64b395de13b2`). Contem objetivo, historico, decisoes, commits, OTA publicada 2.9.53/code82, HEAD recente, testes e gates pendentes.
+- Mudancas mais recentes de interface (notas com >=20 votos, cabecalho detalhes e classificacao anime filme/serie) estao em branch de desenvolvimento e NAO foram promovidas para OTA. P0 isolado `40448636040` SUCCESS, compile unsigned `40448636059` SUCCESS, signed candidate `40448636050` CANCELLED. Proxima candidata deve ter versionCode >82, assinatura V2 e QA de publicacao e dispositivo.
+- Pendencias de produto: validar notas Trakt diretamente por API, lacunas dos logos de streaming BR (ex. relato Salario Minimo/Netflix), enriquecer categorias filmes/series/animes/generos sem inferir disponibilidade inexistente. Ver handoff antes de executar.
+
 ## 27/10/2026 — Defeito Cinema na home: parcial/assincrono
 - Relato: titulos em exibicao no Cinema BR (exemplos verbais Rebelde, Maca Podre) aparecendo na home sem selo Cinema.
 - Causa encontrada: `cinemaIds` era carregado de modo assincrono em apenas 5 paginas de `discoveryCinemaPage`, com segunda consulta independente a apenas 4 paginas; antes da carga (ou para titulos fora desse subconjunto), filtros da home aceitavam o filme como catalogo streaming e `inCinema` tambem nao identificava o titulo.
