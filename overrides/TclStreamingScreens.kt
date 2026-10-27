@@ -1263,7 +1263,8 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
 /** Shadowed score over original poster artwork. */
 @Composable
 private fun AnyTvRatingOverlay(title: StreamingTitle, modifier: Modifier = Modifier) {
-    if (title.votes <= 0) return
+    // Tiny samples are not reliable enough to present as an audience score.
+    if (title.votes < 20) return
     Text("★ " + String.format(java.util.Locale.US, "%.1f", title.rating),
         modifier = modifier.background(Color.Black.copy(alpha = 0.45f),
             RoundedCornerShape(6.dp)).padding(horizontal = 4.dp, vertical = 2.dp),
