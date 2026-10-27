@@ -4522,6 +4522,8 @@ internal fun TclStreamingScreens(
                 deviceLinkStatus = null; deviceIdSuffix = null
             },
             title = {
+                Column(modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -4563,6 +4565,27 @@ internal fun TclStreamingScreens(
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp))
                     }
+                }
+                val detailGenres = title.genreIds.mapNotNull { id ->
+                    (if (title.media == "tv") tvGenres else allMovieGenres)
+                        .firstOrNull { it.id == id }?.name
+                }.take(3)
+                Text(listOfNotNull(if (title.media == "tv") "Série" else "Filme",
+                    detailGenres.takeIf { it.isNotEmpty() }?.joinToString(" · "))
+                    .joinToString(" · "), fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val detailYear = title.date.take(4).takeIf {
+                    it.length == 4 && it.all(Char::isDigit)
+                }
+                val detailRating = if (title.votes >= 20)
+                    "★ " + String.format(java.util.Locale.US, "%.1f", title.rating) +
+                        " TMDB · " + title.votes + " votos"
+                else null
+                val yearAndRating = listOfNotNull(detailYear, detailRating)
+                    .joinToString(" · ")
+                if (yearAndRating.isNotBlank()) Text(yearAndRating,
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             text = {
@@ -4630,17 +4653,6 @@ internal fun TclStreamingScreens(
                         ) { Text(if (deviceActivationPending)
                             "Enviando…" else "Solicitar liberação") }
                     }
-                    val releasedYear = title.date.take(4).takeIf {
-                        it.length == 4 && it.all(Char::isDigit)
-                    }
-                    val knownGenreNames = if (title.media == "tv") tvGenres else allMovieGenres
-                    val titleGenres = title.genreIds.mapNotNull { id ->
-                        knownGenreNames.firstOrNull { it.id == id }?.name
-                    }.take(3)
-                    Text(listOfNotNull(if (title.media == "tv") "Série" else "Filme",
-                        releasedYear, titleGenres.takeIf { it.isNotEmpty() }?.joinToString(" · "))
-                        .joinToString(" · "), fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold)
                     if (title.media == "movie" && title.id in cinemaIds) {
                         Text("Em cartaz no Brasil (TMDB). Consulte a programação da sua cidade:",
                             fontSize = 11.sp,
@@ -4668,11 +4680,6 @@ internal fun TclStreamingScreens(
                         }
                     }
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
-                    if (title.votes > 0) {
-                        Text("★ Nota TMDB: " +
-                            String.format(java.util.Locale.US, "%.1f", title.rating) +
-                            " (" + title.votes + " votos)", fontSize = 12.sp)
-                    }
                     if (detailLoading) CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     val video = trailerLink
                     if (video != null) {
