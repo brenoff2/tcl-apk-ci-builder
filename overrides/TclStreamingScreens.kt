@@ -3127,7 +3127,8 @@ internal fun TclStreamingScreens(
                                 heading.startsWith("Em breve") -> anyTvUpcoming(title)
                                 (heading.startsWith("Filmes recém-lançados") ||
                                     heading.startsWith("Séries novas")) ->
-                                    anyTvRecentPremiere(title) && (title.media != "movie" || title.id !in cinemaIds)
+                                    anyTvRecentPremiere(title) && (title.media != "movie" ||
+                                        (cinemaIndexReady && title.id !in cinemaIds))
                                 heading.startsWith("Novas temporadas") -> title.media == "tv"
                                 else -> anyTvReleased(title) &&
                                     (title.media != "movie" ||
