@@ -1,4 +1,4 @@
-name: AnyTV V2 2.9.52 candidate | unsigned compile and contracts (no OTA)
+name: AnyTV V2 2.9.53 candidate | unsigned compile and contracts (no OTA)
 on:
   push:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
@@ -86,8 +86,8 @@ jobs:
           s=p.read_text()
           assert s.count('versionCode = 39') == 1
           assert s.count('versionName = "2.9.10-AnyTV"') == 1
-          p.write_text(s.replace('versionCode = 39','versionCode = 81')
-                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.52-AnyTV"'))
+          p.write_text(s.replace('versionCode = 39','versionCode = 82')
+                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.53-AnyTV"'))
           PY
           python3 scripts/apply_anytv_phone_v2_identity.py
           cd source
@@ -99,15 +99,15 @@ jobs:
           APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
-          grep -q "name='com.tclremote.livre.v2' versionCode='81'" candidate-identity.txt
-          grep -q "versionName='2.9.52-AnyTV'" candidate-identity.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='82'" candidate-identity.txt
+          grep -q "versionName='2.9.53-AnyTV'" candidate-identity.txt
           sha256sum "$APK" > candidate-sha256.txt
           printf '%s\n' 'AUDITORIA APENAS: APK sem assinatura. NAO instalar como atualizacao da V2 assinada.' > candidate-NOT-INSTALL.txt
-          echo 'V2_2952_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
+          echo 'V2_2953_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
       - name: Store unsigned code61 candidate for audit only
         uses: actions/upload-artifact@v4
         with:
-          name: anytv-v2-2952-code81-unsigned-audit
+          name: anytv-v2-2953-code82-unsigned-audit
           path: |
             source/app/build/outputs/apk/release/app-release-unsigned.apk
             candidate-identity.txt
@@ -155,21 +155,21 @@ jobs:
           "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
             --ks signing-v2-private/phone.p12 --ks-type PKCS12 \
             --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD \
-            --out signed-v2/AnyTV_V2_2.9.52_SIGNED_CANDIDATE.apk source/app/build/outputs/apk/release/app-release-unsigned.apk
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs signed-v2/AnyTV_V2_2.9.52_SIGNED_CANDIDATE.apk > signed-v2/audit.txt
+            --out signed-v2/AnyTV_V2_2.9.53_SIGNED_CANDIDATE.apk source/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs signed-v2/AnyTV_V2_2.9.53_SIGNED_CANDIDATE.apk > signed-v2/audit.txt
           EXPECTED_CERT="$(jq -r .certificate_sha256 signing-recovery/v2/identity.json)"
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-v2/audit.txt
           grep -qi "$EXPECTED_CERT" signed-v2/audit.txt
-          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c 4 signed-v2/AnyTV_V2_2.9.52_SIGNED_CANDIDATE.apk
-          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging signed-v2/AnyTV_V2_2.9.52_SIGNED_CANDIDATE.apk > signed-v2/badging.txt
-          grep -q "package: name='com.tclremote.livre.v2' versionCode='81'" signed-v2/badging.txt
-          echo "ANYTV_V2_SIGNER_VALIDATED_$(sha256sum signed-v2/AnyTV_V2_2.9.52_SIGNED_CANDIDATE.apk | cut -d ' ' -f1)"
-      - name: Archive signed 2.9.52 candidate without publishing OTA
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c 4 signed-v2/AnyTV_V2_2.9.53_SIGNED_CANDIDATE.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging signed-v2/AnyTV_V2_2.9.53_SIGNED_CANDIDATE.apk > signed-v2/badging.txt
+          grep -q "package: name='com.tclremote.livre.v2' versionCode='82'" signed-v2/badging.txt
+          echo "ANYTV_V2_SIGNER_VALIDATED_$(sha256sum signed-v2/AnyTV_V2_2.9.53_SIGNED_CANDIDATE.apk | cut -d ' ' -f1)"
+      - name: Archive signed 2.9.53 candidate without publishing OTA
         uses: actions/upload-artifact@v4
         with:
-          name: anytv-v2-2952-code81-signed-candidate
+          name: anytv-v2-2953-code82-signed-candidate
           path: |
-            signed-v2/AnyTV_V2_2.9.52_SIGNED_CANDIDATE.apk
+            signed-v2/AnyTV_V2_2.9.53_SIGNED_CANDIDATE.apk
             signed-v2/audit.txt
             signed-v2/badging.txt
           retention-days: 14
@@ -183,11 +183,11 @@ jobs:
           test -s ota-v2/updates/android/cert2026/current.apk
           if test -e ota-v2/updates/android/v2/current.apk; then
             oldcode="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging ota-v2/updates/android/v2/current.apk | sed -nE "s/.*versionCode='([0-9]+)'.*/\1/p" | head -1)"
-            test -n "$oldcode" && test "$oldcode" -lt 81
+            test -n "$oldcode" && test "$oldcode" -lt 82
           fi
           mkdir -p ota-v2/updates/android/v2
-          cp signed-v2/AnyTV_V2_2.9.52_SIGNED_CANDIDATE.apk ota-v2/updates/android/v2/current.apk
-          (cd ota-v2 && git config user.name 'github-actions[bot]' && git config user.email '41898282+github-actions[bot]@users.noreply.github.com' && git add -f updates/android/v2/current.apk && git diff --cached --check && git commit -m 'release(anytv-v2): verified signed V2 2.9.52 OTA update' && git push origin HEAD:feat/tcl-v22-updates-back-bluetooth)
+          cp signed-v2/AnyTV_V2_2.9.53_SIGNED_CANDIDATE.apk ota-v2/updates/android/v2/current.apk
+          (cd ota-v2 && git config user.name 'github-actions[bot]' && git config user.email '41898282+github-actions[bot]@users.noreply.github.com' && git add -f updates/android/v2/current.apk && git diff --cached --check && git commit -m 'release(anytv-v2): verified signed V2 2.9.53 OTA update' && git push origin HEAD:feat/tcl-v22-updates-back-bluetooth)
       - name: Verify published V2 APK bytes through immutable GitHub commit HTTPS
         shell: bash
         run: |
@@ -200,7 +200,7 @@ jobs:
           # An immutable commit URL gives a content-addressed readback.
           for attempt in 1 2 3 4 5 6; do
             curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/$expected_commit/updates/android/v2/current.apk?check=$attempt" -o signed-v2/remote.apk || true
-            if test -s signed-v2/remote.apk && cmp -s signed-v2/remote.apk signed-v2/AnyTV_V2_2.9.52_SIGNED_CANDIDATE.apk; then
+            if test -s signed-v2/remote.apk && cmp -s signed-v2/remote.apk signed-v2/AnyTV_V2_2.9.53_SIGNED_CANDIDATE.apk; then
               echo 'ANYTV_V2_GITHUB_OTA_BYTE_READBACK_SUCCESS'
               exit 0
             fi
