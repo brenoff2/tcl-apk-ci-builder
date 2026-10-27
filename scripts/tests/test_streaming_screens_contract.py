@@ -1335,6 +1335,11 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn("if (title.votes < 20) return", self.screen[start:end])
 
 
+    def test_anime_detail_header_uses_type_and_mapped_genres(self):
+        self.assertIn('anyTvGenreLabels(title, allMovieGenres, tvGenres)', self.screen)
+        self.assertIn('anyTvIsAnime(title) && title.media == "tv" -> "Anime · Série"', self.screen)
+        self.assertIn('anyTvIsAnime(title) -> "Anime · Filme"', self.screen)
+
 
 if __name__ == "__main__":
     unittest.main()
