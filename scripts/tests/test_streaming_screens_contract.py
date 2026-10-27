@@ -308,7 +308,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Brush.verticalGradient(listOf(', self.screen)
         self.assertIn('first_air_date', self.screen)
         self.assertIn('release_date', self.screen)
-        self.assertIn('val releasedYear = title.date.take(4)', self.screen)
+        self.assertIn('val detailYear = title.date.take(4)', self.screen)
 
     def test_home_banner_uses_actual_movie_posters_and_opens_discovery(self):
         self.assertIn('internal fun AnyTvHomeFilmBanner(', self.screen)
@@ -357,7 +357,7 @@ class StreamingScreens(unittest.TestCase):
                      '"Acompanhar série"', 'Color(0xFF1CB96B)',
                      'saved_title_', 'anytv_artwork_saved', 'drawable.toBitmap()',
                      'AnyTvPinnedImage(', 'fun previousTitle(',
-                     'val knownGenreNames', 'title.genreIds',
+                     'anyTvGenreLabels(title, allMovieGenres, tvGenres)', 'title.genreIds',
                      'it.id.toString() !in watchedFilms'):
             self.assertIn(text, self.screen)
         self.assertNotIn('90L * 86400000L', self.screen)
