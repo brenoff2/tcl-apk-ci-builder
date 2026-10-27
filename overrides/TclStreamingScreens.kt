@@ -1425,7 +1425,7 @@ private fun StreamingOfferIcons(
                     fontSize = 9.sp, lineHeight = 10.sp, maxLines = 1,
                     color = Color.White, fontWeight = FontWeight.SemiBold)
             }
-            if (showRating && item.votes > 0) {
+            if (showRating && item.votes >= 20) {
                 Text(String.format(java.util.Locale.US, "%.1f", item.rating),
                     fontSize = 11.sp, maxLines = 1,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
