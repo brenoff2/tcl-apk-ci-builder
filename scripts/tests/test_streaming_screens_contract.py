@@ -1321,5 +1321,14 @@ class StreamingScreens(unittest.TestCase):
                 self.assertIn(fragment, self.screen)
 
 
+    def test_home_movies_require_complete_br_cinema_index(self):
+        self.assertIn("var cinemaIndexReady by remember { mutableStateOf(false) }", self.screen)
+        self.assertIn("for (page in 1..42)", self.screen)
+        self.assertIn("cinemaIndexReady = true", self.screen)
+        self.assertIn('(cinemaIndexReady && it.id !in cinemaIds)', self.screen)
+        self.assertIn('(cinemaIndexReady && title.id !in cinemaIds)', self.screen)
+        self.assertNotIn("(1..4).flatMap { page -> StreamingCatalog.discoveryCinemaPage(page).titles }", self.screen)
+
+
 if __name__ == "__main__":
     unittest.main()
