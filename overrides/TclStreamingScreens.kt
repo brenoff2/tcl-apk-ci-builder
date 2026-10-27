@@ -1826,12 +1826,21 @@ internal fun TclStreamingScreens(
     }
     // Only positive matches in Brazil's now-playing feed receive the Cinema badge.
     var cinemaIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var cinemaIndexReady by remember { mutableStateOf(false) }
     LaunchedEffect(token) {
-        for (page in 1..5) {
+        cinemaIndexReady = false
+        val verified = mutableSetOf<Int>()
+        // A partial now-playing index must never authorize non-cinema home rails.
+        // Fetch every available BR page; stop at the catalog's bounded limit.
+        for (page in 1..42) {
             val response = runCatching { StreamingCatalog.discoveryCinemaPage(page) }
                 .getOrNull() ?: break
-            cinemaIds = cinemaIds + response.titles.map { it.id }
-            if (!response.more) break
+            verified.addAll(response.titles.map { it.id })
+            cinemaIds = cinemaIds + verified
+            if (!response.more || page == 42) {
+                cinemaIndexReady = true
+                break
+            }
         }
     }
 
@@ -2349,12 +2358,7 @@ internal fun TclStreamingScreens(
     LaunchedEffect(token) {
         discoveryLoading = true
         discoveryError = null
-        // Separate BR theatrical titles from editorial/streaming shelves.
-        // The first cinematic batch alone is not enough to exclude older pages.
-        val theatricalPages = runCatching {
-            (1..4).flatMap { page -> StreamingCatalog.discoveryCinemaPage(page).titles }
-        }.getOrDefault(emptyList())
-        cinemaIds = cinemaIds + theatricalPages.map { it.id }
+        // The full Brazilian cinema index is loaded separately and gates home movies.
         val shelves = linkedMapOf<String, List<StreamingTitle>>()
         for ((name, route, kind) in listOf(
             Triple("Em alta nesta semana", "trending/movie/week", "movie"),
@@ -3107,7 +3111,7 @@ internal fun TclStreamingScreens(
                             if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                 it.media == "movie" // Genre source is now_playing BR
                             else anyTvReleased(it) &&
-                                (it.media != "movie" || it.id !in cinemaIds)
+                                (it.media != "movie" || (cinemaIndexReady && it.id !in cinemaIds))
                         }.filterNot {
                             it.media == "movie" && it.id.toString() in watchedFilms
                         }.take(10)
@@ -3126,7 +3130,8 @@ internal fun TclStreamingScreens(
                                     anyTvRecentPremiere(title) && (title.media != "movie" || title.id !in cinemaIds)
                                 heading.startsWith("Novas temporadas") -> title.media == "tv"
                                 else -> anyTvReleased(title) &&
-                                    (title.media != "movie" || title.id !in cinemaIds)
+                                    (title.media != "movie" ||
+                                        (cinemaIndexReady && title.id !in cinemaIds))
                             }
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty() &&
