@@ -4566,12 +4566,14 @@ internal fun TclStreamingScreens(
                             modifier = Modifier.size(24.dp))
                     }
                 }
-                val detailGenres = title.genreIds.mapNotNull { id ->
-                    (if (title.media == "tv") tvGenres else allMovieGenres)
-                        .firstOrNull { it.id == id }?.name
-                }.take(3)
-                Text(listOfNotNull(if (title.media == "tv") "Série" else "Filme",
-                    detailGenres.takeIf { it.isNotEmpty() }?.joinToString(" · "))
+                val detailGenres = anyTvGenreLabels(title, allMovieGenres, tvGenres)
+                val detailKind = when {
+                    anyTvIsAnime(title) && title.media == "tv" -> "Anime · Série"
+                    anyTvIsAnime(title) -> "Anime · Filme"
+                    title.media == "tv" -> "Série"
+                    else -> "Filme"
+                }
+                Text(listOf(detailKind, detailGenres).filter { it.isNotBlank() }
                     .joinToString(" · "), fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 val detailYear = title.date.take(4).takeIf {
