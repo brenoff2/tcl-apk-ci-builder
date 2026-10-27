@@ -1329,6 +1329,12 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('(cinemaIndexReady && title.id !in cinemaIds)', self.screen)
         self.assertNotIn("(1..4).flatMap { page -> StreamingCatalog.discoveryCinemaPage(page).titles }", self.screen)
 
+    def test_poster_ratings_reject_tiny_vote_samples(self):
+        start = self.screen.index("private fun AnyTvRatingOverlay(")
+        end = self.screen.index("private fun AnyTvPosterCard(", start)
+        self.assertIn("if (title.votes < 20) return", self.screen[start:end])
+
+
 
 if __name__ == "__main__":
     unittest.main()
