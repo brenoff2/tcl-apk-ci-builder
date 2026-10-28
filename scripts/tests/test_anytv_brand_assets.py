@@ -10,9 +10,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED = {
-    "assets/anytv_icon.png": "990db3c0d4a4fe07e3765851dfb3e5455c849a4f852b8537caa881574495dcf6",
-    "assets/anytv_logo.png": "a8747c3c456eb502c7b93a3fcca803b23631e6f2054edfef05715e5d39401790",
-    "assets/anytv_horizontal.png": "a8747c3c456eb502c7b93a3fcca803b23631e6f2054edfef05715e5d39401790",
+    "assets/anytv_icon.png": "03ce0d8333841de3df8e28459cea5d30a14b171dbcc61dd57682c81cc9c5d578",
+    "assets/anytv_logo.png": "aecbba186c86bc07fc77f30ee97ce512ccfac551d9d7fd63283d9a453855affc",
+    "assets/anytv_horizontal.png": "aecbba186c86bc07fc77f30ee97ce512ccfac551d9d7fd63283d9a453855affc",
 }
 
 class ApprovedBrandAssets(unittest.TestCase):
