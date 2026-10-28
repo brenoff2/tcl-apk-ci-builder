@@ -18,6 +18,7 @@ on:
       - 'assets/anytv_logo.png'
       - 'assets/anytv_horizontal.png'
       - 'scripts/tests/test_approved_visual_contract.py'
+      - 'scripts/tests/test_anytv_brand_assets.py'
       - 'scripts/tests/test_rescue_contract.py'
       - 'overrides/AnyTvPersonalLinks.kt'
       - 'overrides/AnyTvDeviceIdentity.kt'
@@ -35,6 +36,8 @@ jobs:
     timeout-minutes: 65
     steps:
       - uses: actions/checkout@v4
+      - name: Fail closed unless approved AnyTV brand PNGs are committed
+        run: python3 -m unittest discover -s scripts/tests -p 'test_anytv_brand_assets.py' -v
       - name: Load validated V2 release version
         shell: bash
         run: |
