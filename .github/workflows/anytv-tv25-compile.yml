@@ -2,7 +2,7 @@ name: AnyTV Connect 2.5 cert2026 unsigned TV build
 on:
   push:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
-    paths: ['.github/workflows/anytv-tv25-compile.yml', 'overrides/tv_safe/TvAppBridge.java', 'scripts/tests/test_safe_tv_companion.py']
+    paths: ['.github/workflows/anytv-tv25-compile.yml', 'overrides/tv_safe/TvAppBridge.java', 'scripts/tests/test_safe_tv_companion.py', 'scripts/prepare_companion_safe.py', 'assets/anytv_icon.png', 'assets/anytv_logo.png']
   workflow_dispatch:
 permissions:
   contents: read
@@ -54,6 +54,24 @@ jobs:
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_safe_tv_companion.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_tcl_v22_contract.py' -k TvUpdateAndBluetooth -v
+      - name: Validate approved TV launcher icon and black banner
+        run: |
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          original = Image.open("assets/anytv_icon.png").convert("RGBA")
+          original.thumbnail((432, 432), Image.Resampling.LANCZOS)
+          deployed = Image.open("tv-source/app/src/main/res/drawable/tcl_icon.png").convert("RGBA")
+          assert original.size == deployed.size
+          assert original.tobytes() == deployed.tobytes(), "TV launcher icon differs from approved artwork"
+          banner = Image.open("tv-source/app/src/main/res/drawable/tcl_banner.png").convert("RGBA")
+          assert banner.size == (640, 360)
+          assert banner.getpixel((0, 0)) == (0, 0, 0, 255), "TV banner contains stale background"
+          manifest = Path("tv-source/app/src/main/AndroidManifest.xml").read_text()
+          assert 'android:icon="@drawable/tcl_icon"' in manifest
+          assert 'android:banner="@drawable/tcl_banner"' in manifest
+          print("ANYTV_TV_BRAND_ASSETS_VERIFIED")
+          PY
       - name: Compilar release TV
         run: |
           cd tv-source
