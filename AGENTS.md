@@ -229,3 +229,6 @@ docs/handoffs/2026-10-23-anytv-full-transition.md; docs/handoffs/CURRENT_HANDOFF
 ## Revisão de execução — 23/10/2026
 
 O workflow único de assinatura foi corrigido na branch OTA: `.github/workflows/publish-anytv-phone-github-only.yml` aceita pedidos **apenas** por push de `.github/anytv-phone-release-request.json` com ID de CI aprovado e `versionCode` explícito. Alterar workflow/documentação não dispara publicação. Credencial `ANYTV_RECOVERY_SECRET_2026` injetada apenas no passo de assinatura, nunca no job inteiro. Commits do workflow OTA `bc73a647` e `ae2b438e`; verificação automatizada `ef2eddc4`. Não foi criado pedido de release, o segredo ainda não foi comprovado no runner, a OTA continua 2.9.12/code41 e a 2.9.13/code42 não está publicada nem homologada na TCL. Consultar a execução mais recente do verificador e não elevar gates sem evidência.
+
+## AnyTV — envio de PNG/ZIP para GitHub (fallback obrigatório)
+Se o container não alcançar GitHub ou MCP não aceitar anexo binário, consultar PRIMEIRO `docs/dev-context/ANYTV_BINARY_ASSET_GITHUB_FALLBACK.md`. A rota comprovada é anexo real -> ZIP STORE -> Drive upload/fetch Base64 -> extrair PNG em `functions.exec` -> GitHub create_blob -> árvore/commit/ref protegida -> readback e QA OTA. Não pedir upload manual antes de testar; não ignorar bloqueios de segurança nem divulgar conteúdo binário.
