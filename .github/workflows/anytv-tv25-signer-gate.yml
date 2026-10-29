@@ -1,0 +1,67 @@
+name: AnyTV TV 2.5 secure cert2026 signer recovery gate
+on:
+  push:
+    branches: [feat/anytv-p0-device-proof-verifier-20261020]
+    paths: [.github/workflows/anytv-tv25-signer-gate.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify-tv-cert2026:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Verify approved TV build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(gh api repos/${{ github.repository }}/actions/runs/40808305133 --jq .conclusion)" = success
+          mkdir -p unsigned
+          gh run download 40808305133 --name anytv-tv25-unsigned-audit --dir unsigned
+          test -s unsigned/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk
+          (cd unsigned && sha256sum --check SHA256.txt)
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging unsigned/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='16'"
+      - name: Check TV cert2026 recovery without disclosing secret
+        shell: bash
+        env:
+          RECOVERY_HEX: ${{ secrets.ANYTV_RECOVERY_SECRET_2026 }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${RECOVERY_HEX:-}" =~ ^[[:xdigit:]]{64}$ ]]; then
+            echo "::error::TV cert2026 backup secret unavailable. No OTA changed."
+            exit 1
+          fi
+          python3 -m pip install -q 'cryptography>=43,<47'
+          umask 077
+          mkdir -m 700 signing-private signed
+          trap 'rm -rf signing-private' EXIT
+          python3 - <<'PY'
+          import io,os,pathlib,zipfile
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          b=pathlib.Path("signing-recovery/ANYTV_SIGNING_BACKUP_2026_ENCRYPTED.bin").read_bytes()
+          assert b[:9]==b"ANYTVAES1"
+          data=AESGCM(bytes.fromhex(os.environ["RECOVERY_HEX"])).decrypt(b[9:21],b[21:],None)
+          with zipfile.ZipFile(io.BytesIO(data)) as z:
+              for name in ("anytv-tv-migration.p12","tv.password"):
+                  p=pathlib.Path("signing-private")/name
+                  p.write_bytes(z.read(name))
+                  p.chmod(0o600)
+          print("TV_CERT2026_PRIVATE_BACKUP_RECOVERED")
+          PY
+          export TV_PASSWORD
+          TV_PASSWORD="$(cat signing-private/tv.password)"
+          echo "::add-mask::$TV_PASSWORD"
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          "$bt/apksigner" sign --ks signing-private/anytv-tv-migration.p12 --ks-type PKCS12 --ks-pass env:TV_PASSWORD --key-pass env:TV_PASSWORD --out signed/tv-cert2026.apk unsigned/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk
+          "$bt/apksigner" verify --verbose --print-certs signed/tv-cert2026.apk > signed/cert-check.txt
+          grep -qi '0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c' signed/cert-check.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed/cert-check.txt
+          "$bt/zipalign" -c 4 signed/tv-cert2026.apk
+          "$bt/apksigner" verify --print-certs signed/tv-cert2026.apk | grep -qi '0a5427237a2445c42520236469563dabceda6d43310fe4e6aea6af8ddffc223c'
+          echo 'ANYTV_TV25_CERT2026_SIGNER_VERIFIED_NO_OTA_CHANGE'
