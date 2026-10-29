@@ -186,7 +186,7 @@ public final class MainActivity extends Activity {
         root.addView(label("Conexão local e privada", 12, MUTED));
 
         setContentView(scroll);
-        connectButton.setDefaultFocusHighlightEnabled(true);
+        if (Build.VERSION.SDK_INT >= 26) connectButton.setDefaultFocusHighlightEnabled(true);
         connectButton.requestFocus();
         startBridge();
     }
