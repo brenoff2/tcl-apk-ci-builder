@@ -3,8 +3,9 @@
   "intent": "publish-anytv-tv-v2-independent",
   "identity_fingerprint_sha256": "6c09f12091554d24bfb65defc82706923856be2a9ed12745aaadade46623f62e",
   "expected_package": "com.tclremote.tvcompanion.v2",
-  "expected_version_code": 17,
+  "expected_version_code": 18,
   "legacy_channels_unchanged": true,
-  "attempt": 3,
-  "reason": "Use independently passed prior TV 2.5 regression suite for legacy version contract"
+  "attempt": 1,
+  "reason": "Minimal black/red TV companion with Conectar initially focused for D-pad",
+  "release_version": "2.7-AnyTV-TV-V2"
 }
