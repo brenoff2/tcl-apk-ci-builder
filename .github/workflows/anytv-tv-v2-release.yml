@@ -1,5 +1,8 @@
 name: AnyTV Connect TV V2 - signed release and independent OTA
 on:
+  push:
+    branches: [feat/anytv-p0-device-proof-verifier-20261020]
+    paths: [.github/anytv-tv-v2-release-request.json]
   workflow_dispatch:
 permissions:
   contents: write
