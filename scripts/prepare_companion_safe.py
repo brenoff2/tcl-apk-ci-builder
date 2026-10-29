@@ -49,7 +49,8 @@ brand_icon.thumbnail((432, 432), Image.Resampling.LANCZOS)
 brand_icon.save(drawable / "tcl_icon.png", format="PNG", optimize=True)
 logo = Image.open("assets/anytv_logo.png").convert("RGBA")
 logo.thumbnail((580, 200), Image.Resampling.LANCZOS)
-banner = Image.new("RGBA", (640, 360), (5, 12, 22, 255))
+# Match the approved AnyTV black/red identity; preserve TV banner geometry.
+banner = Image.new("RGBA", (640, 360), (0, 0, 0, 255))
 banner.alpha_composite(logo, ((640 - logo.width)//2, (360 - logo.height)//2))
 banner.save(drawable / "tcl_banner.png", format="PNG", optimize=True)
 
