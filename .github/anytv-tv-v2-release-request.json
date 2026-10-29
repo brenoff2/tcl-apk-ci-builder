@@ -4,5 +4,7 @@
   "identity_fingerprint_sha256": "6c09f12091554d24bfb65defc82706923856be2a9ed12745aaadade46623f62e",
   "expected_package": "com.tclremote.tvcompanion.v2",
   "expected_version_code": 17,
-  "legacy_channels_unchanged": true
+  "legacy_channels_unchanged": true,
+  "attempt": 2,
+  "reason": "Run legacy tests before TV V2 package identity override"
 }
