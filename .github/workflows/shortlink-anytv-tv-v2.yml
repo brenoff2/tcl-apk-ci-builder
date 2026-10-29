@@ -1,0 +1,23 @@
+name: Short link for signed AnyTV Connect TV V2 APK
+on:
+  push:
+    branches: [feat/anytv-p0-device-proof-verifier-20261020]
+    paths: [.github/workflows/shortlink-anytv-tv-v2.yml]
+permissions:
+  contents: read
+jobs:
+  shortlink:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Create and verify direct short redirect
+        shell: bash
+        run: |
+          set -euo pipefail
+          target='https://github.com/brenoff2/tcl-apk-ci-builder/raw/00199d67b40049a4d69a389545a96cd23fbbb399/updates/tv/v2/current.apk'
+          short=$(curl -fsSG --max-time 25 --data-urlencode "url=$target" https://da.gd/s)
+          [[ "$short" =~ ^https://da\.gd/[A-Za-z0-9]+$ ]]
+          direct=$(curl -sS --max-time 25 -o /dev/null -w '%{redirect_url}' "$short")
+          test "$direct" = "$target"
+          echo "ANYTV_TV_V2_SHORT_URL=$short"
+          echo "ANYTV_TV_V2_REDIRECT_VERIFIED"
