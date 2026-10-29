@@ -58,8 +58,8 @@ jobs:
           assert s.count('versionCode = 13')==1
           assert s.count('versionName = "2.2-AnyTV"')==1
           s=s.replace('applicationId = "com.tclremote.tvcompanion"','applicationId = "com.tclremote.tvcompanion.v2"')
-          s=s.replace('versionCode = 13','versionCode = 17')
-          s=s.replace('versionName = "2.2-AnyTV"','versionName = "2.6-AnyTV-TV-V2"')
+          s=s.replace('versionCode = 13','versionCode = 18')
+          s=s.replace('versionName = "2.2-AnyTV"','versionName = "2.7-AnyTV-TV-V2"')
           cfg.write_text(s)
           meta=json.loads(Path("signing-recovery/tv-v2/identity.json").read_text())
           fp=meta["certificate_sha256"]
@@ -135,18 +135,18 @@ jobs:
           TV_PASS="$(cat tv-signing-private/password)"
           echo "::add-mask::$TV_PASS"
           bt="$ANDROID_HOME/build-tools/36.0.0"
-          "$bt/apksigner" sign --ks tv-signing-private/tv.p12 --ks-type PKCS12 --ks-pass env:TV_PASS --key-pass env:TV_PASS --out signed/AnyTV_Connect_TV_V2_2_6.apk tv-source/app/build/outputs/apk/release/app-release-unsigned.apk
-          "$bt/apksigner" verify --verbose --print-certs signed/AnyTV_Connect_TV_V2_2_6.apk > signed/audit.txt
+          "$bt/apksigner" sign --ks tv-signing-private/tv.p12 --ks-type PKCS12 --ks-pass env:TV_PASS --key-pass env:TV_PASS --out signed/AnyTV_Connect_TV_V2_2_7.apk tv-source/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$bt/apksigner" verify --verbose --print-certs signed/AnyTV_Connect_TV_V2_2_7.apk > signed/audit.txt
           expected="$(jq -r .certificate_sha256 signing-recovery/tv-v2/identity.json)"
           grep -qi "$expected" signed/audit.txt
           grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed/audit.txt
-          "$bt/zipalign" -c 4 signed/AnyTV_Connect_TV_V2_2_6.apk
-          "$bt/aapt" dump badging signed/AnyTV_Connect_TV_V2_2_6.apk | grep -q "name='com.tclremote.tvcompanion.v2' versionCode='17'"
+          "$bt/zipalign" -c 4 signed/AnyTV_Connect_TV_V2_2_7.apk
+          "$bt/aapt" dump badging signed/AnyTV_Connect_TV_V2_2_7.apk | grep -q "name='com.tclremote.tvcompanion.v2' versionCode='18'"
       - name: Preserve signed installable APK as artifact
         uses: actions/upload-artifact@v4
         with:
-          name: anytv-connect-tv-v2-2-6-signed
-          path: signed/AnyTV_Connect_TV_V2_2_6.apk
+          name: anytv-connect-tv-v2-2-7-signed
+          path: signed/AnyTV_Connect_TV_V2_2_7.apk
           retention-days: 90
           if-no-files-found: error
       - name: Publish only NEW TV V2 channel and enforce version monotonicity
@@ -159,16 +159,16 @@ jobs:
           bt="$ANDROID_HOME/build-tools/36.0.0"
           if test -f ota-tv-v2/updates/tv/v2/current.apk; then
             old="$("$bt/aapt" dump badging ota-tv-v2/updates/tv/v2/current.apk | sed -nE "s/.*versionCode='([0-9]+)'.*/\1/p" | head -1)"
-            test -n "$old" && test "$old" -lt 17
+            test -n "$old" && test "$old" -lt 18
           fi
-          cp signed/AnyTV_Connect_TV_V2_2_6.apk ota-tv-v2/updates/tv/v2/current.apk
+          cp signed/AnyTV_Connect_TV_V2_2_7.apk ota-tv-v2/updates/tv/v2/current.apk
           (
             cd ota-tv-v2
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add -f updates/tv/v2/current.apk
             git diff --cached --check
-            git commit -m 'release(anytv-tv): independent signed TV V2 2.6 OTA [skip ci]'
+            git commit -m 'release(anytv-tv): independent signed TV V2 2.7 OTA [skip ci]'
             git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
           )
       - name: Verify immutable GitHub OTA bytes; leave old TV channels unchanged
@@ -177,7 +177,7 @@ jobs:
           set -euo pipefail
           commit="$(git -C ota-tv-v2 rev-parse HEAD)"
           test "$(git ls-remote origin refs/heads/feat/tcl-v22-updates-back-bluetooth | cut -f1)" = "$commit"
-          expected="$(sha256sum signed/AnyTV_Connect_TV_V2_2_6.apk | cut -d' ' -f1)"
+          expected="$(sha256sum signed/AnyTV_Connect_TV_V2_2_7.apk | cut -d' ' -f1)"
           for attempt in 1 2 3 4 5 6; do
             curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/$commit/updates/tv/v2/current.apk?check=$attempt" -o signed/remote.apk || true
             if test -s signed/remote.apk && test "$(sha256sum signed/remote.apk | cut -d' ' -f1)" = "$expected"; then
