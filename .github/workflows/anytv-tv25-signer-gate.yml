@@ -25,7 +25,7 @@ jobs:
           mkdir -p unsigned
           gh run download 40808305133 --name anytv-tv25-unsigned-audit --dir unsigned
           test -s unsigned/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk
-          (cd unsigned && sha256sum --check SHA256.txt)
+          (cd unsigned && sed 's#output/##g' SHA256.txt | sha256sum --check -)
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging unsigned/AnyTV_TV_2_5_RELEASE_UNSIGNED.apk | grep -q "name='com.tclremote.tvcompanion' versionCode='16'"
       - name: Check TV cert2026 recovery without disclosing secret
         shell: bash
