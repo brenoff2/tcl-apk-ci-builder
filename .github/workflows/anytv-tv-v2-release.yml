@@ -39,6 +39,9 @@ jobs:
           git clone --depth 1 https://github.com/fezdk/bluetooth-quick-connect.git tv-source
           test "$(git -C tv-source rev-parse HEAD)" = "508b5f148e1945911085f1789051c59d76c0278b"
           python3 scripts/prepare_companion_safe.py
+      - name: Verify legacy TV safety contracts before switching to new applicationId
+        run: |
+          TCL_TV_V14=1 TCL_TV_V15=1 TCL_TV_V16=1 TCL_TV_V21=1 TCL_TV_V22=1 TCL_TV_V23=1 TCL_TV_V24=1 TCL_TV_V25=1 python3 -m unittest discover -s scripts/tests -p test_safe_tv_companion.py -v
       - name: Configure independent TV V2 app, signer identity, and update channel
         run: |
           set -euo pipefail
@@ -73,7 +76,6 @@ jobs:
           manifest.write_text(xml.replace('android:label="AnyTV Connect"','android:label="AnyTV Connect V2"'))
           print("ANYTV_TV_V2_PACKAGE_SIGNER_AND_OTA_BOUND")
           PY
-          TCL_TV_V14=1 TCL_TV_V15=1 TCL_TV_V16=1 TCL_TV_V21=1 TCL_TV_V22=1 TCL_TV_V23=1 TCL_TV_V24=1 TCL_TV_V25=1 python3 -m unittest discover -s scripts/tests -p test_safe_tv_companion.py -v
       - name: Verify approved TV icon, black banner and package routing
         run: |
           python3 - <<'PY'
