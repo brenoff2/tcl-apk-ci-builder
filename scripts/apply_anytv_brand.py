@@ -31,6 +31,34 @@ for qualifier, size in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xx
     inner = art.resize((int(fg_size*.72),int(fg_size*.72)),Image.Resampling.LANCZOS)
     foreground.alpha_composite(inner,((fg_size-inner.width)//2,(fg_size-inner.height)//2))
     foreground.save(target/"ic_launcher_foreground.png","PNG",optimize=True)
+# Adaptive launcher resources override the pinned upstream drawables.
+adaptive = res / "mipmap-anydpi-v26"
+adaptive.mkdir(parents=True, exist_ok=True)
+drawables = res / "drawable"
+drawables.mkdir(parents=True, exist_ok=True)
+(drawables / "ic_launcher_background.xml").write_text(
+    '<shape xmlns:android="http://schemas.android.com/apk/res/android">'
+    '<solid android:color="#000000"/></shape>', encoding="utf-8")
+adaptive_xml = ('<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">'
+                '<background android:drawable="@drawable/ic_launcher_background"/>'
+                '<foreground android:drawable="@mipmap/ic_launcher_foreground"/>'
+                '<monochrome android:drawable="@mipmap/ic_launcher_monochrome"/>'
+                '</adaptive-icon>')
+for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
+    (adaptive / name).write_text(adaptive_xml, encoding="utf-8")
+for qualifier, size in [("mdpi",48),("hdpi",72),("xhdpi",96),("xxhdpi",144),("xxxhdpi",192)]:
+    canvas = size * 108 // 48
+    sample = art.resize((int(canvas * .72), int(canvas * .72)), Image.Resampling.LANCZOS)
+    silhouette = Image.new("L", sample.size)
+    silhouette.putdata([
+        a if max(r,g,b) >= 55 else 0
+        for r,g,b,a in sample.getdata()
+    ])
+    alpha = Image.new("L", (canvas,canvas), 0)
+    alpha.paste(silhouette, ((canvas-sample.width)//2,(canvas-sample.height)//2))
+    mono = Image.new("RGBA",(canvas,canvas),(255,255,255,255))
+    mono.putalpha(alpha)
+    mono.save(res / ("mipmap-"+qualifier) / "ic_launcher_monochrome.png", "PNG", optimize=True)
 drawable = res/"drawable-nodpi"
 drawable.mkdir(parents=True, exist_ok=True)
 copyfile(icon_path, drawable/"anytv_icon.png")
