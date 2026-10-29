@@ -1,0 +1,177 @@
+name: AnyTV Connect TV V2 - signed release and independent OTA
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: anytv-tv-v2-ota
+  cancel-in-progress: false
+jobs:
+  signed-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/anytv-p0-device-proof-verifier-20261020
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-35' 'build-tools;36.0.0'
+      - run: python3 -m pip install -q 'Pillow==11.3.0' 'cryptography==46.0.3'
+      - name: Require recovered TV V2 signer and approved original graphics
+        run: |
+          set -euo pipefail
+          test -s signing-recovery/tv-v2/tv-signer.aesgcm
+          test -s signing-recovery/tv-v2/identity.json
+          test -s signing-recovery/tv-v2/tv-cert.pem
+          jq -e '.role == "AnyTV Connect TV V2 new independent Android signer" and .package == "com.tclremote.tvcompanion.v2"' signing-recovery/tv-v2/identity.json
+          python3 -m unittest discover -s scripts/tests -p test_anytv_brand_assets.py -v
+      - name: Prepare pinned MIT source and safe TV app
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/fezdk/bluetooth-quick-connect.git tv-source
+          test "$(git -C tv-source rev-parse HEAD)" = "508b5f148e1945911085f1789051c59d76c0278b"
+          python3 scripts/prepare_companion_safe.py
+      - name: Configure independent TV V2 app, signer identity, and update channel
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          app=Path("tv-source/app")
+          cfg=app/"build.gradle.kts"
+          s=cfg.read_text()
+          assert s.count('applicationId = "com.tclremote.tvcompanion"')==1
+          assert s.count('versionCode = 13')==1
+          assert s.count('versionName = "2.2-AnyTV"')==1
+          s=s.replace('applicationId = "com.tclremote.tvcompanion"','applicationId = "com.tclremote.tvcompanion.v2"')
+          s=s.replace('versionCode = 13','versionCode = 17')
+          s=s.replace('versionName = "2.2-AnyTV"','versionName = "2.6-AnyTV-TV-V2"')
+          cfg.write_text(s)
+          meta=json.loads(Path("signing-recovery/tv-v2/identity.json").read_text())
+          fp=meta["certificate_sha256"]
+          assert len(fp)==64 and all(c in "0123456789abcdef" for c in fp)
+          updater=app/"src/main/java/tcl/shared/TclUpdateManager.java"
+          s=updater.read_text()
+          old='private static final String TV_PACKAGE = "com.tclremote.tvcompanion";'
+          assert s.count(old)==1
+          s=s.replace(old,'private static final String TV_PACKAGE = "com.tclremote.tvcompanion.v2";\n    private static final String TV_CERT_V2 = "'+fp+'";')
+          old='if (TV_CERT_A.equals(signer)) {'
+          assert s.count(old)==1
+          s=s.replace(old,'if (TV_CERT_V2.equals(signer)) {\n                        suffix = "tv/v2";\n                    } else if (TV_CERT_A.equals(signer)) {')
+          updater.write_text(s)
+          print("ANYTV_TV_V2_PACKAGE_SIGNER_AND_OTA_BOUND")
+          PY
+          TCL_TV_V14=1 TCL_TV_V15=1 TCL_TV_V16=1 TCL_TV_V21=1 TCL_TV_V22=1 TCL_TV_V23=1 TCL_TV_V24=1 TCL_TV_V25=1 python3 -m unittest discover -s scripts/tests -p test_safe_tv_companion.py -v
+      - name: Verify approved TV icon, black banner and package routing
+        run: |
+          python3 - <<'PY'
+          from PIL import Image
+          from pathlib import Path
+          icon=Image.open("assets/anytv_icon.png").convert("RGBA")
+          icon.thumbnail((432,432),Image.Resampling.LANCZOS)
+          new=Image.open("tv-source/app/src/main/res/drawable/tcl_icon.png").convert("RGBA")
+          assert icon.size==new.size and icon.tobytes()==new.tobytes()
+          b=Image.open("tv-source/app/src/main/res/drawable/tcl_banner.png").convert("RGBA")
+          assert b.size==(640,360) and b.getpixel((0,0))==(0,0,0,255)
+          txt=Path("tv-source/app/src/main/java/tcl/shared/TclUpdateManager.java").read_text()
+          assert 'suffix = "tv/v2"' in txt
+          print("ANYTV_TV_V2_BRANDING_VERIFIED")
+          PY
+      - name: Compile unsigned V2 APK
+        run: |
+          cd tv-source
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Recover TV signer in runner and sign V2 APK
+        env:
+          TV_V2_RECOVERY_HEX: ${{ secrets.ANYTV_TV_V2_RECOVERY_HEX }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -m 700 -p tv-signing-private
+          mkdir -p signed
+          trap 'rm -rf tv-signing-private' EXIT
+          python3 - <<'PY'
+          import os,base64,hashlib,hmac,json,pathlib
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.serialization import pkcs12
+          root=pathlib.Path("signing-recovery/tv-v2")
+          enc=(root/"tv-signer.aesgcm").read_bytes()
+          m=json.loads((root/"identity.json").read_text())
+          secret=os.getenv("TV_V2_RECOVERY_HEX","")
+          if len(secret)!=64 or any(ch not in "0123456789abcdefABCDEF" for ch in secret):
+              raise RuntimeError("TV V2 recovery secret unavailable; OTA unchanged")
+          key=bytes.fromhex(secret)
+          assert enc[:9]==b"ANYTVTVG1"
+          assert hashlib.sha256(enc).hexdigest()==m["ciphertext_sha256"]
+          p12=AESGCM(key).decrypt(enc[9:21],enc[21:],None)
+          pw=base64.urlsafe_b64encode(hmac.new(key,b"AnyTV-TV-V2-PKCS12-Pass-v1",hashlib.sha256).digest())
+          signer,cert,_=pkcs12.load_key_and_certificates(p12,pw)
+          assert signer and cert and cert.fingerprint(hashes.SHA256()).hex()==m["certificate_sha256"]
+          (pathlib.Path("tv-signing-private")/"tv.p12").write_bytes(p12)
+          (pathlib.Path("tv-signing-private")/"password").write_bytes(pw)
+          print("ANYTV_TV_V2_SIGNER_RECOVERED")
+          PY
+          export TV_PASS
+          TV_PASS="$(cat tv-signing-private/password)"
+          echo "::add-mask::$TV_PASS"
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          "$bt/apksigner" sign --ks tv-signing-private/tv.p12 --ks-type PKCS12 --ks-pass env:TV_PASS --key-pass env:TV_PASS --out signed/AnyTV_Connect_TV_V2_2_6.apk tv-source/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$bt/apksigner" verify --verbose --print-certs signed/AnyTV_Connect_TV_V2_2_6.apk > signed/audit.txt
+          expected="$(jq -r .certificate_sha256 signing-recovery/tv-v2/identity.json)"
+          grep -qi "$expected" signed/audit.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed/audit.txt
+          "$bt/zipalign" -c 4 signed/AnyTV_Connect_TV_V2_2_6.apk
+          "$bt/aapt" dump badging signed/AnyTV_Connect_TV_V2_2_6.apk | grep -q "name='com.tclremote.tvcompanion.v2' versionCode='17'"
+      - name: Preserve signed installable APK as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-connect-tv-v2-2-6-signed
+          path: signed/AnyTV_Connect_TV_V2_2_6.apk
+          retention-days: 90
+          if-no-files-found: error
+      - name: Publish only NEW TV V2 channel and enforce version monotonicity
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/tcl-v22-updates-back-bluetooth
+          git worktree add --detach ota-tv-v2 origin/feat/tcl-v22-updates-back-bluetooth
+          mkdir -p ota-tv-v2/updates/tv/v2
+          bt="$ANDROID_HOME/build-tools/36.0.0"
+          if test -f ota-tv-v2/updates/tv/v2/current.apk; then
+            old="$("$bt/aapt" dump badging ota-tv-v2/updates/tv/v2/current.apk | sed -nE "s/.*versionCode='([0-9]+)'.*/\1/p" | head -1)"
+            test -n "$old" && test "$old" -lt 17
+          fi
+          cp signed/AnyTV_Connect_TV_V2_2_6.apk ota-tv-v2/updates/tv/v2/current.apk
+          (
+            cd ota-tv-v2
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -f updates/tv/v2/current.apk
+            git diff --cached --check
+            git commit -m 'release(anytv-tv): independent signed TV V2 2.6 OTA [skip ci]'
+            git push origin HEAD:feat/tcl-v22-updates-back-bluetooth
+          )
+      - name: Verify immutable GitHub OTA bytes; leave old TV channels unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit="$(git -C ota-tv-v2 rev-parse HEAD)"
+          test "$(git ls-remote origin refs/heads/feat/tcl-v22-updates-back-bluetooth | cut -f1)" = "$commit"
+          expected="$(sha256sum signed/AnyTV_Connect_TV_V2_2_6.apk | cut -d' ' -f1)"
+          for attempt in 1 2 3 4 5 6; do
+            curl -fsSL --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/$commit/updates/tv/v2/current.apk?check=$attempt" -o signed/remote.apk || true
+            if test -s signed/remote.apk && test "$(sha256sum signed/remote.apk | cut -d' ' -f1)" = "$expected"; then
+              echo "ANYTV_TV_V2_SIGNED_OTA_BYTE_READBACK_SUCCESS"
+              exit 0
+            fi
+            sleep 10
+          done
+          exit 1
