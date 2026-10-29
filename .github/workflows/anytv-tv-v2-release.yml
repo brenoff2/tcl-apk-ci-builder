@@ -64,6 +64,10 @@ jobs:
           assert s.count(old)==1
           s=s.replace(old,'if (TV_CERT_V2.equals(signer)) {\n                        suffix = "tv/v2";\n                    } else if (TV_CERT_A.equals(signer)) {')
           updater.write_text(s)
+          manifest=app/"src/main/AndroidManifest.xml"
+          xml=manifest.read_text()
+          assert xml.count('android:label="AnyTV Connect"')==1
+          manifest.write_text(xml.replace('android:label="AnyTV Connect"','android:label="AnyTV Connect V2"'))
           print("ANYTV_TV_V2_PACKAGE_SIGNER_AND_OTA_BOUND")
           PY
           TCL_TV_V14=1 TCL_TV_V15=1 TCL_TV_V16=1 TCL_TV_V21=1 TCL_TV_V22=1 TCL_TV_V23=1 TCL_TV_V24=1 TCL_TV_V25=1 python3 -m unittest discover -s scripts/tests -p test_safe_tv_companion.py -v
