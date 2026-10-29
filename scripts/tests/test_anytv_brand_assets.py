@@ -23,6 +23,14 @@ class ApprovedBrandAssets(unittest.TestCase):
                 self.assertEqual(hashlib.sha256(data).hexdigest(), digest,
                                  "Brand asset not equal to the user-approved image")
 
+    def test_adaptive_launcher_contract(self):
+        source = (ROOT / "scripts/apply_anytv_brand.py").read_text()
+        for text in ('mipmap-anydpi-v26', 'ic_launcher_background.xml',
+                     'ic_launcher_monochrome.png', 'android:color="#000000"',
+                     'ic_launcher_round.xml'):
+            with self.subTest(resource=text):
+                self.assertIn(text, source)
+
     def test_no_change_to_package_or_signer(self):
         pipeline = (ROOT / ".github/workflows/anytv-v2-candidate-compile.yml").read_text()
         self.assertIn("ANYTV_SIGNER_V2_RECOVERY_HEX", pipeline)
