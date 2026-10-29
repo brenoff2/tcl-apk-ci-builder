@@ -35,9 +35,9 @@ import android.widget.TextView;
  * system overlays, notification access, or Bluetooth scanning permissions.
  */
 public final class MainActivity extends Activity {
-    private static final int BACKGROUND = Color.rgb(5, 12, 22);
-    private static final int TEXT = Color.rgb(236, 244, 255);
-    private static final int MUTED = Color.rgb(164, 188, 217);
+    private static final int BACKGROUND = Color.rgb(0, 0, 0);
+    private static final int TEXT = Color.rgb(245, 245, 245);
+    private static final int MUTED = Color.rgb(155, 155, 155);
     private TextView status;
     private TextView updateStatus;
     private static final int REQ_BT_CONNECT = 11;
@@ -47,9 +47,9 @@ public final class MainActivity extends Activity {
     private GradientDrawable buttonShape(int color, boolean selected) {
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(color);
-        bg.setCornerRadius(dp(10));
-        bg.setStroke(dp(selected ? 3 : 1),
-                selected ? Color.rgb(255, 230, 86) : Color.rgb(75, 111, 148));
+        bg.setCornerRadius(dp(14));
+        bg.setStroke(dp(selected ? 2 : 1),
+                selected ? Color.WHITE : Color.rgb(65, 65, 65));
         return bg;
     }
 
@@ -76,11 +76,11 @@ public final class MainActivity extends Activity {
         // Android TV D-pad focus state: bright border + blue background.
         StateListDrawable backgrounds = new StateListDrawable();
         backgrounds.addState(new int[]{android.R.attr.state_pressed},
-                buttonShape(Color.rgb(20, 118, 207), true));
+                buttonShape(Color.rgb(205, 24, 37), true));
         backgrounds.addState(new int[]{android.R.attr.state_focused},
-                buttonShape(Color.rgb(19, 88, 150), true));
+                buttonShape(Color.rgb(185, 20, 34), true));
         backgrounds.addState(new int[]{},
-                buttonShape(Color.rgb(16, 43, 75), false));
+                buttonShape(Color.rgb(27, 27, 27), false));
         button.setBackground(backgrounds);
         button.setMinHeight(dp(48));
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -127,12 +127,12 @@ public final class MainActivity extends Activity {
         scroll.setBackgroundColor(BACKGROUND);
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(10), dp(8), dp(10), dp(10));
+        root.setPadding(dp(24), dp(14), dp(24), dp(20));
         root.setGravity(Gravity.CENTER_HORIZONTAL);
         FrameLayout frame = new FrameLayout(this);
         scroll.addView(frame);
         FrameLayout.LayoutParams centered = new FrameLayout.LayoutParams(
-                Math.min(getResources().getDisplayMetrics().widthPixels - dp(24), dp(760)),
+                Math.min(getResources().getDisplayMetrics().widthPixels - dp(24), dp(600)),
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL);
         frame.addView(root, centered);
@@ -146,33 +146,32 @@ public final class MainActivity extends Activity {
         ImageView logo = new ImageView(this);
         logo.setImageResource(R.drawable.tcl_banner);
         logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        root.addView(logo, new LinearLayout.LayoutParams(dp(260), dp(82)));
-        root.addView(label("AnyTV Connect", 20, TEXT));
-        root.addView(label("Complemento de aplicativos instalados", 17, MUTED));
-        root.addView(label("Código de vinculação da TV", 17, MUTED));
+        root.addView(logo, new LinearLayout.LayoutParams(dp(220), dp(66)));
+        root.addView(label("Conecte seu celular à TV", 20, TEXT));
+        root.addView(label("Código de pareamento", 14, MUTED));
 
-        TextView code = label(TvAppBridge.pairingCode(this), 34, Color.rgb(83, 168, 255));
+        TextView code = label(TvAppBridge.pairingCode(this), 36, Color.rgb(237, 45, 58));
         code.setTextIsSelectable(true);
         code.setPadding(0, 9, 0, 13);
         root.addView(code);
 
         root.addView(label(
-                "No celular, abra AnyTV e informe o código uma única vez. "
-                + "A TV e o celular precisam estar na mesma rede local.", 15, MUTED));
+                "No celular, informe o código acima. Use a mesma rede Wi-Fi.", 14, MUTED));
 
         status = label("Verificando serviço...", 16, TEXT);
         root.addView(status);
 
+        Button connectButton = action("Conectar", v -> startBridge());
         root.addView(actionRow(
-                action("Ativar conexão", v -> startBridge()),
-                action("Buscar atualizações", v ->
+                connectButton,
+                action("Atualizar", v ->
                         TclUpdateManager.check(this, msg -> {
                             if (updateStatus != null) updateStatus.setText(msg);
                         }))));
-        updateStatus = label("Atualizações: verifique a nova versão aqui.", 15, MUTED);
+        updateStatus = label("", 13, MUTED);
         root.addView(updateStatus);
 
-        TextView headphone = label("Fones Bluetooth pareados", 16, MUTED);
+        TextView headphone = label("FONES BLUETOOTH", 13, MUTED);
         root.addView(headphone);
         root.addView(actionRow(
                 action("Escolher fone", v -> chooseHeadphones()),
@@ -184,10 +183,11 @@ public final class MainActivity extends Activity {
                     status.setText("Conexão desativada");
                 })));
 
-        root.addView(label(
-                "Conexão local e privada. Após reiniciar a TV, abra o AnyTV Connect para reativar.", 13, MUTED));
+        root.addView(label("Conexão local e privada", 12, MUTED));
 
         setContentView(scroll);
+        connectButton.setDefaultFocusHighlightEnabled(true);
+        connectButton.requestFocus();
         startBridge();
     }
 
