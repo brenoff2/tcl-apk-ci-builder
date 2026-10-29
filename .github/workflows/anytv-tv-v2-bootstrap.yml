@@ -1,0 +1,110 @@
+name: AnyTV Connect TV V2 - bootstrap independente de assinatura
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: anytv-tv-v2-signer-bootstrap
+  cancel-in-progress: false
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/anytv-p0-device-proof-verifier-20261020
+          fetch-depth: 0
+      - name: Impedir substituicao da identidade existente
+        run: |
+          set -euo pipefail
+          test ! -e signing-recovery/tv-v2/tv-signer.aesgcm
+          test ! -e signing-recovery/tv-v2/identity.json
+          test ! -e signing-recovery/tv-v2/tv-cert.pem
+      - run: python3 -m pip install -q 'cryptography==46.0.3'
+      - name: Gerar identidade TV exclusiva e cifrar backup sem expor segredos
+        env:
+          TV_V2_RECOVERY_HEX: ${{ secrets.ANYTV_TV_V2_RECOVERY_HEX }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import os,base64,hashlib,hmac,json,datetime,pathlib
+          from cryptography import x509
+          from cryptography.hazmat.primitives import hashes,serialization
+          from cryptography.hazmat.primitives.asymmetric import rsa,padding
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.serialization import pkcs12
+          from cryptography.x509.oid import NameOID
+          s=os.getenv("TV_V2_RECOVERY_HEX","")
+          if len(s)!=64 or any(c not in "0123456789abcdefABCDEF" for c in s):
+              raise RuntimeError("ANYTV_TV_V2_RECOVERY_HEX indisponivel ou invalido; nenhuma chave criada")
+          key=bytes.fromhex(s)
+          root=pathlib.Path("signing-recovery/tv-v2")
+          root.mkdir(parents=True,exist_ok=True)
+          signer=rsa.generate_private_key(public_exponent=65537,key_size=3072)
+          subject=x509.Name([x509.NameAttribute(NameOID.COMMON_NAME,"AnyTV Connect TV V2 Signing"),x509.NameAttribute(NameOID.ORGANIZATION_NAME,"AnyTV")])
+          now=datetime.datetime.now(datetime.timezone.utc)
+          cert=(x509.CertificateBuilder().subject_name(subject).issuer_name(subject).public_key(signer.public_key())
+            .serial_number(x509.random_serial_number()).not_valid_before(now-datetime.timedelta(days=1))
+            .not_valid_after(now+datetime.timedelta(days=365*30)).add_extension(x509.BasicConstraints(ca=False,path_length=None),critical=True).sign(signer,hashes.SHA256()))
+          pw=base64.urlsafe_b64encode(hmac.new(key,b"AnyTV-TV-V2-PKCS12-Pass-v1",hashlib.sha256).digest())
+          p12=pkcs12.serialize_key_and_certificates(b"anytv-tv-v2",signer,cert,None,serialization.BestAvailableEncryption(pw))
+          nonce=os.urandom(12)
+          envelope=b"ANYTVTVG1"+nonce+AESGCM(key).encrypt(nonce,p12,None)
+          restored=AESGCM(key).decrypt(envelope[9:21],envelope[21:],None)
+          k,c,_=pkcs12.load_key_and_certificates(restored,pw)
+          assert k and c and c.fingerprint(hashes.SHA256())==cert.fingerprint(hashes.SHA256())
+          challenge=os.urandom(32)
+          signature=k.sign(challenge,padding.PKCS1v15(),hashes.SHA256())
+          c.public_key().verify(signature,challenge,padding.PKCS1v15(),hashes.SHA256())
+          (root/"tv-signer.aesgcm").write_bytes(envelope)
+          (root/"tv-cert.pem").write_bytes(cert.public_bytes(serialization.Encoding.PEM))
+          metadata={"schema":1,"role":"AnyTV Connect TV V2 new independent Android signer",
+          "package":"com.tclremote.tvcompanion.v2",
+          "certificate_sha256":cert.fingerprint(hashes.SHA256()).hex(),
+          "ciphertext_sha256":hashlib.sha256(envelope).hexdigest(),
+          "recovery_secret_name":"ANYTV_TV_V2_RECOVERY_HEX",
+          "envelope":"ANYTVTVG1 + nonce12 + AES256GCM",
+          "password_derivation":"HMAC-SHA256(recovery, AnyTV-TV-V2-PKCS12-Pass-v1) base64url",
+          "created_at":now.isoformat(),"verification":"AESGCM roundtrip, PKCS12 cert and RSA challenge passed"}
+          (root/"identity.json").write_text(json.dumps(metadata,indent=2)+"\n")
+          print("ANYTV_TV_V2_INDEPENDENT_SIGNER_ENCRYPTED_AND_RECOVERED")
+          print("TV_V2_PUBLIC_CERT_SHA256="+metadata["certificate_sha256"])
+          PY
+      - name: Guardar apenas backup cifrado, certificado publico e manifesto no GitHub
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add signing-recovery/tv-v2/tv-signer.aesgcm signing-recovery/tv-v2/tv-cert.pem signing-recovery/tv-v2/identity.json
+          git diff --cached --check
+          git commit -m 'security(anytv-tv): durable encrypted independent TV V2 signer [skip ci]'
+          git push origin HEAD:feat/anytv-p0-device-proof-verifier-20261020
+      - name: Confirmar readback de backup criptografado do Git remoto
+        env:
+          TV_V2_RECOVERY_HEX: ${{ secrets.ANYTV_TV_V2_RECOVERY_HEX }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin feat/anytv-p0-device-proof-verifier-20261020
+          mkdir -p verify-backup
+          git show origin/feat/anytv-p0-device-proof-verifier-20261020:signing-recovery/tv-v2/tv-signer.aesgcm > verify-backup/from-git.aesgcm
+          git show origin/feat/anytv-p0-device-proof-verifier-20261020:signing-recovery/tv-v2/identity.json > verify-backup/from-git.json
+          python3 - <<'PY'
+          import base64,hashlib,hmac,json,os,pathlib
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.serialization import pkcs12
+          root=pathlib.Path("verify-backup")
+          b=(root/"from-git.aesgcm").read_bytes()
+          m=json.loads((root/"from-git.json").read_text())
+          key=bytes.fromhex(os.environ["TV_V2_RECOVERY_HEX"])
+          assert b[:9]==b"ANYTVTVG1"
+          assert hashlib.sha256(b).hexdigest()==m["ciphertext_sha256"]
+          pw=base64.urlsafe_b64encode(hmac.new(key,b"AnyTV-TV-V2-PKCS12-Pass-v1",hashlib.sha256).digest())
+          k,c,_=pkcs12.load_key_and_certificates(AESGCM(key).decrypt(b[9:21],b[21:],None),pw)
+          assert k and c and c.fingerprint(hashes.SHA256()).hex()==m["certificate_sha256"]
+          print("ANYTV_TV_V2_GITHUB_ENCRYPTED_READBACK_AND_SIGNER_RECOVERY_PASS")
+          PY
