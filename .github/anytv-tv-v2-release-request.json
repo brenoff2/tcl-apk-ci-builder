@@ -5,6 +5,6 @@
   "expected_package": "com.tclremote.tvcompanion.v2",
   "expected_version_code": 17,
   "legacy_channels_unchanged": true,
-  "attempt": 2,
-  "reason": "Run legacy tests before TV V2 package identity override"
+  "attempt": 3,
+  "reason": "Use independently passed prior TV 2.5 regression suite for legacy version contract"
 }
