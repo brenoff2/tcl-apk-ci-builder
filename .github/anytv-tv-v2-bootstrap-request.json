@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "intent": "bootstrap-anytv-connect-tv-v2",
+  "package": "com.tclremote.tvcompanion.v2",
+  "backup": "signing-recovery/tv-v2/tv-signer.aesgcm",
+  "new_independent_signer": true,
+  "legacy_ota_unchanged": true
+}
