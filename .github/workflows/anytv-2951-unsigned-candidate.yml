@@ -3,6 +3,7 @@ on:
   push:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
     paths:
+      - '.github/workflows/anytv-2951-unsigned-candidate.yml'
       - '.github/workflows/anytv-v2-candidate-compile.yml'
       - 'overrides/TclStreamingScreens.kt'
       - 'overrides/TclApprovedHomeScreen.kt'
