@@ -104,6 +104,21 @@ internal object AnyTvPersonalLinks {
         }.getOrDefault("unavailable")
     }
 
+    /** The user's explicit attempt to open a title may request device approval.
+     * Never asks for an API key or an activation code in the Android UI.
+     * Approval is still a server-side decision; no client-side bypass.
+     */
+    private fun requestApprovalOnceDaily(context: Context) {
+        val prefs = context.getSharedPreferences("anytv_link_access", Context.MODE_PRIVATE)
+        val now = System.currentTimeMillis()
+        if (now - prefs.getLong("last_approval_request", 0L) < 86_400_000L) return
+        val outcome = runCatching { AnyTvDeviceIdentity.requestApproval(context) }
+            .getOrNull()
+        if (outcome == "pending" || outcome == "activated") {
+            prefs.edit().putLong("last_approval_request", now).apply()
+        }
+    }
+
     /** Resolve official title link through the AnyTV backend. No client API key. */
     suspend fun resolve(context: Context, title: StreamingTitle, packageName: String):
         AnyTvPersonalResult? = withContext(Dispatchers.IO) {
@@ -121,7 +136,10 @@ internal object AnyTvPersonalLinks {
             conn.setRequestProperty("User-Agent", "AnyTV/2.9.8 (Android; streaming catalog client)")
             AnyTvDeviceIdentity.attachProof(context, conn, url.toURI().rawPath)
             val status = conn.responseCode
-            if (status == 401) return@withContext AnyTvPersonalResult.ActivationRequired
+            if (status == 401) {
+                requestApprovalOnceDaily(context)
+                return@withContext AnyTvPersonalResult.ActivationRequired
+            }
             if (status in 500..599) return@withContext AnyTvPersonalResult.ResolverUnavailable
             // HTTP 404 has TWO different provider meanings. Preserve the JSON
             // status rather than incorrectly treating a missing URL as no subscription.
