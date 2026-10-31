@@ -39,3 +39,9 @@ Inspecao read-only concluida. Nenhum compose, tabela, senha, chave, credencial, 
 - Build Android unsigned do SDK oficial, workflow run `41193275819`, terminou `completed/success`, artefato unsigned gerado. Confirmacao factual de compilacao apos import Email corrigido; NAO e login ativo.
 - Preparado `overrides/AnyTvAuthClientFactory.kt` commit `3f1bd71fc4796cfc57796a413c531507e0586a8f`: cria client do Supabase Kotlin 3.8.0 com `install(Auth)`, valida URL HTTPS e chave publica vindas da futura configuracao isolada AnyTV. Nao inclui credenciais privadas. Incluido no build pelo commit `2b4241f3c820bdc259d59dee043a365371cfa34a`.
 - Novo workflow de compilacao unsigned `41214083195` disparado para validar factory, ainda pendente na ultima checagem. Nao publicar OTA nem conectar CLFCJ/AnyTV Auth antes da separacao de tenants e TLS/OAuth.
+
+## 31/10/2026 — cliente Auth e preflight
+- Build unsigned `41214083195`: **completed/success** (compilou o client factory com SDK 3.8.0). A APK OTA 2.9.59 permanece intocada; a autenticacao end-to-end NAO esta pronta.
+- Adicionado teste de contrato para validar URL HTTPS/chave publica em `scripts/tests/test_anytv_account_entry.py`, commit `1bb0015352aef3a4bde8ce385ed8163fb2d05702`. Os testes desse commit ainda sem readback final no momento do checkpoint.
+- Adicionado `scripts/anytv_selfhost_preflight.py`, commit `223ea1715feeb3cbe79f06a5cb3b55fe444b7121`, inspecao local read-only de infraestrutura existente, destino separado e portas sem ler segredos. Nao executado no servidor nesta etapa.
+- Confirmado via MCP que o projeto em producao `clfcj-supabase-e13-shadow` e administrado E13 e compartilhado com n8n. Isolamento da Auth AnyTV deve anteceder qualquer mudanca de credenciais/tabelas; nada em producao foi modificado.
