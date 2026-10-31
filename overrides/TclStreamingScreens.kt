@@ -1369,7 +1369,18 @@ private fun AnyTvOneRowPreview(
                     .take(ANYTV_LIST_BATCH)) { title ->
                     // International and upcoming cinema listings are not proof of
                     // being in theaters in Brazil. Only cinemaIds identifies BR titles.
-                    card(title, Modifier.width(cardWidth), false)
+                    Box(modifier = Modifier.width(cardWidth)) {
+                        card(title, Modifier.fillMaxWidth(), false)
+                        if (heading == "Em breve · Cinema") {
+                            Text("EM BREVE · CINEMA",
+                                modifier = Modifier.align(Alignment.TopStart)
+                                    .padding(5.dp)
+                                    .background(Color(0xFFE3383F), RoundedCornerShape(5.dp))
+                                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                                color = Color.White, fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                    }
                 }
             }
         }
