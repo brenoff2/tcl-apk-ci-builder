@@ -28,5 +28,16 @@ class SignInScreenContract(unittest.TestCase):
         script = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
         self.assertIn('copyfile("overrides/AnyTvSignInScreen.kt"', script)
 
+class AccountSessionContract(unittest.TestCase):
+    def test_gateway_never_authenticates_by_local_email(self):
+        src = (ROOT / "overrides/AnyTvAccountSession.kt").read_text(encoding="utf-8")
+        self.assertIn("interface AnyTvAccountGateway", src)
+        self.assertIn("verifiedUserId: String?", src)
+        self.assertIn("guestPreviouslySelected -> AnyTvAccountSession.Guest", src)
+        self.assertIn("data class SignedIn(val userId: String)", src)
+        self.assertNotIn("password = ", src)
+        script = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
+        self.assertIn('copyfile("overrides/AnyTvAccountSession.kt"', script)
+
 if __name__ == "__main__":
     unittest.main()
