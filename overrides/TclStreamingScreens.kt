@@ -2561,7 +2561,7 @@ internal fun TclStreamingScreens(
                         return@launch
                     }
                     AnyTvPersonalResult.ActivationRequired -> {
-                        linkSourceNotice = "Links diretos não autorizados neste celular. "
+                        linkSourceNotice = "Autorização de links solicitada para este aparelho; nenhum código precisa ser inserido. "
                     }
                     AnyTvPersonalResult.ResolverUnavailable -> {
                         linkSourceNotice = "Resolvedor temporariamente indisponível. "
@@ -4620,7 +4620,7 @@ internal fun TclStreamingScreens(
                             linkActivationRequired = state == "unauthorized"
                             deviceLinkStatus = when (state) {
                                 "activated" -> "Links autorizados neste celular."
-                                "unauthorized" -> "Acesso aos links aguardando liberação."
+                                "unauthorized" -> "Acesso aos links pendente de liberação; sem inserir código."
                                 else -> "Não foi possível verificar o acesso aos links."
                             }
                         }
