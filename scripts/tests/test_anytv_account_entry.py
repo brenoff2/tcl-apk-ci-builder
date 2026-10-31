@@ -65,5 +65,16 @@ class UpstreamAuthAdapterContract(unittest.TestCase):
         self.assertIn("auth-kt:3.8.0", build)
         self.assertIn("AnyTvSupabaseAuthGateway.kt", build)
 
+class AuthClientFactoryContract(unittest.TestCase):
+    def test_public_https_only_auth_client(self):
+        src = (ROOT / "overrides/AnyTvAuthClientFactory.kt").read_text(encoding="utf-8")
+        self.assertIn('parsed.scheme == "https"', src)
+        self.assertIn("install(Auth)", src)
+        self.assertIn("config.publishableKey", src)
+        self.assertNotIn("service_role", src.replace("service-role", ""))
+        self.assertNotIn("http://", src)
+        script = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
+        self.assertIn('copyfile("overrides/AnyTvAuthClientFactory.kt"', script)
+
 if __name__ == "__main__":
     unittest.main()
