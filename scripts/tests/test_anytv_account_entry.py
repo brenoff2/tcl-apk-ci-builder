@@ -50,5 +50,20 @@ class EntryHostContract(unittest.TestCase):
         self.assertIn('copyfile("overrides/AnyTvEntryHost.kt"', script)
         self.assertNotIn("AnyTvEntryHost(", script)
 
+class UpstreamAuthAdapterContract(unittest.TestCase):
+    def test_upstream_auth_and_no_fake_login(self):
+        src = (ROOT / "overrides/AnyTvSupabaseAuthGateway.kt").read_text(encoding="utf-8")
+        for snippet in (
+            "client.auth.signInWith(Email)", "client.auth.signUpWith(Email)",
+            "client.auth.signInWith(Google)", "client.auth.signOut()",
+            "client.auth.currentUserOrNull()", "client.auth.awaitInitialization()"
+        ):
+            self.assertIn(snippet, src)
+        self.assertNotIn("service_role", src)
+        self.assertNotIn("passwordHash", src)
+        build = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
+        self.assertIn("auth-kt:3.8.0", build)
+        self.assertIn("AnyTvSupabaseAuthGateway.kt", build)
+
 if __name__ == "__main__":
     unittest.main()
