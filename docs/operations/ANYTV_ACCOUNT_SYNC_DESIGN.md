@@ -29,3 +29,12 @@ Base adotada para a proxima implementacao: **supabase/supabase-kt** (biblioteca 
 - Persistencia: dados locais existentes continuam visiveis antes da autenticacao; importacao por opt-in, confronto por `media+id` e `updated_at`, tombstones, idempotencia. Sessao persistente em armazenamento seguro do SDK; validar que nenhum token aparece em log ou preferencias em claro.
 - Gate de entrega: teste email/senha, login Google, logout, reinicio, recuperacao, restauracao em segundo aparelho, migracao local, RLS negando conta adversaria, e refresh de sessao. Publicar APK assinada somente apos teste dos fluxos reais no provedor configurado.
 - **Estado**: pesquisa e decisao de base realizadas; servidor auth AnyTV, cliente Google OAuth, interface de login e sincronizacao ainda nao implementados. Nao prometer login funcional ate concluir.
+
+## Decisão UX aprovada — tela de escolha antes do login
+- **Primeiro acesso:** mostrar uma tela minimalista nas cores AnyTV (preto, vermelho e branco) com duas ações explícitas: **Continuar sem login** (acesso imediato ao app, modo convidado/local) e **Entrar ou criar conta** (abre a tela de autenticação, e-mail/senha ou Google). Não mostrar campo de senha na tela inicial de escolha.
+- **Convidado:** catálogo, conexão com TV, favoritos, filmes assistidos, séries acompanhadas e preferências seguem funcionando e gravados localmente. Não forçar cadastro, não bloquear recursos existentes por ausência de conta, nem solicitar chaves de API ou códigos.
+- **Aberturas seguintes:** guardar a escolha do modo convidado e abrir o app diretamente; permitir entrar/criar conta mais tarde em Perfil/Configurações. Após login bem-sucedido, deixar de mostrar a tela de escolha nas reaberturas, restaurando a sessão.
+- **Migração:** quando um convidado decidir entrar, oferecer importação e mesclagem não destrutiva de toda sua biblioteca local para a conta, com confirmação e tratamento de duplicados, sem limpar a cópia local antes da sincronização verificada.
+- **Saída da conta:** oferecer voltar a modo convidado sem apagar dados remotos. Não exibir biblioteca de outra conta após logout; isolar cache pessoal por usuário ou remover somente o cache de sessão privada.
+- **Testes obrigatórios:** instalação limpa -> convidado -> reinício sem tela repetida; convidado -> Google/e-mail -> mesclagem -> reinício com sessão; logout -> convidado sem vazamento; sem internet -> convidado funcional.
+- **Estado:** decisão de produto registrada; telas/autenticação/sync ainda não implementadas nem publicadas.
