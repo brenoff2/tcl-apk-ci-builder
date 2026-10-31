@@ -70,6 +70,7 @@ copyfile("overrides/AnyTvAccountEntry.kt", "source/app/src/main/java/com/hari/an
 copyfile("overrides/AnyTvSignInScreen.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvSignInScreen.kt")
 copyfile("overrides/AnyTvAccountSession.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAccountSession.kt")
 copyfile("overrides/AnyTvEntryHost.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvEntryHost.kt")
+copyfile("overrides/AnyTvSupabaseAuthGateway.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvSupabaseAuthGateway.kt")
 # Keep the supplied brand palette consistent on all devices, including when
 # Android changes wallpaper/dynamic colors. Preserve user data and package.
 theme = Path("source/app/src/main/java/com/hari/androidtvremote/ui/theme/Theme.kt")
@@ -115,6 +116,9 @@ theme.write_text(theme_source, encoding="utf-8")
 
 gradle = Path("source/app/build.gradle.kts")
 cfg = gradle.read_text(encoding="utf-8")
+# Official SDK pinned to upstream 3.8.0; OAuth secrets are never shipped.
+assert 'dependencies {' in cfg, 'Gradle dependency block unavailable'
+cfg = cfg.replace('dependencies {', 'dependencies {\\n    implementation("io.github.jan-tennert.supabase:auth-kt:3.8.0")\\n    implementation("io.ktor:ktor-client-okhttp:3.3.1")', 1)
 assert cfg.count("versionCode = 23") == 1 and cfg.count('versionName = "2.3-TCL"') == 1
 cfg = cfg.replace("versionCode = 23","versionCode = 34").replace('versionName = "2.3-TCL"','versionName = "2.9.5-AnyTV"')
 gradle.write_text(cfg, encoding="utf-8")
