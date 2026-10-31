@@ -39,5 +39,16 @@ class AccountSessionContract(unittest.TestCase):
         script = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
         self.assertIn('copyfile("overrides/AnyTvAccountSession.kt"', script)
 
+class EntryHostContract(unittest.TestCase):
+    def test_host_not_activated_without_live_auth(self):
+        host = (ROOT / "overrides/AnyTvEntryHost.kt").read_text(encoding="utf-8")
+        self.assertIn("AnyTvAccountEntry(", host)
+        self.assertIn("AnyTvEntryPreference.selectGuest(context)", host)
+        self.assertIn("onLoginRequested", host)
+        self.assertIn("existingApp()", host)
+        script = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
+        self.assertIn('copyfile("overrides/AnyTvEntryHost.kt"', script)
+        self.assertNotIn("AnyTvEntryHost(", script)
+
 if __name__ == "__main__":
     unittest.main()
