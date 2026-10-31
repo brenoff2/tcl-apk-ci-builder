@@ -19,3 +19,8 @@ O stack real **ja existe**: Docker Compose `clfcj-supabase-e13-shadow` sob `/opt
 - Gate de publicacao: healthcheck e backup do host, dominio/certificado, servidor de Auth, email/senha, login Google, logout, migracao local, isolamento entre 2 contas, sync entre 2 dispositivos, load-test moderado, rollback e APK assinada. Preservar versao 2.9.59 ate aprovar.
 ## Estado
 Inspecao read-only concluida. Nenhum compose, tabela, senha, chave, credencial, registro Auth ou servico de producao foi alterado por esta decisao. A integracao em runtime e o deploy ainda pendem de isolamento do stack em producao.
+
+## Verificacao adicional 31/10/2026
+- MCP server_ops `list_directory` do projeto `/opt/clfcj-supabase-e13-shadow` respondeu com acesso somente leitura; `.supabase-version` foi lido e registra `ref=self-hosted/v0.7.2` e gestao por E13. Evitar modificacoes diretas em E13 sem preservar isolamento.
+- Consulta de configuracao autenticação via `exec_command` foi bloqueada pela governanca `DESTRUCTIVE_CONFIRMATION_REQUIRED` mesmo apos `confirm_write`; nenhum comando executado e nenhuma variavel/secreto foi exposto.
+- Decisao de execução: nao alterar variaveis de Google Auth, SMTP, roteamento ou Postgres do CLFCJ. Criar primeiro adapter mobile usando SDK pronto e parametros *publicos* de endpoint separados do AnyTV; migrar apenas em ambiente AnyTV isolado com backup e verificacao de OAuth.
