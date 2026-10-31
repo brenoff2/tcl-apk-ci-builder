@@ -641,7 +641,9 @@ class StreamingScreens(unittest.TestCase):
     def test_international_and_future_rails_never_invent_cinema_br(self):
         preview = self.screen.split('private fun AnyTvOneRowPreview(', 1)[1].split(
             '/** Compact, single-line score', 1)[0]
-        self.assertIn('card(title, Modifier.width(cardWidth), false)', preview)
+        self.assertIn('card(title, Modifier.fillMaxWidth(), false)', preview)
+        self.assertIn('if (heading == "Em breve · Cinema")', preview)
+        self.assertIn('Text("EM BREVE · CINEMA"', preview)
         self.assertNotIn('heading.contains("Cinema")', preview)
         # Each individual poster still carries an independently confirmed
         # BR now-playing Cinema marker (when the movie is in cinemaIds).
