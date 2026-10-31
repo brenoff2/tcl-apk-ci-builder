@@ -356,12 +356,18 @@ private object StreamingDiskCache {
         return runCatching {
             if (!target.isFile || target.length() > 480000L) return null
             val entry = JSONObject(target.readText(Charsets.UTF_8))
-            if (entry.optLong("until", 0) <= System.currentTimeMillis()) {
-                target.delete()
-                return null
-            }
+            // Keep the last genuine catalogue response as an offline fallback.
+            // Expiry marks freshness, not permission to destroy cached data.
+            if (entry.optLong("until", 0) <= System.currentTimeMillis()) return null
             target.setLastModified(System.currentTimeMillis())
             entry.getJSONObject("value")
+        }.getOrNull()
+    }
+    @Synchronized fun stale(route: String): JSONObject? {
+        val target = file(route) ?: return null
+        return runCatching {
+            if (!target.isFile || target.length() > 480000L) return null
+            JSONObject(target.readText(Charsets.UTF_8)).getJSONObject("value")
         }.getOrNull()
     }
     @Synchronized fun write(route: String, value: JSONObject, ttlMillis: Long) {
@@ -395,8 +401,8 @@ private object StreamingCatalog {
         route.matches(Regex("(movie|tv)/[0-9]+(\\?.*)?")) -> 14L * 86400000L
         route.contains("/watch/providers") -> 12L * 3600000L
         route.contains("external_ids") -> 30L * 86400000L
-        route.contains("trending") || route.contains("now_playing") -> 6L * 3600000L
-        else -> 12L * 3600000L
+        route.contains("trending") || route.contains("now_playing") -> 24L * 3600000L
+        else -> 48L * 3600000L
     }
 
     private fun norm(v: String) = Normalizer.normalize(v.lowercase(), Normalizer.Form.NFD)
@@ -435,22 +441,28 @@ private object StreamingCatalog {
 
     private fun get(token: String, route: String): JSONObject {
         StreamingDiskCache.read(route)?.let { return it }
-        val connection = URL("https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/$route")
-            .openConnection() as HttpURLConnection
-        try {
-            connection.connectTimeout = 6000
-            connection.readTimeout = 9000
-            connection.setRequestProperty("Accept", "application/json")
-            connection.setRequestProperty("User-Agent", "AnyTV/2.9.8 (Android; streaming catalog client)")
-            val status = connection.responseCode
-            if (status !in 200..299) {
-                error("Catálogo temporariamente indisponível (HTTP $status).")
+        // The initial screen must not repeatedly fail empty when the backend
+        // is temporarily unavailable; verified cached titles remain useful.
+        return try {
+            val connection = URL("https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/$route")
+                .openConnection() as HttpURLConnection
+            try {
+                connection.connectTimeout = 6000
+                connection.readTimeout = 9000
+                connection.setRequestProperty("Accept", "application/json")
+                connection.setRequestProperty("User-Agent", "AnyTV/2.9.8 (Android; streaming catalog client)")
+                val status = connection.responseCode
+                if (status !in 200..299) {
+                    error("Catálogo temporariamente indisponível (HTTP $status).")
+                }
+                val payload = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
+                StreamingDiskCache.write(route, payload, ttl(route))
+                payload
+            } finally {
+                connection.disconnect()
             }
-            val payload = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-            StreamingDiskCache.write(route, payload, ttl(route))
-            return payload
-        } finally {
-            connection.disconnect()
+        } catch (failure: Exception) {
+            StreamingDiskCache.stale(route) ?: throw failure
         }
     }
 
