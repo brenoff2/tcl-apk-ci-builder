@@ -65,6 +65,8 @@ copyfile(icon_path, drawable/"anytv_icon.png")
 copyfile(logo_path, drawable/"anytv_wordmark.png")
 copyfile("assets/anytv_horizontal.png", drawable/"anytv_horizontal.png")
 copyfile("overrides/AnyTvSplashScreen.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/SplashScreen.kt")
+# Prepare guest-first account entry; activate the route only with live auth callbacks.
+copyfile("overrides/AnyTvAccountEntry.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAccountEntry.kt")
 # Keep the supplied brand palette consistent on all devices, including when
 # Android changes wallpaper/dynamic colors. Preserve user data and package.
 theme = Path("source/app/src/main/java/com/hari/androidtvremote/ui/theme/Theme.kt")
