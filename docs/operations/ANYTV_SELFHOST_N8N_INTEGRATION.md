@@ -34,3 +34,8 @@ Inspecao read-only concluida. Nenhum compose, tabela, senha, chave, credencial, 
 - O signed workflow `41167802941` falhou na etapa Kotlin: `Unresolved reference 'Email'` em `AnyTvSupabaseAuthGateway.kt`; demais erros eram cascata de inferência de tipo.
 - Consultado upstream oficial supabase-kt tag 3.8.0: Email se encontra em `Auth/src/commonMain/kotlin/io/github/jan/supabase/auth/providers/builtin/Email.kt`; import corrigido no commit `efdc03cb15c94dfc4c4d129f2299dbbbcbf57b62`.
 - Workflow **unsigned sem OTA** `.github/workflows/anytv-2951-unsigned-candidate.yml` passou a incluir alterações de módulos Auth e self-trigger, commit `a1648552e481c205cfebbd6da75e243b5cdebcb8`. Execução `41193275819` iniciou, sem resultado final quando este checkpoint foi escrito. Nunca liberar APK assinada/login baseado só em testes de contrato.
+
+## 31/10/2026 — validacao de compilacao SDK + factory de cliente
+- Build Android unsigned do SDK oficial, workflow run `41193275819`, terminou `completed/success`, artefato unsigned gerado. Confirmacao factual de compilacao apos import Email corrigido; NAO e login ativo.
+- Preparado `overrides/AnyTvAuthClientFactory.kt` commit `3f1bd71fc4796cfc57796a413c531507e0586a8f`: cria client do Supabase Kotlin 3.8.0 com `install(Auth)`, valida URL HTTPS e chave publica vindas da futura configuracao isolada AnyTV. Nao inclui credenciais privadas. Incluido no build pelo commit `2b4241f3c820bdc259d59dee043a365371cfa34a`.
+- Novo workflow de compilacao unsigned `41214083195` disparado para validar factory, ainda pendente na ultima checagem. Nao publicar OTA nem conectar CLFCJ/AnyTV Auth antes da separacao de tenants e TLS/OAuth.
