@@ -17,5 +17,16 @@ class AccountEntryContract(unittest.TestCase):
         self.assertIn('copyfile("overrides/AnyTvAccountEntry.kt"', script)
         self.assertNotIn("AnyTvAccountEntry(onContinueAsGuest", script)
 
+class SignInScreenContract(unittest.TestCase):
+    def test_sign_in_uses_real_callbacks_not_mock_success(self):
+        src = (ROOT / "overrides/AnyTvSignInScreen.kt").read_text(encoding="utf-8")
+        for name in ("onSignIn", "onSignUp", "onGoogle", "onResetPassword", "onGuest"):
+            self.assertIn(name, src)
+        self.assertIn("PasswordVisualTransformation()", src)
+        self.assertNotIn("signInSucceeded = true", src)
+        self.assertNotIn("SharedPreferences", src)
+        script = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
+        self.assertIn('copyfile("overrides/AnyTvSignInScreen.kt"', script)
+
 if __name__ == "__main__":
     unittest.main()
