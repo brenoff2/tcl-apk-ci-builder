@@ -68,6 +68,7 @@ copyfile("overrides/AnyTvSplashScreen.kt", "source/app/src/main/java/com/hari/an
 # Prepare guest-first account entry; activate the route only with live auth callbacks.
 copyfile("overrides/AnyTvAccountEntry.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAccountEntry.kt")
 copyfile("overrides/AnyTvSignInScreen.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvSignInScreen.kt")
+copyfile("overrides/AnyTvAccountSession.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAccountSession.kt")
 # Keep the supplied brand palette consistent on all devices, including when
 # Android changes wallpaper/dynamic colors. Preserve user data and package.
 theme = Path("source/app/src/main/java/com/hari/androidtvremote/ui/theme/Theme.kt")
