@@ -49,3 +49,8 @@ Inspecao read-only concluida. Nenhum compose, tabela, senha, chave, credencial, 
 ## Checkpoint 31/10/2026 — criacao real do diretorio isolado
 - Servidor Contabo vmi3505836: `server_open_ports` nao mostrou listeners nas portas candidatas 15433, 18081, 18181 (snapshot, nao reserva); `list_directory('/opt/anytv-auth')` retornou FileNotFoundError; chamada server_ops `make_directory('/opt/anytv-auth')` com confirm_write=true retornou `ok:true` e o destino criado. Nao houve criacao de containers.
 - server_ops `exec_command` continua bloqueado por `DESTRUCTIVE_CONFIRMATION_REQUIRED`; tentativa de escrever README de preflight via `write_file` bloqueada pelo guardrail. Nao burlar MCP nem afirmar implantacao. Proximo passo: instalar stack isolado com segredo novo e HTTPS AnyTV, sem tocar no Compose E13/CLFCJ; testar email/Google e migracao, entao ativar interface.
+
+## Atualizacao 01/11/2026 — compile validado
+- GitHub Actions unsigned Android build `41193275819` terminou SUCCESS depois da correcao upstream do import `providers.builtin.Email`; valida compatibilidade de compilacao do SDK, NAO autenticação em runtime. Nenhuma APK OTA assinada nova foi publicada.
+- Read-only server_ops: Supabase Auth v2.192.0, PostgREST v14.12, PostgreSQL 17 e Kong 3.9.3 saudaveis no stack E13, n8n operacional. RAM disponivel 10.48 GiB, swap utilizado 6.69 GiB: evitar instalar novo Supabase completo indiscriminadamente.
+- Proximo gate: escolher isolamento de identidade Auth AnyTV e dominio HTTPS separados da producao CLFCJ; configurar segredos no servidor sem exportar para GitHub, migrar tabela com RLS, integrar sessao e UI convidado, testar Google e senha.
