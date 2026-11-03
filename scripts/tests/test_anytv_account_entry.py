@@ -78,11 +78,11 @@ class AuthClientFactoryContract(unittest.TestCase):
 
 class AnyTvClientFactoryContract(unittest.TestCase):
     def test_official_sdk_has_dedicated_https_config(self):
-        src = (ROOT / "overrides/AnyTvSupabaseClientFactory.kt").read_text(encoding="utf-8")
+        src = (ROOT / "overrides/AnyTvAuthClientFactory.kt").read_text(encoding="utf-8")
         self.assertIn("createSupabaseClient(", src)
         self.assertIn("install(Auth)", src)
         self.assertIn("install(Postgrest)", src)
-        self.assertIn('endpoint.startsWith("https://")', src)
+        self.assertIn('parsed.scheme == "https"', src)
         build = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
         self.assertEqual(build.count('implementation("io.github.jan-tennert.supabase:auth-kt:3.8.0")'), 1)
         self.assertEqual(build.count('implementation("io.github.jan-tennert.supabase:postgrest-kt:3.8.0")'), 1)
