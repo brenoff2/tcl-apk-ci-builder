@@ -4,6 +4,7 @@ import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.Postgrest
 
 /**
  * Public configuration only, supplied by the AnyTV release process after
@@ -33,5 +34,6 @@ internal fun createAnyTvAuthClient(config: AnyTvPublicAuthConfig): SupabaseClien
         supabaseKey = config.publishableKey
     ) {
         install(Auth)
+        install(Postgrest)
     }
 }
