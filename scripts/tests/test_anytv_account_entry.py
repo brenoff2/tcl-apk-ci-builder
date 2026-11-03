@@ -87,5 +87,18 @@ class AnyTvClientFactoryContract(unittest.TestCase):
         self.assertEqual(build.count('implementation("io.github.jan-tennert.supabase:auth-kt:3.8.0")'), 1)
         self.assertEqual(build.count('implementation("io.github.jan-tennert.supabase:postgrest-kt:3.8.0")'), 1)
 
+class GuestAuthFlowContract(unittest.TestCase):
+    def test_guest_and_authenticated_paths_use_gateway(self):
+        src = (ROOT / "overrides/AnyTvAccountFlow.kt").read_text(encoding="utf-8")
+        self.assertIn("gateway.restoreSession()", src)
+        self.assertIn("gateway.signInWithEmail(", src)
+        self.assertIn("gateway.signUpWithEmail(", src)
+        self.assertIn("gateway.signInWithGoogle()", src)
+        self.assertIn("gateway.resetPassword(", src)
+        self.assertIn("AnyTvEntryPreference.selectGuest(context)", src)
+        self.assertIn("existingApp()", src)
+        build = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
+        self.assertIn("AnyTvAccountFlow.kt", build)
+
 if __name__ == "__main__":
     unittest.main()
