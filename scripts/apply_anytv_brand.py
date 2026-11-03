@@ -72,6 +72,7 @@ copyfile("overrides/AnyTvAccountSession.kt", "source/app/src/main/java/com/hari/
 copyfile("overrides/AnyTvEntryHost.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvEntryHost.kt")
 copyfile("overrides/AnyTvSupabaseAuthGateway.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvSupabaseAuthGateway.kt")
 copyfile("overrides/AnyTvSupabaseClientFactory.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvSupabaseClientFactory.kt")
+copyfile("overrides/AnyTvAccountFlow.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAccountFlow.kt")
 copyfile("overrides/AnyTvAuthClientFactory.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAuthClientFactory.kt")
 # Keep the supplied brand palette consistent on all devices, including when
 # Android changes wallpaper/dynamic colors. Preserve user data and package.
