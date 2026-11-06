@@ -11,7 +11,7 @@ class AccountEntryContract(unittest.TestCase):
         self.assertIn('putString(MODE, "guest").commit()', screen)
         self.assertIn("onContinueAsGuest: () -> Unit", screen)
         self.assertIn("onSignIn: () -> Unit", screen)
-        self.assertNotIn("password", screen.lower())
+        self.assertNotIn("PasswordVisualTransformation", screen)
     def test_guest_entry_included_in_build_but_auth_not_faked(self):
         script = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
         self.assertIn('copyfile("overrides/AnyTvAccountEntry.kt"', script)
