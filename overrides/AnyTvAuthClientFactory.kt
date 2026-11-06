@@ -3,6 +3,7 @@ package com.hari.androidtvremote.ui.app
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.auth.Auth
+import io.github.jan.supabase.auth.FlowType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.Postgrest
 
@@ -33,7 +34,12 @@ internal fun createAnyTvAuthClient(config: AnyTvPublicAuthConfig): SupabaseClien
         supabaseUrl = config.apiUrl.trimEnd('/'),
         supabaseKey = config.publishableKey
     ) {
-        install(Auth)
+        install(Auth) {
+            // Browser OAuth returns to this application's authenticated callback.
+            scheme = "com.tclremote.livre.v2"
+            host = "auth"
+            flowType = FlowType.PKCE
+        }
         install(Postgrest)
     }
 }
