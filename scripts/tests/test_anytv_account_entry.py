@@ -111,13 +111,22 @@ class GoogleOAuthIntegrationContract(unittest.TestCase):
         self.assertIn("client.handleDeeplinks(intent)", gateway)
         self.assertIn("SessionStatus.Authenticated", gateway)
         self.assertIn("Continuar com Google", entry)
+        self.assertIn('publishableKey.startsWith("sb_publishable_")', client)
 
     def test_android_build_applies_real_callback_without_enabling_unconfigured_auth(self):
         script = (ROOT / "scripts/apply_anytv_google_login.py").read_text(encoding="utf-8")
         build = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
         public = (ROOT / "release/anytv-auth-public.json").read_text(encoding="utf-8")
-        self.assertIn('"apiUrl": ""', public)
-        self.assertIn('"publishableKey": ""', public)
+        import json
+        from urllib.parse import urlparse
+        metadata = json.loads(public)
+        self.assertEqual(set(metadata), {"apiUrl", "publishableKey"})
+        self.assertTrue(all(isinstance(v, str) for v in metadata.values()))
+        self.assertEqual(bool(metadata["apiUrl"]), bool(metadata["publishableKey"]))
+        if metadata["apiUrl"]:
+            self.assertEqual(urlparse(metadata["apiUrl"]).scheme, "https")
+            self.assertTrue(metadata["publishableKey"].startswith("sb_publishable_"))
+        self.assertIn('if not key.startswith("sb_publishable_")', script)
         self.assertIn('anyTvGoogleGateway?.handleAuthCallback(intent)', script)
         self.assertIn('android:host="auth"', script)
         self.assertIn('android:launchMode="singleTop"', script)
