@@ -31,8 +31,8 @@ if url:
     if (parsed.scheme != "https" or not parsed.hostname or parsed.username
             or parsed.password or parsed.query or parsed.fragment or len(key) < 20):
         raise RuntimeError("AnyTV public auth settings require HTTPS and a publishable key")
-    if key.startswith("sb_secret_"):
-        raise RuntimeError("A server secret must never be shipped in the APK")
+    if not key.startswith("sb_publishable_"):
+        raise RuntimeError("AnyTV must embed only a public Supabase publishable key")
 
 values = Path("source/app/src/main/res/values/anytv_auth_public.xml")
 values.write_text(
