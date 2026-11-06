@@ -46,7 +46,9 @@ internal object AnyTvEntryPreference {
 @Composable
 internal fun AnyTvAccountEntry(
     onContinueAsGuest: () -> Unit,
-    onSignIn: () -> Unit
+    onSignIn: () -> Unit,
+    busy: Boolean = false,
+    error: String? = null
 ) {
     Column(
         modifier = Modifier.fillMaxSize().background(Color(0xFF09090B))
@@ -65,13 +67,19 @@ internal fun AnyTvAccountEntry(
             color = Color(0xFFBBB5B9), textAlign = TextAlign.Center)
         Spacer(Modifier.height(36.dp))
         Button(
-            onClick = onContinueAsGuest, modifier = Modifier.fillMaxWidth().height(56.dp),
+            onClick = onContinueAsGuest, enabled = !busy,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF1744))
         ) { Text("Continuar sem login", color = Color.White) }
         Spacer(Modifier.height(12.dp))
-        OutlinedButton(onClick = onSignIn,
+        OutlinedButton(onClick = onSignIn, enabled = !busy,
             modifier = Modifier.fillMaxWidth().height(56.dp)) {
-            Text("Entrar ou criar conta", color = Color.White)
+            Text(if (busy) "Abrindo Google..." else "Continuar com Google", color = Color.White)
+        }
+        if (!error.isNullOrBlank()) {
+            Spacer(Modifier.height(10.dp))
+            Text(error, fontSize = 13.sp, color = Color(0xFFFF637A),
+                textAlign = TextAlign.Center)
         }
         Spacer(Modifier.height(20.dp))
         Text("Você pode criar uma conta depois, sem perder seus dados locais.",
