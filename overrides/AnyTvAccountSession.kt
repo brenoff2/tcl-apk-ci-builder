@@ -1,5 +1,7 @@
 package com.hari.androidtvremote.ui.app
 
+import kotlinx.coroutines.flow.Flow
+
 /**
  * Auth-independent state for AnyTV account entry. Supabase Auth is the sole
  * authority for SignedIn: do not infer it from a saved email or guest flag.
@@ -16,6 +18,7 @@ internal sealed interface AnyTvAccountSession {
 
 /** Distinct from TV device pairing and its Cloudflare authorization. */
 internal interface AnyTvAccountGateway {
+    fun sessionUpdates(): Flow<AnyTvAccountSession>
     suspend fun restoreSession(): AnyTvAccountSession
     suspend fun signInWithEmail(email: String, password: String): AnyTvAccountSession
     suspend fun signUpWithEmail(email: String, password: String): AnyTvAccountSession
