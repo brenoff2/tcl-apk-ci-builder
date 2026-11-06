@@ -7,7 +7,7 @@ class AccountEntryContract(unittest.TestCase):
     def test_guest_entry_has_real_persistent_choice(self):
         screen = (ROOT / "overrides/AnyTvAccountEntry.kt").read_text(encoding="utf-8")
         self.assertIn('Text("Continuar sem login"', screen)
-        self.assertIn('Text("Entrar ou criar conta"', screen)
+        self.assertIn('"Continuar com Google"', screen)
         self.assertIn('putString(MODE, "guest").commit()', screen)
         self.assertIn("onContinueAsGuest: () -> Unit", screen)
         self.assertIn("onSignIn: () -> Unit", screen)
@@ -91,14 +91,39 @@ class GuestAuthFlowContract(unittest.TestCase):
     def test_guest_and_authenticated_paths_use_gateway(self):
         src = (ROOT / "overrides/AnyTvAccountFlow.kt").read_text(encoding="utf-8")
         self.assertIn("gateway.restoreSession()", src)
-        self.assertIn("gateway.signInWithEmail(", src)
-        self.assertIn("gateway.signUpWithEmail(", src)
         self.assertIn("gateway.signInWithGoogle()", src)
-        self.assertIn("gateway.resetPassword(", src)
+        self.assertIn("gateway.sessionUpdates().collect", src)
+        self.assertNotIn("gateway.signInWithEmail(", src)
+        self.assertNotIn("gateway.signUpWithEmail(", src)
         self.assertIn("AnyTvEntryPreference.selectGuest(context)", src)
         self.assertIn("existingApp()", src)
         build = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
         self.assertIn("AnyTvAccountFlow.kt", build)
+
+class GoogleOAuthIntegrationContract(unittest.TestCase):
+    def test_google_only_pkce_and_verified_session(self):
+        client = (ROOT / "overrides/AnyTvAuthClientFactory.kt").read_text(encoding="utf-8")
+        gateway = (ROOT / "overrides/AnyTvSupabaseAuthGateway.kt").read_text(encoding="utf-8")
+        entry = (ROOT / "overrides/AnyTvAccountEntry.kt").read_text(encoding="utf-8")
+        self.assertIn("flowType = FlowType.PKCE", client)
+        self.assertIn('scheme = "com.tclremote.livre.v2"', client)
+        self.assertIn('host = "auth"', client)
+        self.assertIn("client.handleDeeplinks(intent)", gateway)
+        self.assertIn("SessionStatus.Authenticated", gateway)
+        self.assertIn("Continuar com Google", entry)
+
+    def test_android_build_applies_real_callback_without_enabling_unconfigured_auth(self):
+        script = (ROOT / "scripts/apply_anytv_google_login.py").read_text(encoding="utf-8")
+        build = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
+        public = (ROOT / "release/anytv-auth-public.json").read_text(encoding="utf-8")
+        self.assertIn('"apiUrl": ""', public)
+        self.assertIn('"publishableKey": ""', public)
+        self.assertIn('anyTvGoogleGateway?.handleAuthCallback(intent)', script)
+        self.assertIn('android:host="auth"', script)
+        self.assertIn('android:launchMode="singleTop"', script)
+        self.assertIn('AnyTvAccountFlow(gateway = gateway, existingApp = existingApp)', script)
+        self.assertIn('if (gateway == null) existingApp()', script)
+        self.assertIn('runpy.run_path("scripts/apply_anytv_google_login.py"', build)
 
 if __name__ == "__main__":
     unittest.main()
