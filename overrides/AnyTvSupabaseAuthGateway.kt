@@ -1,7 +1,13 @@
 package com.hari.androidtvremote.ui.app
 
+import android.content.Intent
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.handleDeeplinks
+import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.auth.providers.Google
 
@@ -20,6 +26,21 @@ internal class AnyTvSupabaseAuthGateway(
         client.auth.currentUserOrNull()?.id?.let {
             AnyTvAccountSession.SignedIn(it)
         } ?: AnyTvAccountSession.Choosing
+
+    // The OAuth browser returns asynchronously. Session updates, not the browser
+    // launch result, are the sole authority to unlock the application.
+    override fun sessionUpdates(): Flow<AnyTvAccountSession> =
+        client.auth.sessionStatus.map { status ->
+            when (status) {
+                is SessionStatus.Authenticated -> session()
+                SessionStatus.Initializing -> AnyTvAccountSession.Loading
+                else -> AnyTvAccountSession.Choosing
+            }
+        }
+
+    fun handleAuthCallback(intent: Intent) {
+        client.handleDeeplinks(intent)
+    }
 
     override suspend fun restoreSession(): AnyTvAccountSession {
         client.auth.awaitInitialization()
