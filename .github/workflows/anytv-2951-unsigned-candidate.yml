@@ -14,6 +14,10 @@ on:
       - 'overrides/AnyTvSplashScreen.kt'
       - 'overrides/AnyTvSupabaseAuthGateway.kt'
       - 'overrides/AnyTvAuthClientFactory.kt'
+      - 'overrides/AnyTvAccountFlow.kt'
+      - 'scripts/apply_anytv_google_login.py'
+      - 'release/anytv-auth-public.json'
+      - 'scripts/tests/test_anytv_account_entry.py'
       - 'overrides/AnyTvAccountEntry.kt'
       - 'overrides/AnyTvSignInScreen.kt'
       - 'overrides/AnyTvAccountSession.kt'
@@ -84,6 +88,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_account_entry.py' -v
       - name: Apply V2 package identity and compile current candidate
         run: |
           set -euo pipefail
