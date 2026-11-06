@@ -134,5 +134,60 @@ class GoogleOAuthIntegrationContract(unittest.TestCase):
         self.assertIn('if (gateway == null) existingApp()', script)
         self.assertIn('runpy.run_path("scripts/apply_anytv_google_login.py"', build)
 
+
+class GoogleServerPreflightContract(unittest.TestCase):
+    def test_missing_google_oauth_configuration_fails_closed_without_exposing_secrets(self):
+        import runpy
+        import tempfile
+        import json
+        ns = runpy.run_path(str(ROOT / "scripts/anytv_selfhost_preflight.py"))
+        with tempfile.TemporaryDirectory() as temp:
+            fn = ns["google_readiness"]
+            fn.__globals__["DEST"] = pathlib.Path(temp)
+            status = fn()
+        self.assertFalse(status["config_ready"])
+        self.assertFalse(status["google_web_client_present"])
+        self.assertFalse(status["google_secret_present"])
+        self.assertNotIn("secret_value", json.dumps(status))
+
+    def test_complete_google_configuration_requires_https_android_callback_and_passthrough(self):
+        import runpy
+        import tempfile
+        import json
+        ns = runpy.run_path(str(ROOT / "scripts/anytv_selfhost_preflight.py"))
+        with tempfile.TemporaryDirectory() as temp:
+            folder = pathlib.Path(temp)
+            (folder / ".env").write_text(
+                "GOOGLE_ENABLED=true\\n"
+                "GOOGLE_CLIENT_ID=google-test.apps.googleusercontent.com\\n"
+                "GOOGLE_SECRET=not-a-real-google-secret\\n"
+                "API_EXTERNAL_URL=https://auth.example.org/auth/v1\\n"
+                "SITE_URL=https://auth.example.org\\n"
+                "ADDITIONAL_REDIRECT_URLS=com.tclremote.livre.v2://auth\\n",
+                encoding="utf-8",
+            )
+            (folder / "docker-compose.anytv.yml").write_text(
+                "    GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED}\\n"
+                "    GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}\\n"
+                "    GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}\\n"
+                "    GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback\\n",
+                encoding="utf-8",
+            )
+            fn = ns["google_readiness"]
+            fn.__globals__["DEST"] = folder
+            status = fn()
+            self.assertTrue(status["config_ready"])
+            self.assertNotIn("not-a-real-google-secret", json.dumps(status))
+            (folder / ".env").write_text(
+                (folder / ".env").read_text(encoding="utf-8").replace(
+                    "https://auth.example.org/auth/v1", "http://localhost:8000/auth/v1"
+                ),
+                encoding="utf-8",
+            )
+            status = fn()
+            self.assertFalse(status["config_ready"])
+            self.assertFalse(status["public_auth_https"])
+
+
 if __name__ == "__main__":
     unittest.main()
