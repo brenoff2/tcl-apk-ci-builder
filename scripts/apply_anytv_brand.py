@@ -73,6 +73,9 @@ copyfile("overrides/AnyTvEntryHost.kt", "source/app/src/main/java/com/hari/andro
 copyfile("overrides/AnyTvSupabaseAuthGateway.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvSupabaseAuthGateway.kt")
 copyfile("overrides/AnyTvAccountFlow.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAccountFlow.kt")
 copyfile("overrides/AnyTvAuthClientFactory.kt", "source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAuthClientFactory.kt")
+# Install the Google-only OAuth callback after copying the approved overlays.
+import runpy
+runpy.run_path("scripts/apply_anytv_google_login.py", run_name="__main__")
 # Keep the supplied brand palette consistent on all devices, including when
 # Android changes wallpaper/dynamic colors. Preserve user data and package.
 theme = Path("source/app/src/main/java/com/hari/androidtvremote/ui/theme/Theme.kt")
