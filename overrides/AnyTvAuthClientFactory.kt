@@ -21,8 +21,8 @@ internal data class AnyTvPublicAuthConfig(
         require(parsed.scheme == "https" && !parsed.host.isNullOrBlank() &&
             parsed.userInfo == null && parsed.query == null &&
             parsed.fragment == null) { "AnyTV Auth requires its own HTTPS endpoint" }
-        require(publishableKey.isNotBlank() && publishableKey.length >= 20) {
-            "Missing AnyTV public API key"
+        require(publishableKey.startsWith("sb_publishable_")) {
+            "AnyTV Auth accepts a public Supabase publishable key only"
         }
     }
 }
