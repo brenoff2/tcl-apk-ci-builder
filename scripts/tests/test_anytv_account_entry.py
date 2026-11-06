@@ -158,19 +158,19 @@ class GoogleServerPreflightContract(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             folder = pathlib.Path(temp)
             (folder / ".env").write_text(
-                "GOOGLE_ENABLED=true\\n"
-                "GOOGLE_CLIENT_ID=google-test.apps.googleusercontent.com\\n"
-                "GOOGLE_SECRET=not-a-real-google-secret\\n"
-                "API_EXTERNAL_URL=https://auth.example.org/auth/v1\\n"
-                "SITE_URL=https://auth.example.org\\n"
-                "ADDITIONAL_REDIRECT_URLS=com.tclremote.livre.v2://auth\\n",
+                "GOOGLE_ENABLED=true\n"
+                "GOOGLE_CLIENT_ID=google-test.apps.googleusercontent.com\n"
+                "GOOGLE_SECRET=not-a-real-google-secret\n"
+                "API_EXTERNAL_URL=https://auth.example.org/auth/v1\n"
+                "SITE_URL=https://auth.example.org\n"
+                "ADDITIONAL_REDIRECT_URLS=com.tclremote.livre.v2://auth\n",
                 encoding="utf-8",
             )
             (folder / "docker-compose.anytv.yml").write_text(
-                "    GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED}\\n"
-                "    GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}\\n"
-                "    GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}\\n"
-                "    GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback\\n",
+                "    GOTRUE_EXTERNAL_GOOGLE_ENABLED: ${GOOGLE_ENABLED}\n"
+                "    GOTRUE_EXTERNAL_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}\n"
+                "    GOTRUE_EXTERNAL_GOOGLE_SECRET: ${GOOGLE_SECRET}\n"
+                "    GOTRUE_EXTERNAL_GOOGLE_REDIRECT_URI: ${API_EXTERNAL_URL}/callback\n",
                 encoding="utf-8",
             )
             fn = ns["google_readiness"]
