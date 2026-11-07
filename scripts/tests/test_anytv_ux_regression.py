@@ -29,6 +29,26 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertIn("title.poster", self.catalog)
         self.assertIn("credits", self.worker)
 
+    def test_rating_is_not_cached_as_48h_catalogue_or_stale_offline_value(self):
+        start = self.catalog.index('    private fun get(token: String, route: String): JSONObject {')
+        end = self.catalog.index('    suspend fun traktRating(', start)
+        getter = self.catalog[start:end]
+        self.assertIn('val remoteRating = route.startsWith("ratings/trakt/")', getter)
+        self.assertIn('if (!remoteRating) StreamingDiskCache.read(route)', getter)
+        self.assertIn('if (!remoteRating) StreamingDiskCache.write(route, payload, ttl(route))', getter)
+        self.assertIn('if (remoteRating) throw failure', getter)
+        self.assertIn('StreamingDiskCache.stale(route) ?: throw failure', getter)
+        self.assertIn('max-age=900', self.worker)
+
+    def test_detail_parses_only_valid_trakt_rating_and_shows_unavailable(self):
+        self.assertIn('get("backend", "ratings/trakt/$media/$id")', self.catalog)
+        self.assertIn('data.optString("source") == "trakt"', self.catalog)
+        self.assertIn('votes > 0 && it.isFinite() && it in 0.0..10.0', self.catalog)
+        self.assertIn('detailTraktRating = runCatching { StreamingCatalog.traktRating(item.media, item.id) }', self.catalog)
+        self.assertIn('?: "Trakt: nota indisponível"', self.catalog)
+        self.assertIn('StreamingCatalog.cast(item.media, item.id)', self.catalog)
+        self.assertIn('minOf(cast.length(), 12)', self.catalog)
+
     def test_only_confirmed_streaming_preselected(self):
         self.assertIn("StreamingCatalog.appHasOffer(app, offers)", self.catalog)
         self.assertIn("eligible.singleOrNull()", self.catalog)
