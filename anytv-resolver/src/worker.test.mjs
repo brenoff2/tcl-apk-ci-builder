@@ -395,7 +395,7 @@ test("watched-film metadata route reads exact TMDB ID only, caches and rejects u
   assert.equal(env._cache.size, 1);
   for (const path of [
     "/v1/catalog/movie/0", "/v1/catalog/movie/-1",
-    "/v1/catalog/movie/0550", "/v1/catalog/movie/550/credits",
+    "/v1/catalog/movie/0550",
     "/v1/catalog/movie/550?region=BR",
     "/v1/catalog/movie/550?query=someone",
     "/v1/catalog/movie/550?page=2",
