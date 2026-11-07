@@ -234,6 +234,7 @@ internal data class StreamingGenre(val id: Int, val name: String)
 internal data class StreamingSeason(val number: Int, val name: String, val count: Int, val airDate: String = "")
 internal data class StreamingEpisode(val number: Int, val name: String, val airDate: String)
 internal data class StreamingOffer(val id: Int, val name: String, val logo: String)
+internal data class StreamingActor(val name: String, val character: String, val photo: String)
 internal data class StreamingFavorite(val title: StreamingTitle, val packageName: String)
 internal data class StreamingResults(val titles: List<StreamingTitle>, val more: Boolean)
 
@@ -465,6 +466,18 @@ private object StreamingCatalog {
             StreamingDiskCache.stale(route) ?: throw failure
         }
     }
+
+    suspend fun cast(media: String, id: Int): List<StreamingActor> =
+        withContext(Dispatchers.IO) {
+            val credits = get("backend", "$media/$id/credits")
+            val cast = credits.optJSONArray("cast") ?: return@withContext emptyList()
+            (0 until minOf(cast.length(), 12)).mapNotNull { index ->
+                val actor = cast.optJSONObject(index) ?: return@mapNotNull null
+                val name = actor.optString("name").trim()
+                if (name.isBlank()) return@mapNotNull null
+                StreamingActor(name, actor.optString("character"), actor.optString("profile_path"))
+            }
+        }
 
     suspend fun genres(token: String, media: String): List<StreamingGenre> =
         withContext(Dispatchers.IO) {
@@ -1990,6 +2003,7 @@ internal fun TclStreamingScreens(
     var details by remember { mutableStateOf<StreamingTitle?>(null) }
     var trailerLink by remember { mutableStateOf<String?>(null) }
     var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
+    var detailCast by remember { mutableStateOf<List<StreamingActor>>(emptyList()) }
     val offerCache = remember { mutableStateMapOf<String, List<StreamingOffer>>() }
     var traktSignals by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     LaunchedEffect(Unit) {
@@ -2132,6 +2146,7 @@ internal fun TclStreamingScreens(
         val item = details
         trailerLink = null
         relatedTitles = emptyList()
+        detailCast = emptyList()
         detailsOffers = null
         seriesSeasons = emptyList()
         seasonEpisodes = emptyList()
@@ -2147,10 +2162,19 @@ internal fun TclStreamingScreens(
             trailerLink = runCatching { StreamingCatalog.trailer(item.media, item.id) }.getOrNull()
             relatedTitles = runCatching { StreamingCatalog.related(item.media, item.id) }
                 .getOrDefault(emptyList())
+            detailCast = runCatching { StreamingCatalog.cast(item.media, item.id) }
+                .getOrDefault(emptyList())
             val key = "${item.media}:${item.id}"
             detailsOffers = offerCache[key] ?:
                 runCatching { StreamingCatalog.offersInBrazil(item) }.getOrNull()
             detailsOffers?.let { offerCache[key] = it }
+            val preferred = displayed.filter { app ->
+                detailsOffers?.let { offers -> StreamingCatalog.appHasOffer(app, offers) } == true &&
+                    (myServices.isEmpty() || myServices.any { selectedService ->
+                        selectedService.equals(app.name, ignoreCase = true)
+                    })
+            }
+            if (detailsPackage == null) detailsPackage = preferred.firstOrNull()?.packageName
             detailLoading = false
         }
     }
@@ -4705,6 +4729,26 @@ internal fun TclStreamingScreens(
                         }
                     }
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
+                    if (detailCast.isNotEmpty()) {
+                        Text("Elenco principal", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            detailCast.forEach { actor ->
+                                Column(modifier = Modifier.width(105.dp)) {
+                                    if (actor.photo.startsWith("/")) {
+                                        AnyTvPinnedImage(
+                                            model = "https://image.tmdb.org/t/p/w185" + actor.photo,
+                                            contentDescription = actor.name,
+                                            modifier = Modifier.fillMaxWidth().height(132.dp))
+                                    }
+                                    Text(actor.name, fontSize = 11.sp, maxLines = 2)
+                                    if (actor.character.isNotBlank()) Text(actor.character,
+                                        fontSize = 10.sp, maxLines = 2,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+                        }
+                    }
                     if (detailLoading) CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     val video = trailerLink
                     if (video != null) {
@@ -4864,6 +4908,13 @@ internal fun TclStreamingScreens(
                     Text("Ofertas informadas pelo TMDB/JustWatch; confirme no streaming.",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (title.poster.startsWith("/")) {
+                        Text("Cartaz original", fontWeight = FontWeight.SemiBold)
+                        AnyTvPinnedImage(
+                            model = "https://image.tmdb.org/t/p/w780" + title.poster,
+                            contentDescription = "Cartaz original de " + title.name,
+                            modifier = Modifier.fillMaxWidth().height(500.dp))
+                    }
                 }
             },
             confirmButton = {
