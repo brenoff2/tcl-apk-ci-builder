@@ -28,6 +28,12 @@ jobs:
           node --check src/worker.mjs
       - name: Trakt signal adapter regression (no external API credits)
         run: node --test src/worker.test.mjs
+      - name: AnyTV Google account entry and PKCE regression
+        working-directory: .
+        run: python3 -m unittest discover -s scripts/tests -p 'test_anytv_account_entry.py' -v
+      - name: AnyTV film detail, streaming selection and UI contracts
+        working-directory: .
+        run: python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
       - name: SQLite activation transaction regressions
         run: python3 -m unittest discover -s tests -p 'test_device_activation_sql.py' -v
       - name: Cloudflare D1 local migration and activation smoke
