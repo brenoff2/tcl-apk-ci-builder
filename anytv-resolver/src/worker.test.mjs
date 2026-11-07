@@ -750,3 +750,104 @@ test("Trakt rating rejects invalid upstream data and handles empty votes", async
       assert.deepEqual(await result.json(), { source: "trakt", kind: "movie", rating: null, votes: 0 });
   }
 });
+
+
+test("Preview QA contracts: TMDB credits return cast without leaking the server token", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "preview-tmdb-server-secret";
+  const requested = [];
+  const deps = { fetch: async (url, options) => {
+    requested.push(url);
+    assert.equal(options.headers.Authorization, "Bearer preview-tmdb-server-secret");
+    assert.equal(options.redirect, "manual");
+    const uri = new URL(url);
+    assert.equal(uri.hostname, "api.themoviedb.org");
+    assert.equal(uri.searchParams.get("language"), "pt-BR");
+    const kind = uri.pathname.includes("/movie/") ? "movie" : "tv";
+    return response({ id: kind === "movie" ? 550 : 1399, cast: [
+      { id: 71, name: "Pessoa Exemplo", character: "Papel Exemplo", order: 0 }
+    ], crew: [] });
+  } };
+  for (const [kind, id] of [["movie", 550], ["tv", 1399]]) {
+    const path = "/v1/catalog/" + kind + "/" + id + "/credits?language=pt-BR";
+    const first = await handleRequest(request(path, null), env, deps);
+    assert.equal(first.status, 200);
+    const body = await first.json();
+    assert.equal(body.id, id);
+    assert.equal(body.cast[0].name, "Pessoa Exemplo");
+    assert.equal(body.cast[0].character, "Papel Exemplo");
+    assert.equal(JSON.stringify(body).includes(env.TMDB_READ_TOKEN), false);
+    const second = await handleRequest(request(path, null), env, deps);
+    assert.equal(second.status, 200);
+    assert.equal(second.headers.get("x-anytv-cache"), "hit");
+    assert.deepEqual(await second.json(), body);
+  }
+  assert.deepEqual(requested.map(url => new URL(url).pathname),
+    ["/3/movie/550/credits", "/3/tv/1399/credits"]);
+});
+
+test("Preview QA contracts: TMDB credits reject invalid requests and sanitize unavailable upstream", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "preview-tmdb-server-secret";
+  let calls = 0;
+  const deps = { fetch: async () => { calls++; return response({ error: "upstream" }, 404); } };
+  for (const path of ["/v1/catalog/movie/0/credits",
+    "/v1/catalog/tv/01399/credits",
+    "/v1/catalog/movie/550/credits?language=en-US",
+    "/v1/catalog/movie/550/credits?language=pt-BR&language=pt-BR"]) {
+    assert.equal((await handleRequest(request(path, null), env, deps)).status, 400, path);
+  }
+  assert.equal(calls, 0);
+  const missingSecret = await handleRequest(request("/v1/catalog/movie/550/credits", null), { DB: env.DB }, deps);
+  assert.equal(missingSecret.status, 503);
+  assert.deepEqual(await missingSecret.json(), { status: "catalog_not_configured" });
+  const notFound = await handleRequest(request("/v1/catalog/movie/550/credits", null), env, deps);
+  assert.equal(notFound.status, 503);
+  assert.deepEqual(await notFound.json(), { status: "catalog_unavailable" });
+  assert.equal(notFound.headers.get("x-anytv-upstream-status"), "404");
+  assert.equal(calls, 1);
+  assert.equal(env._cache.size, 0);
+});
+
+test("Preview QA contracts: Trakt rating uses null for 404 and 503 for outages", async () => {
+  const env = { TRAKT_CLIENT_ID: "preview-trakt-server-secret" };
+  for (const kind of ["movie", "tv"]) {
+    let calls = 0;
+    const missing = await handleRequest(request("/v1/catalog/ratings/trakt/" + kind + "/42", null), env, {
+      fetch: async () => { calls++; return response({ message: "not found" }, 404); }
+    });
+    assert.equal(missing.status, 200);
+    assert.deepEqual(await missing.json(), { source: "trakt", kind, rating: null, votes: 0 });
+    assert.equal(calls, 1);
+  }
+  const badGateway = await handleRequest(request("/v1/catalog/ratings/trakt/movie/42", null), env, {
+    fetch: async () => response({ status: "rate limited" }, 429)
+  });
+  assert.equal(badGateway.status, 503);
+  assert.deepEqual(await badGateway.json(), { status: "trakt_unavailable" });
+  const thrown = await handleRequest(request("/v1/catalog/ratings/trakt/movie/42", null), env, {
+    fetch: async () => { throw Error("preview-trakt-server-secret upstream timeout"); }
+  });
+  assert.equal(thrown.status, 503);
+  assert.equal(JSON.stringify(await thrown.json()).includes(env.TRAKT_CLIENT_ID), false);
+});
+
+test("Preview QA contracts: Trakt rating returns public 900-second cache only for valid upstream", async () => {
+  const env = { TRAKT_CLIENT_ID: "preview-trakt-server-secret" };
+  let calls = 0;
+  const result = await handleRequest(request("/v1/catalog/ratings/trakt/tv/1399", null), env, {
+    fetch: async (url, init) => {
+      calls++;
+      assert.equal(init.headers["trakt-api-key"], env.TRAKT_CLIENT_ID);
+      if (url.includes("/search/tmdb/")) return response([
+        { type: "show", show: { ids: { tmdb: 1399, trakt: 197 } } }
+      ]);
+      if (url.endsWith("/shows/197/ratings")) return response({ rating: 8.3, votes: 55 });
+      throw Error("Unexpected upstream");
+    }
+  });
+  assert.equal(result.status, 200);
+  assert.equal(result.headers.get("cache-control"), "public, max-age=900");
+  assert.deepEqual(await result.json(), { source: "trakt", kind: "tv", rating: 8.3, votes: 55 });
+  assert.equal(calls, 2);
+});
