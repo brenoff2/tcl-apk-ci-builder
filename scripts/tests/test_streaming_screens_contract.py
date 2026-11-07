@@ -1359,7 +1359,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn("StreamingCatalog.cast(item.media, item.id)", self.screen)
         self.assertIn("Elenco principal", self.screen)
         self.assertIn("Cartaz original", self.screen)
-        self.assertIn("detailsPackage = preferred.firstOrNull()?.packageName", self.screen)
+        self.assertIn("detailsPackage = preferred?.packageName", self.screen)
         self.assertIn('credits', worker)
         self.assertNotIn("IMDb: " + "10.0", self.screen)
 
