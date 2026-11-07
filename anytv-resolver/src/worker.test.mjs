@@ -564,6 +564,7 @@ test("discovery endpoints are allowlisted and cached without exposing TMDB token
   for (const route of [
     "trending/movie/week", "trending/tv/day", "movie/top_rated",
     "movie/now_playing", "tv/on_the_air", "movie/1/videos",
+    "movie/550/credits", "tv/42/credits",
     "tv/2/similar", "movie/3/recommendations"
   ]) {
     const req = new Request("https://anytv.invalid/v1/catalog/" + route + "?language=pt-BR");
