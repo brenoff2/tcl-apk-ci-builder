@@ -571,7 +571,7 @@ test("discovery endpoints are allowlisted and cached without exposing TMDB token
     assert.equal((await catalogRequest(req, env, deps)).status, 200, route);
     assert.equal((await catalogRequest(req, env, deps)).status, 200, route);
   }
-  assert.equal(calls, 8);
+  assert.equal(calls, 10);
   for (const route of ["movie/0/videos", "movie/1/credits/all", "trending/person/day"]) {
     assert.equal((await catalogRequest(new Request("https://anytv.invalid/v1/catalog/" + route), env)).status, 400);
   }
