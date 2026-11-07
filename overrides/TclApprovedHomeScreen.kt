@@ -260,6 +260,7 @@ fun TclApprovedHomeScreen(
                         tvHost = sessionState.connectedDevice?.ipAddress,
                         tvIdentity = sessionState.connectedDevice?.id,
                         tvName = sessionState.connectedDevice?.name,
+                        onRemoteKey = { remoteKey(it) },
                         modifier = Modifier.fillMaxWidth()
                     )
 
