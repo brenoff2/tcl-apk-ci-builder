@@ -1651,7 +1651,9 @@ private fun AnyTvGenreViewIcon(
 internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String,
     tvName: String, onDismiss: () -> Unit,
-    onRemoteKey: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {}
+    onRemoteKey: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
+    onKeyboardText: (String) -> Unit = {},
+    onKeyboardEnter: () -> Unit = {}
 ) {
     val context = LocalContext.current
     StreamingCatalog.configure(context)
@@ -1901,6 +1903,7 @@ internal fun TclStreamingScreens(
     var titleActionPending by remember { mutableStateOf(false) }
     var showPlaybackRemote by remember { mutableStateOf(false) }
     var remoteMinimized by remember { mutableStateOf(false) }
+    var remoteText by remember { mutableStateOf("") }
     var titleActionFeedback by remember { mutableStateOf<String?>(null) }
     var deviceLinkStatus by remember { mutableStateOf<String?>(null) }
     var deviceIdSuffix by remember { mutableStateOf<String?>(null) }
@@ -5021,6 +5024,18 @@ internal fun TclStreamingScreens(
                             TextButton(onClick = {
                                 send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_PLAY_PAUSE)
                             }) { Text("Play/Pause") }
+                        }
+                        OutlinedTextField(
+                            value = remoteText,
+                            onValueChange = { remoteText = it.take(120) },
+                            label = { Text("Texto para a TV") },
+                            singleLine = true)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(enabled = remoteText.isNotBlank(), onClick = {
+                                onKeyboardText(remoteText)
+                                remoteText = ""
+                            }) { Text("Enviar texto") }
+                            TextButton(onClick = onKeyboardEnter) { Text("Enter") }
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = {
