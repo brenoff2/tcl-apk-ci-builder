@@ -36,7 +36,7 @@ jobs:
         run: |
           set -euo pipefail
           cd anytv-resolver
-          npx --yes wrangler@4.45.0 deploy --dry-run --config wrangler.jsonc --outdir dist-dry-run
+          npx --yes wrangler@4.158.0 deploy --dry-run --config wrangler.jsonc --outdir dist-dry-run
           test -f dist-dry-run/worker.js || test -f dist-dry-run/worker.mjs
       - name: Never deploy to production or use API secrets in CI
         run: echo 'OFFLINE_CONTRACTS_ONLY; no API key, app build or Cloudflare deployment.'
