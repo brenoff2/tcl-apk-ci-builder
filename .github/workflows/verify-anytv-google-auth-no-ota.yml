@@ -1,0 +1,134 @@
+name: AnyTV Google Auth | Compile-only, NO OTA
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/anytv-p0-device-proof-verifier-20261020
+    paths:
+      - .github/anytv-google-auth-private-build-request.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: anytv-google-auth-compile-only
+  cancel-in-progress: false
+
+jobs:
+  compile-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail closed on missing public configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          p = json.loads(Path('release/anytv-auth-public.json').read_text())
+          assert set(p) == {'apiUrl', 'publishableKey'}
+          assert p['apiUrl'] == 'https://anytv-auth.clfcj.com'
+          assert isinstance(p['publishableKey'], str) and p['publishableKey'].startswith('sb_publishable_')
+          assert len(p['publishableKey']) > 20
+          print('ANYTV_GOOGLE_AUTH_PUBLIC_CONFIG_READY')
+          PY
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Fetch upstream Android sources at exact pinned revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init source
+          git -C source remote add origin https://github.com/harimoradiya/androidtvremote.git
+          git -C source fetch --depth 1 origin 16c68f0bb9d23f929ee8240f105fdb9000262d85
+          git -C source checkout --detach FETCH_HEAD
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+      - name: Apply the same AnyTV source overlays as the official V2 workflow
+        shell: bash
+        env:
+          TCL_RESCUE_STABLE: '1'
+          TCL_APPROVED_UI: '1'
+          TCL_RELEASE_SINGLE_APP: '1'
+        run: |
+          set -euo pipefail
+          python3 scripts/prepare_tcl.py
+          python3 scripts/apply_tcl_v21.py
+          python3 scripts/apply_tcl_v22.py
+          python3 scripts/apply_tcl_ptbr_cleanup.py
+          python3 scripts/apply_tcl_i18n.py
+          python3 scripts/apply_tcl_sticky_controls.py
+          python3 scripts/apply_anytv_brand.py
+          python3 scripts/apply_anytv_tv_tls_alias_isolation.py
+          python3 scripts/apply_anytv_restore_connection.py
+          python3 scripts/apply_anytv_premiere_reminder_manifest.py
+      - name: Match official V2 version and package transforms without publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('source/app/build.gradle.kts')
+          s = p.read_text()
+          assert s.count('versionCode = 34') == 1
+          assert s.count('versionName = "2.9.5-AnyTV"') == 1
+          s = s.replace('versionCode = 34', 'versionCode = 39', 1)
+          s = s.replace('versionName = "2.9.5-AnyTV"', 'versionName = "2.9.10-AnyTV"', 1)
+          assert s.count('versionCode = 39') == 1
+          assert s.count('versionName = "2.9.10-AnyTV"') == 1
+          s = s.replace('versionCode = 39', 'versionCode = 79', 1)
+          s = s.replace('versionName = "2.9.10-AnyTV"', 'versionName = "2.9.50-AnyTV"', 1)
+          p.write_text(s)
+          PY
+          python3 scripts/apply_anytv_phone_v2_identity.py
+      - name: Check generated OAuth wiring without printing keys
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -Fq 'android:scheme="com.tclremote.livre.v2" android:host="auth"' source/app/src/main/AndroidManifest.xml
+          grep -Fq 'handleAuthCallback(intent)' source/app/src/main/java/com/hari/androidtvremote/MainActivity.kt
+          grep -Fq 'FlowType.PKCE' source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvAuthClientFactory.kt
+          grep -Fq 'client.handleDeeplinks(intent)' source/app/src/main/java/com/hari/androidtvremote/ui/app/AnyTvSupabaseAuthGateway.kt
+          grep -Fq 'https://anytv-auth.clfcj.com' source/app/src/main/res/values/anytv_auth_public.xml
+          echo ANYTV_GOOGLE_PKCE_STATIC_WIRING_PASS
+      - name: Compile ONLY an unsigned release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Audit unsigned output, without signing or publishing
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$APK"
+          mkdir -p output
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/aapt" dump badging "$APK" > output/identity.txt
+          "$BT/aapt" dump xmltree "$APK" AndroidManifest.xml > output/manifest.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='79'" output/identity.txt
+          sha256sum "$APK" > output/sha256.txt
+          printf 'UNSIGNED COMPILE-ONLY ARTIFACT. NOT INSTALLABLE AS AN UPDATE. NO OTA PUBLICATION.\n' > output/README.txt
+          echo ANYTV_GOOGLE_AUTH_UNSIGNED_COMPILE_PASS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: anytv-google-auth-unsigned-audit
+          path: |
+            source/app/build/outputs/apk/release/app-release-unsigned.apk
+            output/identity.txt
+            output/manifest.txt
+            output/sha256.txt
+            output/README.txt
+          if-no-files-found: error
+          retention-days: 3
