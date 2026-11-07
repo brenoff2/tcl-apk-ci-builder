@@ -311,7 +311,9 @@ private fun cachedTvApps(raw: String?): List<TvOfficialApp> {
 fun TclInstalledAppsBar(
     tvHost: String?, tvIdentity: String?, tvName: String?,
     modifier: Modifier = Modifier,
-    onRemoteKey: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {}
+    onRemoteKey: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
+    onKeyboardText: (String) -> Unit = {},
+    onKeyboardEnter: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = remember(context) {
@@ -505,7 +507,9 @@ fun TclInstalledAppsBar(
     if (showStreaming) {
         TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
             tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },
-            onRemoteKey = onRemoteKey)
+            onRemoteKey = onRemoteKey,
+            onKeyboardText = onKeyboardText,
+            onKeyboardEnter = onKeyboardEnter)
     }
 
     if (showPair) {
