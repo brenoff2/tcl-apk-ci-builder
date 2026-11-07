@@ -34,7 +34,7 @@ class AccountSessionContract(unittest.TestCase):
         self.assertIn("interface AnyTvAccountGateway", src)
         self.assertIn("verifiedUserId: String?", src)
         self.assertIn("guestPreviouslySelected -> AnyTvAccountSession.Guest", src)
-        self.assertIn("data class SignedIn(val userId: String)", src)
+        self.assertIn("data class SignedIn(val userId: String, val email: String? = null)", src)
         self.assertNotIn("password = ", src)
         script = (ROOT / "scripts/apply_anytv_brand.py").read_text(encoding="utf-8")
         self.assertIn('copyfile("overrides/AnyTvAccountSession.kt"', script)
