@@ -210,6 +210,60 @@ export async function traktSignalsRequest(request, env, deps = {}) {
   }
 }
 
+/** Exact-title Trakt community rating. Trending watchers are not ratings. */
+export async function traktTitleRatingRequest(request, env, deps = {}) {
+  const parsed = new URL(request.url);
+  const match = parsed.pathname.match(/^\/v1\/catalog\/ratings\/trakt\/(movie|tv)\/([1-9][0-9]{0,8})$/);
+  if (!match || parsed.search || request.method !== "GET")
+    return asJson({ status: "bad_request" }, 400);
+  if (!env?.TRAKT_CLIENT_ID) return asJson({ status: "trakt_not_configured" }, 503);
+  const [, kind, rawId] = match;
+  const tmdbId = Number(rawId);
+  const type = kind === "movie" ? "movie" : "show";
+  const cache = typeof caches !== "undefined" ? caches.default : null;
+  const cached = cache ? await cache.match(request) : null;
+  if (cached) return cached;
+  const transport = deps.fetch || fetch;
+  const options = { headers: {
+    "trakt-api-version": "2", "trakt-api-key": env.TRAKT_CLIENT_ID,
+    Accept: "application/json"
+  }, redirect: "manual", signal: AbortSignal.timeout(6500) };
+  try {
+    const lookup = await transport(
+      `https://api.trakt.tv/search/tmdb/${tmdbId}?type=${type}`, options);
+    if (!lookup.ok) return lookup.status === 404
+      ? asJson({ source: "trakt", kind, rating: null, votes: 0 })
+      : asJson({ status: "trakt_unavailable" }, 503);
+    const found = await lookup.json();
+    if (!Array.isArray(found)) return asJson({ status: "trakt_invalid_response" }, 503);
+    const item = found.find(entry => entry?.type === type &&
+      entry?.[type]?.ids?.tmdb === tmdbId);
+    const traktId = item?.[type]?.ids?.trakt;
+    if (!Number.isSafeInteger(traktId) || traktId < 1)
+      return asJson({ source: "trakt", kind, rating: null, votes: 0 });
+    const target = kind === "movie" ? "movies" : "shows";
+    const ratings = await transport(
+      `https://api.trakt.tv/${target}/${traktId}/ratings`, options);
+    if (!ratings.ok) return ratings.status === 404
+      ? asJson({ source: "trakt", kind, rating: null, votes: 0 })
+      : asJson({ status: "trakt_unavailable" }, 503);
+    const data = await ratings.json();
+    if (!data || typeof data !== "object")
+      return asJson({ status: "trakt_invalid_response" }, 503);
+    const valid = Number.isFinite(data.rating) && data.rating >= 0 &&
+      data.rating <= 10 && Number.isSafeInteger(data.votes) && data.votes > 0;
+    if (!valid && !(data.votes === 0 || data.rating == null))
+      return asJson({ status: "trakt_invalid_response" }, 503);
+    const result = asJson({ source: "trakt", kind,
+      rating: valid ? data.rating : null, votes: valid ? data.votes : 0 },
+      200, { "cache-control": "public, max-age=900" });
+    if (cache) await cache.put(request, result.clone());
+    return result;
+  } catch {
+    return asJson({ status: "trakt_unavailable" }, 503);
+  }
+}
+
 export async function catalogRequest(request, env, deps = {}) {
   const parsed = new URL(request.url);
   const route = parsed.pathname.replace(/^\/v1\/catalog\//, "");
@@ -217,6 +271,8 @@ export async function catalogRequest(request, env, deps = {}) {
   // TMDB and D1 outages must not disable these independent signals.
   if (/^signals\/trakt\/(movie|tv)$/.test(route))
     return traktSignalsRequest(request, env, deps);
+  if (route.startsWith("ratings/trakt/"))
+    return traktTitleRatingRequest(request, env, deps);
   if (!env?.TMDB_READ_TOKEN || !env?.DB) {
     return asJson({ status: "catalog_not_configured" }, 503);
   }
