@@ -45,7 +45,28 @@ Referências upstream: https://docs.github.com/en/actions/how-tos/manage-workflo
 | N09 | identidade de `main`/signer não vinculada ao SHA aprovado | `DENY`, evitar TOCTOU do checkout |
 | N10 | instalação, publicação ou assinatura acionadas pelo mero registro documental | zero efeitos e zero execução |
 
-A implementação desses testes exige que exista um workflow proposto e revisado, sem acionar o signer; até lá são **casos de aceite**, não testes PASS. Readbacks do manifesto e do roadmap devem permanecer 2.9.60/code88 e 7/11 (63%).
+A implementação desses testes exige que exista um workflow proposto e revisado, sem acionar o signer; até lá são **casos de aceite**, não testes PASS.
+
+### Cobertura real da suíte offline atual contra N01–N10 (07/11/2026)
+
+**Auditoria estática de fonte GitHub na DEV:** examinados os 18 arquivos Python atualmente em `scripts/tests/` e `anytv-resolver/tests/`. Não existe implementação de `anytv-v2-sign-only-audit.yml` para testar; o inventário abaixo é **análise de cobertura**, NÃO execução da matriz nem confirmação de PASS. Os testes existentes `scripts/tests/test_anytv_brand_assets.py::test_no_change_to_package_or_signer` só procuram strings do signer/OTA no workflow antigo; `scripts/tests/test_tcl_v22_contract.py::test_update_button_and_signed_install` verifica o controle de identidade no atualizador Android, e `anytv-resolver/tests/test_preview_isolation.py` verifica outro limite de confiança (Preview). Nada disso protege o uso futuro do recovery secret em um job QA-only.
+
+| Caso | Cobertura atual específica de sign-only | Teste offline futuro recomendado |
+| --- | --- | --- |
+| N01 | NÃO COBERTO | `test_request_rejects_wrong_apk_and_zip_hash` com mutação determinística de bytes/hash |
+| N02 | NÃO COBERTO | `test_rejects_wrong_run_artifact_status_origin_head` com respostas GitHub stubadas |
+| N03 | NÃO COBERTO | `test_zip_rejects_traversal_symlink_duplicate_apk_and_extras` em ZIPs criados em memória |
+| N04 | NÃO COBERTO | `test_sign_job_requires_approved_environment` inspecionando YAML futuro; aprovação efetiva exige GET administrativo independente |
+| N05 | NÃO COBERTO | `test_missing_environment_gate_fails_closed`; não usar ausência de GET como prova de ausência de proteção |
+| N06 | NÃO COBERTO | `test_workflow_denies_write_permission_and_ota_steps`, validando estrutura YAML sem buscas ingênuas de substrings |
+| N07 | PARCIAL EM OUTRO LIMITE: `test_tcl_v22_contract.py` verifica identidade na instalação, não certificado de saída do signer | `test_rejects_signer_fingerprint_package_or_code_mismatch` com dados de auditoria falsos e certificados públicos de fixture |
+| N08 | NÃO COBERTO | `test_preflight_failure_skips_sign_job` sobre `needs`/condição, mais integração em job sem segredo |
+| N09 | NÃO COBERTO | `test_workflow_checkout_is_pinned_to_approved_commit` e comparação entre head SHA e workflow source |
+| N10 | PARCIAL EM WORKFLOW DISTINTO: `anytv-2951-unsigned-candidate.yml` sem passos de signer/OTA; futuro não existe | `test_sign_only_has_only_qa_artifact_output`, proibir checkout write, `git push`, release e credenciais de deploy |
+
+**Ordem mínima futura:** primeiro escrever apenas fixture/validador offline de ZIP + request (N01–N03) e testes estruturais do YAML do sign-only proposto (N06/N08/N09/N10); só depois revisar o workflow sem secrets e demonstrar N04/N05 por proteção de ambiente real; N07 exige comparação com fingerprint/cert público canônico. Não criar teste que passe só porque o workflow ainda não existe, nem invocar assinatura para conferir um teste. Qualquer mudança deve voltar para review independente, e nada disto altera gates F0–F8 ou autoriza execução.
+
+ Readbacks do manifesto e do roadmap devem permanecer 2.9.60/code88 e 7/11 (63%).
 
 ### Revisão de segurança P1 — gates adicionais fail-closed (07/11/2026)
 
