@@ -1343,5 +1343,28 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('anyTvIsAnime(title) -> "Anime · Filme"', self.screen)
 
 
+    def test_account_detail_cast_and_streaming_remote_share_real_callbacks(self):
+        root = pathlib.Path(__file__).resolve().parents[2]
+        home = (root / "overrides/TclApprovedHomeScreen.kt").read_text(encoding="utf-8")
+        installed = (root / "overrides/TclInstalledApps.kt").read_text(encoding="utf-8")
+        worker = (root / "anytv-resolver/src/worker.mjs").read_text(encoding="utf-8")
+        self.assertIn("onRemoteKey = { remoteKey(it) }", home)
+        self.assertIn("onRemoteKey = onRemoteKey", installed)
+        self.assertIn("var showPlaybackRemote by remember", self.screen)
+        self.assertIn("showPlaybackRemote = true", self.screen)
+        for key in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_LEFT",
+                    "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER", "KEYCODE_BACK",
+                    "KEYCODE_HOME", "KEYCODE_MEDIA_PLAY_PAUSE"):
+            self.assertIn(key, self.screen)
+        self.assertIn("StreamingCatalog.cast(item.media, item.id)", self.screen)
+        self.assertIn("Elenco principal", self.screen)
+        self.assertIn("Cartaz original", self.screen)
+        self.assertIn("detailsPackage = preferred.firstOrNull()?.packageName", self.screen)
+        self.assertIn('\\/credits    unittest.main()
+, worker)
+        self.assertNotIn("IMDb: " + "10.0", self.screen)
+
+
+
 if __name__ == "__main__":
     unittest.main()
