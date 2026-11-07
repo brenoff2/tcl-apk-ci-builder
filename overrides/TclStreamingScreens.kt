@@ -4677,6 +4677,11 @@ internal fun TclStreamingScreens(
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
+                    if (showPlaybackRemote && remoteMinimized) {
+                        TextButton(onClick = { remoteMinimized = false }) {
+                            Text("Abrir controle da TV para escolher perfil")
+                        }
+                    }
                     TextButton(onClick = {
                         scope.launch {
                             val state = AnyTvPersonalLinks.activationStatus(context)
@@ -4981,19 +4986,7 @@ internal fun TclStreamingScreens(
         val send: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {
             onRemoteKey(it)
         }
-        if (remoteMinimized) {
-            AlertDialog(
-                onDismissRequest = { showPlaybackRemote = false },
-                title = { Text("Controle da TV") },
-                text = { Text("O streaming esta aberto na TV. Reabra o controle para escolher o perfil.") },
-                confirmButton = {
-                    Button(onClick = { remoteMinimized = false }) { Text("Abrir controle") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPlaybackRemote = false }) { Text("Fechar") }
-                }
-            )
-        } else {
+        if (!remoteMinimized) {
             AlertDialog(
                 onDismissRequest = { remoteMinimized = true },
                 title = { Text("Controle do streaming") },
