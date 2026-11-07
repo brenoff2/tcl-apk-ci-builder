@@ -53,7 +53,8 @@ def validate_config(config):
     if "migrations_dir" in db and db["migrations_dir"] != production_db.get("migrations_dir"):
         raise ValueError("Preview migration directory must match schema")
     vars_ = preview.get("vars")
-    if not isinstance(vars_, dict) or vars_.get("ANYTV_DEVICE_ACTIVATION_ENABLED") not in (False, "false"):
+    if not isinstance(vars_, dict) or not (vars_.get("ANYTV_DEVICE_ACTIVATION_ENABLED") is False or
+                                          vars_.get("ANYTV_DEVICE_ACTIVATION_ENABLED") == "false"):
         raise ValueError("Preview device activation must be explicitly disabled")
     # The actual Worker checks literal string \"true\", so \"false\" is a safe
     # explicit Wrangler var, and boolean false is also non-activating.
@@ -111,7 +112,7 @@ class PreviewIsolationContract(unittest.TestCase):
             validate_config(c)
 
     def test_rejects_enabled_or_missing_activation_gate(self):
-        for value in (True, "true", None, "0"):
+        for value in (True, "true", None, "0", 0):
             c = self.with_preview()
             if value is None:
                 del c["previews"]["vars"]["ANYTV_DEVICE_ACTIVATION_ENABLED"]
