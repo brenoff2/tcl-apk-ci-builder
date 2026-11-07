@@ -1344,7 +1344,7 @@ class StreamingScreens(unittest.TestCase):
 
 
     def test_account_detail_cast_and_streaming_remote_share_real_callbacks(self):
-        root = pathlib.Path(__file__).resolve().parents[2]
+        root = Path(__file__).resolve().parents[2]
         home = (root / "overrides/TclApprovedHomeScreen.kt").read_text(encoding="utf-8")
         installed = (root / "overrides/TclInstalledApps.kt").read_text(encoding="utf-8")
         worker = (root / "anytv-resolver/src/worker.mjs").read_text(encoding="utf-8")
