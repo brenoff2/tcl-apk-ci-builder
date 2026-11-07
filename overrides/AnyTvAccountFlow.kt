@@ -82,6 +82,8 @@ internal fun AnyTvAccountFlow(
                         else -> "Modo convidado - dados salvos neste aparelho"
                     })
                     if (signedIn) {
+                        val user = state as? AnyTvAccountSession.SignedIn
+                        if (!user?.email.isNullOrBlank()) Text(user?.email.orEmpty())
                         Text("Conta autenticada pelo Supabase. Sua lista ainda e local, nao sincronizada.")
                     } else {
                         Text("Entre com Google quando desejar. O catalogo nao exige login.")
