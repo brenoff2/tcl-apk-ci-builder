@@ -118,7 +118,7 @@ jobs:
           s=p.read_text()
           assert s.count('versionCode = 39') == 1
           assert s.count('versionName = "2.9.10-AnyTV"') == 1
-          p.write_text(s.replace('versionCode = 39','versionCode = 80').replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.51-AnyTV"))
+          p.write_text(s.replace('versionCode = 39','versionCode = 80').replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.51-AnyTV"'))
           PY
       - name: Gate - restaurar literalmente codigo de conexao validado na 2.9.8
         run: |
