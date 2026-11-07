@@ -2171,13 +2171,17 @@ internal fun TclStreamingScreens(
             detailsOffers = offerCache[key] ?:
                 runCatching { StreamingCatalog.offersInBrazil(item) }.getOrNull()
             detailsOffers?.let { offerCache[key] = it }
-            val preferred = displayed.filter { app ->
-                detailsOffers?.let { offers -> StreamingCatalog.appHasOffer(app, offers) } == true &&
-                    (myServices.isEmpty() || myServices.any { selectedService ->
-                        selectedService.equals(app.name, ignoreCase = true)
-                    })
+            val eligible = displayed.filter { app ->
+                detailsOffers?.let { offers -> StreamingCatalog.appHasOffer(app, offers) } == true
             }
-            if (detailsPackage == null) detailsPackage = preferred.firstOrNull()?.packageName
+            val preferred = selected?.let { current ->
+                eligible.firstOrNull { it.packageName == current.packageName }
+            } ?: eligible.firstOrNull { app ->
+                myServices.any { subscription ->
+                    subscription.equals(app.name, ignoreCase = true)
+                }
+            } ?: eligible.singleOrNull()
+            if (detailsPackage == null) detailsPackage = preferred?.packageName
             detailLoading = false
         }
     }
