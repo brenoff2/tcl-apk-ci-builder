@@ -1365,5 +1365,17 @@ class StreamingScreens(unittest.TestCase):
 
 
 
+    def test_detail_shows_tmdb_and_real_trakt_not_imdb(self):
+        self.assertIn('suspend fun traktRating(media: String, id: Int): Double?', self.screen)
+        self.assertIn('get("backend", "ratings/trakt/$media/$id")', self.screen)
+        self.assertIn('data.optString("source") == "trakt"', self.screen)
+        self.assertIn('votes > 0 && it.isFinite()', self.screen)
+        self.assertIn('Trakt: nota indisponível', self.screen)
+        self.assertIn('Trakt: " + String.format', self.screen)
+        self.assertIn('StreamingCatalog.traktRating(item.media, item.id)', self.screen)
+        self.assertNotIn('IMDb: ver nota oficial', self.screen)
+        self.assertNotIn('imdbTitleId(', self.screen)
+
+
 if __name__ == "__main__":
     unittest.main()
