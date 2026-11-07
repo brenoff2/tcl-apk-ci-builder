@@ -10,7 +10,7 @@ internal sealed interface AnyTvAccountSession {
     data object Choosing : AnyTvAccountSession
     data object Guest : AnyTvAccountSession
     data object Loading : AnyTvAccountSession
-    data class SignedIn(val userId: String) : AnyTvAccountSession {
+    data class SignedIn(val userId: String, val email: String? = null) : AnyTvAccountSession {
         init { require(userId.isNotBlank()) }
     }
     data class Error(val message: String) : AnyTvAccountSession
