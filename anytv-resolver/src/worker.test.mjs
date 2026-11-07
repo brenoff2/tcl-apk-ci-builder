@@ -691,3 +691,62 @@ test("Trakt never requires user login but fails closed without server Client ID"
   assert.equal(result.status, 503);
   assert.deepEqual(await result.json(), { status: "trakt_not_configured" });
 });
+
+test("Trakt rating resolves exact TMDB movie and show IDs and keeps credentials server-side", async () => {
+  for (const [kind, type, plural] of [["movie", "movie", "movies"], ["tv", "show", "shows"]]) {
+    const urls = [];
+    const env = { TRAKT_CLIENT_ID: "server-only-client-id" };
+    const deps = { fetch: async (url, init) => {
+      urls.push(url);
+      assert.equal(init.headers["trakt-api-key"], env.TRAKT_CLIENT_ID);
+      if (url.includes("/search/tmdb/")) return response([
+        { type, [type]: { ids: { tmdb: 42, trakt: 197 } } }
+      ]);
+      if (url.includes("/ratings")) return response({ rating: 8.7, votes: 1234 });
+      throw Error("unexpected Trakt URL");
+    } };
+    const result = await catalogRequest(request(`/v1/catalog/ratings/trakt/${kind}/42`), env, deps);
+    assert.equal(result.status, 200);
+    assert.deepEqual(await result.json(), { source: "trakt", kind, rating: 8.7, votes: 1234 });
+    assert.equal(urls.length, 2);
+    assert.equal(urls[0], `https://api.trakt.tv/search/tmdb/42?type=${type}`);
+    assert.equal(urls[1], `https://api.trakt.tv/${plural}/197/ratings`);
+  }
+});
+
+test("Trakt never substitutes watcher counts or a mismatched TMDB rating", async () => {
+  let calls = 0;
+  const env = { TRAKT_CLIENT_ID: "server-key" };
+  const deps = { fetch: async () => {
+    calls++;
+    return response([{ type: "movie", movie: { ids: { tmdb: 99, trakt: 777 }, watchers: 500 } }]);
+  } };
+  const mismatch = await catalogRequest(request("/v1/catalog/ratings/trakt/movie/42"), env, deps);
+  assert.deepEqual(await mismatch.json(), { source: "trakt", kind: "movie", rating: null, votes: 0 });
+  assert.equal(calls, 1, "must not call ratings for a different title");
+  const missing = await catalogRequest(request("/v1/catalog/ratings/trakt/movie/42"), {}, deps);
+  assert.equal(missing.status, 503);
+  assert.equal(calls, 1);
+  for (const path of ["/v1/catalog/ratings/trakt/movie/0",
+    "/v1/catalog/ratings/trakt/movie/042", "/v1/catalog/ratings/trakt/tv/42?x=1",
+    "/v1/catalog/ratings/trakt/person/42"]) {
+    const result = await catalogRequest(request(path), env, deps);
+    assert.equal(result.status, 400, path);
+  }
+  assert.equal(calls, 1);
+});
+
+test("Trakt rating rejects invalid upstream data and handles empty votes", async () => {
+  const env = { TRAKT_CLIENT_ID: "server-key" };
+  const lookup = response([{ type: "movie", movie: { ids: { tmdb: 42, trakt: 3 } } }]);
+  for (const [rating, votes, expectedStatus] of [
+    [11.5, 100, 503], [8.1, "9", 503], [null, 0, 200]
+  ]) {
+    let calls = 0;
+    const deps = { fetch: async () => (++calls === 1 ? lookup.clone() : response({ rating, votes })) };
+    const result = await catalogRequest(request("/v1/catalog/ratings/trakt/movie/42"), env, deps);
+    assert.equal(result.status, expectedStatus);
+    if (expectedStatus === 200)
+      assert.deepEqual(await result.json(), { source: "trakt", kind: "movie", rating: null, votes: 0 });
+  }
+});
