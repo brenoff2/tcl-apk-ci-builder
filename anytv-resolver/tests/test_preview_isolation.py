@@ -12,8 +12,12 @@ import unittest
 
 CONFIG = Path(__file__).resolve().parents[1] / "wrangler.jsonc"
 UUID = re.compile(r"^[a-fA-F0-9]{8}-(?:[a-fA-F0-9]{4}-){3}[a-fA-F0-9]{12}$")
-PROTECTED_VARS = {"TMDB_READ_TOKEN", "TRAKT_CLIENT_ID", "ANYTV_MOVIE_API_KEY",
-                  "ANYTV_CLIENT_TOKEN", "WATCHMODE_API_KEY"}
+# No storage/worker bindings except D1 until each new binding has a reviewed
+# isolation policy. Observability/limits do not point at production data.
+ALLOWED_PREVIEW_FIELDS = {"d1_databases", "vars", "observability", "logpush",
+                          "limits", "placement"}
+ALLOWED_PREVIEW_VARS = {"ANYTV_DEVICE_ACTIVATION_ENABLED",
+                        "ANYTV_RESOLVER_AUTH_MODE"}
 
 
 def validate_config(config):
@@ -30,6 +34,9 @@ def validate_config(config):
     preview = config["previews"]
     if not isinstance(preview, dict):
         raise ValueError("Preview configuration invalid")
+    forbidden = set(preview) - ALLOWED_PREVIEW_FIELDS
+    if forbidden:
+        raise ValueError("Unreviewed Preview bindings or production routes")
     dbs = preview.get("d1_databases")
     if not isinstance(dbs, list) or len(dbs) != 1:
         raise ValueError("Preview requires exactly one separate DB binding")
@@ -41,15 +48,19 @@ def validate_config(config):
         raise ValueError("Preview must not bind production D1")
     if not db.get("database_name") or db.get("database_name") == production_db.get("database_name"):
         raise ValueError("Preview requires separate D1 name")
-    if db.get("migrations_dir") != production_db.get("migrations_dir"):
+    # Preview D1 migrations are applied using a separate top-level Wrangler
+    # migration config; this optional hint is NOT proof of remote migrations.
+    if "migrations_dir" in db and db["migrations_dir"] != production_db.get("migrations_dir"):
         raise ValueError("Preview migration directory must match schema")
     vars_ = preview.get("vars")
-    if not isinstance(vars_, dict) or vars_.get("ANYTV_DEVICE_ACTIVATION_ENABLED") is not False:
+    if not isinstance(vars_, dict) or vars_.get("ANYTV_DEVICE_ACTIVATION_ENABLED") not in (False, "false"):
         raise ValueError("Preview device activation must be explicitly disabled")
-    if any(k in vars_ for k in PROTECTED_VARS):
-        raise ValueError("Secret names must not be configured as plaintext Preview vars")
-    if any(k in preview for k in ("routes", "route", "triggers")):
-        raise ValueError("Production routes and triggers are forbidden in Preview")
+    # The actual Worker checks literal string \"true\", so \"false\" is a safe
+    # explicit Wrangler var, and boolean false is also non-activating.
+    if vars_.get("ANYTV_RESOLVER_AUTH_MODE") != "pilot":
+        raise ValueError("Preview resolver auth mode must be explicit pilot")
+    if set(vars_) - ALLOWED_PREVIEW_VARS:
+        raise ValueError("Secret or unreviewed plaintext Preview var")
     return "PREVIEW_STATIC_ISOLATION_OK"
 
 
@@ -75,7 +86,8 @@ class PreviewIsolationContract(unittest.TestCase):
                 "database_id": self.preview_id,
                 "migrations_dir": c["d1_databases"][0]["migrations_dir"],
             }],
-            "vars": {"ANYTV_DEVICE_ACTIVATION_ENABLED": False},
+            "vars": {"ANYTV_DEVICE_ACTIVATION_ENABLED": "false",
+                     "ANYTV_RESOLVER_AUTH_MODE": "pilot"},
         }
         return c
 
@@ -99,13 +111,32 @@ class PreviewIsolationContract(unittest.TestCase):
             validate_config(c)
 
     def test_rejects_enabled_or_missing_activation_gate(self):
-        for value in (True, "false", None):
+        for value in (True, "true", None, "0"):
             c = self.with_preview()
             if value is None:
                 del c["previews"]["vars"]["ANYTV_DEVICE_ACTIVATION_ENABLED"]
             else:
                 c["previews"]["vars"]["ANYTV_DEVICE_ACTIVATION_ENABLED"] = value
             with self.subTest(value=value), self.assertRaisesRegex(ValueError, "activation"):
+                validate_config(c)
+
+    def test_accepts_boolean_false_but_rejects_unreviewed_vars(self):
+        c = self.with_preview()
+        c["previews"]["vars"]["ANYTV_DEVICE_ACTIVATION_ENABLED"] = False
+        self.assertEqual(validate_config(c), "PREVIEW_STATIC_ISOLATION_OK")
+        c["previews"]["vars"]["NEW_SERVICE_TOKEN"] = "not-allowed"
+        with self.assertRaisesRegex(ValueError, "Secret"):
+            validate_config(c)
+
+    def test_rejects_missing_auth_mode_and_other_bindings(self):
+        c = self.with_preview()
+        del c["previews"]["vars"]["ANYTV_RESOLVER_AUTH_MODE"]
+        with self.assertRaisesRegex(ValueError, "auth mode"):
+            validate_config(c)
+        for field in ("services", "kv_namespaces", "r2_buckets", "queues"):
+            c = self.with_preview()
+            c["previews"][field] = []
+            with self.subTest(field=field), self.assertRaisesRegex(ValueError, "Unreviewed"):
                 validate_config(c)
 
     def test_rejects_plaintext_credentials_and_routes(self):
