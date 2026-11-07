@@ -22,6 +22,31 @@
 **Gate de execução futura:** requer aprovação explícita do desenho, da criação do workflow e, separadamente, da solicitação que o executaria. Antes de qualquer QA no dispositivo, exigir resultado sign-only SUCCESS, artifact ID, `apksigner`/SHA/readback e autorização de instalação no aparelho de teste. QA U01–U05/L03–L05 e OTA permanecem gates distintos. A aprovação deste documento como proposta NÃO autoriza nenhum desses efeitos.
 
 Referências upstream: https://docs.github.com/en/actions/how-tos/manage-workflow-runs/manually-run-a-workflow e https://github.com/actions/download-artifact .
+### Evidência GitHub READ — proteções e testes negativos propostos (07/11/2026)
+
+**Readback autenticado da conta do repositório (sem escrita):** GitHub `get_repo` retornou `visibility=public`, `default_branch=main`, `permissions.admin=true` para a identidade do conector. GitHub MCP `list_branches` retornou `feat/anytv-p0-device-proof-verifier-20261020: protected=false` (HEAD de leitura `ff4cdac623458fe715aaed062ccbe5623084f756`). `repository_ruleset_read(method=list, includes_parents=true)` retornou `[]`; `get_rules_for_branch` retornou todos os tipos de regra nulos. Portanto, **não há proteção de branch/ruleset demonstrada** que imponha aprovação humana antes de um `push` de pedido na DEV. Este fato impede tratar o gatilho por push como gate independente de uso de segredo.
+
+**Limite de consulta:** o catálogo conectado do GitHub nesta sessão NÃO disponibiliza GET de `/repos/{owner}/{repo}/environments`, `/environments/{name}`, protection rules de environment, secrets de environment ou configurações globais de permissões do Actions. **Não concluir que tais environments estão ausentes ou configurados**: marcar `ENVIRONMENT_APPROVAL=UNVERIFIED`, `ACTIONS_PERMISSIONS=UNVERIFIED`. A visibilidade pública pode permitir determinadas regras pela política do GitHub, mas não comprova que tenham sido habilitadas. Nem a permissão `admin=true` do conector equivale a uma revisão humana independente.
+
+**Conclusão de segurança:** `SIGN_ONLY_EXECUTION=BLOCKED`. A proposta do gatilho push, isoladamente, NÃO satisfaz dupla aprovação: nenhum workflow sign-only foi criado, nenhum signer foi usado, nenhuma configuração de proteção alterada. Somente um GET autenticado do environment com `required_reviewers`, `prevent_self_review`, políticas de branch e bypass (ou alternativa governada efetivamente validada) pode permitir nova avaliação.
+
+**Matriz de casos negativos PARA FUTUROS TESTES OFFLINE; não há workflow implementado para testá-la nesta rodada:**
+
+| Teste | Entrada ou condição | Resultado obrigatório |
+| --- | --- | --- |
+| N01 | request com SHA do APK errado ou ZIP digest trocado | `DENY` antes de qualquer secret |
+| N02 | run/artifact não SUCCESS, expirado, fork ou head SHA diferente | `DENY` antes de assinatura |
+| N03 | ZIP com path traversal, symlink, arquivo extra ou dois APKs | `DENY` sem extrair/executar conteúdo |
+| N04 | request enviado por push sem aprovação independente efetiva | job `sign` aguarda reviewer, ou `DENY` |
+| N05 | ambiente sem `required_reviewers` ou política de bypass verificável | `BLOCKED_UNVERIFIED`, não consumir secret |
+| N06 | token com `contents:write` ou código que executa `git push`/OTA/deploy | reprovar contrato estático do workflow |
+| N07 | certificado SHA256 V2 divergente, pacote/code89 errado ou checksum inválido | `DENY` e zero artefato instalável |
+| N08 | preflight rejeitado, mas job de assinatura tenta executar | job `sign` deve ser `skipped`/bloqueado |
+| N09 | identidade de `main`/signer não vinculada ao SHA aprovado | `DENY`, evitar TOCTOU do checkout |
+| N10 | instalação, publicação ou assinatura acionadas pelo mero registro documental | zero efeitos e zero execução |
+
+A implementação desses testes exige que exista um workflow proposto e revisado, sem acionar o signer; até lá são **casos de aceite**, não testes PASS. Readbacks do manifesto e do roadmap devem permanecer 2.9.60/code88 e 7/11 (63%).
+
 ### Revisão de segurança P1 — gates adicionais fail-closed (07/11/2026)
 
 **Escopo e confiança:** avaliação ESTÁTICA da proposta `anytv-v2-sign-only-audit.yml`, ainda NÃO implementada; são lacunas de desenho e hipóteses de acesso, não incidentes ou exploração confirmada. Nenhum segredo foi lido. Avaliação GitHub-first: **BLOCK** quanto a execução até que os gates abaixo existam e possam ser testados.
