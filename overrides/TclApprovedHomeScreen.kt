@@ -261,6 +261,8 @@ fun TclApprovedHomeScreen(
                         tvIdentity = sessionState.connectedDevice?.id,
                         tvName = sessionState.connectedDevice?.name,
                         onRemoteKey = { remoteKey(it) },
+                        onKeyboardText = { if (isConnected) onKeyboardText(it) else onOpenDiscovery() },
+                        onKeyboardEnter = { if (isConnected) onKeyboardEnter() else onOpenDiscovery() },
                         modifier = Modifier.fillMaxWidth()
                     )
 
