@@ -6,6 +6,6 @@
   "source": "User-authorized Android update for real Google OAuth PKCE sign-in testing on existing AnyTV V2, preserving guest mode and data.",
   "new_install_only": false,
   "release_version": "2.9.51-AnyTV",
-  "release_scope": "Signed AnyTV V2 2.9.51/code80 official OTA for user-requested Google OAuth PKCE validation on real Android; retain original V2 signer and package, guest fallback, no CLFCJ/n8n changes; publish only after CI, signer certificate verification and OTA readback.",
-  "ci_revision": 53
+  "release_scope": "Signed AnyTV V2 2.9.51/code80 Google OAuth test update; retry after fixing Python version bump syntax error in initial run 42406304274; original certificate and all OTA readback guards remain.",
+  "ci_revision": 54
 }
