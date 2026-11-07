@@ -467,10 +467,13 @@ private object StreamingCatalog {
         }
     }
 
-    suspend fun imdbTitleId(media: String, id: Int): String? =
+    suspend fun traktRating(media: String, id: Int): Double? =
         withContext(Dispatchers.IO) {
-            get("backend", "$media/$id/external_ids").optString("imdb_id")
-                .takeIf { it.matches(Regex("tt[0-9]{7,10}")) }
+            val data = get("backend", "ratings/trakt/$media/$id")
+            val rating = data.optDouble("rating", Double.NaN)
+            val votes = data.optInt("votes", 0)
+            rating.takeIf { data.optString("source") == "trakt" &&
+                votes > 0 && it.isFinite() && it in 0.0..10.0 }
         }
 
     suspend fun cast(media: String, id: Int): List<StreamingActor> =
@@ -2016,7 +2019,7 @@ internal fun TclStreamingScreens(
     var trailerLink by remember { mutableStateOf<String?>(null) }
     var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var detailCast by remember { mutableStateOf<List<StreamingActor>>(emptyList()) }
-    var detailImdbId by remember { mutableStateOf<String?>(null) }
+    var detailTraktRating by remember { mutableStateOf<Double?>(null) }
     val offerCache = remember { mutableStateMapOf<String, List<StreamingOffer>>() }
     var traktSignals by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     LaunchedEffect(Unit) {
@@ -2160,7 +2163,7 @@ internal fun TclStreamingScreens(
         trailerLink = null
         relatedTitles = emptyList()
         detailCast = emptyList()
-        detailImdbId = null
+        detailTraktRating = null
         detailsOffers = null
         seriesSeasons = emptyList()
         seasonEpisodes = emptyList()
@@ -2178,7 +2181,7 @@ internal fun TclStreamingScreens(
                 .getOrDefault(emptyList())
             detailCast = runCatching { StreamingCatalog.cast(item.media, item.id) }
                 .getOrDefault(emptyList())
-            detailImdbId = runCatching { StreamingCatalog.imdbTitleId(item.media, item.id) }
+            detailTraktRating = runCatching { StreamingCatalog.traktRating(item.media, item.id) }
                 .getOrNull()
             val key = "${item.media}:${item.id}"
             detailsOffers = offerCache[key] ?:
@@ -4661,14 +4664,9 @@ internal fun TclStreamingScreens(
                     Text(if (title.votes >= 20) "TMDB: " +
                         String.format(java.util.Locale.US, "%.1f/10", title.rating)
                         else "TMDB: sem nota confiável", fontSize = 11.sp)
-                    Text("IMDb: ver nota oficial", fontSize = 11.sp,
-                        color = if (detailImdbId != null) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.clickable(enabled = detailImdbId != null) {
-                            val id = detailImdbId ?: return@clickable
-                            runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,
-                                Uri.parse("https://www.imdb.com/title/" + id + "/"))) }
-                        })
+                    Text(detailTraktRating?.let {
+                        "Trakt: " + String.format(java.util.Locale.US, "%.1f/10", it)
+                    } ?: "Trakt: nota indisponível", fontSize = 11.sp)
                 }
                 }
             },
