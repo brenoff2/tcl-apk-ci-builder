@@ -23,8 +23,8 @@ internal class AnyTvSupabaseAuthGateway(
     private val client: SupabaseClient
 ) : AnyTvAccountGateway {
     private fun session(): AnyTvAccountSession =
-        client.auth.currentUserOrNull()?.id?.let {
-            AnyTvAccountSession.SignedIn(it)
+        client.auth.currentUserOrNull()?.let { user ->
+            AnyTvAccountSession.SignedIn(user.id, user.email)
         } ?: AnyTvAccountSession.Choosing
 
     // The OAuth browser returns asynchronously. Session updates, not the browser
