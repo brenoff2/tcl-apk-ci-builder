@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 # LOCAL-ONLY D1 / Miniflare smoke; never uses --remote or production IDs.
-WRANGLER="npx --yes wrangler@4.45.3"
+WRANGLER="npx --yes wrangler@4.158.0"
 CFG="wrangler.local.toml"
 DB="anytv-d1-local-smoke"
 DIR="$(mktemp -d)"
