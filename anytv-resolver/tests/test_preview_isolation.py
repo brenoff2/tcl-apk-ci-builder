@@ -65,13 +65,80 @@ def validate_config(config):
     return "PREVIEW_STATIC_ISOLATION_OK"
 
 
-def load_current():
-    raw = CONFIG.read_text(encoding="utf-8")
-    # Existing checked-in JSONC uses full-line comments only. Fail closed
-    # on other syntax rather than loosely deleting arbitrary // in strings.
-    raw = re.sub(r"(?m)^[ \t]*//[^\n]*(?:\n|$)", "", raw)
-    return json.loads(raw)
+def parse_jsonc(raw):
+    """Parse JSONC comments and trailing commas without changing strings."""
+    chars = list(raw)
+    pos = 0
+    in_string = False
+    escaped = False
+    while pos < len(chars):
+        ch = chars[pos]
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+            pos += 1
+            continue
+        if ch == '"':
+            in_string = True
+            pos += 1
+        elif ch == "/" and pos + 1 < len(chars) and chars[pos + 1] == "/":
+            end = pos + 2
+            while end < len(chars) and chars[end] not in "\r\n":
+                end += 1
+            for index in range(pos, end):
+                chars[index] = " "
+            pos = end
+        elif ch == "/" and pos + 1 < len(chars) and chars[pos + 1] == "*":
+            end = pos + 2
+            while end + 1 < len(chars) and chars[end:end + 2] != ["*", "/"]:
+                end += 1
+            if end + 1 >= len(chars):
+                raise ValueError("Unterminated JSONC comment")
+            for index in range(pos, end + 2):
+                if chars[index] not in "\r\n":
+                    chars[index] = " "
+            pos = end + 2
+        else:
+            pos += 1
+    if in_string:
+        raise ValueError("Unterminated JSONC string")
 
+    in_string = False
+    escaped = False
+    for pos, ch in enumerate(chars):
+        if in_string:
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == '"':
+                in_string = False
+        elif ch == '"':
+            in_string = True
+        elif ch == ",":
+            next_pos = pos + 1
+            while next_pos < len(chars) and chars[next_pos].isspace():
+                next_pos += 1
+            if next_pos < len(chars) and chars[next_pos] in "}]":
+                chars[pos] = " "
+
+    def reject_duplicates(pairs):
+        obj = {}
+        for key, value in pairs:
+            if key in obj:
+                raise ValueError("Duplicate JSONC key: " + key)
+            obj[key] = value
+        return obj
+
+    return json.loads("".join(chars), object_pairs_hook=reject_duplicates)
+
+
+def load_current():
+    return parse_jsonc(CONFIG.read_text(encoding="utf-8"))
 
 class PreviewIsolationContract(unittest.TestCase):
     def setUp(self):
@@ -91,6 +158,37 @@ class PreviewIsolationContract(unittest.TestCase):
                      "ANYTV_RESOLVER_AUTH_MODE": "pilot"},
         }
         return c
+
+    def test_jsonc_comments_and_trailing_commas(self):
+        raw = r"""
+        /* header */
+        {
+          "name": "https://example.test/a//b", // inline comment
+          "literal": "slash // stays",
+          "escaped": "say \"hello\"",
+          "array": [1, 2, /* interior */],
+          "nested": {"ok": true,},
+        }
+        """
+        parsed = parse_jsonc(raw)
+        self.assertEqual(parsed["name"], "https://example.test/a//b")
+        self.assertEqual(parsed["escaped"], 'say "hello"')
+        self.assertEqual(parsed["array"], [1, 2])
+        self.assertTrue(parsed["nested"]["ok"])
+
+    def test_jsonc_rejects_invalid_or_ambiguous_syntax(self):
+        for raw in ('{"a": 1, "a": 2}', '{"a": /* never closed',
+                    '{"a": 1,,}', '{"a": "unterminated}'):
+            with self.subTest(raw=raw), self.assertRaises((ValueError, json.JSONDecodeError)):
+                parse_jsonc(raw)
+
+    def test_jsonc_preserves_security_check_on_modified_config(self):
+        raw = json.dumps(self.with_preview(), indent=2)
+        raw = raw.replace('"previews": {', '"previews": { // future test config')
+        raw = raw.replace('"database_id": "' + self.preview_id + '"',
+                          '"database_id": "' + self.base["d1_databases"][0]["database_id"] + '"')
+        with self.assertRaisesRegex(ValueError, "production D1"):
+            validate_config(parse_jsonc(raw))
 
     def test_checked_in_config_meets_static_gate(self):
         self.assertIn(validate_config(self.base),
