@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "intent": "release-independent-phone-v2",
-  "expected_version_code": 79,
+  "expected_version_code": 80,
   "preserve_legacy_ota": true,
-  "source": "Editorial upgrade: 50 true titles per shelf, favor chosen/favorited genres with target 40/35/25 blend, credible Bayesian rating, contemporary highlights, cross-rail dedup prioritization, additional discovery and quality shelves, explicit miniseries, country/provider-specific release shelves, deeper Brazilian flatrate discovery, optional Trakt Standard trend signal (backend only, activation separately gated).",
+  "source": "User-authorized Android update for real Google OAuth PKCE sign-in testing on existing AnyTV V2, preserving guest mode and data.",
   "new_install_only": false,
-  "release_version": "2.9.50-AnyTV",
-  "release_scope": "Signed AnyTV V2 2.9.50/code79 official OTA; full UI contracts, Android compilation, original signer/cert2026 preservation, Worker live route safety tests, GitHub immutable signed APK readback. Trakt remains disabled until registered client ID/Worker deployment.",
-  "ci_revision": 52
+  "release_version": "2.9.51-AnyTV",
+  "release_scope": "Signed AnyTV V2 2.9.51/code80 official OTA for user-requested Google OAuth PKCE validation on real Android; retain original V2 signer and package, guest fallback, no CLFCJ/n8n changes; publish only after CI, signer certificate verification and OTA readback.",
+  "ci_revision": 53
 }
