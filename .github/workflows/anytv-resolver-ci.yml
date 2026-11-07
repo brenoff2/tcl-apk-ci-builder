@@ -32,6 +32,8 @@ jobs:
           PY
       - name: Run security, provider and unrestricted-usage cache regression tests
         run: node --test anytv-resolver/src/worker.test.mjs
+      - name: Preview D1 isolation contract (static, no Cloudflare access)
+        run: python3 -m unittest discover -s anytv-resolver/tests -p 'test_preview_isolation.py' -v
       - name: Cloudflare Worker bundle dry-run (no deployment, no token)
         run: |
           set -euo pipefail
