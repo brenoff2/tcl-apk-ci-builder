@@ -1644,7 +1644,8 @@ private fun AnyTvGenreViewIcon(
 @Composable
 internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String,
-    tvName: String, onDismiss: () -> Unit
+    tvName: String, onDismiss: () -> Unit,
+    onRemoteKey: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {}
 ) {
     val context = LocalContext.current
     StreamingCatalog.configure(context)
@@ -1892,6 +1893,8 @@ internal fun TclStreamingScreens(
     var showSaved by remember { mutableStateOf(false) }
     var detailsPackage by remember { mutableStateOf<String?>(null) }
     var titleActionPending by remember { mutableStateOf(false) }
+    var showPlaybackRemote by remember { mutableStateOf(false) }
+    var remoteMinimized by remember { mutableStateOf(false) }
     var titleActionFeedback by remember { mutableStateOf<String?>(null) }
     var deviceLinkStatus by remember { mutableStateOf<String?>(null) }
     var deviceIdSuffix by remember { mutableStateOf<String?>(null) }
@@ -2550,6 +2553,8 @@ internal fun TclStreamingScreens(
             return
         }
         titleActionPending = true
+        showPlaybackRemote = true
+        remoteMinimized = false
         titleActionFeedback = "Enviando comando à TCL…"
         scope.launch {
             try {
@@ -4942,5 +4947,78 @@ internal fun TclStreamingScreens(
                 }
             }
         )
+    }
+    // Overlay stays available while the TV streaming app asks for a profile.
+    // Uses the same established Android TV remote connection as the home screen.
+    if (showPlaybackRemote) {
+        val send: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {
+            onRemoteKey(it)
+        }
+        if (remoteMinimized) {
+            AlertDialog(
+                onDismissRequest = { showPlaybackRemote = false },
+                title = { Text("Controle da TV") },
+                text = { Text("O streaming esta aberto na TV. Reabra o controle para escolher o perfil.") },
+                confirmButton = {
+                    Button(onClick = { remoteMinimized = false }) { Text("Abrir controle") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPlaybackRemote = false }) { Text("Fechar") }
+                }
+            )
+        } else {
+            AlertDialog(
+                onDismissRequest = { remoteMinimized = true },
+                title = { Text("Controle do streaming") },
+                text = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("Escolha o perfil e confirme com OK na TV.", fontSize = 12.sp)
+                        OutlinedButton(onClick = {
+                            send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_UP)
+                        }) { Text("↑") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(onClick = {
+                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_LEFT)
+                            }) { Text("←") }
+                            Button(onClick = {
+                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_CENTER)
+                            }) { Text("OK") }
+                            OutlinedButton(onClick = {
+                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_RIGHT)
+                            }) { Text("→") }
+                        }
+                        OutlinedButton(onClick = {
+                            send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_DOWN)
+                        }) { Text("↓") }
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            TextButton(onClick = {
+                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_BACK)
+                            }) { Text("Voltar") }
+                            TextButton(onClick = {
+                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_HOME)
+                            }) { Text("Inicio") }
+                            TextButton(onClick = {
+                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_PLAY_PAUSE)
+                            }) { Text("Play/Pause") }
+                        }
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = {
+                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_DOWN)
+                            }) { Text("Vol -") }
+                            TextButton(onClick = {
+                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_UP)
+                            }) { Text("Vol +") }
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { remoteMinimized = true }) { Text("Minimizar") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showPlaybackRemote = false }) { Text("Fechar") }
+                }
+            )
+        }
     }
 }
