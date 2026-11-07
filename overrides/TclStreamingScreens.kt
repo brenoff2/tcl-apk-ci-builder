@@ -441,7 +441,10 @@ private object StreamingCatalog {
                 .any { it in norm(app.name) || it in norm(app.packageName) }
 
     private fun get(token: String, route: String): JSONObject {
-        StreamingDiskCache.read(route)?.let { return it }
+        // Rating freshness is controlled by the Worker (900s), not the 48h
+        // Android catalogue cache. An expired score is not an offline fallback.
+        val remoteRating = route.startsWith("ratings/trakt/")
+        if (!remoteRating) StreamingDiskCache.read(route)?.let { return it }
         // The initial screen must not repeatedly fail empty when the backend
         // is temporarily unavailable; verified cached titles remain useful.
         return try {
@@ -457,12 +460,13 @@ private object StreamingCatalog {
                     error("Catálogo temporariamente indisponível (HTTP $status).")
                 }
                 val payload = JSONObject(connection.inputStream.bufferedReader().use { it.readText() })
-                StreamingDiskCache.write(route, payload, ttl(route))
+                if (!remoteRating) StreamingDiskCache.write(route, payload, ttl(route))
                 payload
             } finally {
                 connection.disconnect()
             }
         } catch (failure: Exception) {
+            if (remoteRating) throw failure
             StreamingDiskCache.stale(route) ?: throw failure
         }
     }
