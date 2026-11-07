@@ -28,6 +28,25 @@ A configuração efetiva `previews.d1_databases` fica **bloqueada** até que exi
 
 **Diagnóstico complementar da API e CI (07/11/2026, GET e logs apenas):** leituras de Builds com `script_tag` correto permanecem em HTTP 401/código 12006. A mensagem de erro da API indica `Workers CI Read` ou `Workers CI Write`, enquanto o guia oficial [Builds API reference](https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/) documenta token `user-scoped` com `Workers Builds Configuration: Edit` e `Workers Scripts: Read`. A divergência de rótulos/escopos **não foi resolvida**: antes de solicitar permissão, confirmar no painel/perfil oficial qual token de usuário e menor escopo realmente autorizam o GET; não tratar `Edit` como autorização para executar PUT/POST. Os logs existentes GitHub Actions Worker offline [42416555021](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/42416555021) comprovam Node `42/42`, Wrangler **4.45.0** e `deploy --dry-run`; P0 [42416572523](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/42416572523) comprova `62/62` e Wrangler **4.45.3** com D1 **local**. Ambos estão abaixo do Wrangler **>=4.135.0** necessário para Previews. Antes de configurar ou ativar Previews, preparar atualização da versão fixada no CI DEV e executar dry-run/testes isolados, SEM Cloudflare credentials/Preview. Esses CI anteriores não comprovam Preview. Nenhuma chamada de deploy remota foi feita nesta rodada.
 
+### Matriz de aceite remoto do Preview (GET, fail-closed; 07/11/2026)
+
+Esta matriz distingue preflight somente leitura de provisionamento sujeito a autorizacao humana. PASS requer readback de recurso real e teste correspondente; UUID sintaticamente valido ou CI offline nao satisfaz gate remoto. Nenhum POST/PATCH/DELETE, criacao de token, secret put, migracao remota ou deploy esta autorizado por esta matriz.
+
+| Gate | Evidencia de aceite exigida | Inventario GET desta rodada | Resultado |
+| --- | --- | --- | --- |
+| A — identidade/Worker | Identificar conta autenticada, nome do Worker e script_tag sem expor token | Worker anytv-link-resolver-pilot encontrado; tag presente | READ_CONFIRMED, nao autoriza deploy |
+| B — D1 staging | GET /accounts/{account_id}/d1/database com nome e UUID real de banco distinto do D1 produtivo; readback de binding | Somente 1 D1 listado: anytv-link-resolver, vinculado a producao | BLOCKED: STAGING_DB_UNAVAILABLE |
+| C — Access Preview | GET apps e policies: destino preview_worker + worker_id correto, politica allow restrita a operadores; conferir protecao global, depois negar anonimo e aceitar operador autenticado | 10 apps listadas, zero destinos Preview Worker; policies/controles globais nao comprovados | BLOCKED: PREVIEW_ACCESS_UNVERIFIED |
+| D — Builds | GET /accounts/{account_id}/builds/workers/{script_tag} com token user-scoped autorizado: registrar previews_enabled, branch de producao, comandos de build/deploy | GET via tag real retorna HTTP 401 / codigo 12006 Invalid token | BLOCKED: BUILDS_STATE_UNKNOWN |
+| E — bindings e segredos | Readback previews.d1_databases=DB staging; vars de QA, flags false e pilot; nomes de secrets TMDB/Trakt no Preview Base ou Preview individual; nenhum binding compartilhado de producao | wrangler.jsonc sem bloco previews; nenhum Preview remoto verificado | BLOCKED: PREVIEW_NOT_CONFIGURED |
+| F — migracoes | Config de migracao separada para mesmo UUID de staging; evidencia autorizada de schema e tabelas no banco de QA; nenhum D1 produtivo alterado | CI anterior valida somente D1 local | BLOCKED: PREVIEW_SCHEMA_UNVERIFIED |
+| G — endpoints | Somente depois de Access, testar GET creditos movie/tv e ratings Trakt movie/tv, associacao de IDs, notas 0..10, votos e ausencia explicita quando indisponivel; nenhuma credencial em resposta/log | Node offline passou, nenhum HTTP Preview real | BLOCKED: LIVE_QA_PENDING |
+| H — producao inalterada | Readback comparativo de deployment, bindings, D1 e OTA antes/depois; QA fisico separado | Manifesto GitHub mantem 2.9.60-AnyTV/code88; nenhum QA remoto nesta rodada | PARTIAL: RELEASE_MANIFEST_ONLY |
+
+Sequencia autorizada futura: (1) comprovar Builds e previews_enabled por GET user-scoped; (2) criar D1 separado apos aprovacao e validar UUID; (3) configurar Access apenas para Previews com policies verificadas; (4) vincular D1, migracoes e segredos de Preview independentes; (5) testar CI estatico e Wrangler dry-run sem credencial; (6) criar Preview somente com aprovacao; (7) testar HTTP real e comparar producao antes/depois. Nenhuma dessas escritas foi executada nesta rodada.
+
+Fontes oficiais: https://developers.cloudflare.com/workers/previews/configuration/ ; https://developers.cloudflare.com/workers/previews/ ; https://developers.cloudflare.com/workers/configuration/cloudflare-access/ ; https://developers.cloudflare.com/workers/ci-cd/builds/api-reference/ .
+
 **Estado operacional desta seção:** `PLAN_ONLY`; nenhum provisionamento, configuração `previews`, segredo ou QA live executado nesta etapa.
 
 
