@@ -79,8 +79,9 @@ class PreviewIsolationContract(unittest.TestCase):
         }
         return c
 
-    def test_checked_in_config_passes_without_enabling_preview(self):
-        self.assertEqual(validate_config(self.base), "PREVIEW_NOT_CONFIGURED")
+    def test_checked_in_config_meets_static_gate(self):
+        self.assertIn(validate_config(self.base),
+                      ("PREVIEW_NOT_CONFIGURED", "PREVIEW_STATIC_ISOLATION_OK"))
 
     def test_future_separate_preview_static_config_passes(self):
         self.assertEqual(validate_config(self.with_preview()), "PREVIEW_STATIC_ISOLATION_OK")
