@@ -1367,6 +1367,19 @@ class StreamingScreens(unittest.TestCase):
 
 
 
+    def test_detail_cast_loads_independently_and_reports_unavailable_data(self):
+        self.assertIn('    // Load cast independently:', self.screen)
+        cast_effect = self.screen.split('    // Load cast independently:', 1)[1].split(
+            '    LaunchedEffect(details?.media, details?.id) {', 2)
+        self.assertEqual(len(cast_effect), 3)
+        self.assertIn('detailCast = StreamingCatalog.cast(item.media, item.id)', cast_effect[1])
+        self.assertIn('detailCastError = true', cast_effect[1])
+        self.assertNotIn('StreamingCatalog.cast(item.media, item.id)', cast_effect[2])
+        for message in ('Carregando elenco...', 'Não foi possível carregar o elenco agora.',
+                        'Elenco não informado para este título.'):
+            self.assertIn(message, self.screen)
+        self.assertIn('if (actor.photo.startsWith("/"))', self.screen)
+
     def test_detail_shows_tmdb_and_real_trakt_not_imdb(self):
         self.assertIn('suspend fun traktRating(media: String, id: Int): Double?', self.screen)
         self.assertIn('get("backend", "ratings/trakt/$media/$id")', self.screen)
