@@ -1,3 +1,12 @@
+## 08/11/2026 — Elenco AnyTV: falha pública confirmada em movie/tv credits
+- Diagnóstico de produção **READ_ONLY**, sem credenciais e sem deploy: GitHub Actions `42512289845` retornou `HTTP 400 {"status":"bad_request"}` tanto para `/v1/catalog/movie/550/credits` quanto para `/v1/catalog/tv/1399/credits`. O diagnóstico anterior `42512255609` já havia observado 400 na rota movie. Isso é um bloqueio de dados do elenco, não somente problema de rolagem.
+- O Worker DEV `anytv-resolver/src/worker.mjs` (blob `1b8185cbc7c2109f31f21d71eee4b2b054fd77be`) permite explicitamente as rotas de credits; a cópia na branch OTA (blob `1515ff3995a9c4a5505b67e073add603d264659b`) não contém a rota. A equivalência entre branch OTA e deploy Cloudflare não foi comprovada; o HTTP 400 em produção é evidência independente.
+- UI Android DEV: `c4c8ec5` carrega elenco separadamente e apresenta estados; `13eb7f8` coloca Elenco principal antes da sinopse; testes `bab9712` e `f26ac8e5`. Compilação unsigned code91 `42511909350` ainda in_progress nesta consulta, sem signed artifact. Prova isolada `42511909358` SUCCESS. Regressão Worker com dados simulados `cf955e48` SUCCESS em `42512232456`; teste não prova produção.
+- **Gate NÃO SATISFEITO:** antes de publicar Android code91, inspecionar implantação autorizada do Worker, preparar mudança mínima/rollback; aprovar e executar separadamente se autorizado, provar HTTP 200 com cast real em filme e série, fotos `profile_path` e dados de personagem. Depois avaliar code91 assinado/OTA com os gates usuais. NÃO implantar Worker, assinar, atualizar OTA ou promover F0-F8 apenas com este diagnóstico.
+- Android assinado atual 2.9.62/code90 e OTA `93e526e5a532724f139208ff042d1a92056f7c91` preservados. Samsung Tizen adiada.
+
+---
+
 ## 08/11/2026 — AnyTV 2.9.62/code90 release definitivo assinado e OTA verificado
 - Autorização humana expressa para release definitivo registrada na conversa do projeto; não é build somente de teste.
 - DEV: concorrência do workflow unsigned isolada no commit `ffa6fb090dc4614cb49f2f705631284419a65fbf`; manifesto oficial `release/anytv-v2.json` atualizado para `2.9.62-AnyTV`/`versionCode=90` no commit `1e0464b3742c236946774a970df47cdcda7fe257`.
