@@ -1379,5 +1379,56 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('imdbTitleId(', self.screen)
 
 
+
+class UpdaterFlowRegression(unittest.TestCase):
+    """Offline source contracts for the shared phone/TV update flow (UPD-01..03)."""
+
+    @classmethod
+    def setUpClass(cls):
+        root = Path(__file__).resolve().parents[2]
+        cls.updater = (root / "overrides/common/TclUpdateManager.java").read_text(encoding="utf-8")
+        cls.receiver = (root / "overrides/common/TclInstallResultReceiver.java").read_text(encoding="utf-8")
+        cls.check = cls.updater.split("public static void check(Activity activity, Status callback) {", 1)[1].split(
+            "    /**\n     * Stable per-platform release channels.", 1)[0]
+
+    def test_upd01_install_permission_only_after_version_and_signer_validation(self):
+        check = self.check
+        self.assertLess(check.index("if (nextCode <= installedCode)"),
+                        check.index("!pm.canRequestPackageInstalls()"))
+        self.assertLess(check.index("if (!MessageDigest.isEqual(currentSigner(installed),"),
+                        check.index("!pm.canRequestPackageInstalls()"))
+        self.assertLess(check.index("!pm.canRequestPackageInstalls()"),
+                        check.index("install(app, apk, nextCode);"))
+
+    def test_upd02_status_does_not_claim_upgrade_before_validation(self):
+        check = self.check
+        self.assertIn('post(activity, callback, "Baixando e verificando a versão oficial...");', check)
+        self.assertNotIn("Atualização encontrada. Baixando e verificando...", check)
+        done = 'post(activity, callback,\n                        "Atualização disponível. Abrindo a confirmação de instalação do Android...");'
+        self.assertIn(done, check)
+        self.assertLess(check.index("if (!MessageDigest.isEqual(currentSigner(installed),"),
+                        check.index(done))
+
+    def test_upd03_install_success_names_phone_and_tv_correctly(self):
+        success = self.receiver.split("} else if (status == PackageInstaller.STATUS_SUCCESS) {", 1)[1].split(
+            "} else {", 1)[0]
+        self.assertIn('context.getPackageName()', success)
+        self.assertIn('"com.tclremote.tvcompanion"', success)
+        self.assertIn('"Controle TCL atualizado."', success)
+        self.assertIn('"AnyTV atualizado."', success)
+
+    def test_update_safety_contracts_remain_enforced(self):
+        check = self.check
+        self.assertIn('"https".equals(parsed.getProtocol())', self.updater)
+        self.assertIn('"/current.apk"', self.updater)
+        self.assertIn('if (nextCode <= installedCode)', check)
+        self.assertIn('if (!MessageDigest.isEqual(currentSigner(installed),', check)
+        self.assertIn('archiveSigner(pm, apk.getAbsolutePath(), next, pkg)', check)
+        self.assertIn('if (next == null || !pkg.equals(next.packageName))', check)
+        self.assertIn('PackageInstaller.SessionParams.USER_ACTION_REQUIRED', self.updater)
+        self.assertIn('PackageInstaller.STATUS_PENDING_USER_ACTION', self.receiver)
+        self.assertIn('TclInstallResultReceiver.class', self.updater)
+
+
 if __name__ == "__main__":
     unittest.main()
