@@ -1,0 +1,28 @@
+name: AnyTV v27 cast-only candidate offline verification
+on:
+  push:
+    branches: ['fix/anytv-v27-cast-only-20261108']
+    paths:
+      - 'anytv-resolver/cast-v27-candidate/**'
+      - '.github/workflows/anytv-v27-cast-only-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Verify all four isolated original modules have valid JS syntax
+        run: |
+          set -euo pipefail
+          for file in anytv-resolver/cast-v27-candidate/*.mjs; do
+            node --check "$file"
+          done
+      - name: Verify movie and TV credits, cache, invalid requests
+        run: node --test anytv-resolver/cast-v27-candidate/cast.test.mjs
+      - name: Confirm no deployment and no credentials
+        run: echo 'CAST_V27_OFFLINE_ONLY; no Cloudflare deploy, no signature, no APK or OTA write.'
