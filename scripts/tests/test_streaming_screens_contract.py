@@ -135,7 +135,8 @@ class StreamingScreens(unittest.TestCase):
 
     def test_no_unverified_playback_claim(self):
         self.assertIn("TclTvAppApi.open(host, pairing, app.packageName)", self.screen)
-        self.assertIn("Não existe deep link universal", self.screen)
+        self.assertIn("Busca solicitada ao aplicativo na TCL; confira o resultado.", self.screen)
+        self.assertNotIn("Não existe deep link universal", self.screen)
         self.assertNotIn("startPlaybackOnTv", self.screen)
 
     def test_search_genres_grid_and_favorites(self):
@@ -187,7 +188,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertLess(
             self.screen.index("LazyColumn(state = catalogScrollState,"),
             self.screen.index("HorizontalPager(", self.screen.index("val heroTitles =")))
-        self.assertIn(".heightIn(max = 460.dp)", self.screen)
+        self.assertIn(".heightIn(max = 560.dp)", self.screen)
         self.assertIn(".verticalScroll(rememberScrollState())", self.screen)
 
     def test_brazil_subscription_offers_are_title_specific_not_every_installed_app(self):

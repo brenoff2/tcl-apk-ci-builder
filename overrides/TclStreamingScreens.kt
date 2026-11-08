@@ -4670,39 +4670,17 @@ internal fun TclStreamingScreens(
                 if (scoreLine.isNotBlank()) Text(scoreLine, fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                    Row(modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = {
-                            if (pkg.isBlank()) {
-                                titleActionFeedback = "Selecione um serviço disponível para este título."
-                            } else if (!(officialDisneyTitle && pkg == "com.disney.disneyplus") &&
-                                detailsOffers?.let { offers ->
-                                    displayed.any { app -> app.packageName == pkg &&
-                                        StreamingCatalog.appHasOffer(app, offers) } } != true) {
-                                titleActionFeedback = "Oferta de assinatura no Brasil não confirmada para este aplicativo."
-                            } else {
-                                searchOnTv(title, pkg)
-                            }
-                        }, enabled = !titleActionPending,
-                            modifier = Modifier.weight(1f),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFFF1744)),
-                            contentPadding = PaddingValues(horizontal = 10.dp,
-                                vertical = 10.dp)) {
-                            Text(if (titleActionPending) "Abrindo…" else "Abrir na TV",
-                                fontSize = 12.sp, maxLines = 1)
-                        }
-                        OutlinedButton(onClick = {
-                            showPlaybackRemote = true
-                            remoteMinimized = false
-                        }, contentPadding = PaddingValues(horizontal = 10.dp,
-                            vertical = 10.dp)) {
-                            Icon(Icons.Filled.Tv, contentDescription = "Controle da TV",
-                                modifier = Modifier.size(17.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text("Controle", fontSize = 12.sp)
-                        }
+                    OutlinedButton(onClick = {
+                        showPlaybackRemote = true
+                        remoteMinimized = false
+                    }, colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFFF1744)),
+                        contentPadding = PaddingValues(horizontal = 12.dp,
+                            vertical = 8.dp)) {
+                        Icon(Icons.Filled.Tv, contentDescription = "Controle da TV",
+                            modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Controle da TV", fontSize = 12.sp)
                     }
                     if (titleActionFeedback != null) {
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
@@ -4988,14 +4966,31 @@ internal fun TclStreamingScreens(
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    details = null
-                    detailsPackage = null
-                    titleActionFeedback = null
-                    linkActivationRequired = false
-                    deviceLinkStatus = null
+                Button(onClick = {
+                    if (pkg.isBlank()) {
+                        titleActionFeedback = "Selecione um serviço disponível para este título."
+                    } else if (!(officialDisneyTitle && pkg == "com.disney.disneyplus") &&
+                        detailsOffers?.let { offers ->
+                            displayed.any { app -> app.packageName == pkg &&
+                                StreamingCatalog.appHasOffer(app, offers) } } != true) {
+                        titleActionFeedback = "Oferta de assinatura no Brasil não confirmada para este aplicativo."
+                    } else {
+                        searchOnTv(title, pkg)
+                    }
+                }, enabled = !titleActionPending,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF1744))) {
+                    Text(if (titleActionPending) "Abrindo…" else
+                        "Abrir na " + tvName.ifBlank { "TV conectada" })
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = {
+                    details = null; detailsPackage = null; titleActionFeedback = null
+                    linkActivationRequired = false; deviceLinkStatus = null
                     deviceIdSuffix = null
-                }) { Text("Fechar") }
+                }) {
+                    Text("Voltar")
+                }
             }
         )
     }
