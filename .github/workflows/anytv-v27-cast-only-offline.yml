@@ -5,6 +5,7 @@ on:
     paths:
       - 'anytv-resolver/cast-v27-candidate/**'
       - '.github/workflows/anytv-v27-cast-only-offline.yml'
+      - '.github/workflows/anytv-v27-cast-staging-readonly-preflight.yml'
   workflow_dispatch:
 permissions:
   contents: read
@@ -26,6 +27,8 @@ jobs:
         run: node --test anytv-resolver/cast-v27-candidate/cast.test.mjs
       - name: Reject production D1, Worker or public previews in staging configs
         run: node --test anytv-resolver/cast-v27-candidate/staging-config.test.mjs
+      - name: Verify cast-only remote preflight is isolated and read-only
+        run: node --test anytv-resolver/cast-v27-candidate/staging-preflight.test.mjs
       - name: Check prospective staging config only when explicitly provided
         env:
           STAGING_CONFIG_PATH: ${{ vars.ANYTV_CAST_STAGING_CONFIG_PATH }}
