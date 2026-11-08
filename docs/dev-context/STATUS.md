@@ -1,3 +1,12 @@
+## 08/11/2026 — Cloudflare MCP authenticated active deployment readback
+- Correção de diagnóstico: credencial `CLOUDFLARE_API_TOKEN` ausente no GitHub Actions run `42512608148` não significa impossibilidade de consultar Cloudflare. Hub MCP `cloudflare.whoami` autenticou na conta `48172e80b82e7f0a2100e512831c48d2`, e `cloudflare.execute` operou exclusivamente GET via API oficial, sem deploy.
+- Worker `anytv-link-resolver-pilot` deployment ativo `e94c3bad-bcac-4b40-bad9-a317d7967563`, versão `88779b1b-9dbd-4dc6-9884-eff52769ded2` com **100% do tráfego**, criado `2026-10-26T02:01:56.74237Z`. Versão número 27, criada um segundo antes, `has_preview=true`.
+- Settings GET: compatibility date `2026-10-15`; bindings (somente nome/tipo, sem valores) `DB` D1, `TMDB_READ_TOKEN`, `TRAKT_CLIENT_ID`, `ANYTV_MOVIE_API_KEY`, `WATCHMODE_API_KEY` secret_text, além de `ANYTV_DEVICE_ACTIVATION_ENABLED` e `ANYTV_RESOLVER_AUTH_MODE` plain_text. Não houve alteração em secrets, version, deployment ou D1.
+- Evidência HTTP já existente: `movie/550/credits` e `tv/1399/credits` responderam 400 `bad_request` no Worker público. Próxima etapa: cotejar source/bundle da versão 27 via rota autenticada de leitura, preparar patch mínimo sem misturar mudanças DEV, isolar teste de preview, obter autorização de deploy e exigir rollback para deployment `e94c3bad-bcac-4b40-bad9-a317d7967563`/versão `88779b1b-9dbd-4dc6-9884-eff52769ded2`.
+- Android oficial code90 e OTA `93e526e5` seguem intactos; não publicar code91 até Worker live credits PASS e gates restantes.
+
+---
+
 ## 08/11/2026 — Cloudflare deployment inspect: auth unavailable, rollout isolated
 - Foi criado preflight GitHub Actions GET-only `.github/workflows/anytv-cast-deployment-readonly.yml` (commit `5fd0c49e66f7fbb7f8895d8da49dc0c7e43c944e`); run `42512608148` FAIL-CLOSED com recibo `CAST_DEPLOYMENT_READ_UNAVAILABLE no_cloudflare_token`. Portanto, versão/deployment ativos Cloudflare NÃO foram lidos; proibição de inferir version ID ou contornar ACL.
 - API oficial Cloudflare diferencia Worker versions de deployments: deployment determina versões que atendem tráfego; lista GET `/accounts/{account_id}/workers/scripts/{script_name}/deployments`. Docs: https://developers.cloudflare.com/workers/versions-and-deployments/ e https://developers.cloudflare.com/api/resources/workers/ .
