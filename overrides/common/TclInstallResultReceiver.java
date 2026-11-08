@@ -37,7 +37,9 @@ public final class TclInstallResultReceiver extends BroadcastReceiver {
                         Toast.LENGTH_LONG).show();
             }
         } else if (status == PackageInstaller.STATUS_SUCCESS) {
-            Toast.makeText(context, "Controle TCL atualizado.", Toast.LENGTH_LONG).show();
+            String message = "com.tclremote.tvcompanion".equals(context.getPackageName())
+                    ? "Controle TCL atualizado." : "AnyTV atualizado.";
+            Toast.makeText(context, message, Toast.LENGTH_LONG).show();
         } else {
             String reason = intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE);
             Log.e("TclUpdater", "Installation rejected: " + status + " " + reason);
