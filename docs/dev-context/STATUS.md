@@ -1,3 +1,12 @@
+## 08/11/2026 — Plano de staging isolado AnyTV cast documentado
+- Elaborado plano técnico `anytv-resolver/cast-v27-candidate/STAGING_PLAN.md` em branch isolada `fix/anytv-v27-cast-only-20261108`, commit `276841f178adf550a6d8fdae983f63e6957b8a5c`. Sem operações Cloudflare de escrita.
+- Verificados arquivos de migração reais: `0001_create_tables.sql` contém `link_cache`, `monthly_quota` histórica e índice; `0002_device_proof.sql` contém `device_keys`, `device_nonces`; `0003_device_activations.sql` define ativações; `0004_user_library_sync.sql` permanece explicitamente **fora do escopo**, não aplicada.
+- Plano propõe D1 `anytv-cast-staging` **novo e separado** e Worker `anytv-cast-staging`, data `2026-10-15`, `DB` somente staging, token TMDB autorizado para teste separado, ativação `false`, modo `device` sem chaves provisionadas, outros serviços falham fechados. Tudo sujeito a autorização expressa, sem copiar segredos ou dados de produção.
+- Gates documentados: aprovação de recursos, isolamento por UUID e bindings, offline PASS `42514148321`, HTTP200 staging créditos filme/série com cast, nome, personagem, foto, cache, regressões e negativas; readback production deployment, rollback v27 e eventual QA Android code91. Preview/Version URL que compartilhe D1 PROD não conta como staging.
+- Cloudflare inventário comprovou 1 D1 e nenhum Worker staging AnyTV; por ora a criação/validação remota está `BLOCKED_AWAITING_STAGING_AUTHORIZATION`. Android 2.9.62/code90 e OTA `93e526e5` preservados, roadmap 7/11 63% sem promoções.
+
+---
+
 ## 08/11/2026 — Inventário Cloudflare AnyTV: sem D1 staging
 - Hub oficial Cloudflare MCP / account `48172e80b82e7f0a2100e512831c48d2`: consulta **GET-only** de `/accounts/{account_id}/d1/database` retornou **1** D1 total (`result_info.total_count=1`): `anytv-link-resolver`, ID `9bab6598-d019-4e88-8b29-a327ff0cfd00` (PRODUÇÃO). **Nenhum D1 staging nessa conta**.
 - GET `/accounts/{account_id}/workers/scripts` retornou **4** Workers: `anytv-link-resolver-pilot`, `clfcj-extension-updates`, `clfcj-mcp-gateway`, `clfcj-pjecalc-egress-relay`. Somente o primeiro pertence ao AnyTV; **nenhum Worker staging AnyTV** identificado. Não utilizar Workers CLFCJ para testes AnyTV.
