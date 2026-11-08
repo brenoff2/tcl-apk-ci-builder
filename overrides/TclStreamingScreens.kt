@@ -4730,7 +4730,6 @@ internal fun TclStreamingScreens(
                             Text("Ver cinemas e sessões · Ingresso.com", fontSize = 12.sp)
                         }
                     }
-                    Text(title.overview.ifBlank { "Sinopse indisponível." })
                     Text("Elenco principal", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                     if (detailCastLoading) {
                         Text("Carregando elenco...", fontSize = 12.sp,
@@ -4760,6 +4759,8 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
+                    Text("Sinopse", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text(title.overview.ifBlank { "Sinopse indisponível." })
                     if (detailLoading) CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     val video = trailerLink
                     if (video != null) {
