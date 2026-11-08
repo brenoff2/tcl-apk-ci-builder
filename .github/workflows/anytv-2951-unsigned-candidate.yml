@@ -89,6 +89,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_anytv_account_entry.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_ux_regression.py' -v
       - name: Apply V2 package identity and compile current candidate
         run: |
           set -euo pipefail
