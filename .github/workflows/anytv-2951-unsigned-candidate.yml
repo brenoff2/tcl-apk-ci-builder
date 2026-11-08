@@ -6,6 +6,8 @@ on:
       - '.github/workflows/anytv-2951-unsigned-candidate.yml'
       - '.github/workflows/anytv-v2-candidate-compile.yml'
       - 'overrides/TclStreamingScreens.kt'
+      - 'overrides/common/TclUpdateManager.java'
+      - 'overrides/common/TclInstallResultReceiver.java'
       - 'overrides/TclApprovedHomeScreen.kt'
       - 'overrides/TclResponsivePad.kt'
       - 'scripts/apply_tcl_sticky_controls.py'
