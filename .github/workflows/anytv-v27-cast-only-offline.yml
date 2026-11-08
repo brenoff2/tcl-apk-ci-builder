@@ -24,5 +24,16 @@ jobs:
           done
       - name: Verify movie and TV credits, cache, invalid requests
         run: node --test anytv-resolver/cast-v27-candidate/cast.test.mjs
+      - name: Reject production D1, Worker or public previews in staging configs
+        run: node --test anytv-resolver/cast-v27-candidate/staging-config.test.mjs
+      - name: Check prospective staging config only when explicitly provided
+        env:
+          STAGING_CONFIG_PATH: ${{ vars.ANYTV_CAST_STAGING_CONFIG_PATH }}
+        run: |
+          if [ -n "$STAGING_CONFIG_PATH" ]; then
+            node anytv-resolver/cast-v27-candidate/check-staging-config.mjs "$STAGING_CONFIG_PATH"
+          else
+            echo 'STAGING_CONFIG_NOT_PROVISIONED; unit negative tests still enforced; deployment forbidden'
+          fi
       - name: Confirm no deployment and no credentials
         run: echo 'CAST_V27_OFFLINE_ONLY; no Cloudflare deploy, no signature, no APK or OTA write.'
