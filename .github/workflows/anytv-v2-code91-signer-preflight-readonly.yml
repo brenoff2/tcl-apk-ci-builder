@@ -1,0 +1,79 @@
+name: AnyTV V2 code91 signer and OTA read-only preflight
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths:
+      - '.github/workflows/anytv-v2-code91-signer-preflight-readonly.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  existing-v2-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - name: Install APK signing tool
+        run: sdkmanager 'build-tools;36.0.0'
+      - name: Assert unchanged signed baseline and candidate version
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          baseline=json.loads(Path('release/anytv-v2.json').read_text())
+          signer=json.loads(Path('signing-recovery/v2/identity.json').read_text())
+          assert baseline=={'versionName':'2.9.62-AnyTV','versionCode':90}, 'V2 baseline changed'
+          assert signer['schema']==1 and signer['role']=='Android phone V2 independent signer'
+          assert len(signer['certificate_sha256'])==64
+          assert Path('signing-recovery/v2/phone-cert.pem').is_file()
+          assert Path('signing-recovery/v2/phone-signer.aesgcm').is_file()
+          assert 'versionCode = 91' in Path('.github/workflows/anytv-2951-unsigned-candidate.yml').read_text()
+          assert '2.9.63-AnyTV' in Path('.github/workflows/anytv-2951-unsigned-candidate.yml').read_text()
+          print('ANYTV_V2_BASELINE_AND_CODE91_SOURCE_OK')
+          PY
+      - name: Verify V2 public certificate matches committed identity
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,subprocess
+          from pathlib import Path
+          meta=json.loads(Path('signing-recovery/v2/identity.json').read_text())
+          cert_der=subprocess.check_output(['openssl','x509','-in','signing-recovery/v2/phone-cert.pem','-outform','DER'])
+          assert hashlib.sha256(cert_der).hexdigest()==meta['certificate_sha256'], 'V2 public signer mismatch'
+          ciphertext=Path('signing-recovery/v2/phone-signer.aesgcm').read_bytes()
+          assert hashlib.sha256(ciphertext).hexdigest()==meta['ciphertext_sha256'], 'V2 encrypted signer changed'
+          print('ANYTV_V2_CERT_AND_ENCRYPTED_SIGNER_CHECKSUM_OK; no secret decryption performed')
+          PY
+      - name: Download existing OTA V2 APK from canonical branch without modification
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin feat/tcl-v22-updates-back-bluetooth
+          mkdir -p current-ota-readonly
+          git show FETCH_HEAD:updates/android/v2/current.apk > current-ota-readonly/current.apk
+          test -s current-ota-readonly/current.apk
+      - name: Verify installed-channel APK signature and package version
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/apksigner" verify --verbose --print-certs current-ota-readonly/current.apk > current-ota-readonly/cert-report.txt
+          "$BT/aapt" dump badging current-ota-readonly/current.apk > current-ota-readonly/badging.txt
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+          meta=json.loads(Path('signing-recovery/v2/identity.json').read_text())
+          s=Path('current-ota-readonly/cert-report.txt').read_text()
+          b=Path('current-ota-readonly/badging.txt').read_text()
+          match=re.search(r'Signer #1 certificate SHA-256 digest:\s*([0-9a-fA-F]+)',s)
+          assert match, 'certificate digest unavailable'
+          assert match.group(1).lower()==meta['certificate_sha256'], 'OTA signer differs from V2 identity'
+          assert "name='com.tclremote.livre.v2'" in b, 'OTA package mismatch'
+          assert "versionCode='90'" in b and "versionName='2.9.62-AnyTV'" in b, 'OTA baseline changed'
+          print('ANYTV_V2_SIGNED_OTA_CODE90_READBACK_OK')
+          print('CODE91_NOT_SIGNED_OR_PUBLISHED_BY_PREFLIGHT')
+          PY
+      - name: Confirm workflow is read-only
+        run: echo 'READ_ONLY_SIGNER_PREFLIGHT; no decryption, signing, APK publish, git push or OTA write.'
