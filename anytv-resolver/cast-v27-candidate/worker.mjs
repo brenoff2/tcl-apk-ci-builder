@@ -257,4 +257,216 @@ export async function catalogRequest(request, env, deps = {}) {
     return asJson({ status: "bad_request" }, 400);
   }
   const provider = parsed.searchParams.get("with_watch_providers");
-  if (provider !== null && !/^[1- --- TRUNCATED --- 21,995 chars
+  if (provider !== null && !/^[1-9][0-9]{0,5}$/.test(provider)) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const genre = parsed.searchParams.get("with_genres");
+  if (genre !== null && !/^[1-9][0-9]{0,5}$/.test(genre)) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const query = parsed.searchParams.get("query");
+  if (query !== null && (query.length < 1 || query.length > 90)) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const region = parsed.searchParams.get("region");
+  if (region !== null && (route !== "movie/now_playing" || region !== "BR")) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const lang = parsed.searchParams.get("language") || "pt-BR";
+  // TMDB sorting is restricted to official discover endpoints; never forward
+  // arbitrary query expressions or mutate unrelated search/metadata routes.
+  const sort = parsed.searchParams.get("sort_by") || "popularity.desc";
+  const discoverSorts = route === "discover/movie"
+    ? new Set(["popularity.desc", "vote_average.desc",
+        "primary_release_date.desc", "title.asc"])
+    : route === "discover/tv"
+      ? new Set(["popularity.desc", "vote_average.desc",
+          "first_air_date.desc", "name.asc"])
+      : new Set(["popularity.desc"]);
+  const trailerLanguage = /^(movie|tv)\/[1-9][0-9]{0,9}\/videos$/.test(route);
+  if ((parsed.searchParams.get("watch_region") || "BR") !== "BR" ||
+      (lang !== "pt-BR" && !(trailerLanguage && lang === "en-US")) ||
+      (parsed.searchParams.get("include_adult") || "false") !== "false" ||
+      (parsed.searchParams.get("with_watch_monetization_types") || "flatrate") !== "flatrate" ||
+      !discoverSorts.has(sort)) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  let diagnosticStage = "cache_read";
+  try {
+    const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
+    const upstream = new URL("https://api.themoviedb.org/3/" + route);
+    for (const [k, v] of parsed.searchParams) upstream.searchParams.set(k, v);
+    upstream.searchParams.set("language", lang);
+    if (route.startsWith("discover/") || route.startsWith("watch/providers/")) {
+      upstream.searchParams.set("watch_region", "BR");
+    }
+    const key = "tmdb:" + upstream.pathname + upstream.search;
+    diagnosticStage = "cache_read";
+    const cached = await env.DB.prepare(
+      "SELECT payload,expires_at FROM link_cache WHERE cache_key = ? LIMIT 1"
+    ).bind(key).first();
+    if (cached && cached.expires_at > now) {
+      return asJson(JSON.parse(cached.payload), 200, { "x-anytv-cache": "hit" });
+    }
+    // TMDB metadata is not charged against the separate Movie of the Night link budget.
+    // Requests remain path-allowlisted, validated and cached without user-usage caps.
+    // TMDB offers either a v4 Read Access Token (Bearer) or a 32-char v3 API key.
+    // Both stay exclusively in Cloudflare Secrets; no credential reaches the app.
+    const credential = String(env.TMDB_READ_TOKEN).trim().replace(/^Bearer\s+/i, "").replace(/\s+/g, "");
+    const v3Key = /^[a-f0-9]{32}$/i.test(credential);
+    if (v3Key) upstream.searchParams.set("api_key", credential);
+    const transport = deps.fetch || fetch;
+    diagnosticStage = "upstream_fetch";
+    const reply = await transport(upstream.toString(), {
+      headers: { ...(v3Key ? {} : { Authorization: "Bearer " + credential }),
+        Accept: "application/json" },
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!reply.ok) {
+      // An unknown movie ID is not an outage: let the Android history restore
+      // skip this ID and try the next one, without caching negative responses.
+      if (/^movie\/[1-9][0-9]{0,9}$/.test(route) && reply.status === 404)
+        return asJson({ status: "catalog_not_found" }, 404);
+      return asJson({ status: "catalog_unavailable" }, 503,
+        { "x-anytv-upstream-status": String(reply.status) });
+    }
+    diagnosticStage = "upstream_body";
+    const payload = await reply.text();
+    if (payload.length > 450000) return asJson({ status: "catalog_unavailable" }, 503);
+    const parsedPayload = JSON.parse(payload);
+    diagnosticStage = "cache_write";
+    // Cache validated read-only TMDB metadata to reduce upstream load.
+    // Search and availability have route-specific expiration.
+    const cacheTtl = route.startsWith("genre/") || route.startsWith("watch/providers/")
+      ? 7 * 86400
+      : route.endsWith("/watch/providers") ? 12 * 3600
+      : route.startsWith("search/") ? 24 * 3600
+      : route.startsWith("trending/") || route.includes("now_playing")
+        ? 6 * 3600 : 24 * 3600;
+    await env.DB.prepare(
+      "INSERT INTO link_cache(cache_key,payload,expires_at) VALUES (?,?,?) " +
+      "ON CONFLICT(cache_key) DO UPDATE SET payload=excluded.payload,expires_at=excluded.expires_at"
+    ).bind(key, JSON.stringify(parsedPayload), now + cacheTtl).run();
+    return asJson(parsedPayload);
+  } catch (error) {
+    const detail = error instanceof Error ? String(error.message) : "";
+    const sanitized = detail.replaceAll(String(env.TMDB_READ_TOKEN || ""), "[REDACTED]")
+      .replace(/https?:\/\/\S+/g, "[URL]")
+      .replace(/[A-Za-z0-9._+=\/-]{24,}/g, "[LONG]")
+      .replace(/[^\x20-\x7e]/g, " ").slice(0,140);
+    // Diagnostic code only: never include upstream URLs, credentials or messages.
+    const diagnostic = /Invalid URL/i.test(detail) ? "invalid_url"
+      : /Fetch API cannot load/i.test(detail) ? "cf_fetch_denied"
+      : /outbound|not permitted|not allowed|blocked/i.test(detail) ? "outbound_block"
+      : /fetch is not|not a function/i.test(detail) ? "fetch_binding"
+      : /Invalid header|ByteString|Invalid character/i.test(detail) ? "bad_header"
+      : /network connection lost|network error/i.test(detail) ? "network_lost"
+      : /AbortSignal|signal/i.test(detail) ? "bad_signal"
+      : "unknown";
+    const reason = /header|ByteString|Invalid character/i.test(detail) ? "invalid_header"
+      : /timed|abort/i.test(detail) ? "timeout"
+      : /fetch|network|DNS|connect/i.test(detail) ? "network"
+      : /signal/i.test(detail) ? "signal"
+      : "unknown";
+    return asJson({ status: "catalog_unavailable" }, 503,
+      { "x-anytv-failure-stage": diagnosticStage,
+        "x-anytv-failure-type": error instanceof Error ? error.name : "unknown",
+        "x-anytv-failure-reason": reason,
+        "x-anytv-failure-detail-code": diagnostic,
+        "x-anytv-sanitized-error": sanitized });
+  }
+}
+
+/**
+ * Inject clock/fetch for deterministic unit tests.
+ * Does NOT authorize replaying arbitrary link strings from callers.
+ */
+export async function handleRequest(request, env, deps = {}) {
+  const parsed = new URL(request.url);
+  // Enrollment remains disabled by default, including on existing deployments.
+  if (parsed.pathname === "/v1/device/activate" &&
+      env?.ANYTV_DEVICE_ACTIVATION_ENABLED === "true") {
+    return activateDevice(request, env, deps);
+  }
+  // An enrollment request proves ownership of its key; it never authorizes
+  // streaming links until the existing D1 row is explicitly enabled by an operator.
+  if (parsed.pathname === "/v1/device/request" &&
+      env?.ANYTV_RESOLVER_AUTH_MODE === "device" &&
+      env.ANYTV_DEVICE_ACTIVATION_ENABLED === "true") {
+    return requestDeviceEnrollment(request, env, deps);
+  }
+  if (request.method !== "GET") return asJson({ status: "method_not_allowed" }, 405);
+  // A signed status check reveals only whether THIS key is enabled, not keys
+  // or enrollment records. No quotas or shared client credentials are involved.
+  if (parsed.pathname === "/v1/device/status") {
+    if (!env?.DB || env.ANYTV_RESOLVER_AUTH_MODE !== "device")
+      return asJson({ status: "not_configured" }, 503);
+    const authorized = await verifyDeviceProof(request, env, deps);
+    return asJson({ status: authorized ? "activated" : "unauthorized" },
+      authorized ? 200 : 401);
+  }
+  if (parsed.pathname === "/health") return asJson({ status: "ok", phase: "pilot" });
+  if (parsed.pathname.startsWith("/v1/catalog/")) return catalogRequest(request, env, deps);
+  if (!env?.ANYTV_MOVIE_API_KEY || !env?.DB ||
+      ((env.ANYTV_RESOLVER_AUTH_MODE || "pilot") === "pilot" &&
+       !env.ANYTV_CLIENT_TOKEN)) {
+    return asJson({ status: "not_configured" }, 503);
+  }
+  // Explicit opt-in for preapproved device proofs. Existing pilot-token
+  // deployments stay unchanged until an authenticated enrollment is available.
+  // An unknown mode must fail closed, not silently select the pilot bypass.
+  const authMode = env.ANYTV_RESOLVER_AUTH_MODE || "pilot";
+  if (authMode !== "pilot" && authMode !== "device") {
+    return asJson({ status: "not_configured" }, 503);
+  }
+  if (authMode === "device") {
+    if (!(await verifyDeviceProof(request, env, deps))) {
+      return asJson({ status: "unauthorized" }, 401);
+    }
+  } else if (!safeEqual(request.headers.get("authorization") || "",
+      "Bearer " + env.ANYTV_CLIENT_TOKEN)) {
+    return asJson({ status: "unauthorized" }, 401);
+  }
+  const match = parsed.pathname.match(
+    /^\/v1\/resolve\/(movie|tv)\/([1-9][0-9]{0,9})\/(netflix|disney|prime|apple|hbo)$/
+  );
+  if (!match || [...parsed.searchParams].length !== 0) {
+    return asJson({ status: "bad_request" }, 400);
+  }
+  const [, media, id, provider] = match;
+  try {
+    const now = Math.floor((deps.now ? deps.now() : Date.now()) / 1000);
+    const key = media + ":" + id + ":" + provider + ":br";
+    const cached = await useCached(env, key, now);
+    if (cached) return report(cached, true);
+    const sourceUrl = new URL(ORIGIN + "/shows/" + media + "%2F" + id);
+    sourceUrl.searchParams.set("country", "br");
+    sourceUrl.searchParams.set("series_granularity", "show");
+    const transport = deps.fetch || fetch;
+    const reply = await transport(sourceUrl.toString(), {
+      headers: {
+        "X-API-Key": env.ANYTV_MOVIE_API_KEY,
+        Accept: "application/json",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!reply.ok) return asJson({ status: "source_unavailable" }, 503);
+    const len = Number(reply.headers.get("content-length") || "0");
+    if (len > 450000) return asJson({ status: "source_unavailable" }, 503);
+    const item = await reply.json();
+    const resolved = inspectOffers(item, media + "/" + id, provider);
+    await remember(env, key, resolved, now);
+    return report(resolved, false);
+  } catch {
+    // No upstream payload, customer token or other secrets in errors/logs.
+    return asJson({ status: "resolver_unavailable" }, 503);
+  }
+}
+
+export default {
+  async fetch(request, env) {
+    return handleRequest(request, env);
+  },
+};
