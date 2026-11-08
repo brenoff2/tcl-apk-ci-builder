@@ -410,6 +410,42 @@ test("watched-film metadata route reads exact TMDB ID only, caches and rejects u
     { method: "POST" }), env, deps)).status, 405, "movie details is GET-only");
 });
 
+test("movie and TV credits return authentic actor fields through the permitted cached proxy", async () => {
+  const env = makeEnv();
+  env.TMDB_READ_TOKEN = "server-only";
+  const seen = [];
+  const deps = {
+    fetch: async (url, init) => {
+      const parsed = new URL(url);
+      seen.push(parsed.pathname);
+      assert.equal(parsed.hostname, "api.themoviedb.org");
+      assert.equal(parsed.searchParams.get("language"), "pt-BR");
+      assert.equal(init.headers.Authorization, "Bearer server-only");
+      return new Response(JSON.stringify({
+        id: Number(parsed.pathname.split("/")[3]),
+        cast: [{ id: 101, name: "Pessoa Exemplo", character: "Personagem",
+          profile_path: "/example.jpg" }],
+      }), { status: 200 });
+    },
+  };
+  for (const route of ["movie/550/credits", "tv/1399/credits"]) {
+    const url = new Request("https://resolver.example.test/v1/catalog/" + route);
+    for (let i = 0; i < 2; i++) {
+      const result = await catalogRequest(url, env, deps);
+      assert.equal(result.status, 200);
+      const body = await result.json();
+      assert.deepEqual(body.cast[0], { id: 101, name: "Pessoa Exemplo",
+        character: "Personagem", profile_path: "/example.jpg" });
+      assert.equal(JSON.stringify(body).includes("server-only"), false);
+    }
+  }
+  assert.deepEqual(seen, ["/3/movie/550/credits", "/3/tv/1399/credits"]);
+  assert.equal(env._cache.size, 2);
+  assert.equal((await catalogRequest(new Request(
+    "https://resolver.example.test/v1/catalog/movie/550/credits?query=unsafe"),
+    env, deps)).status, 400);
+});
+
 test("catalog proxy keeps TMDB secret on server and caches read-only responses", async () => {
   const env = makeEnv();
   env.TMDB_READ_TOKEN = "secret-server-only";
