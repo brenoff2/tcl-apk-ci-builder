@@ -1,0 +1,53 @@
+name: AnyTV cast public endpoint smoke (read-only)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-cast-live-smoke.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  cast-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Verify public movie and TV actor credits without credentials
+        run: |
+          python3 - <<'PY'
+          import json
+          import urllib.error
+          import urllib.request
+
+          base = "https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/"
+          for route in ("movie/550/credits", "tv/1399/credits"):
+              url = base + route
+              req = urllib.request.Request(url, headers={
+                  "Accept": "application/json",
+                  "User-Agent": "AnyTV-public-cast-readonly-smoke/1",
+              })
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as response:
+                      status = response.status
+                      data = json.load(response)
+              except urllib.error.HTTPError as error:
+                  print("CAST_PUBLIC_HTTP_ERROR", route, error.code)
+                  raise
+              except Exception as error:
+                  print("CAST_PUBLIC_UNAVAILABLE", route, type(error).__name__)
+                  raise
+
+              assert status == 200, (route, status)
+              cast = data.get("cast")
+              assert isinstance(cast, list) and len(cast) > 0, (route, "cast_empty")
+              named = sum(isinstance(p, dict) and bool(p.get("name")) for p in cast)
+              photographed = sum(isinstance(p, dict) and
+                  isinstance(p.get("profile_path"), str) and
+                  p["profile_path"].startswith("/") for p in cast)
+              characters = sum(isinstance(p, dict) and bool(p.get("character")) for p in cast)
+              assert named > 0 and photographed > 0, (route, "actor_fields_unavailable")
+              print("CAST_PUBLIC_OK", route, "actors", len(cast),
+                    "named", named, "photos", photographed, "characters", characters)
+          print("ANYTV_CAST_PUBLIC_LIVE_READBACK_SUCCESS")
+          PY
+      - name: Confirm no write or deployment
+        run: echo 'READ_ONLY_HTTP_GET; no signing, OTA, Worker deployment or private credentials.'
