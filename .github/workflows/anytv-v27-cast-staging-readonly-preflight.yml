@@ -1,0 +1,95 @@
+name: AnyTV v27 cast staging D1 read-only preflight
+on:
+  workflow_dispatch:
+    inputs:
+      staging_database_id:
+        description: 'Existing dedicated AnyTV cast staging D1 UUID; must not be production'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      STAGING_DATABASE_ID: ${{ inputs.staging_database_id }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.ANYTV_STAGING_CF_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.ANYTV_STAGING_CF_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Fail closed on identity, token, D1 ID or staging configuration
+        run: |
+          set -euo pipefail
+          test -n "$CLOUDFLARE_API_TOKEN" || { echo 'CAST_STAGING_TOKEN_MISSING'; exit 1; }
+          test "$CLOUDFLARE_ACCOUNT_ID" = '48172e80b82e7f0a2100e512831c48d2' || {
+            echo 'CAST_STAGING_ACCOUNT_MISMATCH'; exit 1;
+          }
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          value=os.environ["STAGING_DATABASE_ID"]
+          import re
+          assert re.fullmatch(r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}",value), "invalid staging UUID"
+          assert value != "9bab6598-d019-4e88-8b29-a327ff0cfd00", "production D1 forbidden"
+          config = {
+              "name": "anytv-cast-staging",
+              "main": "worker.mjs",
+              "compatibility_date": "2026-10-15",
+              "workers_dev": False,
+              "preview_urls": False,
+              "d1_databases": [{
+                  "binding": "DB",
+                  "database_name": "anytv-cast-staging",
+                  "database_id": value
+              }],
+              "vars": {
+                  "ANYTV_DEVICE_ACTIVATION_ENABLED": "false",
+                  "ANYTV_RESOLVER_AUTH_MODE": "device"
+              }
+          }
+          Path("anytv-resolver/cast-v27-candidate/staging-probe.json").write_text(json.dumps(config))
+          PY
+          node anytv-resolver/cast-v27-candidate/check-staging-config.mjs \
+            anytv-resolver/cast-v27-candidate/staging-probe.json
+      - name: Verify dedicated staging D1 identity through Cloudflare GET API
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          url=("https://api.cloudflare.com/client/v4/accounts/" +
+               os.environ["CLOUDFLARE_ACCOUNT_ID"] + "/d1/database/" +
+               os.environ["STAGING_DATABASE_ID"])
+          req=urllib.request.Request(url, headers={
+              "Authorization": "Bearer " + os.environ["CLOUDFLARE_API_TOKEN"],
+              "Accept": "application/json"
+          }, method="GET")
+          with urllib.request.urlopen(req, timeout=20) as res:
+              body=json.load(res)
+          record=body.get("result") or {}
+          assert body.get("success") is True, "Cloudflare API rejected D1 read"
+          assert record.get("name") == "anytv-cast-staging", "unexpected D1 name"
+          assert (record.get("uuid") or record.get("id")) == os.environ["STAGING_DATABASE_ID"], "D1 UUID mismatch"
+          print("CAST_STAGING_REMOTE_D1_IDENTITY_OK")
+          PY
+      - name: Read remote D1 schema only (no migration, no deploy)
+        working-directory: anytv-resolver
+        run: |
+          set -euo pipefail
+          trap 'rm -f ./cast-v27-candidate/staging-probe.json /tmp/anytv-cast-staging-tables.json' EXIT
+          npx --yes wrangler@4.158.0 d1 execute anytv-cast-staging \
+            --config ./cast-v27-candidate/staging-probe.json --remote \
+            --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name" \
+            --json > /tmp/anytv-cast-staging-tables.json
+          node -e '
+            const fs = require("node:fs");
+            const response = JSON.parse(fs.readFileSync("/tmp/anytv-cast-staging-tables.json", "utf8"));
+            const rows = Array.isArray(response) ? response.flatMap(item => item.results || []) : [];
+            const names = new Set(rows.map(row => row.name));
+            if (!names.has("link_cache")) throw Error("CAST_STAGING_CACHE_SCHEMA_MISSING");
+            console.log("CAST_STAGING_D1_SCHEMA_READ_ONLY_OK");
+          '
+      - name: Confirm preflight scope
+        run: echo 'CAST_STAGING_INSPECTION_ONLY; no migrations, Worker version upload, deployment, signed APK or OTA.'
