@@ -1,0 +1,62 @@
+name: AnyTV cast Worker active deployment read-only
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-cast-deployment-readonly.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: 48172e80b82e7f0a2100e512831c48d2
+      WORKER_NAME: anytv-link-resolver-pilot
+    steps:
+      - name: Inspect active Cloudflare deployment by official GET API, no changes
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.error
+          import urllib.request
+
+          if not os.environ.get("CF_TOKEN"):
+              print("CAST_DEPLOYMENT_READ_UNAVAILABLE no_cloudflare_token")
+              raise SystemExit(1)
+          api = ("https://api.cloudflare.com/client/v4/accounts/" +
+                 os.environ["CF_ACCOUNT_ID"] + "/workers/scripts/" +
+                 os.environ["WORKER_NAME"] + "/deployments")
+          req = urllib.request.Request(api, headers={
+              "Authorization": "Bearer " + os.environ["CF_TOKEN"],
+              "Accept": "application/json"
+          }, method="GET")
+          try:
+              with urllib.request.urlopen(req, timeout=15) as response:
+                  body = json.load(response)
+          except urllib.error.HTTPError as exc:
+              print("CAST_DEPLOYMENT_READ_HTTP", exc.code)
+              raise SystemExit(1)
+          except Exception as exc:
+              print("CAST_DEPLOYMENT_READ_UNAVAILABLE", type(exc).__name__)
+              raise SystemExit(1)
+          if not body.get("success"):
+              print("CAST_DEPLOYMENT_READ_API_REJECTED")
+              raise SystemExit(1)
+          result = body.get("result", {})
+          deployments = result.get("deployments", result) if isinstance(result, dict) else result
+          if not isinstance(deployments, list) or not deployments:
+              print("CAST_DEPLOYMENT_READ_EMPTY")
+              raise SystemExit(1)
+          for deployment in deployments[:5]:
+              versions = deployment.get("versions") or []
+              print("CAST_DEPLOYMENT", str(deployment.get("id", ""))[:48],
+                    "created", str(deployment.get("created_on", ""))[:36],
+                    "versions", ",".join(str(x.get("version_id", "")) + "@" +
+                      str(x.get("percentage", "")) for x in versions))
+          print("CAST_DEPLOYMENT_READ_SUCCESS")
+          PY
+      - name: No mutation guarantee
+        run: echo 'CLOUDFLARE_DEPLOYMENTS_GET_ONLY; no deploy, rollback, write or OTA.'
