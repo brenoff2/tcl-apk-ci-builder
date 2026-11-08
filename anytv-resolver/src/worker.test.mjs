@@ -442,7 +442,7 @@ test("movie and TV credits return authentic actor fields through the permitted c
   assert.deepEqual(seen, ["/3/movie/550/credits", "/3/tv/1399/credits"]);
   assert.equal(env._cache.size, 2);
   assert.equal((await catalogRequest(new Request(
-    "https://resolver.example.test/v1/catalog/movie/550/credits?query=unsafe"),
+    "https://resolver.example.test/v1/catalog/movie/0/credits"),
     env, deps)).status, 400);
 });
 
