@@ -1,3 +1,12 @@
+## 08/11/2026 — AnyTV cast-only: staging isolation static fail-closed PASS
+- Branch isolada `fix/anytv-v27-cast-only-20261108` HEAD `c1c8431c0743c3c906aef7a077936b51e69803cd`. Criados `anytv-resolver/cast-v27-candidate/check-staging-config.mjs` e `staging-config.test.mjs`, incorporados no workflow offline `.github/workflows/anytv-v27-cast-only-offline.yml`.
+- Validador estático fail-closed: rejeita D1 UUID de produção `9bab6598-d019-4e88-8b29-a327ff0cfd00`, identificador ausente/inválido, D1 com nome de produção, múltiplos bindings, nome do Worker de produção `anytv-link-resolver-pilot`, caminhos de Worker não auditados, compatibility date diferente de `2026-10-15`, workers_dev/preview_urls não explicitamente false, ativação de device habilitada, auth_mode divergente de device e campos extras/segredos; exige `DB` único apontando a staging com nome `anytv-cast-staging`.
+- **GitHub Actions run `42515473906`: COMPLETED/SUCCESS**; módulo cast test 1/1 e isolamento 4/4 testes PASS; sintaxe módulos PASS. Log: `STAGING_CONFIG_NOT_PROVISIONED`: UUID real de staging ainda não existe; a execução valida invariantes com fixture fictícia e **NÃO** aprova configurações reais, conexões ou deploy.
+- Nenhum recurso/versão criado no Cloudflare, nenhum D1 migrado; staging real permanece BLOCKED_AWAITING_STAGING_AUTHORIZATION. Worker v27/rollback `88779b1b-9dbd-4dc6-9884-eff52769ded2`, deployment `e94c3bad-bcac-4b40-bad9-a317d7967563` preservado; Android 2.9.62/code90 e OTA `93e526e5a532724f139208ff042d1a92056f7c91` intactos. Progresso formal 7/11 e gates F0-F8 inalterados.
+- Próxima ação segura: analisar e alinhar preflight remoto staging existente ao escopo cast-only **sem executá-lo**, depois submeter autorização específica para criar D1 e Worker isolados. Não confundir sucesso de CI sintético com aprovação de produção.
+
+---
+
 ## 08/11/2026 — Plano de staging isolado AnyTV cast documentado
 - Elaborado plano técnico `anytv-resolver/cast-v27-candidate/STAGING_PLAN.md` em branch isolada `fix/anytv-v27-cast-only-20261108`, commit `276841f178adf550a6d8fdae983f63e6957b8a5c`. Sem operações Cloudflare de escrita.
 - Verificados arquivos de migração reais: `0001_create_tables.sql` contém `link_cache`, `monthly_quota` histórica e índice; `0002_device_proof.sql` contém `device_keys`, `device_nonces`; `0003_device_activations.sql` define ativações; `0004_user_library_sync.sql` permanece explicitamente **fora do escopo**, não aplicada.
