@@ -39,7 +39,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: anytv-v2-candidate-compile-${{ github.ref }}
+  group: anytv-v2-unsigned-candidate-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   phone-compile:
