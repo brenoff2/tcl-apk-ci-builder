@@ -1379,6 +1379,9 @@ class StreamingScreens(unittest.TestCase):
                         'Elenco não informado para este título.'):
             self.assertIn(message, self.screen)
         self.assertIn('if (actor.photo.startsWith("/"))', self.screen)
+        self.assertLess(self.screen.index('Text("Elenco principal"'),
+                        self.screen.index('Text(title.overview.ifBlank'))
+        self.assertIn('Text("Sinopse", fontWeight = FontWeight.SemiBold', self.screen)
 
     def test_detail_shows_tmdb_and_real_trakt_not_imdb(self):
         self.assertIn('suspend fun traktRating(media: String, id: Int): Double?', self.screen)
