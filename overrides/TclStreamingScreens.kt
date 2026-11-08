@@ -4597,7 +4597,10 @@ internal fun TclStreamingScreens(
                 linkActivationRequired = false
                 deviceLinkStatus = null; deviceIdSuffix = null
             },
-            title = {
+            text = {
+                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Column(modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Row(modifier = Modifier.fillMaxWidth(),
@@ -4655,29 +4658,52 @@ internal fun TclStreamingScreens(
                 val detailYear = title.date.take(4).takeIf {
                     it.length == 4 && it.all(Char::isDigit)
                 }
-                val detailRating = if (title.votes >= 20)
-                    "★ " + String.format(java.util.Locale.US, "%.1f", title.rating) +
-                        " TMDB · " + title.votes + " votos"
+                val tmdbScore = if (title.votes >= 20)
+                    "TMDB ★ " + String.format(java.util.Locale.US, "%.1f", title.rating) +
+                        " · " + title.votes + " votos"
                 else null
-                val yearAndRating = listOfNotNull(detailYear, detailRating)
+                val traktScore = detailTraktRating?.let {
+                    "Trakt ★ " + String.format(java.util.Locale.US, "%.1f", it)
+                }
+                val scoreLine = listOfNotNull(detailYear, tmdbScore, traktScore)
                     .joinToString(" · ")
-                if (yearAndRating.isNotBlank()) Text(yearAndRating,
-                    fontSize = 12.sp,
+                if (scoreLine.isNotBlank()) Text(scoreLine, fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(if (title.votes >= 20) "TMDB: " +
-                        String.format(java.util.Locale.US, "%.1f/10", title.rating)
-                        else "TMDB: sem nota confiável", fontSize = 11.sp)
-                    Text(detailTraktRating?.let {
-                        "Trakt: " + String.format(java.util.Locale.US, "%.1f/10", it)
-                    } ?: "Trakt: nota indisponível", fontSize = 11.sp)
                 }
-                }
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth().heightIn(max = 460.dp)
-                    .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = {
+                            if (pkg.isBlank()) {
+                                titleActionFeedback = "Selecione um serviço disponível para este título."
+                            } else if (!(officialDisneyTitle && pkg == "com.disney.disneyplus") &&
+                                detailsOffers?.let { offers ->
+                                    displayed.any { app -> app.packageName == pkg &&
+                                        StreamingCatalog.appHasOffer(app, offers) } } != true) {
+                                titleActionFeedback = "Oferta de assinatura no Brasil não confirmada para este aplicativo."
+                            } else {
+                                searchOnTv(title, pkg)
+                            }
+                        }, enabled = !titleActionPending,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFFFF1744)),
+                            contentPadding = PaddingValues(horizontal = 10.dp,
+                                vertical = 10.dp)) {
+                            Text(if (titleActionPending) "Abrindo…" else "Abrir na TV",
+                                fontSize = 12.sp, maxLines = 1)
+                        }
+                        OutlinedButton(onClick = {
+                            showPlaybackRemote = true
+                            remoteMinimized = false
+                        }, contentPadding = PaddingValues(horizontal = 10.dp,
+                            vertical = 10.dp)) {
+                            Icon(Icons.Filled.Tv, contentDescription = "Controle da TV",
+                                modifier = Modifier.size(17.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Controle", fontSize = 12.sp)
+                        }
+                    }
                     if (titleActionFeedback != null) {
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -4686,63 +4712,6 @@ internal fun TclStreamingScreens(
                         TextButton(onClick = { remoteMinimized = false }) {
                             Text("Abrir controle da TV para escolher perfil")
                         }
-                    }
-                    TextButton(onClick = {
-                        scope.launch {
-                            val state = AnyTvPersonalLinks.activationStatus(context)
-                            deviceIdSuffix = withContext(Dispatchers.IO) {
-                                runCatching {
-                                    AnyTvDeviceIdentity.deviceId(context).takeLast(8)
-                                }.getOrNull()
-                            }
-                            linkActivationRequired = state == "unauthorized"
-                            deviceLinkStatus = when (state) {
-                                "activated" -> "Links autorizados neste celular."
-                                "unauthorized" -> "Acesso aos links pendente de liberação; sem inserir código."
-                                else -> "Não foi possível verificar o acesso aos links."
-                            }
-                        }
-                    }, enabled = !deviceActivationPending,
-                        contentPadding = PaddingValues(0.dp)) {
-                        Text("Verificar acesso aos links", fontSize = 11.sp)
-                    }
-                    if (deviceLinkStatus != null) {
-                        Text(deviceLinkStatus.orEmpty(), fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("Instalação: " + context.packageName + " · " +
-                            (deviceIdSuffix ?: "não identificada"),
-                            fontSize = 10.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    if (linkActivationRequired) {
-                        Text("Solicite a liberação segura desta instalação. " +
-                            "A solicitação não concede acesso automaticamente.",
-                            fontSize = 11.sp)
-                        TextButton(enabled = !deviceActivationPending,
-                            onClick = {
-                                scope.launch {
-                                    deviceActivationPending = true
-                                    try {
-                                        val result = withContext(Dispatchers.IO) {
-                                            runCatching {
-                                                AnyTvDeviceIdentity.requestApproval(context)
-                                            }.getOrDefault("unavailable")
-                                        }
-                                        linkActivationRequired = result != "activated"
-                                        deviceLinkStatus = when (result) {
-                                            "activated" -> "Links autorizados neste celular."
-                                            "pending" -> "Solicitação recebida. " +
-                                                "Aguarde a liberação e verifique novamente."
-                                            else -> "Não foi possível enviar a solicitação. " +
-                                                "Tente novamente."
-                                        }
-                                    } finally {
-                                        deviceActivationPending = false
-                                    }
-                                }
-                            }
-                        ) { Text(if (deviceActivationPending)
-                            "Enviando…" else "Solicitar liberação") }
                     }
                     if (title.media == "movie" && title.id in cinemaIds) {
                         Text("Em cartaz no Brasil (TMDB). Consulte a programação da sua cidade:",
@@ -4886,18 +4855,6 @@ internal fun TclStreamingScreens(
                                 }
                         }
                     }
-                    if (relatedTitles.isNotEmpty()) {
-                        Text("Você também pode gostar", fontWeight = FontWeight.SemiBold)
-                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
-                            val cardWidth = (maxWidth - 18.dp) / 3f
-                            Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
-                                horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                relatedTitles.take(ANYTV_LIST_BATCH).forEach { suggested ->
-                                    posterCard(suggested, Modifier.width(cardWidth), false)
-                                }
-                            }
-                        }
-                    }
                     Text("Onde assistir por assinatura no Brasil",
                         fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                     when {
@@ -4921,6 +4878,63 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
+                    OutlinedButton(onClick = {
+                        scope.launch {
+                            val state = AnyTvPersonalLinks.activationStatus(context)
+                            deviceIdSuffix = withContext(Dispatchers.IO) {
+                                runCatching {
+                                    AnyTvDeviceIdentity.deviceId(context).takeLast(8)
+                                }.getOrNull()
+                            }
+                            linkActivationRequired = state == "unauthorized"
+                            deviceLinkStatus = when (state) {
+                                "activated" -> "Links autorizados neste celular."
+                                "unauthorized" -> "Acesso aos links pendente de liberação; sem inserir código."
+                                else -> "Não foi possível verificar o acesso aos links."
+                            }
+                        }
+                    }, enabled = !deviceActivationPending,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                        Text("Acesso aos links", fontSize = 12.sp)
+                    }
+                    if (deviceLinkStatus != null) {
+                        Text(deviceLinkStatus.orEmpty(), fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Instalação: " + context.packageName + " · " +
+                            (deviceIdSuffix ?: "não identificada"),
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (linkActivationRequired) {
+                        Text("Solicite a liberação segura desta instalação. " +
+                            "A solicitação não concede acesso automaticamente.",
+                            fontSize = 11.sp)
+                        TextButton(enabled = !deviceActivationPending,
+                            onClick = {
+                                scope.launch {
+                                    deviceActivationPending = true
+                                    try {
+                                        val result = withContext(Dispatchers.IO) {
+                                            runCatching {
+                                                AnyTvDeviceIdentity.requestApproval(context)
+                                            }.getOrDefault("unavailable")
+                                        }
+                                        linkActivationRequired = result != "activated"
+                                        deviceLinkStatus = when (result) {
+                                            "activated" -> "Links autorizados neste celular."
+                                            "pending" -> "Solicitação recebida. " +
+                                                "Aguarde a liberação e verifique novamente."
+                                            else -> "Não foi possível enviar a solicitação. " +
+                                                "Tente novamente."
+                                        }
+                                    } finally {
+                                        deviceActivationPending = false
+                                    }
+                                }
+                            }
+                        ) { Text(if (deviceActivationPending)
+                            "Enviando…" else "Solicitar liberação") }
+                    }
                     if (selected == null) {
                         val eligible = displayed.filter { app ->
                             detailsOffers?.let { StreamingCatalog.appHasOffer(app, it) } == true ||
@@ -4931,10 +4945,23 @@ internal fun TclStreamingScreens(
                             Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 eligible.forEach { app ->
-                                    FilterChip(
-                                        selected = detailsPackage == app.packageName,
+                                    val chosen = detailsPackage == app.packageName
+                                    Button(
                                         onClick = { detailsPackage = app.packageName },
-                                        label = { Text(app.name, maxLines = 1, fontSize = 11.sp) })
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (chosen) Color(0xFFC50038)
+                                                else Color(0xFFFF1744)),
+                                        shape = RoundedCornerShape(20.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp,
+                                            vertical = 4.dp)) {
+                                        if (chosen) {
+                                            Icon(Icons.Filled.CheckCircle,
+                                                contentDescription = "Selecionado",
+                                                modifier = Modifier.size(14.dp))
+                                            Spacer(Modifier.width(4.dp))
+                                        }
+                                        Text(app.name, maxLines = 1, fontSize = 11.sp)
+                                    }
                                 }
                             }
                         } else {
@@ -4942,46 +4969,38 @@ internal fun TclStreamingScreens(
                                 fontSize = 11.sp)
                         }
                     }
-                    Text("A TV poderá abrir a busca do título se este serviço aceitar " +
-                        "pesquisa externa. Não existe deep link universal de reprodução.",
-                        fontSize = 12.sp)
-                    // Availability is already displayed above; avoid a confusing
-                    // external website link claiming direct playback.
-                    Text("Ofertas informadas pelo TMDB/JustWatch; confirme no streaming.",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (title.poster.startsWith("/")) {
-                        Text("Cartaz original", fontWeight = FontWeight.SemiBold)
-                        AnyTvPinnedImage(
-                            model = "https://image.tmdb.org/t/p/w780" + title.poster,
-                            contentDescription = "Cartaz original de " + title.name,
-                            modifier = Modifier.fillMaxWidth().height(500.dp))
+                        Box(modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center) {
+                            AnyTvPinnedImage(
+                                model = "https://image.tmdb.org/t/p/w780" + title.poster,
+                                contentDescription = "Cartaz de " + title.name,
+                                modifier = Modifier.width(190.dp).height(285.dp))
+                        }
+                    }
+                    if (relatedTitles.isNotEmpty()) {
+                        Text("Você também pode gostar", fontWeight = FontWeight.SemiBold)
+                        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                            val cardWidth = (maxWidth - 18.dp) / 3f
+                            Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                relatedTitles.take(ANYTV_LIST_BATCH).forEach { suggested ->
+                                    posterCard(suggested, Modifier.width(cardWidth), false)
+                                }
+                            }
+                        }
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    if (pkg.isBlank()) {
-                        titleActionFeedback = "Selecione um serviço disponível para este título."
-                    } else if (!(officialDisneyTitle && pkg == "com.disney.disneyplus") &&
-                        detailsOffers?.let { offers ->
-                            displayed.any { app -> app.packageName == pkg &&
-                                StreamingCatalog.appHasOffer(app, offers) } } != true) {
-                        titleActionFeedback = "Oferta de assinatura no Brasil não confirmada para este aplicativo."
-                    } else {
-                        searchOnTv(title, pkg)
-                    }
-                }, enabled = !titleActionPending) {
-                    Text(if (titleActionPending) "Abrindo…" else
-                        "Abrir na " + tvName.ifBlank { "TV conectada" })
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = {
-                    details = null; detailsPackage = null; titleActionFeedback = null
-                }) {
-                    Text("Voltar")
-                }
+                TextButton(onClick = {
+                    details = null
+                    detailsPackage = null
+                    titleActionFeedback = null
+                    linkActivationRequired = false
+                    deviceLinkStatus = null
+                    deviceIdSuffix = null
+                }) { Text("Fechar") }
             }
         )
     }

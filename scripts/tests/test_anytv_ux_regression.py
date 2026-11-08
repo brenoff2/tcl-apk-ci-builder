@@ -25,7 +25,8 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertIn("StreamingCatalog.cast(item.media, item.id)", self.catalog)
         self.assertIn("Elenco principal", self.catalog)
         self.assertIn("actor.character", self.catalog)
-        self.assertIn("Cartaz original", self.catalog)
+        self.assertNotIn('Text("Cartaz original"', self.catalog)
+        self.assertIn('"https://image.tmdb.org/t/p/w780" + title.poster', self.catalog)
         self.assertIn("title.poster", self.catalog)
         self.assertIn("credits", self.worker)
 
@@ -45,9 +46,30 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertIn('data.optString("source") == "trakt"', self.catalog)
         self.assertIn('votes > 0 && it.isFinite() && it in 0.0..10.0', self.catalog)
         self.assertIn('detailTraktRating = runCatching { StreamingCatalog.traktRating(item.media, item.id) }', self.catalog)
-        self.assertIn('?: "Trakt: nota indisponível"', self.catalog)
+        self.assertNotIn('Trakt: nota indisponível', self.catalog)
+        self.assertIn('val traktScore = detailTraktRating?.let {', self.catalog)
         self.assertIn('StreamingCatalog.cast(item.media, item.id)', self.catalog)
         self.assertIn('minOf(cast.length(), 12)', self.catalog)
+
+    def test_detail_modal_is_scrolling_with_compact_actions_and_single_scores(self):
+        start = self.catalog.index("    val title = details\\n    if (title != null) {")
+        end = self.catalog.index("    // Overlay stays available", start)
+        detail = self.catalog[start:end]
+        self.assertNotIn("            title = {", detail)
+        self.assertIn("heightIn(max = 560.dp)", detail)
+        self.assertEqual(detail.count("TMDB ★ "), 1)
+        self.assertNotIn("TMDB: ", detail)
+        self.assertIn("detailTraktRating?.let {", detail)
+        self.assertNotIn("Trakt: nota indisponível", detail)
+        self.assertIn('Text("Controle", fontSize = 12.sp)', detail)
+        self.assertIn('contentDescription = "Controle da TV"', detail)
+        self.assertIn('Text("Abrir na TV"', detail)
+        self.assertIn('OutlinedButton(onClick = {', detail)
+        self.assertNotIn("A TV poderá abrir a busca do título", detail)
+        self.assertNotIn("Ofertas informadas pelo TMDB/JustWatch", detail)
+        self.assertNotIn('Text("Cartaz original"', detail)
+        self.assertIn("Modifier.width(190.dp).height(285.dp)", detail)
+        self.assertIn("containerColor = if (chosen) Color(0xFFC50038)", detail)
 
     def test_only_confirmed_streaming_preselected(self):
         self.assertIn("StreamingCatalog.appHasOffer(app, offers)", self.catalog)
