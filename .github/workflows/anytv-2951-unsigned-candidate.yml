@@ -96,7 +96,7 @@ jobs:
           from pathlib import Path
           import json
           baseline=json.loads(Path('release/anytv-v2.json').read_text())
-          assert baseline == {'versionName': '2.9.60-AnyTV', 'versionCode': 88}, 'Published baseline changed: review candidate version before compiling'
+          assert baseline == {'versionName': '2.9.61-AnyTV', 'versionCode': 89}, 'Published baseline changed: review candidate version before compiling'
           p=Path('source/app/build.gradle.kts')
           s=p.read_text()
           assert s.count('versionCode = 39') == 1
