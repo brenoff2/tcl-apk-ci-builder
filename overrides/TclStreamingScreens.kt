@@ -2023,6 +2023,8 @@ internal fun TclStreamingScreens(
     var trailerLink by remember { mutableStateOf<String?>(null) }
     var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var detailCast by remember { mutableStateOf<List<StreamingActor>>(emptyList()) }
+    var detailCastLoading by remember { mutableStateOf(false) }
+    var detailCastError by remember { mutableStateOf(false) }
     var detailTraktRating by remember { mutableStateOf<Double?>(null) }
     val offerCache = remember { mutableStateMapOf<String, List<StreamingOffer>>() }
     var traktSignals by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
@@ -2162,11 +2164,29 @@ internal fun TclStreamingScreens(
         }
     }
 
+    // Load cast independently: slow trailers and recommendations must not hide actors.
+    LaunchedEffect(details?.media, details?.id) {
+        val item = details
+        detailCast = emptyList()
+        detailCastError = false
+        detailCastLoading = item != null
+        if (item != null) {
+            try {
+                detailCast = StreamingCatalog.cast(item.media, item.id)
+            } catch (cancel: java.util.concurrent.CancellationException) {
+                throw cancel
+            } catch (error: Exception) {
+                detailCastError = true
+            } finally {
+                detailCastLoading = false
+            }
+        }
+    }
+
     LaunchedEffect(details?.media, details?.id) {
         val item = details
         trailerLink = null
         relatedTitles = emptyList()
-        detailCast = emptyList()
         detailTraktRating = null
         detailsOffers = null
         seriesSeasons = emptyList()
@@ -2182,8 +2202,6 @@ internal fun TclStreamingScreens(
             detailLoading = true
             trailerLink = runCatching { StreamingCatalog.trailer(item.media, item.id) }.getOrNull()
             relatedTitles = runCatching { StreamingCatalog.related(item.media, item.id) }
-                .getOrDefault(emptyList())
-            detailCast = runCatching { StreamingCatalog.cast(item.media, item.id) }
                 .getOrDefault(emptyList())
             detailTraktRating = runCatching { StreamingCatalog.traktRating(item.media, item.id) }
                 .getOrNull()
@@ -4713,8 +4731,17 @@ internal fun TclStreamingScreens(
                         }
                     }
                     Text(title.overview.ifBlank { "Sinopse indisponível." })
-                    if (detailCast.isNotEmpty()) {
-                        Text("Elenco principal", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    Text("Elenco principal", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                    if (detailCastLoading) {
+                        Text("Carregando elenco...", fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if (detailCastError) {
+                        Text("Não foi possível carregar o elenco agora.", fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if (detailCast.isEmpty()) {
+                        Text("Elenco não informado para este título.", fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
                         Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
                             horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             detailCast.forEach { actor ->
