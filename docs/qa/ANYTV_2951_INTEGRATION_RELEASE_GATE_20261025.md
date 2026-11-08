@@ -1,3 +1,36 @@
+## 08/11/2026 — Auditoria de atualização V2 (LEITURA; sem patch)
+
+**Escopo:** leitura dos arquivos `overrides/common/TclUpdateManager.java` e `TclInstallResultReceiver.java`, copiados ao build por `scripts/apply_tcl_v22.py` e adaptados à V2 por `scripts/apply_anytv_phone_v2_identity.py`. Não houve execução em aparelho, assinatura, OTA nem alteração de código. A versão publicada continua 2.9.61/code89 e a candidata 2.9.62/code90 está unsigned.
+
+### Achados de UX diretamente demonstrados pelo código
+
+- **UPD-01 — permissão antes da versão (CORRIGIR NA DEV APÓS APROVAÇÃO TÉCNICA):** `check()` avalia `canRequestPackageInstalls()` e inicia `ACTION_MANAGE_UNKNOWN_APP_SOURCES` antes de `download()`, `getPackageArchiveInfo()` e `nextCode <= installedCode`. Logo, um aparelho atualizado sem a permissão pode ser levado a Configurações sem haver nova versão. Preservar a permissão Android, mas pedir somente depois de verificar a existência de upgrade, pacote, versão monotônica e certificado, imediatamente antes de `install()`.
+- **UPD-02 — anúncio prematuro de atualização:** mostra `Atualização encontrada. Baixando e verificando...` antes de saber se o servidor retornou APK válida, se há versão maior ou se o certificado confere. Para download/verificação, usar mensagem neutra; só anunciar atualização encontrada depois das verificações.
+- **UPD-03 — mensagem de sucesso para app errado:** o receiver compartilhado mostra `Controle TCL atualizado.` no `STATUS_SUCCESS` mesmo se o pacote é `com.tclremote.livre.v2`. Diferenciar mensagem AnyTV no celular e companion TV, sem mudar o pacote ou o callback oficial.
+- **UPD-04 — retorno após permissão:** o código orienta o usuário a retornar de Configurações e tocar em `Buscar atualizações` novamente, sem retomar automaticamente o download. É comportamento real do código, não bug demonstrado de segurança. Não prometer instalação sem intervenção.
+
+### Controles comprovados e que não devem ser removidos
+
+- HTTPS e canal V2 `updates/android/v2/current.apk` configurado pelo adaptador; limite máximo de download, APK temporária, comparação de `packageName`, `nextCode > installedCode` e comparação do certificado instalado com o da APK (`MessageDigest.isEqual`).
+- Instalação via `PackageInstaller.Session`, com `USER_ACTION_REQUIRED` nas versões aplicáveis, `PendingIntent` apontando ao receiver interno não exportado; `STATUS_PENDING_USER_ACTION` pede confirmação oficial do Android. Falha de assinatura ou pacote deve permanecer bloqueada.
+- O `commit()` da sessão é assíncrono. Enviar a sessão não é prova de instalação concluída; só callback de sucesso e readback no dispositivo podem demonstrar o resultado.
+
+### Casos de QA para a correção futura (todos NOT_RUN)
+
+- [ ] **UP01** code89 já instalado e OTA code89, instalação por fontes externas sem permissão: informar `O aplicativo já está atualizado.` sem abrir Configurações.
+- [ ] **UP02** code89 + OTA assinada code90, permissão ausente: reconhecer upgrade verificado, pedir permissão e confirmação oficial do Android, retorno manual claro.
+- [ ] **UP03** erro de rede, HTTP 404, APK inválida: mensagem de falha coerente e nenhuma falsa indicação de upgrade disponível.
+- [ ] **UP04** code90 instalado versus OTA code89: recusar downgrade.
+- [ ] **UP05** pacote/certificado divergente: falhar sem desinstalar e sem tentar cert2026.
+- [ ] **UP06** `STATUS_PENDING_USER_ACTION`, sucesso e falha/cancelamento: diálogo correto e mensagem AnyTV específica, sem declarar sucesso antes do callback.
+- [ ] **UP07** revisão física no celular e TCL: registrar versão, Android, captura da mensagem, preservação de conta/favoritos/assistidos e conexão.
+
+**Fontes oficiais:** https://developer.android.com/reference/android/content/pm/PackageManager ; https://developer.android.com/reference/android/content/pm/PackageInstaller.Session ; https://developer.android.com/reference/android/content/pm/PackageInstaller.SessionParams .
+
+**Decisão:** ADAPT, não alterar código nesta auditoria somente de leitura. Estes achados são reproduzíveis pela ordem das instruções no código; execução em aparelho e causa de qualquer falha concreta da instalação continuam NOT_VERIFIED. Roadmap 7/11=63%, gates F0–F8 sem homologação.
+
+---
+
 ## 08/11/2026 — Aceite físico da ficha corrigida V2 2.9.62/code90 (PLANO, NÃO EXECUTADO)
 
 **Estado verificável e limitação:** roteiro preparado para a candidata *unsigned* aprovada na DEV, **não** significa que a versão 2.9.62 esteja publicada. GitHub Actions [42431728894](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/42431728894), HEAD `b0b14a1d4e20d1c4d9fc71568a2cde59f3bbc1c4`, PASS: 127 testes, 11 skipped, `BUILD SUCCESSFUL`, `com.tclremote.livre.v2`, `2.9.62-AnyTV`/code90, artefato unsigned `13598111426`, SHA-256 do APK `8ce7e3a6b1c810bda1fbdce73c7ef025305a1cafa83fdbfa95f9a945422856cc`. O ZIP e o APK unsigned NÃO são atualizações instaláveis. Em leitura autenticada o manifesto e a OTA assinada seguem `2.9.61-AnyTV`/code89, e o canal `cert2026` está preservado.
