@@ -58,3 +58,11 @@ References:
 - [Cloudflare Worker versions and deployments](https://developers.cloudflare.com/workers/versions-and-deployments/)
 - [Cloudflare Version URLs](https://developers.cloudflare.com/workers/versions-and-deployments/version-urls/)
 - Canonical migrations and `.github/workflows/anytv-p0-d1-staging-preflight.yml` in repository.
+
+## Cast-only remote preflight (prepared, not executed)
+
+- Workflow dedicated: `.github/workflows/anytv-v27-cast-staging-readonly-preflight.yml`, **manual dispatch only** with an existing `staging_database_id`. The original device-P0 preflight `.github/workflows/anytv-p0-d1-staging-preflight.yml` remains untouched because its required device tables and compatibility date serve another gate.
+- Requires distinct staging secrets `ANYTV_STAGING_CF_ACCOUNT_ID` and `ANYTV_STAGING_CF_API_TOKEN`. Checks that the account is `48172e80b82e7f0a2100e512831c48d2`, the D1 UUID is valid and differs from production, the prospective staging configuration passes `check-staging-config.mjs`, and an authenticated Cloudflare GET confirms D1 name/UUID.
+- Reads schema only using `wrangler d1 execute --remote --command "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"` and checks `link_cache`. It does **not** create tables, run migrations, upload Worker versions, deploy or publish Android artifacts.
+- Static CI validates preflight text and guards through `staging-preflight.test.mjs`. **Run `42516273934` PASS**: cast 1/1, isolation 4/4, remote workflow guard 3/3; real staging not provisioned, remote preflight NOT_RUN.
+- This future inspection is not an HTTP integration test; TMDB credentials, a separately approved staging Worker and actual cast endpoints require independent gates. Do not run the manual workflow until the dedicated D1 exists and owner authorization is present.
