@@ -119,24 +119,7 @@ public final class TclUpdateManager {
                         + "/feat/tcl-v22-updates-back-bluetooth/updates/"
                         + suffix + "/current.apk";
 
-                if (Build.VERSION.SDK_INT >= 26 && !pm.canRequestPackageInstalls()) {
-                    post(activity, callback,
-                            "Permita 'Instalar apps desconhecidos' para este aplicativo. " +
-                            "Depois volte e toque novamente em Buscar atualizações.");
-                    activity.runOnUiThread(() -> {
-                        try {
-                            Intent permission = new Intent(
-                                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                                    Uri.parse("package:" + pkg));
-                            activity.startActivity(permission);
-                        } catch (RuntimeException e) {
-                            Log.e(TAG, "Unknown-app settings unavailable", e);
-                        }
-                    });
-                    return;
-                }
-
-                post(activity, callback, "Atualização encontrada. Baixando e verificando...");
+                post(activity, callback, "Baixando e verificando a versão oficial...");
                 File apk = new File(app.getCacheDir(), "tcl-update-verified.apk");
                 download(url, apk, -1);
                 PackageInfo next = pm.getPackageArchiveInfo(apk.getAbsolutePath(), flags);
@@ -159,8 +142,25 @@ public final class TclUpdateManager {
                     throw new SecurityException(
                             "Assinatura diferente da instalada. Atualização bloqueada sem desinstalar.");
                 }
+                if (Build.VERSION.SDK_INT >= 26 && !pm.canRequestPackageInstalls()) {
+                    post(activity, callback,
+                            "Permita 'Instalar apps desconhecidos' para este aplicativo. " +
+                            "Depois volte e toque novamente em Buscar atualizações.");
+                    activity.runOnUiThread(() -> {
+                        try {
+                            Intent permission = new Intent(
+                                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                                    Uri.parse("package:" + pkg));
+                            activity.startActivity(permission);
+                        } catch (RuntimeException e) {
+                            Log.e(TAG, "Unknown-app settings unavailable", e);
+                        }
+                    });
+                    return;
+                }
+
                 post(activity, callback,
-                        "Arquivo verificado. Abrindo a confirmação de instalação do Android...");
+                        "Atualização disponível. Abrindo a confirmação de instalação do Android...");
                 install(app, apk, nextCode);
             } catch (Exception error) {
                 Log.e(TAG, "Update failed safely", error);
