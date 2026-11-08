@@ -52,7 +52,7 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertIn('minOf(cast.length(), 12)', self.catalog)
 
     def test_detail_modal_is_scrolling_with_compact_actions_and_single_scores(self):
-        start = self.catalog.index("    val title = details\\n    if (title != null) {")
+        start = self.catalog.index("    val title = details\n    if (title != null) {")
         end = self.catalog.index("    // Overlay stays available", start)
         detail = self.catalog[start:end]
         self.assertNotIn("            title = {", detail)
@@ -62,8 +62,9 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertIn("detailTraktRating?.let {", detail)
         self.assertNotIn("Trakt: nota indisponível", detail)
         self.assertIn('Text("Controle", fontSize = 12.sp)', detail)
+        self.assertNotIn("Abrir controle da TV para escolher perfil", detail)
         self.assertIn('contentDescription = "Controle da TV"', detail)
-        self.assertIn('Text("Abrir na TV"', detail)
+        self.assertIn('else "Abrir na TV"', detail)
         self.assertIn('OutlinedButton(onClick = {', detail)
         self.assertNotIn("A TV poderá abrir a busca do título", detail)
         self.assertNotIn("Ofertas informadas pelo TMDB/JustWatch", detail)

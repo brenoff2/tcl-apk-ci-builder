@@ -4708,11 +4708,6 @@ internal fun TclStreamingScreens(
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    if (showPlaybackRemote && remoteMinimized) {
-                        TextButton(onClick = { remoteMinimized = false }) {
-                            Text("Abrir controle da TV para escolher perfil")
-                        }
-                    }
                     if (title.media == "movie" && title.id in cinemaIds) {
                         Text("Em cartaz no Brasil (TMDB). Consulte a programação da sua cidade:",
                             fontSize = 11.sp,
