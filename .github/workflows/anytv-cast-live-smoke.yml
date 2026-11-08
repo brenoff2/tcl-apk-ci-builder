@@ -19,6 +19,7 @@ jobs:
           import urllib.request
 
           base = "https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/"
+          errors = []
           for route in ("movie/550/credits", "tv/1399/credits"):
               url = base + route
               req = urllib.request.Request(url, headers={
@@ -30,8 +31,15 @@ jobs:
                       status = response.status
                       data = json.load(response)
               except urllib.error.HTTPError as error:
-                  print("CAST_PUBLIC_HTTP_ERROR", route, error.code)
-                  raise
+                  body = error.read(512).decode("utf-8", errors="replace")
+                  status_value = ""
+                  try:
+                      status_value = str(json.loads(body).get("status", ""))[:60]
+                  except (ValueError, AttributeError):
+                      status_value = "non_json"
+                  print("CAST_PUBLIC_HTTP_ERROR", route, error.code, status_value)
+                  errors.append((route, error.code, status_value))
+                  continue
               except Exception as error:
                   print("CAST_PUBLIC_UNAVAILABLE", route, type(error).__name__)
                   raise
@@ -47,6 +55,7 @@ jobs:
               assert named > 0 and photographed > 0, (route, "actor_fields_unavailable")
               print("CAST_PUBLIC_OK", route, "actors", len(cast),
                     "named", named, "photos", photographed, "characters", characters)
+          assert not errors, ("cast_routes_failed", errors)
           print("ANYTV_CAST_PUBLIC_LIVE_READBACK_SUCCESS")
           PY
       - name: Confirm no write or deployment
