@@ -1,3 +1,30 @@
+## 08/11/2026 — Aceite físico da ficha corrigida V2 2.9.62/code90 (PLANO, NÃO EXECUTADO)
+
+**Estado verificável e limitação:** roteiro preparado para a candidata *unsigned* aprovada na DEV, **não** significa que a versão 2.9.62 esteja publicada. GitHub Actions [42431728894](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/42431728894), HEAD `b0b14a1d4e20d1c4d9fc71568a2cde59f3bbc1c4`, PASS: 127 testes, 11 skipped, `BUILD SUCCESSFUL`, `com.tclremote.livre.v2`, `2.9.62-AnyTV`/code90, artefato unsigned `13598111426`, SHA-256 do APK `8ce7e3a6b1c810bda1fbdce73c7ef025305a1cafa83fdbfa95f9a945422856cc`. O ZIP e o APK unsigned NÃO são atualizações instaláveis. Em leitura autenticada o manifesto e a OTA assinada seguem `2.9.61-AnyTV`/code89, e o canal `cert2026` está preservado.
+
+**Gate para iniciar testes físicos da code90:** somente **após autorização expressa e publicação assinada comprovada**, cert V2 `fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9`, `apksigner verify`, hash da APK assinada, `ANYTV_V2_GITHUB_OTA_BYTE_READBACK_SUCCESS`, confirmar versão e disponibilidade no celular. A QA em aparelho não pode ser marcada PASS com base apenas no CI. Nunca instalar manualmente a candidata unsigned nem desinstalar o aplicativo assinado para forçar atualização.
+
+### Procedimento do operador no Android real — após publicação autorizada
+
+1. **Antes de atualizar:** anotar modelo do celular e versão Android, pacote V2 (`com.tclremote.livre.v2`), versionCode instalado, TV TCL/conexão, estado de favoritos/assistidos e aplicativo de streaming instalado. Ocultar identidades e contas nos prints.
+2. **Atualização in-app:** no AnyTV abrir **Buscar atualizações**. O código instalado usa o updater `TclUpdateManager` ajustado por `scripts/apply_anytv_phone_v2_identity.py` para `android/v2/current.apk`; antes da tentativa de download ele pode solicitar permissão Android **Instalar apps desconhecidos**. Se solicitada, autorizar apenas no aparelho de QA, retornar ao AnyTV e tocar **Buscar atualizações** novamente. O instalador do Android requer confirmação do usuário, não instalação silenciosa. Se o aparelho já estiver em code90, deve mostrar **O aplicativo já está atualizado**.
+3. **Identidade e persistência:** confirmar após reiniciar o AnyTV que mostra 2.9.62/code90, não houve desinstalação, favoritas/assistidos/conta continuam coerentes e a mesma TCL se conecta. Se houver assinatura incompatível, versão menor, pacote divergente, erro de transferência ou perda de dados, **PARAR**, anotar mensagem literal e não tentar contorno.
+4. **Caso de referência:** abrir **Dexter: Ressurreição** (série), conferir por screenshot **topo, meio e rodapé** como nas três evidências originais, com comparação no **mesmo aparelho**. Não extrapolar o resultado a outros tamanhos de tela.
+
+### Critérios visuais objetivos U01-UX da ficha — todos PENDENTES
+
+- [ ] **UX01 — cabeçalho rolável:** título, gêneros e notas entram na mesma rolagem da ficha; nenhum cabeçalho fixo consome altura enquanto se rola. A abertura mostra título e controles sem sobreposição.
+- [ ] **UX02 — nota única:** apresentar `TMDB ★ ...` **uma só vez**. Se Trakt válido, exibir `Trakt ★ ...` uma vez na mesma linha; se indisponível, **não mostrar Trakt** nem placeholder. Não inventar nota nem votos.
+- [ ] **UX03 — controle no topo:** botão `Controle da TV` com ícone aparece logo após metadados; acioná-lo abre o controle da TCL conectada, não texto solto nem link.
+- [ ] **UX04 — ações sem ruído:** remover da ficha os parágrafos explicativos sobre deep links e TMDB/JustWatch; `Acesso aos links` aparece como botão discreto e só retorna o status da própria instalação, sem solicitar códigos automaticamente.
+- [ ] **UX05 — pôster:** cartaz original é mostrado como imagem proporcional, sem título de seção `Cartaz original`, sem ocupar toda a altura disponível.
+- [ ] **UX06 — serviços vermelhos:** os aplicativos instalados elegíveis, inclusive `Apple TV` quando realmente instalado, têm botões vermelhos consistentes, com distinção visual de seleção. Não inventar opções que a TCL não possua.
+- [ ] **UX07 — ordem e navegação:** sinopse, trailer, episódios, `Onde assistir por assinatura no Brasil`, serviços instalados, pôster e `Você também pode gostar` são acessíveis pela rolagem; ausência de sobreposição/truncamento; botão persistente `Abrir na [nome da TV]` permanece funcional depois de escolher um provedor.
+- [ ] **UX08 — comportamento real do link:** após escolher um aplicativo da TCL, `Abrir na [nome da TV]` abre ao menos uma busca/recurso suportado; **não declarar reprodução bem-sucedida somente porque o aplicativo abriu**. Repetir com app sem oferta confirmada: a proteção de oferta deve impedir título falso.
+
+**Registro da prova física:** versão/code e modelo/OS (sem dados pessoais), data/hora, prints topo/meio/rodapé, resultado observado por UX01–UX08 (PASS / FAIL / BLOCKED / NOT_RUN), breve motivo de divergência, resultado U01–U05/L03–L05 e decisão humana. Nenhum desses casos foi executado neste checkpoint. Os gates F0–F8 e progresso 7/11=63% permanecem como estão.
+
+---
 ## 07/11/2026 — QA físico futuro para candidata unsigned 2.9.61/code89 (PREPARADO, NÃO EXECUTADO)
 
 **Proveniência da compilação:** GitHub Actions [run 42420872880](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/42420872880), job `128548827682`, HEAD DEV `76095ad3a9c73d58f8258a71cdd081825e91163c`, `BUILD SUCCESSFUL`, todos os passos de identidade/aapt e upload de auditoria concluídos. Artifact ID `13593169420`, nome `anytv-v2-2961-code89-unsigned-audit`; ZIP 26.155.524 bytes, SHA-256 do **ZIP** `2567617eb83987a496c931ec9d66dbb3f88fb4c648e1693938aeca1a840f2577`.
@@ -99,7 +126,7 @@ A implementação desses testes exige que exista um workflow proposto e revisado
 - [ ] **U01 — abertura e navegação:** abrir AnyTV no Android real e controlar a TCL; testar menu, posters, detalhe de filmes/séries, rolagem, teclas do controle, regressão visual e continuidade de conexão.
 - [ ] **U02 — contas:** login Google/restauração/saída por fluxo aprovado, sem escrever tokens em relatório; nenhum vazamento de informações no log.
 - [ ] **U03 — créditos TMDB:** para filme e série com IDs verificados, comparar elenco de até 12 pessoas, nome, personagem, poster e dados de TMDB; ausência de créditos deve ter fallback sem informação inventada.
-- [ ] **U04 — nota Trakt:** conferir título por TMDB ID, fonte Trakt e nota 0–10 com votos; testar `rating:null`, 404 do título e indisponibilidade com texto `Trakt: nota indisponível`. Comparar frescor após 900 segundos sem cache Android de 48h; nunca transformar contagem de watchers em avaliação.
+- [ ] **U04 — nota Trakt (regra vigente para 2.9.62/code90):** conferir título por TMDB ID, fonte Trakt e nota 0–10 com votos; testar `rating:null`, 404 e indisponibilidade. **Quando não houver nota Trakt válida, ocultar o campo Trakt por completo, sem `Trakt: nota indisponível` ou outro placeholder.** Quando houver, mostrar Trakt uma única vez na linha combinada de notas. Comparar frescor após 900 segundos sem cache Android de 48h; nunca transformar contagem de watchers em avaliação. Versões anteriores possuíam placeholder; esse comportamento foi intencionalmente substituído pela correção code90.
 - [ ] **U05 — cache e offline:** confirmar que catálogo previamente visitado pode usar dados locais válidos e que notas Trakt não retornam nota persistida antiga durante falha de rede; verificar reconexão sem apagar dados/assistidos.
 - [ ] **L03 — links de streaming:** conferir para cada provedor do Brasil se o deeplink aponta ao título correto e diferenciar ficha correta, pesquisa, abertura genérica do app e reprodução efetiva; nenhum status PASS por abertura isolada.
 - [ ] **L04 — autenticação de links:** conferir chave da instalação exata e nonce assinado no fluxo autorizado, sem copiar identidade/segredos; não reemitir ativação por conta própria.
