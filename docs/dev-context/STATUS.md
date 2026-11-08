@@ -1,3 +1,12 @@
+## 08/11/2026 — AnyTV 2.9.62/code90 release definitivo assinado e OTA verificado
+- Autorização humana expressa para release definitivo registrada na conversa do projeto; não é build somente de teste.
+- DEV: concorrência do workflow unsigned isolada no commit `ffa6fb090dc4614cb49f2f705631284419a65fbf`; manifesto oficial `release/anytv-v2.json` atualizado para `2.9.62-AnyTV`/`versionCode=90` no commit `1e0464b3742c236946774a970df47cdcda7fe257`.
+- GitHub Actions release oficial run `42491309376`, job `128764089832`: `completed/success`; etapas de compilação, testes, recuperação de identidade V2, `apksigner` e publicação OTA concluídas. SHA-256 do APK assinado `7a5d238ae1e113ab920b1c1a072e31e2d95c8e317d4bc3842312e8601109db40` (log `ANYTV_V2_SIGNER_VALIDATED_...`). O workflow verificou o fingerprint canônico V2 via `apksigner`, sem expor segredo.
+- OTA commit `93e526e5a532724f139208ff042d1a92056f7c91`; comparação a partir de `0dd028883b9059956d39d72447344fd8f89fe311` contém alteração somente em `updates/android/v2/current.apk`. Blob OTA V2 `eb922fbc4485e982afe07cce7d5fce2c3e3d1376`; legado cert2026 segue blob `44c766b433ddb370f4589b87843f1edfd9cd7b7a`. Log: `ANYTV_V2_OTA_REF_CONFIRMED_93e526e5...` e `ANYTV_V2_GITHUB_OTA_BYTE_READBACK_SUCCESS`.
+- Gate físico continua NOT_RUN: instalação/atualização em aparelho, abertura real e validação UI/UX não comprovadas. Roadmap técnico preservado `7/11=63%`; F0–F8 ainda não homologados. Não promover gate por sucesso de workflow.
+
+---
+
 ## 08/11/2026 — V2 updater regression RED→GREEN; unsigned code90 rebuilt, no OTA
 - **Test-first evidence:** `scripts/tests/test_streaming_screens_contract.py` added four offline updater cases commit `747e03e8d0066ff9193d5e265b75185afe53ea13`. GitHub Actions [42434743159](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/42434743159) FAILED with exactly three UPD01/02/03 target failures; its fourth security invariant PASS, before any Java code change. Defects: premature unknown-app permission, misleading early update-found status, generic "Controle TCL atualizado." shown on phone.
 - **DEV-only repair:** shared `overrides/common/TclUpdateManager.java` commit `ca8dce1411c03e251ca1ec292f4e6f4b76a6cd67` moves permission check after package/version/certificate validation and corrects progress text; receiver commit `38b9c8e8d3bab38a6cfbd531455a376414ab571f` differentiates AnyTV and TV confirmed-success Toast. Unsigned workflow path gate updated commit `807c3b47c236b062e51eecfed931537f467601db`, no signer/OTA changes.
