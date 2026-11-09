@@ -261,6 +261,8 @@ fun TclApprovedHomeScreen(
                         tvIdentity = sessionState.connectedDevice?.id,
                         tvName = sessionState.connectedDevice?.name,
                         onRemoteKey = { remoteKey(it) },
+                        onRemoteHoldStart = { onKeyDirection(it, Remotemessage.RemoteDirection.START_LONG) },
+                        onRemoteHoldEnd = { onKeyDirection(it, Remotemessage.RemoteDirection.END_LONG) },
                         onKeyboardText = { if (isConnected) onKeyboardText(it) else onOpenDiscovery() },
                         onKeyboardEnter = { if (isConnected) onKeyboardEnter() else onOpenDiscovery() },
                         modifier = Modifier.fillMaxWidth()
@@ -504,7 +506,7 @@ internal fun TclHeaderAction(
 }
 
 @Composable
-private fun TclSideRocker(
+internal fun TclSideRocker(
     modifier: Modifier,
     label: String,
     headerIcon: ImageVector,
@@ -558,7 +560,7 @@ private fun TclSideRocker(
 }
 
 @Composable
-private fun TclQuickAction(
+internal fun TclQuickAction(
     title: String,
     icon: ImageVector,
     diameter: Dp,
