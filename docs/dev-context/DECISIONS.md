@@ -1,3 +1,10 @@
+## 09/11/2026 — DECISÃO APROVADA: adicionar SOMENTE LG webOS ao AnyTV
+- O usuário autorizou implementar conexão LG agora; outras marcas serão avaliadas posteriormente. Não substituir a UI remota existente nem reestruturar o transporte TCL/Android TV.
+- Abordagem ADAPT: aproveitar WebOSTVService/SSDP já presentes no ConnectSDK upstream pinado; integrar descoberta e comandos como caminho específico LG; pareamento por prompt na própria TV; credenciais webOS nunca se confundem com PIN/certificados Android TV. Capacidades não implementadas na LG devem ser explicitamente indisponíveis.
+- Primeira candidata LG é unsigned code93, separada da candidata pop-up code91 e da recuperação code92. Não autoriza assinatura, OTA, main, Cloudflare, Samsung nem outros fabricantes. QA físico e compatibilidade do modelo LG permanecem pendentes.
+- Segurança: usar pareamento aprovado na TV, não enviar segredos ao GitHub e não utilizar o companion TCL nem porta 18765 na LG. Publicação somente com revisão governada e autorização própria.
+
+---
 ## 07/11/2026 — AnyTV title ratings: TMDB + Trakt, NOT IMDb
 - Correcao expressa do usuario: na ficha de filme/serie, a segunda avaliacao deve ser do Trakt, que ja possui integracao no projeto, e NAO do IMDb. Apresentar notas rotuladas `TMDB` e `Trakt`, em escala real de 0 a 10 quando obtidas de fonte oficial; na ausencia de dado, indicar indisponibilidade, nunca inventar ou derivar a nota Trakt de watchers/trending.
 - Evidencia de codigo: `overrides/TclStreamingScreens.kt` usa sinais `signals/trakt/movie|tv` apenas na curadoria, e ainda exibe `IMDb: ver nota oficial` na ficha; `anytv-resolver/src/worker.mjs` fornece somente `watchers` para Trakt. Esses sinais de audiencia nao equivalem a media de avaliacao. A fonte oficial Trakt disponibiliza endpoints agregados para classificacoes por titulo e permite exibicao de ratings corretamente atribuidos: https://github.com/trakt/trakt-api ; https://developer.trakt.tv/docs/api-use-policy .
