@@ -1,0 +1,109 @@
+name: AnyTV LG webOS code93 signed QA artifact (NO OTA)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-lg-code93-signed-qa.yml']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: anytv-lg-code93-signed-qa
+  cancel-in-progress: false
+jobs:
+  sign-qa-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download previously audited code93 unsigned candidate (no rebuild)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42669473078
+          name: anytv-lg-webos-code93-unsigned-audit
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: unsigned-proof
+      - name: Install Android signature verification tools
+        uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Verify immutable artifact identity and its APK SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find unsigned-proof -type f -name '*.apk' | wc -l)" -eq 1
+          APK=unsigned-proof/app-release-unsigned.apk
+          test -s "$APK"
+          test -s unsigned-proof/candidate-sha256.txt
+          EXPECTED_SHA="$(awk 'NF {print $1; exit}' unsigned-proof/candidate-sha256.txt)"
+          test "$(sha256sum "$APK" | cut -d' ' -f1)" = "$EXPECTED_SHA"
+          grep -q "name='com.tclremote.livre.v2' versionCode='93'" unsigned-proof/candidate-identity.txt
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/aapt" dump badging "$APK" > unsigned-proof/qa-verified-badging.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='93'" unsigned-proof/qa-verified-badging.txt
+          grep -q "versionName='2.9.65-AnyTV'" unsigned-proof/qa-verified-badging.txt
+          mkdir -p qa-output
+          "$BT/zipalign" -f 4 "$APK" qa-output/AnyTV_LG_2.9.65_code93_qa_aligned.apk
+          "$BT/zipalign" -c 4 qa-output/AnyTV_LG_2.9.65_code93_qa_aligned.apk
+          echo 'LG_CODE93_ORIGINAL_UNSIGNED_SHA_VERIFIED'
+      - name: Sign only the QA artifact with pre-existing V2 key
+        shell: bash
+        env:
+          V2_RECOVERY_HEX: ${{ secrets.ANYTV_SIGNER_V2_RECOVERY_HEX }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check -q 'cryptography==46.0.3'
+          umask 077
+          mkdir -m 700 -p signing-qa-private
+          trap 'rm -rf signing-qa-private' EXIT
+          python3 - <<'PY'
+          import base64,hashlib,hmac,json,os,pathlib
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.serialization import pkcs12
+          k=os.environ.get('V2_RECOVERY_HEX','')
+          if len(k)!=64 or any(c not in '0123456789abcdefABCDEF' for c in k):
+              raise RuntimeError('V2 signer secret unavailable: fail closed')
+          key=bytes.fromhex(k)
+          root=pathlib.Path('signing-recovery/v2')
+          ciphertext=(root/'phone-signer.aesgcm').read_bytes()
+          meta=json.loads((root/'identity.json').read_text())
+          assert ciphertext[:9]==b'ANYTVV2G1'
+          assert hashlib.sha256(ciphertext).hexdigest()==meta['ciphertext_sha256']
+          p12=AESGCM(key).decrypt(ciphertext[9:21],ciphertext[21:],None)
+          pw=base64.urlsafe_b64encode(hmac.new(key,b'AnyTV-Phone-V2-PKCS12-Pass-v1',hashlib.sha256).digest())
+          signer,cert,_=pkcs12.load_key_and_certificates(p12,pw)
+          assert signer is not None and cert is not None
+          assert cert.fingerprint(hashes.SHA256()).hex()==meta['certificate_sha256']
+          assert meta['certificate_sha256']=='fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9'
+          (pathlib.Path('signing-qa-private')/'phone.p12').write_bytes(p12)
+          (pathlib.Path('signing-qa-private')/'password').write_bytes(pw)
+          print('LG_CODE93_V2_SIGNER_CERT_MATCH')
+          PY
+          P12_V2_PASSWORD="$(cat signing-qa-private/password)"
+          echo "::add-mask::$P12_V2_PASSWORD"
+          export P12_V2_PASSWORD
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/apksigner" sign --ks signing-qa-private/phone.p12 --ks-type PKCS12 --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD --out qa-output/AnyTV_LG_2.9.65_code93_SIGNED_QA.apk qa-output/AnyTV_LG_2.9.65_code93_qa_aligned.apk
+          "$BT/apksigner" verify --verbose --print-certs qa-output/AnyTV_LG_2.9.65_code93_SIGNED_QA.apk > qa-output/signature-audit.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' qa-output/signature-audit.txt
+          EXPECTED_CERT="$(python3 -c 'import json;print(json.load(open("signing-recovery/v2/identity.json"))["certificate_sha256"])')"
+          grep -qi "$EXPECTED_CERT" qa-output/signature-audit.txt
+          "$BT/aapt" dump badging qa-output/AnyTV_LG_2.9.65_code93_SIGNED_QA.apk > qa-output/badging.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='93'" qa-output/badging.txt
+          grep -q "versionName='2.9.65-AnyTV'" qa-output/badging.txt
+          "$BT/zipalign" -c 4 qa-output/AnyTV_LG_2.9.65_code93_SIGNED_QA.apk
+          sha256sum qa-output/AnyTV_LG_2.9.65_code93_SIGNED_QA.apk > qa-output/SHA256.txt
+          printf '%s\n' 'LG webOS TEST ONLY. Internal signed QA code93. No OTA, release or auto-install.' > qa-output/READ_ME.txt
+          rm -f qa-output/AnyTV_LG_2.9.65_code93_qa_aligned.apk
+          echo 'LG_CODE93_SIGNED_QA_VERIFIED_NO_OTA'
+      - name: Upload signed APK for personal testing only
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-lg-code93-signed-qa-test-only
+          path: |
+            qa-output/AnyTV_LG_2.9.65_code93_SIGNED_QA.apk
+            qa-output/SHA256.txt
+            qa-output/badging.txt
+            qa-output/signature-audit.txt
+            qa-output/READ_ME.txt
+          retention-days: 7
+          if-no-files-found: error
