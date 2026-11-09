@@ -75,5 +75,28 @@ jobs:
           print('ANYTV_V2_SIGNED_OTA_CODE90_READBACK_OK')
           print('CODE91_NOT_SIGNED_OR_PUBLISHED_BY_PREFLIGHT')
           PY
+      - name: Verify exact official code90 APK bytes and embedded cast code markers
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,subprocess,zipfile
+          from pathlib import Path
+          expected_head='93e526e5a532724f139208ff042d1a92056f7c91'
+          expected_sha='7a5d238ae1e113ab920b1c1a072e31e2d95c8e317d4bc3842312e8601109db40'
+          current=subprocess.check_output(['git','rev-parse','FETCH_HEAD'],text=True).strip()
+          assert current==expected_head, f'OTA branch changed: {current}'
+          apk=Path('current-ota-readonly/current.apk')
+          sha=hashlib.sha256(apk.read_bytes()).hexdigest()
+          assert sha==expected_sha, f'APK bytes differ from official signing run: {sha}'
+          print('ANYTV_CODE90_OFFICIAL_SIGNED_SHA256_MATCH',sha)
+          with zipfile.ZipFile(apk) as z:
+              dex=[n for n in z.namelist() if n.startswith('classes') and n.endswith('.dex')]
+              assert dex, 'No classes.dex files in official APK'
+              data=b''.join(z.read(n) for n in dex)
+          for marker in ('Elenco principal','profile_path','credits'):
+              assert marker.encode('utf-8') in data, f'Missing compiled cast marker: {marker}'
+              print('ANYTV_CODE90_DEX_MARKER_PRESENT',marker)
+          print('ANYTV_CODE90_BINARY_CAST_MARKERS_PASS; not physical UI QA')
+          PY
       - name: Confirm workflow is read-only
         run: echo 'READ_ONLY_SIGNER_PREFLIGHT; no decryption, signing, APK publish, git push or OTA write.'
