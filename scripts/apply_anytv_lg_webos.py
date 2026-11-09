@@ -82,7 +82,7 @@ change(
     "    fun sendKeyboardText(text: String) {\n"
     "        if (!checkConnectionGuard()) return\n"
     "        if (currentConnectableDevice()?.isLgWebOsDevice() == true) {\n"
-    "            showStatus(\"Teclado LG requer sessão de entrada webOS; use o teclado da TV por enquanto.\")\n"
+    "            showStatus(\"Teclado LG requer sessão de entrada webOS; use o teclado da TV por enquanto.\", isError = false)\n"
     "            return\n"
     "        }"
 )
@@ -102,7 +102,7 @@ change(
     "    fun launchQuickApp(appName: String) {\n"
     "        if (!checkConnectionGuard()) return\n"
     "        if (currentConnectableDevice()?.isLgWebOsDevice() == true) {\n"
-    "            showStatus(\"Atalhos de apps LG ainda não disponíveis; utilize Home.\")\n"
+    "            showStatus(\"Atalhos de apps LG ainda não disponíveis; utilize Home.\", isError = false)\n"
     "            return\n"
     "        }"
 )
@@ -255,7 +255,7 @@ change(
             Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_STOP -> media?.stop(listener)
             Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_REWIND -> media?.rewind(listener)
             Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_FAST_FORWARD -> media?.fastForward(listener)
-            else -> showStatus("Comando não disponível na LG webOS.")
+            else -> showStatus("Comando não disponível na LG webOS.", isError = false)
         }
     }
 
