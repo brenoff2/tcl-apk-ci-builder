@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Parse release workflow YAML without executing it
+        run: ruby -e 'require "yaml"; YAML.parse_file(ARGV.fetch(0)); puts "CODE91_RELEASE_YAML_PARSE_OK"' .github/workflows/anytv-v2-code91-signed-release.yml
       - name: Verify manual signed code91 release static guards
         run: python3 -m unittest scripts/tests/test_anytv_code91_release_contract.py -v
       - name: Confirm no signing or publishing in this CI
