@@ -22,7 +22,7 @@ class LgWebOsContract(unittest.TestCase):
 
     def test_tv_prompt_not_android_pairing_pin(self):
         self.assertIn("PairingType.FIRST_SCREEN", self.vm)
-        self.assertIn("DiscoveryManager.PairingLevel.PROTECTED", self.vm)
+        self.assertIn("DiscoveryManager.PairingLevel.ON", self.vm)
         self.assertIn("Autorize a conexão do AnyTV na tela da LG.", self.vm)
         self.assertIn("pairingRequired = false", self.vm)
         self.assertIn("if (device.isLgWebOsDevice())", self.vm)
@@ -68,8 +68,8 @@ class LgWebOsContract(unittest.TestCase):
 
     def test_independent_unsigned_ci(self):
         self.assertIn("scripts/apply_anytv_lg_webos.py", self.workflow)
-        self.assertIn("versionCode = 94", self.workflow)
-        self.assertIn("2.9.66-AnyTV", self.workflow)
+        self.assertIn("versionCode = 95", self.workflow)
+        self.assertIn("2.9.67-AnyTV", self.workflow)
         self.assertIn("assembleRelease", self.workflow)
         self.assertIn("candidate-NOT-INSTALL.txt", self.workflow)
         self.assertNotIn("git push origin HEAD:feat/tcl-v22-updates-back-bluetooth", self.workflow)
