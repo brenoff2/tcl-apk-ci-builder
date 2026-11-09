@@ -44,6 +44,11 @@ change(
     "        if (!device.isChromecastServiceDevice() && !device.isLgWebOsDevice()) {\n"
 )
 change(
+    "            disconnectCurrentDeviceInternal(manual = false)\n        } else {",
+    "            if (device.isLgWebOsDevice()) handleLgWebOsDisconnected()\n"
+    "            else disconnectCurrentDeviceInternal(manual = false)\n        } else {"
+)
+change(
     ".filter { it.isChromecastServiceDevice() || it.id in manualDeviceIds }",
     ".filter { it.isChromecastServiceDevice() || it.isLgWebOsDevice() || it.id in manualDeviceIds }"
 )
@@ -139,7 +144,9 @@ change(
                 pendingDeviceId = null
                 connectionWatchdogJob?.cancel()
                 autoReconnectScheduleJob?.cancel()
-                prefs.edit { putBoolean(Constant.PREF_MANUAL_DISCONNECT, false) }
+                // Pause TCL auto-reconnect while the explicitly selected LG is active.
+                // Selecting Android TV later clears this flag in its existing path.
+                prefs.edit { putBoolean(Constant.PREF_MANUAL_DISCONNECT, true) }
                 _uiState.update {
                     it.copy(
                         connectedDevice = connectableDevice.toUiModel(
