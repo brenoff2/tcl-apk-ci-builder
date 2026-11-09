@@ -33,6 +33,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material.icons.filled.KeyboardBackspace
+import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.PlayCircleFilled
@@ -1659,6 +1662,8 @@ internal fun TclStreamingScreens(
     apps: List<TvOfficialApp>, host: String, pairing: String,
     tvName: String, onDismiss: () -> Unit,
     onRemoteKey: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
+    onRemoteHoldStart: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
+    onRemoteHoldEnd: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
     onKeyboardText: (String) -> Unit = {},
     onKeyboardEnter: () -> Unit = {}
 ) {
@@ -1911,6 +1916,7 @@ internal fun TclStreamingScreens(
     var showPlaybackRemote by remember { mutableStateOf(false) }
     var remoteMinimized by remember { mutableStateOf(false) }
     var remoteText by remember { mutableStateOf("") }
+    var remoteKeyboardExpanded by remember { mutableStateOf(false) }
     var titleActionFeedback by remember { mutableStateOf<String?>(null) }
     var deviceLinkStatus by remember { mutableStateOf<String?>(null) }
     var deviceIdSuffix by remember { mutableStateOf<String?>(null) }
@@ -5022,77 +5028,130 @@ internal fun TclStreamingScreens(
             }
         )
     }
-    // Overlay stays available while the TV streaming app asks for a profile.
-    // Uses the same established Android TV remote connection as the home screen.
+    // Reuse the established home remote visuals and REAL callbacks; do not add
+    // another row of generic arrow/volume text buttons.
     if (showPlaybackRemote) {
         val send: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {
             onRemoteKey(it)
         }
-        if (!remoteMinimized) {
-            AlertDialog(
-                onDismissRequest = { remoteMinimized = true },
-                title = { Text("Controle do streaming") },
-                text = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Escolha o perfil e confirme com OK na TV.", fontSize = 12.sp)
-                        OutlinedButton(onClick = {
-                            send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_UP)
-                        }) { Text("↑") }
-                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            OutlinedButton(onClick = {
-                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_LEFT)
-                            }) { Text("←") }
-                            Button(onClick = {
-                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_CENTER)
-                            }) { Text("OK") }
-                            OutlinedButton(onClick = {
-                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_RIGHT)
-                            }) { Text("→") }
-                        }
-                        OutlinedButton(onClick = {
-                            send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_DPAD_DOWN)
-                        }) { Text("↓") }
-                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            TextButton(onClick = {
-                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_BACK)
-                            }) { Text("Voltar") }
-                            TextButton(onClick = {
-                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_HOME)
-                            }) { Text("Inicio") }
-                            TextButton(onClick = {
-                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_PLAY_PAUSE)
-                            }) { Text("Play/Pause") }
-                        }
-                        OutlinedTextField(
-                            value = remoteText,
-                            onValueChange = { remoteText = it.take(120) },
-                            label = { Text("Texto para a TV") },
-                            singleLine = true)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(enabled = remoteText.isNotBlank(), onClick = {
-                                onKeyboardText(remoteText)
-                                remoteText = ""
-                            }) { Text("Enviar texto") }
-                            TextButton(onClick = onKeyboardEnter) { Text("Enter") }
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = {
-                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_DOWN)
-                            }) { Text("Vol -") }
-                            TextButton(onClick = {
-                                send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_UP)
-                            }) { Text("Vol +") }
+        if (remoteMinimized) {
+            Box(modifier = Modifier.fillMaxSize().padding(16.dp),
+                contentAlignment = Alignment.BottomEnd) {
+                Button(onClick = { remoteMinimized = false }) {
+                    Icon(Icons.Filled.Tv, contentDescription = null,
+                        modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Controle da TV")
+                }
+            }
+        } else {
+            Dialog(onDismissRequest = { remoteMinimized = true },
+                properties = DialogProperties(usePlatformDefaultWidth = false)) {
+                BoxWithConstraints(modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center) {
+                    val compactRemote = maxHeight < 650.dp
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(.94f).widthIn(max = 440.dp)
+                            .heightIn(max = maxHeight * .92f),
+                        shape = RoundedCornerShape(24.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        tonalElevation = 8.dp
+                    ) {
+                        Column(
+                            modifier = Modifier.verticalScroll(rememberScrollState())
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                            verticalArrangement = Arrangement.spacedBy(if (compactRemote) 8.dp else 12.dp)
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween) {
+                                Column {
+                                    Text("Controle da TV", fontWeight = FontWeight.SemiBold,
+                                        fontSize = 17.sp)
+                                    Text(tvName.ifBlank { "Controle conectado" },
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 11.sp)
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TextButton(onClick = { remoteMinimized = true }) {
+                                        Text("Minimizar")
+                                    }
+                                    IconButton(onClick = { showPlaybackRemote = false }) {
+                                        Icon(Icons.Filled.Close, contentDescription = "Fechar controle")
+                                    }
+                                }
+                            }
+                            Text("Selecione o perfil com as direções e confirme com OK.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                                val padSize = (maxWidth - 112.dp)
+                                    .coerceAtMost(if (compactRemote) 206.dp else 236.dp)
+                                    .coerceAtLeast(140.dp)
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    TclSideRocker(
+                                        modifier = Modifier.width(44.dp).height(padSize),
+                                        label = "Volume", headerIcon = Icons.Filled.VolumeUp,
+                                        onHeader = { send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_MUTE) },
+                                        onIncrease = { send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_UP) },
+                                        onDecrease = { send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_DOWN) }
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    TclResponsivePad(
+                                        mode = RemotePadMode.DPad, width = padSize,
+                                        height = padSize, isConnected = true,
+                                        hapticsEnabled = true, onShort = send,
+                                        onHoldStart = onRemoteHoldStart,
+                                        onHoldEnd = onRemoteHoldEnd
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    TclSideRocker(
+                                        modifier = Modifier.width(44.dp).height(padSize),
+                                        label = "Canal", headerIcon = Icons.Filled.Tv,
+                                        onHeader = { send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_TV) },
+                                        onIncrease = { send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_CHANNEL_UP) },
+                                        onDecrease = { send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_CHANNEL_DOWN) }
+                                    )
+                                }
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly,
+                                verticalAlignment = Alignment.CenterVertically) {
+                                TclQuickAction("Voltar", Icons.Filled.KeyboardBackspace, 52.dp) {
+                                    send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_BACK)
+                                }
+                                TclQuickAction("Início", Icons.Filled.Home, 52.dp) {
+                                    send(com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode.KEYCODE_HOME)
+                                }
+                                TclQuickAction("Teclado", Icons.Filled.Keyboard, 52.dp) {
+                                    remoteKeyboardExpanded = !remoteKeyboardExpanded
+                                }
+                            }
+                            PlaybackTransportBar(onRemoteKey = send)
+                            if (remoteKeyboardExpanded) {
+                                OutlinedTextField(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    value = remoteText,
+                                    onValueChange = { remoteText = it.take(120) },
+                                    label = { Text("Texto para a TV") },
+                                    singleLine = true
+                                )
+                                Row(modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End,
+                                    verticalAlignment = Alignment.CenterVertically) {
+                                    TextButton(onClick = onKeyboardEnter) { Text("Enter") }
+                                    Button(enabled = remoteText.isNotBlank(), onClick = {
+                                        onKeyboardText(remoteText)
+                                        remoteText = ""
+                                    }) { Text("Enviar texto") }
+                                }
+                            }
                         }
                     }
-                },
-                confirmButton = {
-                    TextButton(onClick = { remoteMinimized = true }) { Text("Minimizar") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showPlaybackRemote = false }) { Text("Fechar") }
                 }
-            )
+            }
         }
     }
 }
