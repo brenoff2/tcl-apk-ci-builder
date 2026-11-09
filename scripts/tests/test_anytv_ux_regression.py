@@ -53,7 +53,7 @@ class AnyTvUxRegressions(unittest.TestCase):
 
     def test_detail_modal_is_scrolling_with_compact_actions_and_single_scores(self):
         start = self.catalog.index("    val title = details\n    if (title != null) {")
-        end = self.catalog.index("    // Overlay stays available", start)
+        end = self.catalog.index("    // Reuse the established home remote visuals", start)
         detail = self.catalog[start:end]
         self.assertNotIn("            title = {", detail)
         self.assertIn("heightIn(max = 560.dp)", detail)
@@ -81,7 +81,7 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertIn("onRemoteKey = { remoteKey(it) }", self.home)
         self.assertIn("onRemoteKey = onRemoteKey", self.installed)
         self.assertIn("showPlaybackRemote = true", self.catalog)
-        pad = (Path(__file__).resolve().parents[2] / "overrides/TclResponsivePad.kt").read_text(encoding="utf-8")
+        pad = (ROOT / "overrides/TclResponsivePad.kt").read_text(encoding="utf-8")
         for key in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_LEFT",
                     "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER"):
             self.assertIn(key, pad)
