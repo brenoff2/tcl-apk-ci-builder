@@ -77,6 +77,18 @@ change(
     "        }"
 )
 change(
+    "    fun sendHeldKey(\n        keyCode: Remotemessage.RemoteKeyCode,\n"
+    "        direction: Remotemessage.RemoteDirection\n    ) {\n"
+    "        if (!checkConnectionGuard()) return",
+    "    fun sendHeldKey(\n        keyCode: Remotemessage.RemoteKeyCode,\n"
+    "        direction: Remotemessage.RemoteDirection\n    ) {\n"
+    "        if (!checkConnectionGuard()) return\n"
+    "        if (currentConnectableDevice()?.isLgWebOsDevice() == true) {\n"
+    "            if (direction == Remotemessage.RemoteDirection.START_LONG) sendLgWebOsKey(keyCode)\n"
+    "            return\n"
+    "        }"
+)
+change(
     "    fun sendKeyboardText(text: String) {\n"
     "        if (!checkConnectionGuard()) return",
     "    fun sendKeyboardText(text: String) {\n"
@@ -246,8 +258,11 @@ change(
             Remotemessage.RemoteKeyCode.KEYCODE_HOME -> keys?.home(listener)
             Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_UP -> volume?.volumeUp(listener)
             Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_DOWN -> volume?.volumeDown(listener)
-            Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_MUTE ->
-                volume?.setMute(!_uiState.value.isMuted, listener)
+            Remotemessage.RemoteKeyCode.KEYCODE_VOLUME_MUTE -> {
+                val mute = !_uiState.value.isMuted
+                volume?.setMute(mute, listener)
+                if (volume != null) _uiState.update { it.copy(isMuted = mute) }
+            }
             Remotemessage.RemoteKeyCode.KEYCODE_CHANNEL_UP -> channels?.channelUp(listener)
             Remotemessage.RemoteKeyCode.KEYCODE_CHANNEL_DOWN -> channels?.channelDown(listener)
             Remotemessage.RemoteKeyCode.KEYCODE_MEDIA_PLAY -> media?.play(listener)
