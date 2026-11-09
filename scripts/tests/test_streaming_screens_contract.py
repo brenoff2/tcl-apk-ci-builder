@@ -1353,10 +1353,23 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn("onRemoteKey = onRemoteKey", installed)
         self.assertIn("var showPlaybackRemote by remember", self.screen)
         self.assertIn("showPlaybackRemote = true", self.screen)
+        pad = (root / "overrides/TclResponsivePad.kt").read_text(encoding="utf-8")
         for key in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_LEFT",
-                    "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER", "KEYCODE_BACK",
-                    "KEYCODE_HOME", "KEYCODE_MEDIA_PLAY_PAUSE"):
+                    "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER"):
+            self.assertIn(key, pad)
+        for key in ("KEYCODE_BACK", "KEYCODE_HOME"):
             self.assertIn(key, self.screen)
+        self.assertIn("PlaybackTransportBar(onRemoteKey = send)", self.screen)
+        self.assertIn("TclResponsivePad(", self.screen)
+        self.assertIn("TclSideRocker(", self.screen)
+        self.assertIn("TclQuickAction(", self.screen)
+        self.assertIn("onHoldStart = onRemoteHoldStart", self.screen)
+        self.assertIn("onHoldEnd = onRemoteHoldEnd", self.screen)
+        self.assertIn("onRemoteHoldStart = onRemoteHoldStart", installed)
+        self.assertIn("onRemoteHoldEnd = onRemoteHoldEnd", installed)
+        self.assertIn("onRemoteHoldStart = { onKeyDirection(it,", home)
+        self.assertNotIn('Text("↑")', self.screen)
+        self.assertNotIn('Text("←")', self.screen)
         self.assertIn("StreamingCatalog.cast(item.media, item.id)", self.screen)
         self.assertIn("Elenco principal", self.screen)
         self.assertNotIn('Text("Cartaz original"', self.screen)
@@ -1366,6 +1379,24 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn("IMDb: " + "10.0", self.screen)
 
 
+
+    def test_streaming_remote_popup_reuses_home_design_and_restores_after_minimize(self):
+        start = self.screen.split("    // Reuse the established home remote visuals", 1)[1]
+        self.assertIn("Dialog(onDismissRequest = { remoteMinimized = true }", start)
+        self.assertIn('Text("Controle da TV")', start)
+        self.assertIn("remoteMinimized = false", start)
+        self.assertIn("showPlaybackRemote = false", start)
+        self.assertIn("PlaybackTransportBar(onRemoteKey = send)", start)
+        self.assertIn("TclResponsivePad(", start)
+        self.assertIn("TclQuickAction(", start)
+        self.assertIn("TclSideRocker(", start)
+        self.assertIn("onKeyboardText(remoteText)", start)
+        self.assertIn("onKeyboardEnter", start)
+        self.assertIn("KEYCODE_VOLUME_MUTE", start)
+        self.assertIn("KEYCODE_CHANNEL_UP", start)
+        self.assertIn("KEYCODE_CHANNEL_DOWN", start)
+        self.assertNotIn('Text("Play/Pause")', start)
+        self.assertNotIn('Text("Vol +")', start)
 
     def test_detail_cast_loads_independently_and_reports_unavailable_data(self):
         self.assertIn('    // Load cast independently:', self.screen)
