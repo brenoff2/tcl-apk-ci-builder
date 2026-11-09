@@ -1,0 +1,24 @@
+name: AnyTV code91 signed release static safety checks (NO RELEASE)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths:
+      - '.github/workflows/anytv-v2-code91-signed-release.yml'
+      - '.github/workflows/anytv-v2-code91-release-contract-ci.yml'
+      - 'scripts/tests/test_anytv_code91_release_contract.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify manual signed code91 release static guards
+        run: python3 -m unittest scripts/tests/test_anytv_code91_release_contract.py -v
+      - name: Confirm no signing or publishing in this CI
+        run: echo 'CODE91_RELEASE_STATIC_ONLY; no signer secret, no APK signature, no OTA write.'
