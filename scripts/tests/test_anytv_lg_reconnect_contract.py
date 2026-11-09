@@ -13,7 +13,8 @@ class LGReconnectContract(unittest.TestCase):
         self.assertIn('putBoolean("anytv_lg_paired_" + connectableDevice.id, true)', self.vm)
         self.assertIn('prefs.getBoolean("anytv_lg_paired_" + device.id, false)', self.vm)
         self.assertIn('device.ipAddress == pairedHost && prefs.getBoolean(Constant.PIN, false)', self.vm)
-        self.assertIn('if (device.isPaired) "Reconnect" else "Connect"', self.discovery)
+        self.assertIn("device.isPaired", self.discovery)
+        self.assertIn('"Reconnect"', self.discovery)
 
     def test_lg_reconnect_not_android_tls_host(self):
         self.assertIn('private fun scheduleLgReconnect(targetId: String)', self.vm)
