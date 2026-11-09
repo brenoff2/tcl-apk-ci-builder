@@ -28,8 +28,8 @@ change(
 # The upstream discovery filter deliberately excludes LG, even though its
 # bundled ConnectSDK already ships WebOSTVService and SSDP discovery.
 change(
-    "if (device.isChromecastServiceDevice()) {",
-    "if (device.isChromecastServiceDevice() || device.isLgWebOsDevice()) {"
+    "            discoveryManager?.allDevices?.values?.forEach { device ->\n                if (device.isChromecastServiceDevice()) {",
+    "            discoveryManager?.allDevices?.values?.forEach { device ->\n                if (device.isChromecastServiceDevice() || device.isLgWebOsDevice()) {"
 )
 change(
     "if (!device.isChromecastServiceDevice() && deviceId !in manualDeviceIds) {",
