@@ -1,4 +1,4 @@
-name: AnyTV LG webOS code94 pointer repair unsigned proof (no OTA)
+name: AnyTV LG webOS code95 pointer repair unsigned proof (no OTA)
 on:
   push:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
@@ -112,8 +112,8 @@ jobs:
           s=p.read_text()
           assert s.count('versionCode = 39') == 1
           assert s.count('versionName = "2.9.10-AnyTV"') == 1
-          p.write_text(s.replace('versionCode = 39','versionCode = 94')
-                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.66-AnyTV"'))
+          p.write_text(s.replace('versionCode = 39','versionCode = 95')
+                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.67-AnyTV"'))
           PY
           python3 scripts/apply_anytv_phone_v2_identity.py
           cd source
@@ -125,15 +125,15 @@ jobs:
           APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
-          grep -q "name='com.tclremote.livre.v2' versionCode='94'" candidate-identity.txt
-          grep -q "versionName='2.9.66-AnyTV'" candidate-identity.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='95'" candidate-identity.txt
+          grep -q "versionName='2.9.67-AnyTV'" candidate-identity.txt
           sha256sum "$APK" > candidate-sha256.txt
           printf '%s\n' 'AUDITORIA APENAS: APK sem assinatura. NAO instalar como atualizacao da V2 assinada.' > candidate-NOT-INSTALL.txt
-          echo 'ANYTV_LG_WEBOS_CODE94_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
-      - name: Store unsigned LG webOS code94 proof for audit only
+          echo 'ANYTV_LG_WEBOS_CODE95_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
+      - name: Store unsigned LG webOS code95 proof for audit only
         uses: actions/upload-artifact@v4
         with:
-          name: anytv-lg-webos-code94-pointer-unsigned-audit
+          name: anytv-lg-webos-code95-pointer-unsigned-audit
           path: |
             source/app/build/outputs/apk/release/app-release-unsigned.apk
             candidate-identity.txt
