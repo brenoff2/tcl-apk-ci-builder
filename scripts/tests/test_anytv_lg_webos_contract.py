@@ -22,7 +22,7 @@ class LgWebOsContract(unittest.TestCase):
 
     def test_tv_prompt_not_android_pairing_pin(self):
         self.assertIn("PairingType.FIRST_SCREEN", self.vm)
-        self.assertIn("DiscoveryManager.PairingLevel.ON", self.vm)
+        self.assertIn("DiscoveryManager.PairingLevel.PROTECTED", self.vm)
         self.assertIn("Autorize a conexão do AnyTV na tela da LG.", self.vm)
         self.assertIn("pairingRequired = false", self.vm)
         self.assertIn("if (device.isLgWebOsDevice())", self.vm)
