@@ -312,6 +312,8 @@ fun TclInstalledAppsBar(
     tvHost: String?, tvIdentity: String?, tvName: String?,
     modifier: Modifier = Modifier,
     onRemoteKey: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
+    onRemoteHoldStart: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
+    onRemoteHoldEnd: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
     onKeyboardText: (String) -> Unit = {},
     onKeyboardEnter: () -> Unit = {}
 ) {
@@ -508,6 +510,8 @@ fun TclInstalledAppsBar(
         TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
             tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },
             onRemoteKey = onRemoteKey,
+            onRemoteHoldStart = onRemoteHoldStart,
+            onRemoteHoldEnd = onRemoteHoldEnd,
             onKeyboardText = onKeyboardText,
             onKeyboardEnter = onKeyboardEnter)
     }
