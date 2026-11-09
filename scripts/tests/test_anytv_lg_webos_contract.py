@@ -47,6 +47,20 @@ class LgWebOsContract(unittest.TestCase):
         self.assertIn('apps = emptyList(), host = "", pairing = ""', self.home)
         self.assertIn("if (currentConnectableDevice()?.isLgWebOsDevice() == true)", self.vm)
 
+    def test_lg_does_not_use_android_hold_or_tcl_auto_reconnect(self):
+        self.assertIn("if (currentConnectableDevice()?.isLgWebOsDevice() == true)", self.vm)
+        self.assertIn("if (direction == Remotemessage.RemoteDirection.START_LONG) sendLgWebOsKey(keyCode)", self.vm)
+        self.assertIn("handleLgWebOsDisconnected()", self.vm)
+        self.assertIn("if (device.isLgWebOsDevice()) handleLgWebOsDisconnected()", self.vm)
+        self.assertIn("putBoolean(Constant.PREF_MANUAL_DISCONNECT, true)", self.vm)
+        self.assertIn("if (!isActiveConnection(token) || !service.isConnected) return", self.vm)
+        self.assertIn("volume?.setMute(mute, listener)", self.vm)
+
+    def test_lg_status_and_ui_have_required_import(self):
+        self.assertIn("import androidx.compose.material3.Button", self.home)
+        self.assertIn("Teclado LG requer sessão de entrada webOS; use o teclado da TV por enquanto.", self.vm)
+        self.assertIn("Comando não disponível na LG webOS.\", isError = false)", self.vm)
+
     def test_independent_unsigned_ci(self):
         self.assertIn("scripts/apply_anytv_lg_webos.py", self.workflow)
         self.assertIn("versionCode = 93", self.workflow)
