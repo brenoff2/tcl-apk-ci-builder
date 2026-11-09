@@ -8,6 +8,7 @@ class LgWebOsContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.vm = (ROOT / "TvRemoteViewModel.kt").read_text()
+        cls.app = Path("source/app/src/main/java/com/hari/androidtvremote/App.kt").read_text()
         cls.home = (ROOT / "TclApprovedHomeScreen.kt").read_text()
         cls.workflow = Path(".github/workflows/anytv-lg-webos-unsigned-ci.yml").read_text()
 
@@ -16,9 +17,12 @@ class LgWebOsContract(unittest.TestCase):
         self.assertIn("getServiceByName(WebOSTVService.ID)", self.vm)
         self.assertIn('isLgWebOsDevice() -> "LG webOS"', self.vm)
         self.assertIn("connectLgWebOs(device)", self.vm)
+        self.assertIn("WebOSTVService::class.java", self.app)
+        self.assertIn("SSDPDiscoveryProvider::class.java", self.app)
 
     def test_tv_prompt_not_android_pairing_pin(self):
         self.assertIn("PairingType.FIRST_SCREEN", self.vm)
+        self.assertIn("DiscoveryManager.PairingLevel.ON", self.vm)
         self.assertIn("Autorize a conexão do AnyTV na tela da LG.", self.vm)
         self.assertIn("pairingRequired = false", self.vm)
         self.assertIn("if (device.isLgWebOsDevice())", self.vm)
@@ -39,6 +43,7 @@ class LgWebOsContract(unittest.TestCase):
         self.assertIn('sessionState.connectedDevice?.type == "LG webOS"', self.home)
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertIn("TclStreamingScreens(", self.home)
+        self.assertIn('if (sessionState.connectedDevice?.type == "LG webOS") remoteKey(it)', self.home)
         self.assertIn('apps = emptyList(), host = "", pairing = ""', self.home)
         self.assertIn("if (currentConnectableDevice()?.isLgWebOsDevice() == true)", self.vm)
 
