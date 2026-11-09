@@ -63,6 +63,19 @@ class Code91ReleaseContract(unittest.TestCase):
         self.assertIn("cmp -s signed-v2/remote.apk signed-v2/AnyTV_V2_2.9.63_UPDATE.apk", self.s)
         self.assertNotIn("git push --force", self.s)
 
+    def test_recovery_code92_plan_preserves_android_anti_downgrade(self):
+        plan = Path("docs/anytv-code92-recovery-plan.md").read_text(encoding="utf-8")
+        for invariant in (
+            "versionCode **90**", "versionCode **91**", "versionCode = 92",
+            "com.tclremote.livre.v2", "RECOVERY_SOURCE_UNVERIFIED",
+            "SIGNATURE_OR_VERSION_MISMATCH", "STALE_OTA_STOP",
+            "PUBLISHED_UNVERIFIED", "NO_MAIN_WRITE", "NO_OTA_WRITE",
+            "default_branch=main", "workflow_dispatch"
+        ):
+            self.assertIn(invariant, plan)
+        self.assertIn("não recupera aparelhos já atualizados", plan)
+        self.assertIn("não recupera a UI Android", plan)
+
     def test_old_workflow_is_distinct_and_untouched(self):
         self.assertIn("expected_version_code == 80", self.old)
         self.assertIn("2.9.51-AnyTV", self.old)
