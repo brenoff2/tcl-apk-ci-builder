@@ -55,6 +55,8 @@ class LgWebOsContract(unittest.TestCase):
         self.assertIn("putBoolean(Constant.PREF_MANUAL_DISCONNECT, true)", self.vm)
         self.assertIn("if (!isActiveConnection(token) || !service.isConnected) return", self.vm)
         self.assertIn("volume?.setMute(mute, listener)", self.vm)
+        self.assertIn('if (isLg) null else tv?.ipAddress', self.home)
+        self.assertIn('Fones via companion disponíveis somente na TCL.', self.home)
 
     def test_lg_status_and_ui_have_required_import(self):
         self.assertIn("import androidx.compose.material3.Button", self.home)
