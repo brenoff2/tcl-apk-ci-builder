@@ -1,4 +1,4 @@
-name: AnyTV LG webOS unsigned proof (no OTA)
+name: AnyTV LG webOS code94 pointer repair unsigned proof (no OTA)
 on:
   push:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
@@ -36,6 +36,8 @@ on:
       - 'overrides/tv_safe/TvAppBridge.java'
       - 'scripts/tests/test_streaming_screens_contract.py'
       - 'scripts/apply_anytv_lg_webos.py'
+      - 'scripts/apply_anytv_lg_pointer_fix.py'
+      - 'scripts/tests/test_anytv_lg_pointer_contract.py'
       - 'scripts/tests/test_anytv_lg_webos_contract.py'
   workflow_dispatch:
 permissions:
@@ -72,6 +74,7 @@ jobs:
           python3 scripts/apply_anytv_restore_connection.py
           python3 scripts/apply_anytv_premiere_reminder_manifest.py
           python3 scripts/apply_anytv_lg_webos.py
+          python3 scripts/apply_anytv_lg_pointer_fix.py
       - name: Prepare current V2 version without signing
         run: |
           python3 - <<'PY'
@@ -96,6 +99,7 @@ jobs:
           python3 -m unittest discover -s scripts/tests -p 'test_anytv_account_entry.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_anytv_ux_regression.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_anytv_lg_webos_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_lg_pointer_contract.py' -v
       - name: Apply V2 package identity and compile current candidate
         run: |
           set -euo pipefail
@@ -108,8 +112,8 @@ jobs:
           s=p.read_text()
           assert s.count('versionCode = 39') == 1
           assert s.count('versionName = "2.9.10-AnyTV"') == 1
-          p.write_text(s.replace('versionCode = 39','versionCode = 93')
-                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.65-AnyTV"'))
+          p.write_text(s.replace('versionCode = 39','versionCode = 94')
+                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.66-AnyTV"'))
           PY
           python3 scripts/apply_anytv_phone_v2_identity.py
           cd source
@@ -122,14 +126,14 @@ jobs:
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
           grep -q "name='com.tclremote.livre.v2' versionCode='93'" candidate-identity.txt
-          grep -q "versionName='2.9.65-AnyTV'" candidate-identity.txt
+          grep -q "versionName='2.9.66-AnyTV'" candidate-identity.txt
           sha256sum "$APK" > candidate-sha256.txt
           printf '%s\n' 'AUDITORIA APENAS: APK sem assinatura. NAO instalar como atualizacao da V2 assinada.' > candidate-NOT-INSTALL.txt
-          echo 'ANYTV_LG_WEBOS_CODE93_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
+          echo 'ANYTV_LG_WEBOS_CODE94_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
       - name: Store unsigned LG webOS code93 proof for audit only
         uses: actions/upload-artifact@v4
         with:
-          name: anytv-lg-webos-code93-unsigned-audit
+          name: anytv-lg-webos-code94-pointer-unsigned-audit
           path: |
             source/app/build/outputs/apk/release/app-release-unsigned.apk
             candidate-identity.txt
