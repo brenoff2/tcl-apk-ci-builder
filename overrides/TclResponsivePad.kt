@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -66,6 +67,9 @@ fun TclResponsivePad(
     onShort: (Remotemessage.RemoteKeyCode) -> Unit,
     onHoldStart: (Remotemessage.RemoteKeyCode) -> Unit,
     onHoldEnd: (Remotemessage.RemoteKeyCode) -> Unit,
+    isLgWebOs: Boolean = false,
+    onLgPointerMove: (Float, Float) -> Unit = { _, _ -> },
+    onLgPointerClick: () -> Unit = {},
 ) {
     when (mode) {
         RemotePadMode.DPad -> TclHoldDPad(
@@ -76,7 +80,13 @@ fun TclResponsivePad(
             onHoldStart = onHoldStart,
             onHoldEnd = onHoldEnd
         )
-        RemotePadMode.Touchpad -> RemotePadStage(
+        RemotePadMode.Touchpad -> if (isLgWebOs) LgWebOsPointerPad(
+            width = width,
+            isConnected = isConnected,
+            hapticsEnabled = hapticsEnabled,
+            onMove = onLgPointerMove,
+            onClick = onLgPointerClick
+        ) else RemotePadStage(
             activePadMode = RemotePadMode.Touchpad,
             stageHeight = width,
             isConnected = isConnected,
@@ -87,6 +97,48 @@ fun TclResponsivePad(
             width = width,
             height = height,
             onShort = onShort
+        )
+    }
+}
+
+@Composable
+private fun LgWebOsPointerPad(
+    width: Dp,
+    isConnected: Boolean,
+    hapticsEnabled: Boolean,
+    onMove: (Float, Float) -> Unit,
+    onClick: () -> Unit
+) {
+    val latestMove by rememberUpdatedState(onMove)
+    val latestClick by rememberUpdatedState(onClick)
+    val view = LocalView.current
+    Box(
+        modifier = Modifier.size(width)
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0xFF17191F))
+            .border(1.dp, Color(0xFF424550), RoundedCornerShape(24.dp))
+            .semantics { contentDescription = "Mouse LG webOS: arraste para mover, toque para clicar" }
+            .pointerInput(isConnected) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    if (isConnected) latestMove(dragAmount.x * 1.6f, dragAmount.y * 1.6f)
+                }
+            }
+            .pointerInput(isConnected, hapticsEnabled) {
+                detectTapGestures(onTap = {
+                    if (isConnected) {
+                        if (hapticsEnabled) view.performHapticFeedback(
+                            android.view.HapticFeedbackConstants.KEYBOARD_TAP
+                        )
+                        latestClick()
+                    }
+                })
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Text("Arraste para mover o cursor\nToque para clicar",
+            color = Color(0xFFE7E8ED),
+            fontSize = 14.sp
         )
     }
 }
