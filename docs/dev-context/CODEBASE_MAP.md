@@ -1,3 +1,10 @@
+## Mapa incremental — LG webOS (09/11/2026)
+- `scripts/apply_anytv_lg_webos.py`: aplica modificações fail-closed sobre o upstream Android TV PINADO, somente no workflow de prova LG. Gera registro de descoberta SSDP/WebOSTVService em App.kt, adaptador de sessão/teclas no TvRemoteViewModel.kt e isolamento do companion TCL na TclApprovedHomeScreen.kt. Não é invocado pela build code91 oficial.
+- `.github/workflows/anytv-lg-webos-unsigned-ci.yml`: candidato LG code93 unsigned separado, build e regressões, sem assinatura/OTA. `scripts/tests/test_anytv_lg_webos_contract.py`: invariantes de descoberta, autorização em TV, controles suportados, interface reutilizada e ausência de publicação.
+- Base upstream: `harimoradiya/androidtvremote` SHA `16c68f0bb9d23f929ee8240f105fdb9000262d85`, `ConnectSDK/src/main/java/com/connectsdk/service/WebOSTVService.java`, `App.kt`, `TvRemoteViewModel.kt`. Campos e anchors precisam ser revalidados em cada alteração de SHA.
+- Os overrides TCL existentes e a OTA code90 NÃO foram modificados pelo workflow LG. Code91 popup também preservado. Integração REAL com TV LG ainda NÃO TESTADA.
+
+---
 ## 26/10/2026 — build APK 2.9.51 preparada, execucao bloqueada
 - Criado `.github/workflows/anytv-2951-unsigned-candidate.yml` (commit f8d8dae530cabbc0bbcef60c656eee82842c3c11) derivado do pipeline de compilacao Android existente: package V2 preservado, versionCode 80, versionName 2.9.51-AnyTV, artifact unsigned audit-only, SEM ASSINATURA/OTA. Readback confirmou estas declaracoes. Ainda NAO HOUVE APK gerada ou CI da candidata PASS.
 - Tentativa de `workflow_dispatch` via GitHub MCP foi BLOQUEADA `DESTRUCTIVE_CONFIRMATION_REQUIRED`; nao repetir atraves de desvio de autorizacao. Necessita operacao autorizada para executar CI e baixar/inspecionar artefato.
