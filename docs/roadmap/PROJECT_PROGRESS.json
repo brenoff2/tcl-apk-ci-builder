@@ -113,6 +113,7 @@
     "F8": "NAO_HOMOLOGADO"
   },
   "history": [
+    {"date":"2026-11-09","event":"Usuário aprovou LG webOS como primeira expansão de fabricante. Implementação isolada DEV via scripts/apply_anytv_lg_webos.py e workflow anytv-lg-webos-unsigned-ci.yml (code93 prova não assinada), registro SSDP/WebOSTVService, descoberta/seleção, pairing via TV e comandos básicos. CI/build físico e homologação NÃO VERIFICADOS nesta rodada; code91 popup e code90 OTA assinada preservados. 7/11 63%, gates F0-F8 inalterados."},
     {
       "date": "2026-10-21",
       "event": "baseline da diretriz mestre; 11 marcos próprios, sem importar percentuais da Fábrica"
