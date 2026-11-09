@@ -151,7 +151,9 @@ replace_one(
 )
 replace_one(
     '''        if (activeDeviceId == device.id) {
-            disconnectCurrentDevice()
+            // Involuntary network/discovery loss must NEVER store PREF_MANUAL_DISCONNECT.
+            if (device.isLgWebOsDevice()) handleLgWebOsDisconnected()
+            else disconnectCurrentDeviceInternal(manual = false)
         } else {
             publishDeviceSnapshot()
         }
