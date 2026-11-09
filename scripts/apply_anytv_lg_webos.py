@@ -304,6 +304,10 @@ def home_change(old: str, new: str) -> None:
     home = home.replace(old, new, 1)
 
 home_change(
+    "import androidx.compose.material3.TextButton",
+    "import androidx.compose.material3.TextButton\nimport androidx.compose.material3.Button"
+)
+home_change(
     "    var showKeyboard by rememberSaveable { mutableStateOf(false) }",
     "    var showKeyboard by rememberSaveable { mutableStateOf(false) }\n"
     "    var lgStreaming by rememberSaveable { mutableStateOf(false) }"
