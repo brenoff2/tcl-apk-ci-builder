@@ -41,3 +41,22 @@ Para falhas visuais, guardar **um print do estado afetado**, informando versão,
 - `40045771887`: consulta TMDB filme/série e ordenação/paginação **PASS**.
 - OTA legado `updates/android/cert2026/current.apk` preservado (Git blob `44c766b433ddb370f4589b87843f1edfd9cd7b7a`).
 - **Atualização posterior à publicação do APK:** removido também o antigo limite de 200/mês da API de links Movie of the Night e o rate-limit Cloudflare por IP/ativação; removidos os bindings `MAX_UPSTREAM_CALLS_MONTH` e `RATE_LIMIT` em produção. Nenhum limite próprio do AnyTV permanece. Autenticação, cache, validação de links e permissões foram preservados. Limites contratuais dos fornecedores externos independem dessa mudança. Worker atual `ce51439e-ca19-40d3-85e8-019c7a3669a5`; offline CI `40052421285` e smoke real `40052526994`: SUCCESS.
+
+
+## 09/11/2026 — Roteiro incremental QA LG webOS (code93 unsigned, NAO EXECUTADO)
+
+Esta secao e plano de homologacao, NAO evidencia fisica. Fonte para futura prova LG: CI unsigned [#42668068400](https://github.com/brenoff2/tcl-apk-ci-builder/actions/runs/42668068400) SUCCESS do SHA ae373c316fa6dcdb72c3f034c44ad315e189e1bb e artifact 13696079878, MAS um patch posterior de protecao de sessao webOS requer novo CI antes de aceitar a candidata atualizada. O artifact e sem assinatura: nao atualizar telefone que tem AnyTV V2 assinada. Antes de instalacao fisica, exigir via gate apropriado APK instalavel com mesmo pacote/certificado e versionCode superior ao code90, sem OTA publica; ou teste isolado em aparelho descartavel com pacote distinto aprovado.
+
+| ID | Ensaio real LG | Prova exigida | Estado |
+|---|---|---|---|
+| LG01 | TV LG webOS e Android na mesma rede; procurar dispositivos | Modelo LG, versao webOS, rede e screenshot da lista mostrando LG e TCL | PENDENTE |
+| LG02 | Escolher LG pela lista e confirmar autorizacao na propria TV | Evidencia de FIRST_SCREEN, sem PIN de Android TV e sem falso sucesso antes da conexao SSAP | PENDENTE |
+| LG03 | Enviar cima/baixo/esquerda/direita, OK, Home, Voltar | Comando + resposta observada para cada tecla; testar TV sem suporte quando aplicavel | PENDENTE |
+| LG04 | Volume +/-, mudo/unmute, canal +/- e play/pause | Comando e efeito real; indisponivel deve aparecer como indisponivel | PENDENTE |
+| LG05 | Perder Wi-Fi, desligar/religar TV e voltar ao app | Nenhuma tecla enviada quando webOS desconectado, estado nao conectado, nova selecao/pareamento permitido | PENDENTE |
+| LG06 | Encerrar/reabrir AnyTV e selecionar novamente a LG | Verificar se o DefaultConnectableDeviceStore reusa a chave com autorizacao anterior; falha de persistencia vira bug | PENDENTE |
+| LG07 | Trocar LG para TCL/Android TV e vice-versa | PIN TLS, reconexao Android TV, long press, fones e companion TCL funcionais; chamadas TCL NUNCA enviadas ao IP LG | PENDENTE |
+| LG08 | Abrir Streaming e popup remoto com LG selecionada | Reutilizacao visual, minimizar/reativar, botoes remoto reais; abertura direta de titulos LG NAO IMPLEMENTADA | PENDENTE |
+| LG09 | Testar LG com servico Cast conectado, mas socket webOS caido | Direcional/volume bloqueados sem sessao webOS ativa mesmo com isConnected agregado verdadeiro | PENDENTE |
+
+**Aceite:** teste documental de build + aparelho real LG e TCL, registro de defeitos, versao/modelo, hashes de APK e identidade da assinatura; reavaliar permissao expressa para publicar. Nao homologar F5/F6/F8 por passar testes de contrato ou compilar.
