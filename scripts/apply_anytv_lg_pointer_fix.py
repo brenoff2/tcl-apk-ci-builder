@@ -26,8 +26,10 @@ replace_exact(
 )
 replace_exact(
     vm,
+    '                if (!isActiveConnection(token) || !service.isConnected) return\n'
     '                Constant.connectableDevice = connectableDevice\n'
     '                Constant.isConnected.value = true',
+    '                if (!isActiveConnection(token) || !service.isConnected) return\n'
     '                // Pointer uses a separate LG WebSocket; prepare it after pairing.\n'
     '                service.connectMouse()\n'
     '                Constant.connectableDevice = connectableDevice\n'
