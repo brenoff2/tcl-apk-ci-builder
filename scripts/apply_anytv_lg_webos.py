@@ -128,11 +128,11 @@ change(
             return
         }
         // Pairing confirmation is shown by the LG itself, not the Android PIN modal.
-        DiscoveryManager.getInstance().pairingLevel = DiscoveryManager.PairingLevel.ON
+        DiscoveryManager.getInstance().pairingLevel = DiscoveryManager.PairingLevel.PROTECTED
         service.setPairingType(DeviceService.PairingType.FIRST_SCREEN)
         val listener = object : ConnectableDeviceListener {
             override fun onDeviceReady(connectableDevice: ConnectableDevice) {
-                if (!isActiveConnection(token)) return
+                if (!isActiveConnection(token) || !service.isConnected) return
                 Constant.connectableDevice = connectableDevice
                 Constant.isConnected.value = true
                 activeDeviceId = connectableDevice.id
@@ -301,15 +301,9 @@ home_change(
                             onDismiss = { lgStreaming = false },
                             onRemoteKey = { remoteKey(it) },
                             onRemoteHoldStart = { key ->
-                                if (isConnected) onKeyDirection(
-                                    key, Remotemessage.RemoteDirection.START_LONG
-                                )
+                                if (isConnected) remoteKey(key)
                             },
-                            onRemoteHoldEnd = { key ->
-                                if (isConnected) onKeyDirection(
-                                    key, Remotemessage.RemoteDirection.END_LONG
-                                )
-                            },
+                            onRemoteHoldEnd = { _ -> Unit },
                             onKeyboardText = { if (isConnected) onKeyboardText(it) },
                             onKeyboardEnter = { if (isConnected) onKeyboardEnter() }
                         )
