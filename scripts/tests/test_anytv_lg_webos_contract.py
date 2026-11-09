@@ -54,6 +54,8 @@ class LgWebOsContract(unittest.TestCase):
         self.assertIn("if (device.isLgWebOsDevice()) handleLgWebOsDisconnected()", self.vm)
         self.assertIn("putBoolean(Constant.PREF_MANUAL_DISCONNECT, true)", self.vm)
         self.assertIn("if (!isActiveConnection(token) || !service.isConnected) return", self.vm)
+        self.assertIn("(it.getServiceByName(WebOSTVService.ID) as? WebOSTVService)?.isConnected == true", self.vm)
+        self.assertNotIn("it.id == activeDeviceId && it.isLgWebOsDevice() && it.isConnected", self.vm)
         self.assertIn("volume?.setMute(mute, listener)", self.vm)
         self.assertIn('if (isLg) null else tv?.ipAddress', self.home)
         self.assertIn("if (host.isNullOrBlank() || tv == null)", self.home)
