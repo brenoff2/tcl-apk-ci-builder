@@ -387,7 +387,7 @@ home_change(
     "                                val isLg = sessionState.connectedDevice?.type == \"LG webOS\"\n"
     "                                val tv = sessionState.connectedDevice\n"
     "                                val host = if (isLg) null else tv?.ipAddress\n"
-    "                                if (host.isNullOrBlank()) {\n"
+    "                                if (host.isNullOrBlank() || tv == null) {\n"
     "                                    if (isLg) headsetStatus = \"Fones via companion disponíveis somente na TCL.\"\n"
     "                                    else onOpenDiscovery()"
 )
