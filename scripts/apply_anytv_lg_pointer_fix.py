@@ -22,7 +22,7 @@ replace_exact(
     '        val keys = webOs.getKeyControl()\n'
     '        val volume = webOs.getVolumeControl()\n'
     '        val channels = webOs.getTVControl()\n'
-    '        val media = webOs.getMediaControl()'
+    '        val media = device.getCapability(MediaControl::class.java)'
 )
 replace_exact(
     vm,
