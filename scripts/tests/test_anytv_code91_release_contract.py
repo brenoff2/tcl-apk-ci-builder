@@ -49,6 +49,20 @@ class Code91ReleaseContract(unittest.TestCase):
         self.assertNotIn("git push --force", self.s)
         self.assertNotIn("updates/android/cert2026/current.apk ota-v2/", self.s)
 
+    def test_signed_artifact_is_archived_before_ota_mutation(self):
+        archive = self.s.index("      - name: Audit signed V2 app as independent artifact")
+        publish = self.s.index("      - name: Publish V2 APK to independent GitHub channel")
+        assert archive < publish, "signed artifact must exist before any OTA write"
+        self.assertIn("signed-v2/AnyTV_V2_2.9.63_UPDATE.apk", self.s)
+        self.assertIn("if-no-files-found: error", self.s)
+
+    def test_release_stops_on_stale_ota_and_requires_signed_readback(self):
+        self.assertIn('test "$current" = "$EXPECTED_OTA_HEAD"', self.s)
+        self.assertIn('test "$oldcode" -eq 90', self.s)
+        self.assertIn("git push origin HEAD:feat/tcl-v22-updates-back-bluetooth", self.s)
+        self.assertIn("cmp -s signed-v2/remote.apk signed-v2/AnyTV_V2_2.9.63_UPDATE.apk", self.s)
+        self.assertNotIn("git push --force", self.s)
+
     def test_old_workflow_is_distinct_and_untouched(self):
         self.assertIn("expected_version_code == 80", self.old)
         self.assertIn("2.9.51-AnyTV", self.old)
