@@ -6,7 +6,10 @@ vm = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TvRemoteView
 
 def replace_one(old: str, new: str) -> None:
     content = vm.read_text(encoding="utf-8")
-    assert content.count(old) == 1, f"LG_RECONNECT_ANCHOR_DRIFT {content.count(old)} {old[:100]!r}"
+    if content.count(old) != 1:
+        i = content.find("override fun onDeviceRemoved")
+        excerpt = content[i:i+780] if i >= 0 else "method absent"
+        raise AssertionError(f"LG_RECONNECT_ANCHOR_DRIFT {content.count(old)} {old[:100]!r} CONTEXT: {excerpt}")
     vm.write_text(content.replace(old, new, 1), encoding="utf-8")
 
 replace_one(
