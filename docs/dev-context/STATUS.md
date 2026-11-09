@@ -1,3 +1,11 @@
+## 09/11/2026 — LG webOS: correcoes estaticas, compilacao ainda NAO VERIFICADA
+- Workflow LG unsigned code93 na DEV com gatilho push. A ferramenta GitHub fetch_commit_workflow_runs lista apenas PR; vazio NAO prova ausencia de execucao push. API Actions publica nao acessivel nesta sessao: sem run_id, job_id ou artifact comprovado. CI LG UNVERIFIED; nenhum PASS/FAIL afirmado.
+- Fonte upstream fixada: showStatus(message, isError, ...) exige isError. Corrigidas tres chamadas LG e adicionado import Material3 Button ao Home preparado. Mudancas de compilacao inferidas da assinatura upstream e inspeccionadas, NAO de logs CI.
+- Pareamento FIRST_SCREEN com PairingLevel.PROTECTED, registro SSDP/WebOSTVService, exigir service.isConnected antes de onDeviceReady aceitar LG. Direcional, volume, canais, mute e comandos media pela API ConnectSDK; hold LG nao envia START_LONG/END_LONG Android.
+- Isolado auto-reconnect TCL depois de perda LG; LG nao usa PIN Android, nem o companion privado TCL da lista de apps e nem headset TCL na porta 18765. Testes de contratos da candidata LG atualizados.
+- Proxima acao: obter recibo REAL Actions do workflow LG unsigned code93, diagnosticar falhas de build e testar LG fisica e regressao TCL; nenhuma assinatura/publicacao. Pop-up code91 unsigned separado; Android oficial code90/OTA 93e526e5 preservados; roadmap 7/11 (63%), F0-F8 NAO_HOMOLOGADO.
+
+---
 ## 09/11/2026 — AnyTV LG webOS: implementação DEV candidata, SEM assinatura/OTA
 - Pedido aprovado pelo usuário: adicionar conexão LG webOS ao AnyTV, mantendo Android/TCL e a interface remota; demais marcas ficam FORA de escopo. Não confundir com release pop-up 2.9.63/code91.
 - Verificado upstream pinado harimoradiya/androidtvremote 16c68f0: módulo ConnectSDK contém WebOSTVService, mas App.kt registra apenas CastService e TvRemoteViewModel filtra dispositivos Chromecast/Android TV. Integração mínima via novo `scripts/apply_anytv_lg_webos.py`, que só atua em build LG independente: registra WebOSTVService com SSDPDiscoveryProvider, permite descoberta/seleção LG, pareamento FIRST_SCREEN com confirmação na TV, despacha D-pad, Home/Back, volume/canais e transporte por capabilities webOS. Não usa PIN Android TV nem companion TCL na LG. Teclado LG e atalhos de apps não são anunciados como funcionais.
