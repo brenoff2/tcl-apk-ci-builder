@@ -320,6 +320,25 @@ home_change(
                         verticalArrangement = Arrangement.spacedBy(6.dp)
 """
 )
+# webOS exposes discrete keys, not Android TV START_LONG/END_LONG frames.
+# A held LG D-pad press sends one supported key on start, never a false END_LONG.
+home_change(
+    """                                    onHoldStart = {
+                                        onKeyDirection(it, Remotemessage.RemoteDirection.START_LONG)
+                                    },
+                                    onHoldEnd = {
+                                        onKeyDirection(it, Remotemessage.RemoteDirection.END_LONG)
+                                    }""",
+    """                                    onHoldStart = {
+                                        if (sessionState.connectedDevice?.type == "LG webOS") remoteKey(it)
+                                        else onKeyDirection(it, Remotemessage.RemoteDirection.START_LONG)
+                                    },
+                                    onHoldEnd = {
+                                        if (sessionState.connectedDevice?.type != "LG webOS")
+                                            onKeyDirection(it, Remotemessage.RemoteDirection.END_LONG)
+                                    }"""
+)
+
 HOME.write_text(home, encoding="utf-8")
 assert "LG webOS" in HOME.read_text(encoding="utf-8")
 
