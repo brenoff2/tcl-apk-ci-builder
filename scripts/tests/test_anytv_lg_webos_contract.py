@@ -59,7 +59,7 @@ class LgWebOsContract(unittest.TestCase):
     def test_lg_status_and_ui_have_required_import(self):
         self.assertIn("import androidx.compose.material3.Button", self.home)
         self.assertIn("Teclado LG requer sessão de entrada webOS; use o teclado da TV por enquanto.", self.vm)
-        self.assertIn("Comando não disponível na LG webOS.\", isError = false)", self.vm)
+        self.assertIn('showStatus("Comando não disponível na LG webOS.", isError = false)', self.vm)
 
     def test_independent_unsigned_ci(self):
         self.assertIn("scripts/apply_anytv_lg_webos.py", self.workflow)
