@@ -243,4 +243,60 @@ change(
 
 VM.write_text(src, encoding="utf-8")
 assert "connectLgWebOs(device)" in VM.read_text(encoding="utf-8")
+
+# The TCL companion is Android-only. LG keeps the same remote/streaming UI,
+# but must not attempt the TCL private pairing port (18765).
+HOME = ROOT / "TclApprovedHomeScreen.kt"
+home = HOME.read_text(encoding="utf-8")
+def home_change(old: str, new: str) -> None:
+    global home
+    assert home.count(old) == 1, f"LG_WEBOS_HOME_ANCHOR_DRIFT: {old[:80]!r}"
+    home = home.replace(old, new, 1)
+
+home_change(
+    "    var showKeyboard by rememberSaveable { mutableStateOf(false) }",
+    "    var showKeyboard by rememberSaveable { mutableStateOf(false) }\n"
+    "    var lgStreaming by rememberSaveable { mutableStateOf(false) }"
+)
+home_change(
+    "                    TclInstalledAppsBar(\n",
+    """                    if (sessionState.connectedDevice?.type == "LG webOS") {
+                        Button(onClick = { lgStreaming = true }) {
+                            Text("Streaming")
+                        }
+                    } else TclInstalledAppsBar(
+"""
+)
+home_change(
+    "                    Column(\n                        modifier = Modifier.fillMaxWidth(),\n"
+    "                        verticalArrangement = Arrangement.spacedBy(6.dp)\n",
+    """                    if (lgStreaming && sessionState.connectedDevice?.type == "LG webOS") {
+                        TclStreamingScreens(
+                            apps = emptyList(), host = "", pairing = "",
+                            tvName = sessionState.connectedDevice?.name.orEmpty(),
+                            onDismiss = { lgStreaming = false },
+                            onRemoteKey = { remoteKey(it) },
+                            onRemoteHoldStart = { key ->
+                                if (isConnected) onKeyDirection(
+                                    key, Remotemessage.RemoteDirection.START_LONG
+                                )
+                            },
+                            onRemoteHoldEnd = { key ->
+                                if (isConnected) onKeyDirection(
+                                    key, Remotemessage.RemoteDirection.END_LONG
+                                )
+                            },
+                            onKeyboardText = { if (isConnected) onKeyboardText(it) },
+                            onKeyboardEnter = { if (isConnected) onKeyboardEnter() }
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+"""
+)
+HOME.write_text(home, encoding="utf-8")
+assert "LG webOS" in HOME.read_text(encoding="utf-8")
+
 print("ANYTV_LG_WEBOS_ADAPTER_PATCHED_NO_SIGNING_NO_OTA")
