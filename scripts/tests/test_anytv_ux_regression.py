@@ -81,10 +81,16 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertIn("onRemoteKey = { remoteKey(it) }", self.home)
         self.assertIn("onRemoteKey = onRemoteKey", self.installed)
         self.assertIn("showPlaybackRemote = true", self.catalog)
+        pad = (Path(__file__).resolve().parents[2] / "overrides/TclResponsivePad.kt").read_text(encoding="utf-8")
         for key in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_LEFT",
-                    "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER", "KEYCODE_BACK",
-                    "KEYCODE_HOME", "KEYCODE_MEDIA_PLAY_PAUSE"):
+                    "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER"):
+            self.assertIn(key, pad)
+        for key in ("KEYCODE_BACK", "KEYCODE_HOME"):
             self.assertIn(key, self.catalog)
+        self.assertIn("TclResponsivePad(", self.catalog)
+        self.assertIn("PlaybackTransportBar(onRemoteKey = send)", self.catalog)
+        self.assertIn("onRemoteHoldStart = onRemoteHoldStart", self.installed)
+        self.assertIn("onRemoteHoldEnd = onRemoteHoldEnd", self.installed)
         self.assertNotIn("ANYTV_SIGNER_V2_RECOVERY_HEX", self.catalog)
 
 if __name__ == "__main__":
