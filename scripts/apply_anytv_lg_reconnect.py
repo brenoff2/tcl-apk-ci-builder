@@ -143,8 +143,10 @@ replace_one(
 
     override fun onDiscoveryFailed''',
     '''        if (activeDeviceId == device.id && device.isLgWebOsDevice()) {
-            // SSDP disappearance is not a user-requested disconnect.
-            handleLgWebOsDisconnected()
+            // SSDP TTL expiry does NOT mean the connected webOS socket dropped.
+            if ((device.getServiceByName(WebOSTVService.ID) as? WebOSTVService)?.isConnected == true)
+                publishDeviceSnapshot()
+            else handleLgWebOsDisconnected()
         } else if (activeDeviceId == device.id) {
             disconnectCurrentDevice()
         } else {
