@@ -6,6 +6,7 @@ on:
       - '.github/workflows/anytv-v2-code91-signed-release.yml'
       - '.github/workflows/anytv-v2-code91-release-contract-ci.yml'
       - 'scripts/tests/test_anytv_code91_release_contract.py'
+      - 'docs/anytv-code92-recovery-plan.md'
   workflow_dispatch:
 permissions:
   contents: read
