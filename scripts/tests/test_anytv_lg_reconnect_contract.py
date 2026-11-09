@@ -12,6 +12,9 @@ class LGReconnectContract(unittest.TestCase):
         cls.vm = (ROOT / "TvRemoteViewModel.kt").read_text()
         cls.discovery = (ROOT / "DeviceDiscoveryScreen.kt").read_text()
         cls.sdk_discovery = Path("source/ConnectSDK/src/main/java/com/connectsdk/discovery/DiscoveryManager.java").read_text()
+        cls.lg_connection = cls.vm.split(
+            "private fun connectLgWebOs(device: ConnectableDevice) {", 1
+        )[1].split("private fun handleLgWebOsDisconnected()", 1)[0]
 
     def test_pairing_saved_independently_of_tcl(self):
         self.assertIn('putBoolean("anytv_lg_paired_" + connectableDevice.id, true)', self.vm)
@@ -62,11 +65,44 @@ class LGReconnectContract(unittest.TestCase):
         self.assertIn('prefs.edit { putBoolean(Constant.PREF_MANUAL_DISCONNECT, manual) }', self.vm)
 
     def test_stuck_handshake_expires_before_retry(self):
-        self.assertIn('delay(12_000L)', self.vm)
-        self.assertIn('device.removeListener(listener)', self.vm)
+        self.assertIn('armLgConnectWatchdog(device, token, 12_000L', self.lg_connection)
+        self.assertIn('delay(timeoutMs)', self.vm)
+        self.assertIn('pendingDeviceId == device.id', self.vm)
         self.assertIn('connectionGeneration += 1', self.vm)
         self.assertIn('scheduleLgReconnect(device.id)', self.vm)
         self.assertIn('connectionWatchdogJob?.cancel()', self.vm)
+
+    def test_human_pairing_has_separate_bounded_timeout(self):
+        self.assertRegex(
+            self.lg_connection,
+            r'override fun onPairingRequired\([\s\S]*?'
+            r'pendingDeviceId != device\.id[\s\S]*?'
+            r'armLgConnectWatchdog\(device, token, 120_000L'
+        )
+        self.assertIn('autorização não confirmada em 2 minutos', self.lg_connection)
+
+    def test_lg_listener_cleanup_across_all_terminal_paths(self):
+        self.assertIn('private fun clearLgListener()', self.vm)
+        self.assertIn('previousDevice.removeListener(previousListener)', self.vm)
+        self.assertIn('lgListenerDevice = device', self.lg_connection)
+        self.assertIn('lgListener = listener', self.lg_connection)
+        self.assertRegex(
+            self.lg_connection,
+            r'override fun onConnectionFailed\([\s\S]*?'
+            r'connectionWatchdogJob\?\.cancel\(\)[\s\S]*?'
+            r'clearLgListener\(\)'
+        )
+        self.assertIn('clearLgListener()\n                device.disconnect()', self.vm)
+        self.assertRegex(
+            self.vm,
+            r'private fun disconnectCurrentDeviceInternal\(manual: Boolean\) '
+            r'\{[\s\S]*?cancelLgReconnect\(\)\s*clearLgListener\(\)'
+        )
+        self.assertRegex(
+            self.vm,
+            r'override fun onCleared\(\) \{[\s\S]*?'
+            r'cancelLgReconnect\(\)\s*clearLgListener\(\)'
+        )
 
     def test_manual_change_cancels_lg_retry(self):
         self.assertIn('if (userInitiated) {\n            // A deliberate TV selection supersedes', self.vm)

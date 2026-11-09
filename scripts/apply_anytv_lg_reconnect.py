@@ -18,6 +18,40 @@ replace_one(
     private var lgReconnectTarget: String? = null
     private var lgReconnectEnabled: Boolean = false
     private var lgReconnectJob: Job? = null
+    private var lgListenerDevice: ConnectableDevice? = null
+    private var lgListener: ConnectableDeviceListener? = null
+
+    private fun clearLgListener() {
+        val previousDevice = lgListenerDevice
+        val previousListener = lgListener
+        if (previousDevice != null && previousListener != null)
+            previousDevice.removeListener(previousListener)
+        if (previousListener != null && currentConnectableListener === previousListener)
+            currentConnectableListener = null
+        lgListenerDevice = null
+        lgListener = null
+    }
+
+    private fun armLgConnectWatchdog(
+        device: ConnectableDevice, token: Int, timeoutMs: Long, message: String
+    ) {
+        connectionWatchdogJob?.cancel()
+        connectionWatchdogJob = viewModelScope.launch(Dispatchers.Main) {
+            delay(timeoutMs)
+            if (isActiveConnection(token) && pendingDeviceId == device.id &&
+                _uiState.value.isConnecting) {
+                connectionGeneration += 1
+                pendingDeviceId = null
+                clearLgListener()
+                device.disconnect()
+                _uiState.update { it.copy(isConnecting = false, pairingRequired = false,
+                    statusMessage = message, isError = true) }
+                publishDeviceSnapshot()
+                if (lgReconnectEnabled && lgReconnectTarget == device.id)
+                    scheduleLgReconnect(device.id)
+            }
+        }
+    }
 
     private fun cancelLgReconnect() {
         lgReconnectEnabled = false
@@ -134,6 +168,7 @@ replace_one(
     '''    private fun disconnectCurrentDeviceInternal(manual: Boolean) {
         // Explicit disconnect or switching TVs must not resurrect a previous LG.
         cancelLgReconnect()
+        clearLgListener()
         connectionGeneration += 1'''
 )
 replace_one(
@@ -181,6 +216,7 @@ replace_one(
         autoReconnectScheduleJob?.cancel()''',
     '''        super.onCleared()
         cancelLgReconnect()
+        clearLgListener()
         autoReconnectScheduleJob?.cancel()'''
 )
 replace_one(
@@ -253,24 +289,12 @@ replace_one(
     }
 
     private fun handleLgWebOsDisconnected()''',
-    '''        currentConnectableListener = listener
+    '''        clearLgListener()
+        currentConnectableListener = listener
+        lgListenerDevice = device
+        lgListener = listener
         device.addListener(listener)
-        connectionWatchdogJob?.cancel()
-        connectionWatchdogJob = viewModelScope.launch(Dispatchers.Main) {
-            delay(12_000L)
-            if (isActiveConnection(token) && pendingDeviceId == device.id &&
-                _uiState.value.isConnecting) {
-                connectionGeneration += 1
-                pendingDeviceId = null
-                device.removeListener(listener)
-                device.disconnect()
-                _uiState.update { it.copy(isConnecting = false, pairingRequired = false,
-                    statusMessage = "LG não respondeu. Tentando reconectar...", isError = true) }
-                publishDeviceSnapshot()
-                if (lgReconnectEnabled && lgReconnectTarget == device.id)
-                    scheduleLgReconnect(device.id)
-            }
-        }
+        armLgConnectWatchdog(device, token, 12_000L, "LG não respondeu. Tentando reconectar...")
         device.connect()
     }
 
@@ -284,12 +308,48 @@ replace_one(
                         statusMessage = "LG webOS: " + (error.message ?: "Conexão recusada"),''',
     '''                pendingDeviceId = null
                 connectionWatchdogJob?.cancel()
+                clearLgListener()
+                connectableDevice.disconnect()
                 _uiState.update {
                     it.copy(
                         isConnecting = false, pairingRequired = false,
                         statusMessage = "LG webOS: " + (error.message ?: "Conexão recusada"),'''
 )
 
+# A FIRST_SCREEN prompt is not a network handshake failure. Keep time bounded,
+# but grant the user an authorization window before timing out and disconnecting.
+replace_one(
+    '''                if (!isActiveConnection(token)) return
+                _uiState.update {
+                    it.copy(
+                        pairingRequired = false,
+                        isConnecting = true,
+                        statusMessage = "Autorize a conexão do AnyTV na tela da LG.",''',
+    '''                if (!isActiveConnection(token) || pendingDeviceId != device.id) return
+                // Human confirmation may take longer than the 12-second socket watchdog.
+                armLgConnectWatchdog(device, token, 120_000L,
+                    "LG: autorização não confirmada em 2 minutos. Tente reconectar.")
+                _uiState.update {
+                    it.copy(
+                        pairingRequired = false,
+                        isConnecting = true,
+                        statusMessage = "Autorize a conexão do AnyTV na tela da LG.",'''
+)
+
+# Remove the LG listener on involuntary socket loss; keep TCL session untouched.
+replace_one(
+    '''        val lostId = activeDeviceId ?: pendingDeviceId ?: lgReconnectTarget
+        connectionGeneration += 1
+        pendingDeviceId = null''',
+    '''        val lostId = activeDeviceId ?: pendingDeviceId ?: lgReconnectTarget
+        connectionWatchdogJob?.cancel()
+        clearLgListener()
+        connectionGeneration += 1
+        pendingDeviceId = null'''
+)
+
+# Keep one listener per LG attempt: a new connection must release the old session.
+# Clear the listener on manual disconnect, failures, and ViewModel lifecycle too.
 # The pinned ConnectSDK destroys a connected webOS socket when an SSDP entry
 # times out: onServiceRemoved -> removeServiceWithId -> disconnect. Keep the
 # active webOS service until its socket actually closes; all non-LG services
