@@ -69,8 +69,8 @@ class LgWebOsContract(unittest.TestCase):
 
     def test_independent_unsigned_ci(self):
         self.assertIn("scripts/apply_anytv_lg_webos.py", self.workflow)
-        self.assertIn("versionCode = 97", self.workflow)
-        self.assertIn("2.9.69-AnyTV", self.workflow)
+        self.assertIn("versionCode = 98", self.workflow)
+        self.assertIn("2.9.70-AnyTV", self.workflow)
         self.assertIn("assembleRelease", self.workflow)
         self.assertIn("candidate-NOT-INSTALL.txt", self.workflow)
         self.assertNotIn("git push origin HEAD:feat/tcl-v22-updates-back-bluetooth", self.workflow)
