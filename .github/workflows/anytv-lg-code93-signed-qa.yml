@@ -30,7 +30,7 @@ jobs:
         run: |
           set -euo pipefail
           test "$(find unsigned-proof -type f -name '*.apk' | wc -l)" -eq 1
-          APK=unsigned-proof/app-release-unsigned.apk
+          APK=unsigned-proof/source/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           test -s unsigned-proof/candidate-sha256.txt
           EXPECTED_SHA="$(awk 'NF {print $1; exit}' unsigned-proof/candidate-sha256.txt)"
