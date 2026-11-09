@@ -167,7 +167,8 @@ replace_one(
             if (activeService?.isConnected == true) publishDeviceSnapshot()
             else handleLgWebOsDisconnected()
         } else if (activeDeviceId == device.id) {
-            disconnectCurrentDevice()
+            // SSDP loss is involuntary: preserve TCL pairing and auto-reconnect.
+            disconnectCurrentDeviceInternal(manual = false)
         } else {
             publishDeviceSnapshot()
         }

@@ -48,6 +48,19 @@ class LGReconnectContract(unittest.TestCase):
         # The upstream path still removes disconnected services, including TCL.
         self.assertIn('device.removeServiceWithId(serviceDescription.getServiceID());', self.sdk_discovery)
 
+    def test_tcl_discovery_loss_is_not_manual_disconnect(self):
+        # Explicit user disconnect remains manual=true in the existing public method.
+        self.assertIn("private fun disconnectCurrentDeviceInternal(manual: Boolean)", self.vm)
+        self.assertRegex(
+            self.vm,
+            r"else if \(activeDeviceId == device\.id\) \{\s*(?://[^\n]*\n\s*)?disconnectCurrentDeviceInternal\(manual = false\)"
+        )
+        self.assertNotRegex(
+            self.vm,
+            r"else if \(activeDeviceId == device\.id\) \{\s*disconnectCurrentDevice\(\)"
+        )
+        self.assertIn('prefs.edit { putBoolean(Constant.PREF_MANUAL_DISCONNECT, manual) }', self.vm)
+
     def test_stuck_handshake_expires_before_retry(self):
         self.assertIn('delay(12_000L)', self.vm)
         self.assertIn('device.removeListener(listener)', self.vm)
