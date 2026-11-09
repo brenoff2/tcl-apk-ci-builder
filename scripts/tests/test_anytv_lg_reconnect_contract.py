@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""LG lifecycle regression contract against patched prepared Android sources."""
+"""LG session isolation, bounded retry and paired-vs-connected regression contract."""
 import unittest
 from pathlib import Path
+
 ROOT = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app")
+
+
 class LGReconnectContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -16,25 +19,37 @@ class LGReconnectContract(unittest.TestCase):
         self.assertIn("device.isPaired", self.discovery)
         self.assertIn('"Reconnect"', self.discovery)
 
-    def test_lg_reconnect_not_android_tls_host(self):
+    def test_only_active_device_is_connected(self):
+        self.assertIn('val isConnected = isDeviceConnected && connectedId == device.id', self.vm)
+        self.assertNotIn('(!pairedHost.isNullOrBlank() && device.ipAddress == pairedHost)', self.vm)
+        self.assertIn('connectedDevice = snapshot.firstOrNull { it.isConnected }', self.vm)
+
+    def test_lg_reconnect_never_uses_android_tls_host(self):
         self.assertIn('private fun scheduleLgReconnect(targetId: String)', self.vm)
         self.assertIn('for (attempt in 1..6)', self.vm)
         self.assertIn('connectToDeviceInternal(targetId, userInitiated = false)', self.vm)
         self.assertIn('lgReconnectTarget = connectableDevice.id', self.vm)
         self.assertIn('if (lostId != null && lgReconnectEnabled) scheduleLgReconnect(lostId)', self.vm)
         self.assertIn('val host = prefs.getString(Constant.HOST, null)', self.vm)
-        self.assertIn('cancelLgReconnect()', self.vm)
 
-    def test_ssdp_does_not_disconnect_live_socket(self):
-        self.assertIn('if ((device.getServiceByName(WebOSTVService.ID) as? WebOSTVService)?.isConnected == true)', self.vm)
-        self.assertIn('else handleLgWebOsDisconnected()', self.vm)
+    def test_ssdp_never_tears_down_live_lg_socket(self):
         self.assertIn('val lgActive = Constant.connectableDevice?.takeIf', self.vm)
-        self.assertIn('if (lgActive != null) return lgActive', self.vm)
+        self.assertIn('val activeLg = Constant.connectableDevice?.takeIf', self.vm)
+        self.assertIn('if (activeService?.isConnected == true) publishDeviceSnapshot()', self.vm)
+        self.assertIn('if (socket?.isConnected != true) handleLgWebOsDisconnected()', self.vm)
+
+    def test_stuck_handshake_expires_before_retry(self):
+        self.assertIn('delay(12_000L)', self.vm)
+        self.assertIn('device.removeListener(listener)', self.vm)
+        self.assertIn('connectionGeneration += 1', self.vm)
+        self.assertIn('scheduleLgReconnect(device.id)', self.vm)
+        self.assertIn('connectionWatchdogJob?.cancel()', self.vm)
 
     def test_manual_change_cancels_lg_retry(self):
         self.assertIn('if (userInitiated) {\n            // A deliberate TV selection supersedes', self.vm)
         self.assertIn('private fun disconnectCurrentDeviceInternal(manual: Boolean) {\n        // Explicit disconnect', self.vm)
         self.assertIn('override fun onCleared() {\n        super.onCleared()\n        cancelLgReconnect()', self.vm)
+
 
 if __name__ == "__main__":
     unittest.main()

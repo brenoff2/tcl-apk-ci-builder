@@ -16,42 +16,87 @@ patch(vm,
     "import com.connectsdk.service.WebOSTVService",
     "import com.connectsdk.service.WebOSTVService\n"
     "import com.connectsdk.core.AppInfo\n"
-    "import com.connectsdk.service.capability.Launcher")
+    "import com.connectsdk.service.capability.Launcher\n"
+    "import org.json.JSONArray\n"
+    "import org.json.JSONObject")
 patch(vm,
     "    val cast: CastPlaybackUiState = CastPlaybackUiState(),",
     "    val lgWebOsApps: List<LgWebOsApp> = emptyList(),\n"
+    "    val lgWebOsAppsDeviceId: String? = null,\n"
     "    val lgWebOsAppsBusy: Boolean = false,\n"
     "    val lgWebOsAppsError: String? = null,\n"
     "    val cast: CastPlaybackUiState = CastPlaybackUiState(),")
 
 # Use only actual launcher IDs from the most recent device query.
 # Ignore asynchronous responses from a TV that is no longer the active TV.
-methods = '''    fun refreshLgWebOsApps() {
+methods = '''    private var lgAppsRequestSeq = 0
+
+    // Only store launch points actually returned by this LG. Never reuse a TCL cache.
+    private fun restoreLgWebOsApps(deviceId: String) {
+        lgAppsRequestSeq += 1
+        val raw = prefs.getString("anytv_lg_apps_" + deviceId, null)
+        val cached = raw?.let { saved -> runCatching {
+            val entries = JSONArray(saved)
+            (0 until entries.length()).mapNotNull { index ->
+                val item = entries.optJSONObject(index) ?: return@mapNotNull null
+                val appId = item.optString("id").trim()
+                if (appId.isEmpty()) null else LgWebOsApp(
+                    appId, item.optString("name", appId), item.optString("icon"))
+            }.distinctBy { it.id }
+        }.getOrNull() }
+        _uiState.update { it.copy(lgWebOsAppsDeviceId = deviceId,
+            lgWebOsApps = cached.orEmpty(), lgWebOsAppsBusy = false, lgWebOsAppsError = null) }
+        // A successfully cached empty list is still a completed query; refresh manually.
+        if (cached == null) refreshLgWebOsApps()
+    }
+
+    fun refreshLgWebOsApps() {
         val device = currentConnectableDevice()?.takeIf { it.id == activeDeviceId } ?: return
         val service = device.getServiceByName(WebOSTVService.ID) as? WebOSTVService ?: return
         if (!service.isConnected || _uiState.value.lgWebOsAppsBusy) return
         val deviceId = device.id
-        _uiState.update { it.copy(lgWebOsAppsBusy = true,
-            lgWebOsAppsError = null, lgWebOsApps = emptyList()) }
+        val requestId = ++lgAppsRequestSeq
+        val connectionToken = connectionGeneration
+        _uiState.update { state -> state.copy(lgWebOsAppsBusy = true,
+            lgWebOsAppsDeviceId = deviceId, lgWebOsAppsError = null,
+            lgWebOsApps = if (state.lgWebOsAppsDeviceId == deviceId)
+                state.lgWebOsApps else emptyList()) }
         service.getAppList(object : Launcher.AppListListener {
             override fun onSuccess(result: MutableList<AppInfo>?) {
-                if (activeDeviceId != deviceId) return
+                if (activeDeviceId != deviceId || requestId != lgAppsRequestSeq ||
+                    connectionToken != connectionGeneration) return
                 val entries = result.orEmpty().mapNotNull { item ->
                     val appId = item.id?.trim().orEmpty()
                     if (appId.isBlank()) null else LgWebOsApp(
                         appId, item.name?.trim()?.takeIf { it.isNotBlank() } ?: appId,
-                        item.rawData?.optString("icon").orEmpty())
+                        item.rawData?.optString("largeIcon").orEmpty().ifBlank {
+                            item.rawData?.optString("icon").orEmpty() })
                 }.distinctBy { it.id }
+                val saved = JSONArray()
+                entries.forEach { app -> saved.put(JSONObject()
+                    .put("id", app.id).put("name", app.name).put("icon", app.icon)) }
+                prefs.edit { putString("anytv_lg_apps_" + deviceId, saved.toString()) }
                 _uiState.update { it.copy(lgWebOsApps = entries,
                     lgWebOsAppsBusy = false, lgWebOsAppsError = null) }
             }
             override fun onError(error: ServiceCommandError?) {
-                if (activeDeviceId != deviceId) return
+                if (activeDeviceId != deviceId || requestId != lgAppsRequestSeq ||
+                    connectionToken != connectionGeneration) return
                 _uiState.update { it.copy(lgWebOsAppsBusy = false,
                     lgWebOsAppsError = "Não foi possível consultar aplicativos da LG: " +
                         (error?.message ?: "tente novamente")) }
             }
         })
+        // The ConnectSDK callback can be lost when the socket drops during a query.
+        viewModelScope.launch(Dispatchers.Main) {
+            delay(10_000L)
+            if (activeDeviceId == deviceId && requestId == lgAppsRequestSeq &&
+                connectionToken == connectionGeneration && _uiState.value.lgWebOsAppsBusy) {
+                lgAppsRequestSeq += 1
+                _uiState.update { it.copy(lgWebOsAppsBusy = false,
+                    lgWebOsAppsError = "A LG não respondeu. Toque em Atualizar para tentar novamente.") }
+            }
+        }
     }
 
     fun launchLgWebOsApp(id: String) {
@@ -75,6 +120,12 @@ methods = '''    fun refreshLgWebOsApps() {
 patch(vm,
     "    fun launchQuickApp(appName: String) {",
     methods + "    fun launchQuickApp(appName: String) {")
+# Restore per-TV app cache only after the webOS session actually becomes ready.
+patch(vm,
+    "                publishDeviceSnapshot()\n            }\n\n            override fun onPairingRequired(",
+    "                publishDeviceSnapshot()\n"
+    "                restoreLgWebOsApps(connectableDevice.id)\n"
+    "            }\n\n            override fun onPairingRequired(")
 # Do not blindly launch Android shortcut names on webOS.
 patch(vm,
     '            showStatus("Atalhos de apps LG ainda não disponíveis; utilize Home.", isError = false)',

@@ -28,7 +28,7 @@ replace_one(
 
     private fun scheduleLgReconnect(targetId: String) {
         if (!lgReconnectEnabled || lgReconnectTarget != targetId ||
-            lgReconnectJob?.isActive == true) return
+            activeDeviceId != null || lgReconnectJob?.isActive == true) return
         lgReconnectJob = viewModelScope.launch(Dispatchers.Main) {
             // Allow the TV to sleep/wake and SSDP to rediscover it.
             for (attempt in 1..6) {
@@ -161,9 +161,10 @@ replace_one(
 
     override fun onDiscoveryFailed''',
     '''        if (activeDeviceId == device.id && device.isLgWebOsDevice()) {
-            // SSDP TTL expiry does NOT mean the connected webOS socket dropped.
-            if ((device.getServiceByName(WebOSTVService.ID) as? WebOSTVService)?.isConnected == true)
-                publishDeviceSnapshot()
+            // A newly discovered entry may not own the still-live webOS socket.
+            val activeLg = Constant.connectableDevice?.takeIf { it.id == activeDeviceId }
+            val activeService = activeLg?.getServiceByName(WebOSTVService.ID) as? WebOSTVService
+            if (activeService?.isConnected == true) publishDeviceSnapshot()
             else handleLgWebOsDisconnected()
         } else if (activeDeviceId == device.id) {
             disconnectCurrentDevice()
@@ -217,4 +218,75 @@ replace_one(
 
     override fun onDeviceRemoved'''
 )
+
+# Connected means the selected, actively connected TV, not a stored TCL host.
+# A stale Android pairing must never give a powered-off TCL a Disconnect button.
+replace_one(
+    '''                    val isConnected = isDeviceConnected && (
+                        connectedId == device.id ||
+                        (!pairedHost.isNullOrBlank() && device.ipAddress == pairedHost)
+                    )''',
+    '''                    val isConnected = isDeviceConnected && connectedId == device.id'''
+)
+
+# ConnectSDK can report an unrelated service/discovery event after SSDP refresh.
+# Only a lost active webOS socket may tear down the LG session.
+replace_one(
+    '''            override fun onDeviceDisconnected(connectableDevice: ConnectableDevice) {
+                if (isActiveConnection(token)) handleLgWebOsDisconnected()
+            }''',
+    '''            override fun onDeviceDisconnected(connectableDevice: ConnectableDevice) {
+                if (!isActiveConnection(token)) return
+                val active = Constant.connectableDevice?.takeIf { it.id == activeDeviceId }
+                val socket = active?.getServiceByName(WebOSTVService.ID) as? WebOSTVService
+                if (socket?.isConnected != true) handleLgWebOsDisconnected()
+            }'''
+)
+
+# Retry loop cannot progress if ConnectSDK never invokes ready/failure.
+# Bound each webOS handshake independently of Android/TCL TLS watchdog semantics.
+replace_one(
+    '''        currentConnectableListener = listener
+        device.addListener(listener)
+        device.connect()
+    }
+
+    private fun handleLgWebOsDisconnected()''',
+    '''        currentConnectableListener = listener
+        device.addListener(listener)
+        connectionWatchdogJob?.cancel()
+        connectionWatchdogJob = viewModelScope.launch(Dispatchers.Main) {
+            delay(12_000L)
+            if (isActiveConnection(token) && pendingDeviceId == device.id &&
+                _uiState.value.isConnecting) {
+                connectionGeneration += 1
+                pendingDeviceId = null
+                device.removeListener(listener)
+                device.disconnect()
+                _uiState.update { it.copy(isConnecting = false, pairingRequired = false,
+                    statusMessage = "LG não respondeu. Tentando reconectar...", isError = true) }
+                publishDeviceSnapshot()
+                if (lgReconnectEnabled && lgReconnectTarget == device.id)
+                    scheduleLgReconnect(device.id)
+            }
+        }
+        device.connect()
+    }
+
+    private fun handleLgWebOsDisconnected()'''
+)
+replace_one(
+    '''                pendingDeviceId = null
+                _uiState.update {
+                    it.copy(
+                        isConnecting = false, pairingRequired = false,
+                        statusMessage = "LG webOS: " + (error.message ?: "Conexão recusada"),''',
+    '''                pendingDeviceId = null
+                connectionWatchdogJob?.cancel()
+                _uiState.update {
+                    it.copy(
+                        isConnecting = false, pairingRequired = false,
+                        statusMessage = "LG webOS: " + (error.message ?: "Conexão recusada"),'''
+)
+
 print("LG_RECONNECT_PAIRING_PATCH_APPLIED_TCL_PATH_PRESERVED")
