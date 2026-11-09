@@ -19,6 +19,10 @@ class LgPointerContract(unittest.TestCase):
         self.assertIn("val keys = webOs.getKeyControl()", self.vm)
         self.assertIn("val volume = webOs.getVolumeControl()", self.vm)
         self.assertIn("service.connectMouse()", self.vm)
+        self.assertIn("CONTROL_MOUSE_AND_KEYBOARD", self.vm)
+        self.assertIn("DiscoveryManager.PairingLevel.ON", self.vm)
+        self.assertIn("service.setPermissions(targetPermissions)", self.vm)
+        self.assertIn("lg_webos_pointer_scope_v1_", self.vm)
         self.assertIn("sendLgWebOsKey(keyCode)", self.vm)
 
     def test_webos_pointer_socket_ready_and_recovers(self):
