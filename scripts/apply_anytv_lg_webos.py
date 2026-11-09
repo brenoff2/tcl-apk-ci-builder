@@ -171,7 +171,7 @@ change(
             }
 
             override fun onDeviceDisconnected(connectableDevice: ConnectableDevice) {
-                if (isActiveConnection(token)) handleDeviceDisconnected()
+                if (isActiveConnection(token)) handleLgWebOsDisconnected()
             }
 
             override fun onConnectionFailed(
@@ -199,6 +199,25 @@ change(
         currentConnectableListener = listener
         device.addListener(listener)
         device.connect()
+    }
+
+    private fun handleLgWebOsDisconnected() {
+        // A stored Android TV host is never an LG reconnect target.
+        connectionGeneration += 1
+        pendingDeviceId = null
+        activeDeviceId = null
+        Constant.connectableDevice = null
+        Constant.isConnected.value = false
+        _uiState.update {
+            it.copy(
+                connectedDevice = null,
+                isConnecting = false,
+                pairingRequired = false,
+                statusMessage = "LG desconectada. Escolha a televisão novamente.",
+                isError = true
+            )
+        }
+        publishDeviceSnapshot()
     }
 
     private fun sendLgWebOsKey(key: Remotemessage.RemoteKeyCode) {
