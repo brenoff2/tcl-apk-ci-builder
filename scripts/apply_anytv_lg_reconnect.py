@@ -350,6 +350,30 @@ replace_one(
 
 # Keep one listener per LG attempt: a new connection must release the old session.
 # Clear the listener on manual disconnect, failures, and ViewModel lifecycle too.
+# A late failure from a non-webOS service must not tear down a ready LG socket.
+# Invalidate callbacks from this failed attempt before releasing its listener.
+replace_one(
+    '''            override fun onConnectionFailed(
+                connectableDevice: ConnectableDevice,
+                error: ServiceCommandError
+            ) {
+                if (!isActiveConnection(token)) return
+                pendingDeviceId = null
+                connectionWatchdogJob?.cancel()
+                clearLgListener()
+                connectableDevice.disconnect()''',
+    '''            override fun onConnectionFailed(
+                connectableDevice: ConnectableDevice,
+                error: ServiceCommandError
+            ) {
+                if (!isActiveConnection(token) || pendingDeviceId != connectableDevice.id) return
+                pendingDeviceId = null
+                connectionGeneration += 1
+                connectionWatchdogJob?.cancel()
+                clearLgListener()
+                connectableDevice.disconnect()'''
+)
+
 # The pinned ConnectSDK destroys a connected webOS socket when an SSDP entry
 # times out: onServiceRemoved -> removeServiceWithId -> disconnect. Keep the
 # active webOS service until its socket actually closes; all non-LG services

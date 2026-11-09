@@ -86,6 +86,10 @@ class LGReconnectContract(unittest.TestCase):
         self.assertIn('previousDevice.removeListener(previousListener)', self.vm)
         self.assertIn('lgListenerDevice = device', self.lg_connection)
         self.assertIn('lgListener = listener', self.lg_connection)
+        self.assertIn(
+            'if (!isActiveConnection(token) || pendingDeviceId != connectableDevice.id) return',
+            self.lg_connection
+        )
         self.assertRegex(
             self.lg_connection,
             r'override fun onConnectionFailed\([\s\S]*?'
