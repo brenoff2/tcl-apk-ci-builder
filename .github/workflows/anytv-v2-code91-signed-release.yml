@@ -1,6 +1,8 @@
 name: AnyTV V2 2.9.63 code91 controlled signed release
 
-# MANUAL ONLY. Authorizing a Cloudflare Worker does not authorize APK publication.
+# MANUAL ONLY. DO NOT DISPATCH until registered on default branch and approved.
+# A workflow_dispatch file only in DEV cannot be triggered by GitHub Actions.
+# Cloudflare Worker authorization does not authorize APK publication.
 on:
   workflow_dispatch:
     inputs:
@@ -324,6 +326,17 @@ jobs:
           EXPECTED_CERT="$(jq -r .certificate_sha256 signing-recovery/v2/identity.json)"
           grep -qi "$EXPECTED_CERT" signed-v2/existing-code90-audit.txt
           echo 'ANYTV_V2_CODE90_SIGNER_AND_OTA_HEAD_PRESERVED'
+      # Retain the signed candidate even if a later push or CDN readback fails.
+      # Never persist private signer material; only signed APK and public identity report.
+      - name: Audit signed V2 app as independent artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-v2-2963-code91-signed-update
+          path: |
+            signed-v2/AnyTV_V2_2.9.63_UPDATE.apk
+            signed-v2/badging.txt
+          if-no-files-found: error
+          retention-days: 30
       - name: Publish V2 APK to independent GitHub channel, preserve old OTA
         shell: bash
         run: |
@@ -361,12 +374,3 @@ jobs:
           done
           echo "::error::V2 immutable remote readback failed"
           exit 1
-      - name: Audit signed V2 app as independent artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: anytv-v2-2963-code91-signed-update
-          path: |
-            signed-v2/AnyTV_V2_2.9.63_UPDATE.apk
-            signed-v2/badging.txt
-          if-no-files-found: error
-          retention-days: 30
