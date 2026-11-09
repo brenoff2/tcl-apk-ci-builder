@@ -378,6 +378,20 @@ home_change(
                                     }"""
 )
 
+# The headset shortcut must not probe TCL port 18765 using an LG IP.
+home_change(
+    "                                val tv = sessionState.connectedDevice\n"
+    "                                val host = tv?.ipAddress\n"
+    "                                if (host.isNullOrBlank()) {\n"
+    "                                    onOpenDiscovery()",
+    "                                val isLg = sessionState.connectedDevice?.type == \"LG webOS\"\n"
+    "                                val tv = sessionState.connectedDevice\n"
+    "                                val host = if (isLg) null else tv?.ipAddress\n"
+    "                                if (host.isNullOrBlank()) {\n"
+    "                                    if (isLg) headsetStatus = \"Fones via companion disponíveis somente na TCL.\"\n"
+    "                                    else onOpenDiscovery()"
+)
+
 HOME.write_text(home, encoding="utf-8")
 assert "LG webOS" in HOME.read_text(encoding="utf-8")
 
