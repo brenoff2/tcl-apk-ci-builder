@@ -11,6 +11,7 @@ class LGReconnectContract(unittest.TestCase):
     def setUpClass(cls):
         cls.vm = (ROOT / "TvRemoteViewModel.kt").read_text()
         cls.discovery = (ROOT / "DeviceDiscoveryScreen.kt").read_text()
+        cls.sdk_discovery = Path("source/ConnectSDK/src/main/java/com/connectsdk/discovery/DiscoveryManager.java").read_text()
 
     def test_pairing_saved_independently_of_tcl(self):
         self.assertIn('putBoolean("anytv_lg_paired_" + connectableDevice.id, true)', self.vm)
@@ -37,6 +38,15 @@ class LGReconnectContract(unittest.TestCase):
         self.assertIn('val activeLg = Constant.connectableDevice?.takeIf', self.vm)
         self.assertIn('if (activeService?.isConnected == true) publishDeviceSnapshot()', self.vm)
         self.assertIn('if (socket?.isConnected != true) handleLgWebOsDisconnected()', self.vm)
+
+    def test_active_webos_socket_survives_ssdp_expiry(self):
+        self.assertIn(
+            'com.connectsdk.service.WebOSTVService.ID.equals(serviceDescription.getServiceID())',
+            self.sdk_discovery)
+        self.assertIn('if (webOsService != null && webOsService.isConnected())', self.sdk_discovery)
+        self.assertIn('Keeping active webOS socket despite expired SSDP announcement', self.sdk_discovery)
+        # The upstream path still removes disconnected services, including TCL.
+        self.assertIn('device.removeServiceWithId(serviceDescription.getServiceID());', self.sdk_discovery)
 
     def test_stuck_handshake_expires_before_retry(self):
         self.assertIn('delay(12_000L)', self.vm)

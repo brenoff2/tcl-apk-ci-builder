@@ -289,4 +289,30 @@ replace_one(
                         statusMessage = "LG webOS: " + (error.message ?: "Conexão recusada"),'''
 )
 
+# The pinned ConnectSDK destroys a connected webOS socket when an SSDP entry
+# times out: onServiceRemoved -> removeServiceWithId -> disconnect. Keep the
+# active webOS service until its socket actually closes; all non-LG services
+# retain the upstream removal behavior. On rediscovery, the SDK updates the
+# existing service description for the same webOS UUID.
+sdk_discovery = Path("source/ConnectSDK/src/main/java/com/connectsdk/discovery/DiscoveryManager.java")
+sdk_source = sdk_discovery.read_text(encoding="utf-8")
+sdk_old = '''        if (device != null) { 
+            device.removeServiceWithId(serviceDescription.getServiceID());
+
+            if (device.getServices().isEmpty()) {'''
+sdk_new = '''        if (device != null) {
+            if (com.connectsdk.service.WebOSTVService.ID.equals(serviceDescription.getServiceID())) {
+                DeviceService webOsService =
+                    device.getServiceByName(com.connectsdk.service.WebOSTVService.ID);
+                if (webOsService != null && webOsService.isConnected()) {
+                    Log.d(Util.T, "Keeping active webOS socket despite expired SSDP announcement");
+                    return;
+                }
+            }
+            device.removeServiceWithId(serviceDescription.getServiceID());
+
+            if (device.getServices().isEmpty()) {'''
+assert sdk_source.count(sdk_old) == 1, "LG_SSDP_SDK_ANCHOR_DRIFT"
+sdk_discovery.write_text(sdk_source.replace(sdk_old, sdk_new, 1), encoding="utf-8")
+
 print("LG_RECONNECT_PAIRING_PATCH_APPLIED_TCL_PATH_PRESERVED")
