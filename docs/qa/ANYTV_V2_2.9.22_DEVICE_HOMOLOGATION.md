@@ -124,3 +124,25 @@ Esta secao e plano de homologacao, NAO evidencia fisica. **Candidata final de co
 - **Protecao da entrega:** artifact LG unsigned existente expira 23/11/2026; o futuro artifact assinado exigiria acesso restrito comprovado, identidade/hash, retencao curta e aparelho QA designado. O acesso aos artifacts do GitHub segue o acesso ao repositorio; como o repo e publico, nao tratar upload a Actions como deposito comprovadamente privado sem testar efetivas politicas de acesso. Alternativa: armazenamento privado dedicado e autorizado, fora da OTA, com readback e controle de downloads.
 
 **Estado:** DESIGN_ONLY / QA-S01..QA-S08 PENDENTES; nenhum environment configurado, workflow criado, segredo acessado, APK assinada ou dispositivo testado nesta auditoria.
+
+
+### Auditoria de prova de isolamento do signer e privacidade de entrega (09/11/2026; DESIGN_ONLY)
+
+**Limite verificado da ferramenta:** conector GitHub `fetch` rejeitou `GET /repos/brenoff2/tcl-apk-ci-builder/environments` e `GET /repos/brenoff2/tcl-apk-ci-builder/actions/secrets` como URL nao admitida (INVALID_ARGUMENT/HTTP400). O catalogo federado GitHub nao apresentou acao de leitura de environments ou metadados de secrets. Isto **NAO e prova de que os ambientes nao existem**. O erro anterior de branch protection HTTP403 tambem permanece. Nao tentar usar segredo, criar environment, solicitar permissao elevada ou contornar conector apenas para resolver a incerteza.
+
+**Fato upstream relevante:** GitHub environment com required reviewer impede acesso do job aos **secrets do environment** ate aprovacao; o bloqueio nao deve ser atribuido automaticamente a um segredo exposto no escopo de repo. Documentacao: https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments e https://docs.github.com/en/actions/how-tos/deploy/configure-and-manage-deployments/manage-environments. No code91 atual, `V2_RECOVERY_HEX` e lido de `secrets.ANYTV_SIGNER_V2_RECOVERY_HEX`, mas a visibilidade observavel do YAML **nao identifica o escopo real de armazenamento** desse segredo. Exigir prova documental segura do escopo e da politica de release, sem ler valor.
+
+**Arquitetura proposta, sem novos componentes executados:**
+
+| Componente | Entrada/prova esperada | Restricao obrigatoria | Estado |
+|---|---|---|---|
+| Build unsigned LG | CI #42669473078, source SHA d50dfc58, APK SHA em candidate-sha256.txt | Nenhum secret V2 e nenhum deploy | PASS documental de CI; QA fisica PENDENTE |
+| Assinador independente | APK unsigned extraida/validada, approval de pessoa distinta, environment comprovadamente protegido | Segredo acessivel somente ao job aprovado; escopo repo secret que permita acesso antes da aprovacao deve ser sanado previamente | DESIGN_ONLY / BLOQUEADO |
+| Artefato de entrega | APK assinada + SHA da APK + certificados e identidade auditados | Nao utilizar artifact publico de repo para entregar APK privada; destino com autorizacao de leitura restrita, expiracao e readback verificaveis | DESTINO NAO SELECIONADO |
+| QA no aparelho | Telefone dedicado, modelo e versao instalada, LG webOS + TCL reais, LG01-LG09 | Nao alterar OTA, main, Worker, D1 nem usar telefone principal sem avaliar downgrade | NAO EXECUTADO |
+
+**Prova minima antes de solicitar assinatura:** readback autorizado de configuracao do environment (nome, required reviewers, prevent self-review, restricoes de branches, impedir bypass quando aplicavel), evidencia do escopo do segredo SEM seu valor, lista de permissao efetiva do job e demonstracao de que nao existem passos executaveis de publicacao; idealmente teste negativo com segredo ficticio, sem usar o signer verdadeiro. Documentar aprovador e run especifico antes de liberar qualquer chave V2. Falha de ferramenta/ACL: `QA_SIGNER_ACCESS_UNVERIFIED`.
+
+**Prova minima antes de entrega:** destino privado previamente aprovado, ACL somente para destinatarios nomeados, upload apenas APK e relatorio publico de assinatura/sha, readback do hash e controle de expiracao/revogacao. A API GitHub Actions permite listar artefatos com read access ao repo; em repo publico, nao considerar essa disponibilidade privada. Fonte: https://docs.github.com/en/rest/actions/artifacts e https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts. Se nao houver destino com ACL verificavel: `QA_ARTIFACT_PRIVACY_UNVERIFIED` e nao produzir artefato assinado distribuivel.
+
+**Decisao ADAPT/BLOCK:** reusar somente mecanismo de verificacao criptografica V2 conhecido, em projeto futuro isolado; bloquear implementacao executavel ou assinatura enquanto aprovacao, ACL do segredo, destino privado e aparelhagem nao forem comprovados. Nao criar etapas ou commits de release por prosseguimento automatico do GOAL.
