@@ -69,3 +69,27 @@ Esta secao e plano de homologacao, NAO evidencia fisica. **Candidata final de co
 6. **Aceite restrito:** build PASS nao fecha LG01-LG09 nem F5/F6/F8; sem QA fisica = PENDENTE. Qualquer falha reproduzida leva a reparo minimo, novo CI unsigned e novamente QA, sem publicacao automatica. Abertura direta de filmes/series na LG e teclado LG sao capacidades nao implementadas, nao exemplos de sucesso.
 
 **Aceite:** teste documental de build + aparelho real LG e TCL, registro de defeitos, versao/modelo, hashes de APK e identidade da assinatura; reavaliar permissao expressa para publicar. Nao homologar F5/F6/F8 por passar testes de contrato ou compilar.
+
+
+### Portao QA LG code93 — assinatura interna isolada (DESIGN_ONLY, NAO EXECUTADO)
+
+**Pesquisa documental de 09/11/2026:** Android exige que a APK instalada tenha assinatura valida, que o applicationId coincida com a instalacao anterior e que o certificado seja identico ou haja prova de rotacao valida; versionCode inferior normalmente e bloqueado. Referencias oficiais: https://developer.android.com/google/play/app-updates e https://developer.android.com/studio/publish/app-signing e https://developer.android.com/studio/publish/versioning. A assinatura em teste nao e uma autorizacao implicita de publicacao.
+
+**Evidencia concreta no repo:** o workflow existente `.github/workflows/anytv-v2-code91-signed-release.yml` recupera o PKCS12 V2 do backup criptografado usando segredo GitHub em ambiente temporario, verifica fingerprint da identidade, chama `apksigner`, valida badging/certificado e **depois publica na branch OTA**. Por isso o workflow code91 NAO E ROTA DE QA LG, nao deve ser disparado, editado como atalho ou autorizado com `PUBLISH_ANYTV_V2_CODE91`. Existe apenas build LG **unsigned**, CI #42669473078 PASS no SHA d50dfc58373d748f52c839d581c493485954f22e, artifact #13697179971; o ZIP de CI nao e APK assinada. O backup criptografado historicamente funcionou para code90, mas sua disponibilidade futura nao foi provada nesta fase.
+
+**Desenho sujeito a aprovacao especifica** (nenhum novo workflow executavel ou signer foi criado):
+
+| Gate | Evidencia exigida | Estado |
+|---|---|---|
+| QA-S01 | Autorizacao humana expressa para criar e executar fluxo de assinatura INTERNA LG sem OTA, com destino e aparelho identificados | PENDENTE |
+| QA-S02 | Workflow distinto, com revisao previa, **sem** `git push`, `release`, publish, deploy, Worker, D1, upload publico ou promocao de `main`; permissoes minimas, sem disparo por push | PENDENTE |
+| QA-S03 | Fonte imutavel exata de code93 d50dfc58; verificar hash da APK unsigned produzida, compilacao e testes; NAO presumir que o ZIP digest e o hash da APK | PENDENTE |
+| QA-S04 | Material criptografado V2 e segredo acessiveis SOMENTE na etapa autorizada, com mascara e limpeza de temporarios; nenhum P12/senha/segredo em artifact, log ou GitHub | PENDENTE |
+| QA-S05 | `apksigner verify --print-certs` confirma mesmo certificado V2 oficial; `aapt dump badging` confirma `com.tclremote.livre.v2`, code93 e `2.9.65-AnyTV`; comparar versao realmente instalada | PENDENTE |
+| QA-S06 | Gerar artifact PRIVADO de QA separado da OTA com hash da APK assinada, badge/identidade, proveniencia de fonte, prazo de retencao e autorizacao de acesso; verificar download e readback | PENDENTE |
+| QA-S07 | Preservar o celular principal com code90; preferir segundo aparelho sem dados de producao; teste code93 sobre V2 existente requer aceitar risco de nao conseguir voltar ao code90 sem construir nova versao superior | PENDENTE |
+| QA-S08 | Execucao fisica LG01-LG09 e regressao TCL com provas; somente depois discutir homologacao, politica de versao e publicacao | PENDENTE |
+
+**Duas rotas diferentes:** (A) no aparelho dedicado com o AnyTV V2 existente, assinar code93 com mesmo pacote/certificado V2 e **versionCode superior ao instalado** (testa atualizacao real, mas eleva baseline do aparelho); (B) pacote diferente para QA isolada exige receita, identidade e dependencias de autenticacao/links proprias e **NAO comprova** migracao do app V2 oficial. Nao inventar que uma APK unsigned de mesmo pacote e instalavel em paralelo ao app assinado. Escolher A ou B so apos analisar aparelho e requisitos reais.
+
+**Observacao GitHub:** `workflow_dispatch` so dispara se o workflow estiver registrado na branch default (documentacao: https://docs.github.com/en/actions/managing-workflow-runs/manually-running-a-workflow). Nao promover arquivos para `main` apenas para facilitar testes; revisar alternativa com executor independente ou registro controlado de workflow quando houver autorizacao. Nenhuma assinatura/instalacao/OTA foi feita por este plano.
