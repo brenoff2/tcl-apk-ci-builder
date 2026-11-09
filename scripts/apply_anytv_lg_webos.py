@@ -240,8 +240,11 @@ change(
     }
 
     private fun sendLgWebOsKey(key: Remotemessage.RemoteKeyCode) {
+        // ConnectableDevice.isConnected can be true because another service
+        // (e.g. Cast) is connected even when the webOS socket is not.
         val device = currentConnectableDevice()?.takeIf {
-            it.id == activeDeviceId && it.isLgWebOsDevice() && it.isConnected
+            it.id == activeDeviceId &&
+                (it.getServiceByName(WebOSTVService.ID) as? WebOSTVService)?.isConnected == true
         } ?: return
         val listener = emptyResponseListener()
         val keys = device.getCapability(KeyControl::class.java)
