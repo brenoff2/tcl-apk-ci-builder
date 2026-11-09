@@ -146,3 +146,18 @@ Esta secao e plano de homologacao, NAO evidencia fisica. **Candidata final de co
 **Prova minima antes de entrega:** destino privado previamente aprovado, ACL somente para destinatarios nomeados, upload apenas APK e relatorio publico de assinatura/sha, readback do hash e controle de expiracao/revogacao. A API GitHub Actions permite listar artefatos com read access ao repo; em repo publico, nao considerar essa disponibilidade privada. Fonte: https://docs.github.com/en/rest/actions/artifacts e https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts. Se nao houver destino com ACL verificavel: `QA_ARTIFACT_PRIVACY_UNVERIFIED` e nao produzir artefato assinado distribuivel.
 
 **Decisao ADAPT/BLOCK:** reusar somente mecanismo de verificacao criptografica V2 conhecido, em projeto futuro isolado; bloquear implementacao executavel ou assinatura enquanto aprovacao, ACL do segredo, destino privado e aparelhagem nao forem comprovados. Nao criar etapas ou commits de release por prosseguimento automatico do GOAL.
+
+
+### Evidencia de destino privado existente (09/11/2026; DRIVE METADATA READ-ONLY)
+
+Pesquisa de metadados por `AnyTV` no Google Drive localizou pastas existentes (somente nomes e ACL consultados; nenhum arquivo ou segredo interno lido):
+
+| Pasta real | Verificacao da ACL nesta sessao | Interpretacao fail-closed |
+|---|---|---|
+| `AnyTV - Releases` | `shared=false`; `source_visibility_status=permission_metadata_available`; apenas permission `user:owner` retornada; `canShare=true` | **CANDIDATO** a destino restrito, mas pasta tem finalidade de releases e NAO foi aprovada para QA. Nao presumir que ACL de arquivos filhos e identica a do pai. |
+| `AnyTV - Assinaturas Privadas - Nao Compartilhar` | `shared=false`; apenas `user:owner` retornado | Armazenamento segregado para assinaturas privadas. **PROIBIDO** usar para distribuir APK assinada e nunca extrair/copy signer de la. |
+| `anytv_work` e `anytv_work_20261025` | `shared=true`; perms `user:owner` + `user:writer` retornadas | Nao sao destinos de entrega privada sem avaliacao expressa dos destinatarios. |
+
+**Novo resultado:** a ausencia de um destino privado em absoluto nao se sustenta: existem pastas AnyTV cujo metadata/ACL demonstra somente owner no momento da leitura. **Ainda NAO existe destino de APK QA aprovado** nem prova de upload, download, ACL efetiva do futuro arquivo e ligacao autorizada executor->Drive. O bloqueio `QA_ARTIFACT_PRIVACY_UNVERIFIED` continua para a operacao de entrega; a subquestao de existencia de armazenamento potencial foi esclarecida.
+
+**Proxima verificacao sem criar nada:** validar com identidade autorizada qual pasta exclusiva de QA pode ser designada (preferir destino separado de `Releases` e `Assinaturas Privadas`), que o artifact novo herdaria/permaneceria ACL apenas dos aprovados, que a API de entrega usada pelo executor tenha credenciais limitadas ao destino, e que upload privado/readback/expiracao possam ser realizados sem publicar na OTA. Somente depois do gate de segredo e aprovacao. Nao escrever, mover, compartilhar ou alterar nenhuma pasta nesta investigacao.
