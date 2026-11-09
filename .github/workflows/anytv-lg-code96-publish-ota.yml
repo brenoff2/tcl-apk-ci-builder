@@ -1,0 +1,93 @@
+name: AnyTV LG code96 publish signed in-app OTA (one-shot)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-lg-code96-publish-ota.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: anytv-v2-official-ota-code96-publish
+  cancel-in-progress: false
+jobs:
+  publish-verified-code96:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Retrieve signed LG code96 from verified QA run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42689737128
+          name: anytv-lg-code96-signed-qa-test-only
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: signed-code96
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Validate signed source and immutable OTA baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=signed-code96/AnyTV_LG_2.9.68_code96_SIGNED_QA.apk
+          test -s "$APK"
+          test "$(find signed-code96 -name '*.apk' -type f | wc -l)" -eq 1
+          grep -Fq '1bf81c13a8a31a29b605d0275f4f51bd58b78c2a04aa799871d4928768c712f4' signed-code96/SHA256.txt
+          test "$(sha256sum "$APK" | cut -d ' ' -f1)" = '1bf81c13a8a31a29b605d0275f4f51bd58b78c2a04aa799871d4928768c712f4'
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/apksigner" verify --verbose --print-certs "$APK" > signed-code96/audit-check.txt
+          grep -qi 'fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9' signed-code96/audit-check.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-code96/audit-check.txt
+          "$BT/aapt" dump badging "$APK" > signed-code96/identity-check.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='96'" signed-code96/identity-check.txt
+          grep -q "versionName='2.9.68-AnyTV'" signed-code96/identity-check.txt
+          "$BT/zipalign" -c 4 "$APK"
+          git fetch --no-tags origin feat/tcl-v22-updates-back-bluetooth
+          test "$(git rev-parse origin/feat/tcl-v22-updates-back-bluetooth)" = 'c8d75bc6f8d492bbb1d16cf3fe40ca5ad07b233e'
+          git show 'c8d75bc6f8d492bbb1d16cf3fe40ca5ad07b233e:updates/android/v2/current.apk' > previous-v2-code95.apk
+          "$BT/apksigner" verify --verbose --print-certs previous-v2-code95.apk > previous-audit.txt
+          grep -qi 'fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9' previous-audit.txt
+          "$BT/aapt" dump badging previous-v2-code95.apk > previous-badging.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='95'" previous-badging.txt
+          grep -q "versionName='2.9.67-AnyTV'" previous-badging.txt
+          echo 'LG_CODE96_OTA_BASELINE_AND_SIGNATURE_VERIFIED'
+      - name: Publish only V2 current.apk to existing in-app OTA channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH=feat/tcl-v22-updates-back-bluetooth
+          EXPECTED=c8d75bc6f8d492bbb1d16cf3fe40ca5ad07b233e
+          test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$EXPECTED"
+          git worktree add --detach ota-v2 "$EXPECTED"
+          test -s ota-v2/updates/android/cert2026/current.apk
+          cp signed-code96/AnyTV_LG_2.9.68_code96_SIGNED_QA.apk ota-v2/updates/android/v2/current.apk
+          (
+            cd ota-v2
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -f updates/android/v2/current.apk
+            test "$(git diff --cached --name-only)" = "updates/android/v2/current.apk"
+            git diff --cached --check
+            git commit -m 'release(anytv-v2): LG webOS signed code96 in-app OTA'
+            test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$EXPECTED"
+            git push origin HEAD:"$BRANCH"
+          )
+          echo 'LG_CODE96_OTA_PUSH_COMPLETE'
+      - name: Read back published binary using immutable commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_SHA=1bf81c13a8a31a29b605d0275f4f51bd58b78c2a04aa799871d4928768c712f4
+          NEW_COMMIT="$(git -C ota-v2 rev-parse HEAD)"
+          CURRENT="$(git ls-remote origin refs/heads/feat/tcl-v22-updates-back-bluetooth | cut -f1)"
+          test "$NEW_COMMIT" = "$CURRENT"
+          for n in 1 2 3 4 5 6; do
+            curl --fail --silent --show-error --location --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/$NEW_COMMIT/updates/android/v2/current.apk?verify=$n" -o readback-code96.apk || true
+            if test -s readback-code96.apk && test "$(sha256sum readback-code96.apk | cut -d ' ' -f1)" = "$EXPECTED_SHA"; then
+              echo "LG_CODE96_OTA_READBACK_VERIFIED_SHA256_$EXPECTED_SHA"
+              echo "LG_CODE96_OTA_COMMIT_$NEW_COMMIT"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'LG_CODE96_PUBLISHED_BUT_READBACK_UNVERIFIED'
+          exit 1
