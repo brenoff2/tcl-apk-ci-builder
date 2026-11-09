@@ -128,6 +128,7 @@ change(
             return
         }
         // Pairing confirmation is shown by the LG itself, not the Android PIN modal.
+        DiscoveryManager.getInstance().pairingLevel = DiscoveryManager.PairingLevel.ON
         service.setPairingType(DeviceService.PairingType.FIRST_SCREEN)
         val listener = object : ConnectableDeviceListener {
             override fun onDeviceReady(connectableDevice: ConnectableDevice) {
@@ -240,6 +241,29 @@ change(
     "isPaired = (device.id == activeDeviceId && device.isLgWebOsDevice()) ||\n"
     "                    (device.ipAddress == pairedHost && prefs.getBoolean(Constant.PIN, false)),"
 )
+
+# Upstream App explicitly registers Cast only; without SSDP webOS is invisible.
+APP = Path("source/app/src/main/java/com/hari/androidtvremote/App.kt")
+app_src = APP.read_text(encoding="utf-8")
+assert app_src.count("import com.connectsdk.discovery.provider.CastDiscoveryProvider") == 1
+app_src = app_src.replace(
+    "import com.connectsdk.discovery.provider.CastDiscoveryProvider",
+    "import com.connectsdk.discovery.provider.CastDiscoveryProvider\n"
+    "import com.connectsdk.discovery.provider.SSDPDiscoveryProvider\n"
+    "import com.connectsdk.service.WebOSTVService", 1
+)
+registration = """        discoveryManager?.registerDeviceService(
+            CastService::class.java,
+            CastDiscoveryProvider::class.java
+        )"""
+assert app_src.count(registration) == 1, "LG_WEBOS_DISCOVERY_REGISTRATION_DRIFT"
+app_src = app_src.replace(registration,
+    registration + """
+        discoveryManager?.registerDeviceService(
+            WebOSTVService::class.java,
+            SSDPDiscoveryProvider::class.java
+        )""", 1)
+APP.write_text(app_src, encoding="utf-8")
 
 VM.write_text(src, encoding="utf-8")
 assert "connectLgWebOs(device)" in VM.read_text(encoding="utf-8")
