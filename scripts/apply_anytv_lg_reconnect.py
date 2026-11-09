@@ -134,6 +134,19 @@ replace_one(
         connectionGeneration += 1'''
 )
 replace_one(
+    '''    private fun currentConnectableDevice(): ConnectableDevice? {
+        val currentId = activeDeviceId''',
+    '''    private fun currentConnectableDevice(): ConnectableDevice? {
+        // SSDP may replace a registry entry while the original LG socket stays live.
+        // Keep commands bound to the approved, connected service instance.
+        val lgActive = Constant.connectableDevice?.takeIf { device ->
+            device.id == activeDeviceId &&
+                (device.getServiceByName(WebOSTVService.ID) as? WebOSTVService)?.isConnected == true
+        }
+        if (lgActive != null) return lgActive
+        val currentId = activeDeviceId'''
+)
+replace_one(
     '''        if (activeDeviceId == device.id) {
             disconnectCurrentDevice()
         } else {
