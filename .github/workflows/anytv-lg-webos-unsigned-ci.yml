@@ -125,12 +125,12 @@ jobs:
           APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
           test -s "$APK"
           "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
-          grep -q "name='com.tclremote.livre.v2' versionCode='93'" candidate-identity.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='94'" candidate-identity.txt
           grep -q "versionName='2.9.66-AnyTV'" candidate-identity.txt
           sha256sum "$APK" > candidate-sha256.txt
           printf '%s\n' 'AUDITORIA APENAS: APK sem assinatura. NAO instalar como atualizacao da V2 assinada.' > candidate-NOT-INSTALL.txt
           echo 'ANYTV_LG_WEBOS_CODE94_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
-      - name: Store unsigned LG webOS code93 proof for audit only
+      - name: Store unsigned LG webOS code94 proof for audit only
         uses: actions/upload-artifact@v4
         with:
           name: anytv-lg-webos-code94-pointer-unsigned-audit
