@@ -45,7 +45,6 @@ class LgWebOsContract(unittest.TestCase):
         self.assertIn("LgWebOsAppsBar(", self.home)
         self.assertNotIn("apps = emptyList(), host = \"\", pairing = \"\"", self.home)
         self.assertIn('if (sessionState.connectedDevice?.type == "LG webOS") remoteKey(it)', self.home)
-        self.assertIn('apps = emptyList(), host = "", pairing = ""', self.home)
         self.assertIn("if (currentConnectableDevice()?.isLgWebOsDevice() == true)", self.vm)
 
     def test_lg_does_not_use_android_hold_or_tcl_auto_reconnect(self):
