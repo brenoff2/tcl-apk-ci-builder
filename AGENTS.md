@@ -1,3 +1,9 @@
+## 09/11/2026 — Escopo autorizado LG webOS isolado
+- Usuário autorizou conexão LG webOS no AnyTV; outras marcas somente após nova decisão. Usar o ConnectSDK WebOSTVService/SSDP do upstream fixado; manter TCL/Android TV inalterado e a UI remota existente.
+- Primeira prova LG: `scripts/apply_anytv_lg_webos.py`, workflow `anytv-lg-webos-unsigned-ci.yml`, code93/2.9.65 apenas UNSIGNED. Não confundir com code91 pop-up nem code92 recuperação; não assinar/publicar/alterar main, OTA, Worker, D1, TV companion ou certificado por este escopo.
+- Gate obrigatório: testes+compilação reais com readback, depois QA LG física e regressão TCL; zero homologação por leitura estática. Ver `docs/dev-context/STATUS.md` e `docs/dev-context/DECISIONS.md`.
+
+---
 ## 26/10/2026 — build APK 2.9.51 preparada, execucao bloqueada
 - Criado `.github/workflows/anytv-2951-unsigned-candidate.yml` (commit f8d8dae530cabbc0bbcef60c656eee82842c3c11) derivado do pipeline de compilacao Android existente: package V2 preservado, versionCode 80, versionName 2.9.51-AnyTV, artifact unsigned audit-only, SEM ASSINATURA/OTA. Readback confirmou estas declaracoes. Ainda NAO HOUVE APK gerada ou CI da candidata PASS.
 - Tentativa de `workflow_dispatch` via GitHub MCP foi BLOQUEADA `DESTRUCTIVE_CONFIRMATION_REQUIRED`; nao repetir atraves de desvio de autorizacao. Necessita operacao autorizada para executar CI e baixar/inspecionar artefato.
