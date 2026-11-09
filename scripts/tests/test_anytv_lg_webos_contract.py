@@ -1,0 +1,56 @@
+#!/usr/bin/env python3
+"""Static assertions on the prepared LG proof; no physical-TV claim."""
+import unittest
+from pathlib import Path
+
+ROOT = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app")
+class LgWebOsContract(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.vm = (ROOT / "TvRemoteViewModel.kt").read_text()
+        cls.home = (ROOT / "TclApprovedHomeScreen.kt").read_text()
+        cls.workflow = Path(".github/workflows/anytv-lg-webos-unsigned-ci.yml").read_text()
+
+    def test_discovery_and_selection(self):
+        self.assertIn("device.isLgWebOsDevice()", self.vm)
+        self.assertIn("getServiceByName(WebOSTVService.ID)", self.vm)
+        self.assertIn('isLgWebOsDevice() -> "LG webOS"', self.vm)
+        self.assertIn("connectLgWebOs(device)", self.vm)
+
+    def test_tv_prompt_not_android_pairing_pin(self):
+        self.assertIn("PairingType.FIRST_SCREEN", self.vm)
+        self.assertIn("Autorize a conexão do AnyTV na tela da LG.", self.vm)
+        self.assertIn("pairingRequired = false", self.vm)
+        self.assertIn("if (device.isLgWebOsDevice())", self.vm)
+
+    def test_genuine_webos_commands(self):
+        for key in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN",
+                    "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT",
+                    "KEYCODE_DPAD_CENTER", "KEYCODE_BACK", "KEYCODE_HOME",
+                    "KEYCODE_VOLUME_UP", "KEYCODE_VOLUME_DOWN",
+                    "KEYCODE_CHANNEL_UP", "KEYCODE_CHANNEL_DOWN"):
+            self.assertIn(key, self.vm)
+        for call in ("keys?.up(listener)", "keys?.ok(listener)",
+                     "keys?.home(listener)", "volume?.volumeUp(listener)",
+                     "channels?.channelUp(listener)"):
+            self.assertIn(call, self.vm)
+
+    def test_no_tcl_companion_calls_for_lg(self):
+        self.assertIn('sessionState.connectedDevice?.type == "LG webOS"', self.home)
+        self.assertIn("} else TclInstalledAppsBar(", self.home)
+        self.assertIn("TclStreamingScreens(", self.home)
+        self.assertIn('apps = emptyList(), host = "", pairing = ""', self.home)
+        self.assertIn("if (currentConnectableDevice()?.isLgWebOsDevice() == true)", self.vm)
+
+    def test_independent_unsigned_ci(self):
+        self.assertIn("scripts/apply_anytv_lg_webos.py", self.workflow)
+        self.assertIn("versionCode = 93", self.workflow)
+        self.assertIn("2.9.65-AnyTV", self.workflow)
+        self.assertIn("assembleRelease", self.workflow)
+        self.assertIn("candidate-NOT-INSTALL.txt", self.workflow)
+        self.assertNotIn("git push origin HEAD:feat/tcl-v22-updates-back-bluetooth", self.workflow)
+        self.assertNotIn("ANYTV_SIGNER_V2_RECOVERY_HEX", self.workflow)
+        self.assertNotIn("apksigner sign", self.workflow)
+
+if __name__ == "__main__":
+    unittest.main()
