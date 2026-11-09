@@ -42,7 +42,8 @@ class LgWebOsContract(unittest.TestCase):
     def test_no_tcl_companion_calls_for_lg(self):
         self.assertIn('sessionState.connectedDevice?.type == "LG webOS"', self.home)
         self.assertIn("} else TclInstalledAppsBar(", self.home)
-        self.assertIn("TclStreamingScreens(", self.home)
+        self.assertIn("LgWebOsAppsBar(", self.home)
+        self.assertNotIn("apps = emptyList(), host = \"\", pairing = \"\"", self.home)
         self.assertIn('if (sessionState.connectedDevice?.type == "LG webOS") remoteKey(it)', self.home)
         self.assertIn('apps = emptyList(), host = "", pairing = ""', self.home)
         self.assertIn("if (currentConnectableDevice()?.isLgWebOsDevice() == true)", self.vm)
