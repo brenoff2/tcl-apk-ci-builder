@@ -472,10 +472,10 @@ replace_one(
 
 ui_models = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/UiModels.kt")
 model_text = ui_models.read_text(encoding="utf-8")
-model_old = "    val isConnecting: Boolean = false\\n)"
+model_old = "    val isConnecting: Boolean = false\n)"
 assert model_text.count(model_old) == 1, "KNOWN_TV_MODEL_ANCHOR_DRIFT"
 ui_models.write_text(model_text.replace(model_old,
-    "    val isConnecting: Boolean = false,\\n    val isOnline: Boolean = true\\n)", 1),
+    "    val isConnecting: Boolean = false,\n    val isOnline: Boolean = true\n)", 1),
     encoding="utf-8")
 
 discovery = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/DeviceDiscoveryScreen.kt")
