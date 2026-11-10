@@ -400,4 +400,115 @@ sdk_new = '''        if (device != null) {
 assert sdk_source.count(sdk_old) == 1, "LG_SSDP_SDK_ANCHOR_DRIFT"
 sdk_discovery.write_text(sdk_source.replace(sdk_old, sdk_new, 1), encoding="utf-8")
 
+
+# Persist a LOCAL catalog of TVs independently of ephemeral SSDP/mDNS discovery.
+# Offline rows are visible but NEVER used as live sockets or connectable handles.
+known_methods = '''    private fun knownTvSnapshot(live: List<DeviceUiModel>): List<DeviceUiModel> {
+        val key = "anytv_known_tvs_v1"
+        val previous = prefs.getString(key, "[]") ?: "[]"
+        val saved = runCatching { JSONArray(previous) }.getOrDefault(JSONArray())
+        val remembered = linkedMapOf<String, JSONObject>()
+        for (index in 0 until saved.length()) {
+            val item = saved.optJSONObject(index) ?: continue
+            val id = item.optString("id").trim()
+            if (id.isNotEmpty()) remembered[id] = item
+        }
+        live.forEach { device ->
+            if (device.id.isNotBlank()) {
+                val wasPaired = remembered[device.id]?.optBoolean("paired", false) == true
+                remembered[device.id] = JSONObject()
+                    .put("id", device.id)
+                    .put("name", device.name)
+                    .put("type", device.type)
+                    .put("ip", device.ipAddress)
+                    .put("paired", device.isPaired || wasPaired)
+            }
+        }
+        val updated = JSONArray()
+        remembered.values.takeLast(40).forEach { updated.put(it) }
+        val serialized = updated.toString()
+        if (serialized != previous) prefs.edit { putString(key, serialized) }
+        val onlineIds = live.map { it.id }.toSet()
+        val onlineAddresses = live.map { it.ipAddress }.filter { it.isNotBlank() }.toSet()
+        val offline = remembered.values.mapNotNull { item ->
+            val id = item.optString("id")
+            val ip = item.optString("ip")
+            if (id in onlineIds || (ip.isNotBlank() && ip in onlineAddresses)) null
+            else DeviceUiModel(
+                id = id,
+                name = item.optString("name", "TV"),
+                type = item.optString("type", "TV"),
+                ipAddress = ip,
+                isPaired = item.optBoolean("paired", false),
+                supportsCast = false,
+                accent = Color(0xFF80838D),
+                isConnected = false,
+                isConnecting = false,
+                isOnline = false
+            )
+        }
+        return (live + offline).sortedWith(
+            compareByDescending<DeviceUiModel> { it.isConnected }
+                .thenByDescending { it.isOnline }
+                .thenByDescending { it.isPaired }
+                .thenBy { it.name.lowercase() }
+        )
+    }
+
+'''
+replace_one(
+    "    private fun publishDeviceSnapshot() {",
+    known_methods + "    private fun publishDeviceSnapshot() {"
+)
+replace_one(
+    """        _uiState.update { state ->
+            state.copy(
+                discoveredDevices = snapshot,""",
+    """        val visibleDevices = knownTvSnapshot(snapshot)
+        _uiState.update { state ->
+            state.copy(
+                discoveredDevices = visibleDevices,"""
+)
+
+ui_models = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/UiModels.kt")
+model_text = ui_models.read_text(encoding="utf-8")
+model_old = "    val isConnecting: Boolean = false\\n)"
+assert model_text.count(model_old) == 1, "KNOWN_TV_MODEL_ANCHOR_DRIFT"
+ui_models.write_text(model_text.replace(model_old,
+    "    val isConnecting: Boolean = false,\\n    val isOnline: Boolean = true\\n)", 1),
+    encoding="utf-8")
+
+discovery = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/DeviceDiscoveryScreen.kt")
+screen = discovery.read_text(encoding="utf-8")
+def patch_discovery(old: str, new: str) -> None:
+    global screen
+    assert screen.count(old) == 1, "KNOWN_TV_DISCOVERY_ANCHOR_DRIFT " + repr(old[:65])
+    screen = screen.replace(old, new, 1)
+patch_discovery("if (wifiState.isConnected) {",
+    "if (wifiState.isConnected || sessionState.discoveredDevices.isNotEmpty()) {")
+patch_discovery('sessionState.discoveredDevices.size == 1 -> "1 TV found"',
+    'sessionState.discoveredDevices.size == 1 -> "1 TV conhecida"')
+patch_discovery('"\u0024{sessionState.discoveredDevices.size} TVs found"',
+    '"\u0024{sessionState.discoveredDevices.size} TVs conhecidas"')
+patch_discovery(".clickable(enabled = !isBusy) {",
+    ".clickable(enabled = !isBusy && device.isOnline) {")
+patch_discovery("""                        device.isPaired -> {
+                            Surface(""",
+    """                        !device.isOnline -> {
+                            Text("Offline", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        device.isPaired -> {
+                            Surface(""")
+patch_discovery("""                    } else if (isBusy) {
+                        CircularProgressIndicator(""",
+    """                    } else if (!device.isOnline) {
+                        Text("Indisponível", style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if (isBusy) {
+                        CircularProgressIndicator(""")
+discovery.write_text(screen, encoding="utf-8")
+
+print("ANYTV_PERSISTENT_KNOWN_TVS_OFFLINE_VISIBLE_NO_FAKE_CONNECTION_READY")
+
 print("LG_RECONNECT_PAIRING_PATCH_APPLIED_TCL_PATH_PRESERVED")
