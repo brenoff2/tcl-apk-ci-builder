@@ -5171,6 +5171,10 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                             }
+                            if (isLgWebOs && lgLaunchStatus != null) {
+                                Text(lgLaunchStatus, fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                             Text("Selecione o perfil com as direções e confirme com OK.",
                                 fontSize = 12.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
