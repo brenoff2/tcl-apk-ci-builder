@@ -48,7 +48,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: anytv-lg-webos-unsigned-${{ github.ref }}
+  group: anytv-lg-code100-unsigned-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   phone-compile:
