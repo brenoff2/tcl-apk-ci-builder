@@ -77,6 +77,21 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('LgAppIcon(LgWebOsApp(', catalog)
         self.assertIn('Nenhum aplicativo recebido da TV', catalog)
 
+    def test_lg_title_action_uses_webos_launcher_not_tcl_pairing(self):
+        script = Path("scripts/apply_anytv_lg_apps.py").read_text()
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        self.assertIn("isLgWebOs = true,", script)
+        self.assertIn("onLaunchLgApp = onLgAppLaunch,", script)
+        self.assertIn("onLaunchLgApp: (String) -> Unit = {}", catalog)
+        title_handler = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1]
+        lg_handler, tcl_handler = title_handler.split("if (host.isBlank() || pairing.isBlank())", 1)
+        self.assertIn("if (isLgWebOs)", lg_handler)
+        self.assertIn('onLaunchLgApp(app.packageName.removePrefix("lg:"))', lg_handler)
+        self.assertIn("reprodução automática", lg_handler)
+        self.assertIn("TclTvAppApi.openTitle(", tcl_handler)
+        self.assertIn('} else if (!isLgWebOs &&', catalog)
+        self.assertIn("Aplicativos da LG (disponibilidade do título não confirmada)", catalog)
+
     def test_tcl_companion_remains_separate(self):
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertNotIn("TclTvAppApi.apps(", self.bar)
