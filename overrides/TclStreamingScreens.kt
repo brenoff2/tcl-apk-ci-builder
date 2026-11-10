@@ -4435,6 +4435,10 @@ internal fun TclStreamingScreens(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Column(modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())) {
                         Text("Na minha TV", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
+                        if (installedServices.isEmpty()) {
+                            Text("Nenhum aplicativo recebido da TV. Conecte a LG e atualize os aplicativos no controle.",
+                                fontSize = 11.sp)
+                        }
                         installedServices.forEach { app ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(checked = app.packageName !in installedDraft,
