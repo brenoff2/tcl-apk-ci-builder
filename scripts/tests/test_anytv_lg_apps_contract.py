@@ -158,7 +158,8 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn("onLgTitleChange()", catalog)
         handler = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1]
         lg = handler.split("if (host.isBlank() || pairing.isBlank())", 1)[0]
-        self.assertIn("if (details?.media != title.media || details?.id != title.id)", lg)
+        self.assertIn("if (lookupSelectionGeneration != lgTitleSelectionGeneration ||", lg)
+        self.assertIn("details?.media != title.media || details?.id != title.id)", lg)
         self.assertIn("return@launch", lg)
         self.assertIn("if (details?.media == title.media && details?.id == title.id)", lg)
 
