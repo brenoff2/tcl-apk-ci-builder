@@ -131,7 +131,9 @@ fun LgWebOsAppsBar(
         }
     }
 
-    val allApps = apps.distinctBy { it.id }.sortedBy { it.name.lowercase() }
+    val allApps = apps.distinctBy { it.id }.sortedWith(
+        compareBy<LgWebOsApp> { if (it.name.contains("youtube", ignoreCase = true)) 0 else 1 }
+            .thenBy { it.name.lowercase() })
     // Use provider logos only for exact service matches; launcher IDs always come from LG.
     var providerIcons by remember(deviceId) { mutableStateOf<Map<String, String>>(emptyMap()) }
     LaunchedEffect(deviceId, allApps.map { it.name }) {
