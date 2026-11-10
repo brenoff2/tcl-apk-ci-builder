@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cast
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.Home
@@ -172,6 +173,7 @@ fun TclApprovedHomeScreen(
     }
 
     val context = LocalContext.current
+    val openAccount = LocalAnyTvOpenAccount.current
     val view = LocalView.current
     val isConnected = sessionState.connectedDevice != null
     var showKeyboard by rememberSaveable { mutableStateOf(false) }
@@ -252,6 +254,7 @@ fun TclApprovedHomeScreen(
                         isConnected = isConnected,
                         onChooseTv = onOpenDiscovery,
                         onPower = { if (isConnected) onPower() else onOpenDiscovery() },
+                        onAccount = { openAccount?.invoke() },
                         onCast = { onTabSelected(HomeTab.Cast) },
                         onSettings = onOpenSettings
                     )
@@ -469,6 +472,7 @@ private fun TclApprovedHeader(
     isConnected: Boolean,
     onChooseTv: () -> Unit,
     onPower: () -> Unit,
+    onAccount: () -> Unit,
     onCast: () -> Unit,
     onSettings: () -> Unit
 ) {
@@ -483,6 +487,7 @@ private fun TclApprovedHeader(
                 fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar", TclBlue, onPower)
+        TclHeaderAction(Icons.Filled.AccountCircle, "Minha Conta", TclText, onAccount)
         TclHeaderAction(Icons.Filled.Cast, "Transmitir", TclBlue, onCast)
         TclHeaderAction(Icons.Filled.Settings, "Configurações", TclText, onSettings)
     }
