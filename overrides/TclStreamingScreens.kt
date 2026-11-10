@@ -1500,22 +1500,26 @@ private fun StreamingOfferIcons(
                     val installed = apps.firstOrNull {
                         StreamingCatalog.appHasOffer(it, listOf(offer))
                     }
-                    if (installed != null) {
+                    // Provider identity comes from the verified offer artwork, not
+                    // the TV icon format (TCL Base64 vs webOS URLs).
+                    if (offer.logo.startsWith("/")) {
+                        AnyTvPinnedImage(
+                            model = "https://image.tmdb.org/t/p/w92" + offer.logo,
+                            contentDescription = "Disponível em " + offer.name,
+                            modifier = Modifier.size(14.dp),
+                            contentScale = ContentScale.Fit)
+                    } else if (installed?.packageName?.startsWith("lg:") == true) {
+                        LgAppIcon(LgWebOsApp(
+                            installed.packageName.removePrefix("lg:"),
+                            installed.name, installed.icon), 14.dp)
+                    } else if (installed != null) {
                         OfficialTvIcon(installed, 14.dp)
                     } else {
                         Box(modifier = Modifier.size(14.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(MaterialTheme.colorScheme.surfaceContainerHigh),
                             contentAlignment = Alignment.Center) {
-                            if (offer.logo.isNotBlank()) {
-                                AnyTvPinnedImage(
-                                    model = "https://image.tmdb.org/t/p/w92" + offer.logo,
-                                    contentDescription = "Disponível em " + offer.name,
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentScale = ContentScale.Fit)
-                            } else {
-                                Text(offer.name.take(2), fontSize = 8.sp, maxLines = 1)
-                            }
+                            Text(offer.name.take(2), fontSize = 8.sp, maxLines = 1)
                         }
                     }
                 }
@@ -2617,6 +2621,8 @@ internal fun TclStreamingScreens(
             if (app == null) {
                 titleActionFeedback = "Selecione um aplicativo instalado na LG."
             } else {
+                showPlaybackRemote = true
+                remoteMinimized = false
                 onLaunchLgApp(app.packageName.removePrefix("lg:"))
                 titleActionFeedback = "Abertura de " + app.name +
                     " solicitada à LG. A reprodução automática de " + title.name +
