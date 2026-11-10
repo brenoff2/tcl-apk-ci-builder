@@ -1,14 +1,14 @@
-name: AnyTV LG webOS code99 signed QA artifact (NO OTA)
+name: AnyTV LG code99 signed release candidate (MANUAL, NO OTA)
 on:
   workflow_dispatch:
 permissions:
   contents: read
   actions: read
 concurrency:
-  group: anytv-lg-code99-signed-qa
+  group: anytv-lg-code99-signed-candidate
   cancel-in-progress: false
 jobs:
-  sign-qa-only:
+  sign-candidate-only:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -39,9 +39,9 @@ jobs:
           "$BT/aapt" dump badging "$APK" > unsigned-proof/qa-verified-badging.txt
           grep -q "name='com.tclremote.livre.v2' versionCode='99'" unsigned-proof/qa-verified-badging.txt
           grep -q "versionName='2.9.71-AnyTV'" unsigned-proof/qa-verified-badging.txt
-          mkdir -p qa-output
-          "$BT/zipalign" -f 4 "$APK" qa-output/AnyTV_LG_2.9.71_code99_qa_aligned.apk
-          "$BT/zipalign" -c 4 qa-output/AnyTV_LG_2.9.71_code99_qa_aligned.apk
+          mkdir -p signed-candidate
+          "$BT/zipalign" -f 4 "$APK" signed-candidate/AnyTV_LG_2.9.71_code99_candidate_aligned.apk
+          "$BT/zipalign" -c 4 signed-candidate/AnyTV_LG_2.9.71_code99_candidate_aligned.apk
           echo 'LG_CODE99_ORIGINAL_UNSIGNED_SHA_VERIFIED'
       - name: Sign only the QA artifact with pre-existing V2 key
         shell: bash
@@ -51,8 +51,8 @@ jobs:
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check -q 'cryptography==46.0.3'
           umask 077
-          mkdir -m 700 -p signing-qa-private
-          trap 'rm -rf signing-qa-private' EXIT
+          mkdir -m 700 -p signing-candidate-private
+          trap 'rm -rf signing-candidate-private' EXIT
           python3 - <<'PY'
           import base64,hashlib,hmac,json,os,pathlib
           from cryptography.hazmat.primitives import hashes
@@ -73,36 +73,36 @@ jobs:
           assert signer is not None and cert is not None
           assert cert.fingerprint(hashes.SHA256()).hex()==meta['certificate_sha256']
           assert meta['certificate_sha256']=='fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9'
-          (pathlib.Path('signing-qa-private')/'phone.p12').write_bytes(p12)
-          (pathlib.Path('signing-qa-private')/'password').write_bytes(pw)
+          (pathlib.Path('signing-candidate-private')/'phone.p12').write_bytes(p12)
+          (pathlib.Path('signing-candidate-private')/'password').write_bytes(pw)
           print('LG_CODE99_V2_SIGNER_CERT_MATCH')
           PY
-          P12_V2_PASSWORD="$(cat signing-qa-private/password)"
+          P12_V2_PASSWORD="$(cat signing-candidate-private/password)"
           echo "::add-mask::$P12_V2_PASSWORD"
           export P12_V2_PASSWORD
           BT="$ANDROID_HOME/build-tools/36.0.0"
-          "$BT/apksigner" sign --ks signing-qa-private/phone.p12 --ks-type PKCS12 --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD --out qa-output/AnyTV_LG_2.9.71_code99_SIGNED_QA.apk qa-output/AnyTV_LG_2.9.71_code99_qa_aligned.apk
-          "$BT/apksigner" verify --verbose --print-certs qa-output/AnyTV_LG_2.9.71_code99_SIGNED_QA.apk > qa-output/signature-audit.txt
-          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' qa-output/signature-audit.txt
+          "$BT/apksigner" sign --ks signing-candidate-private/phone.p12 --ks-type PKCS12 --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD --out signed-candidate/AnyTV_LG_2.9.71_code99_SIGNED_CANDIDATE.apk signed-candidate/AnyTV_LG_2.9.71_code99_candidate_aligned.apk
+          "$BT/apksigner" verify --verbose --print-certs signed-candidate/AnyTV_LG_2.9.71_code99_SIGNED_CANDIDATE.apk > signed-candidate/signature-audit.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-candidate/signature-audit.txt
           EXPECTED_CERT="$(python3 -c 'import json;print(json.load(open("signing-recovery/v2/identity.json"))["certificate_sha256"])')"
-          grep -qi "$EXPECTED_CERT" qa-output/signature-audit.txt
-          "$BT/aapt" dump badging qa-output/AnyTV_LG_2.9.71_code99_SIGNED_QA.apk > qa-output/badging.txt
-          grep -q "name='com.tclremote.livre.v2' versionCode='99'" qa-output/badging.txt
-          grep -q "versionName='2.9.71-AnyTV'" qa-output/badging.txt
-          "$BT/zipalign" -c 4 qa-output/AnyTV_LG_2.9.71_code99_SIGNED_QA.apk
-          sha256sum qa-output/AnyTV_LG_2.9.71_code99_SIGNED_QA.apk > qa-output/SHA256.txt
-          printf '%s\n' 'LG webOS TEST ONLY. Internal signed QA code99. No OTA, release or auto-install.' > qa-output/READ_ME.txt
-          rm -f qa-output/AnyTV_LG_2.9.71_code99_qa_aligned.apk
-          echo 'LG_CODE99_SIGNED_QA_VERIFIED_NO_OTA'
-      - name: Upload signed APK for personal testing only
+          grep -qi "$EXPECTED_CERT" signed-candidate/signature-audit.txt
+          "$BT/aapt" dump badging signed-candidate/AnyTV_LG_2.9.71_code99_SIGNED_CANDIDATE.apk > signed-candidate/badging.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='99'" signed-candidate/badging.txt
+          grep -q "versionName='2.9.71-AnyTV'" signed-candidate/badging.txt
+          "$BT/zipalign" -c 4 signed-candidate/AnyTV_LG_2.9.71_code99_SIGNED_CANDIDATE.apk
+          sha256sum signed-candidate/AnyTV_LG_2.9.71_code99_SIGNED_CANDIDATE.apk > signed-candidate/SHA256.txt
+          printf '%s\n' 'AnyTV V2 code99 signed candidate. No OTA publication, no auto-install. Device QA pending.' > signed-candidate/READ_ME.txt
+          rm -f signed-candidate/AnyTV_LG_2.9.71_code99_candidate_aligned.apk
+          echo 'LG_CODE99_SIGNED_CANDIDATE_VERIFIED_NO_OTA'
+      - name: Upload signed candidate, no publication
         uses: actions/upload-artifact@v4
         with:
-          name: anytv-lg-code99-signed-qa-test-only
+          name: anytv-lg-code99-signed-candidate
           path: |
-            qa-output/AnyTV_LG_2.9.71_code99_SIGNED_QA.apk
-            qa-output/SHA256.txt
-            qa-output/badging.txt
-            qa-output/signature-audit.txt
-            qa-output/READ_ME.txt
+            signed-candidate/AnyTV_LG_2.9.71_code99_SIGNED_CANDIDATE.apk
+            signed-candidate/SHA256.txt
+            signed-candidate/badging.txt
+            signed-candidate/signature-audit.txt
+            signed-candidate/READ_ME.txt
           retention-days: 7
           if-no-files-found: error
