@@ -509,6 +509,90 @@ patch_discovery("""                    } else if (isBusy) {
                         CircularProgressIndicator(""")
 discovery.write_text(screen, encoding="utf-8")
 
+
+# TV aliases are local UI labels, not changes to ConnectSDK device identity.
+replace_one(
+    'name = friendlyName ?: "Android TV",',
+    'name = prefs.getString("anytv_tv_alias_" + id, null)?.takeIf { it.isNotBlank() } ?: (friendlyName ?: "Android TV"),'
+)
+replace_one(
+    "    private fun knownTvSnapshot(live: List<DeviceUiModel>): List<DeviceUiModel> {",
+    '''    fun renameKnownTv(deviceId: String, label: String) {
+        val cleanName = label.trim().take(48)
+        if (deviceId.isBlank() || cleanName.isBlank()) return
+        prefs.edit { putString("anytv_tv_alias_" + deviceId, cleanName) }
+        publishDeviceSnapshot()
+    }
+
+    private fun knownTvSnapshot(live: List<DeviceUiModel>): List<DeviceUiModel> {'''
+)
+replace_one(
+    'name = item.optString("name", "TV"),',
+    'name = prefs.getString("anytv_tv_alias_" + id, null)?.takeIf { it.isNotBlank() } ?: item.optString("name", "TV"),'
+)
+
+navigation = Path("source/app/src/main/java/com/hari/androidtvremote/navigation/AppNavGraph.kt")
+nav_content = navigation.read_text(encoding="utf-8")
+nav_anchor = "                onClearStatus = tvRemoteViewModel::clearStatus\\n            )"
+assert nav_content.count(nav_anchor) == 1, "KNOWN_TV_RENAME_NAV_ANCHOR_DRIFT"
+navigation.write_text(nav_content.replace(nav_anchor,
+    "                onClearStatus = tvRemoteViewModel::clearStatus,\\n"
+    "                onRename = tvRemoteViewModel::renameKnownTv\\n            )", 1), encoding="utf-8")
+
+screen = discovery.read_text(encoding="utf-8")
+patch_discovery(
+    "    onClearStatus: () -> Unit\\n) {",
+    "    onClearStatus: () -> Unit,\\n    onRename: (String, String) -> Unit\\n) {"
+)
+patch_discovery(
+    "    var disconnectPendingDevice by remember { mutableStateOf<DeviceUiModel?>(null) }",
+    """    var disconnectPendingDevice by remember { mutableStateOf<DeviceUiModel?>(null) }
+    var renamePendingDevice by remember { mutableStateOf<DeviceUiModel?>(null) }
+    var renameDraft by remember(renamePendingDevice?.id) {
+        mutableStateOf(renamePendingDevice?.name.orEmpty())
+    }
+    renamePendingDevice?.let { device ->
+        AlertDialog(
+            onDismissRequest = { renamePendingDevice = null },
+            title = { Text("Renomear TV") },
+            text = {
+                OutlinedTextField(value = renameDraft,
+                    onValueChange = { renameDraft = it.take(48) },
+                    label = { Text("Nome da TV") }, singleLine = true)
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onRename(device.id, renameDraft)
+                    renamePendingDevice = null
+                }, enabled = renameDraft.isNotBlank()) { Text("Salvar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { renamePendingDevice = null }) { Text("Cancelar") }
+            }
+        )
+    }"""
+)
+patch_discovery(
+    "                                onDisconnect = { disconnectPendingDevice = device }",
+    "                                onDisconnect = { disconnectPendingDevice = device },\\n"
+    "                                onRename = { renamePendingDevice = device }"
+)
+patch_discovery(
+    "    onDisconnect: () -> Unit\\n) {",
+    "    onDisconnect: () -> Unit,\\n    onRename: () -> Unit\\n) {"
+)
+patch_discovery(
+    """                        overflow = TextOverflow.Ellipsis
+                    )""",
+    """                        overflow = TextOverflow.Ellipsis
+                    )
+                    TextButton(onClick = onRename, contentPadding = PaddingValues(0.dp)) {
+                        Text("Renomear", style = MaterialTheme.typography.labelSmall)
+                    }"""
+)
+discovery.write_text(screen, encoding="utf-8")
+print("ANYTV_KNOWN_TV_RENAME_LOCAL_ALIAS_READY")
+
 print("ANYTV_PERSISTENT_KNOWN_TVS_OFFLINE_VISIBLE_NO_FAKE_CONNECTION_READY")
 
 print("LG_RECONNECT_PAIRING_PATCH_APPLIED_TCL_PATH_PRESERVED")
