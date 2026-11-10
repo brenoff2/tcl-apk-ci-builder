@@ -58,7 +58,7 @@ import java.net.URL
 data class LgWebOsApp(val id: String, val name: String, val icon: String = "")
 
 @Composable
-private fun LgAppIcon(app: LgWebOsApp, size: Dp = 52.dp, fallbackIcon: String = "") {
+internal fun LgAppIcon(app: LgWebOsApp, size: Dp = 52.dp, fallbackIcon: String = "") {
     val officialYouTubeIcon = if (app.name.contains("youtube", ignoreCase = true))
         "https://www.gstatic.com/youtube/img/branding/favicon/favicon_144x144.png" else ""
     val sources = listOf(app.icon.trim(), fallbackIcon, officialYouTubeIcon).filter { source ->
