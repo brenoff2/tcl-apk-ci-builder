@@ -151,6 +151,66 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('A ficha e a reprodução ainda não foram confirmadas.', catalog)
         self.assertNotIn('Ficha Netflix solicitada na LG. Confirme na TV.', script)
 
+    def test_lg01_lg10_qa_cases_have_code_regression_coverage(self):
+        """The plan stays pending; this test only checks static implementation guards."""
+        qa = Path("docs/qa/ANYTV_V2_2.9.25_DEVICE_HOMOLOGATION_PLAN_20261025.md").read_text()
+        script = Path("scripts/apply_anytv_lg_apps.py").read_text()
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        source = script + "\n" + catalog + "\n" + self.vm + "\n" + self.bar + "\n" + self.home
+        guards = {
+            "LG01": ('TvOfficialApp("lg:" + app.id, app.name, app.icon)', 'LgAppIcon(LgWebOsApp(', 'offer.logo.startsWith("/")'),
+            "LG02": ('if (title.media == "movie" && anyTvServiceKey(app.name) == "netflix")',
+                     'titleAvailableInBrazil(', 'onLaunchLgNetflixTitle(netflixId)',
+                     'showPlaybackRemote = true'),
+            "LG03": ('if (netflixId != null)', 'onLaunchLgApp(lgId)',
+                     'Não foi confirmado um ID Netflix'),
+            "LG04": ('title.media == "movie"', 'service.launchNetflix(contentId'),
+            "LG05": ('onLaunchLgApp(lgId)', 'Ainda não há deep link validado'),
+            "LG06": ('onLaunchLgApp(lgId)', 'it.packageName.startsWith("lg:")'),
+            "LG07": ('LG: sem TV conectada; não enviado.',
+                     'LG: aplicativo ausente do inventário; não enviado.'),
+            "LG08": ('LG: comando rejeitado pela TV.',
+                     'LG: sem resposta em 10 segundos; confira a conexão webOS.',
+                     'requestId == lgLaunchRequestSeq'),
+            "LG09": ('LG: comando aceito; aplicativo não confirmado visualmente.',
+                     'lgLaunchStatus = sessionState.lgLaunchStatus,'),
+            "LG10": ('TclTvAppApi.openTitle(', '} else TclInstalledAppsBar(',
+                     'PlaybackTransportBar(onRemoteKey = send)'),
+        }
+        for case_id, fragments in guards.items():
+            with self.subTest(case=case_id):
+                self.assertIn("| " + case_id + " |", qa)
+                self.assertIn("| PENDENTE |", qa.split("| " + case_id + " |", 1)[1].split("\n", 1)[0])
+                for fragment in fragments:
+                    self.assertIn(fragment, source)
+        self.assertEqual(len(guards), 10)
+
+    def test_lg05_lg06_do_not_invent_youtube_or_provider_deep_links(self):
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        handler = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1]
+        lg = handler.split("if (host.isBlank() || pairing.isBlank())", 1)[0]
+        self.assertIn('if (title.media == "movie" && anyTvServiceKey(app.name) == "netflix")', lg)
+        fallback = lg.split('} else {\n                    onLaunchLgApp(lgId)', 1)[1]
+        self.assertIn("Ainda não há deep link validado", fallback)
+        self.assertNotIn("launchYouTube(", lg)
+        self.assertNotIn("TclTvAppApi.openTitle(", lg)
+        self.assertNotIn("StreamingCatalog.titleDeepLink(", fallback)
+        self.assertNotIn("onLaunchLgNetflixTitle(", fallback)
+
+    def test_lg07_lg09_callback_result_is_not_playback_or_raw_sdk_error(self):
+        script = Path("scripts/apply_anytv_lg_apps.py").read_text()
+        methods = script.split("    fun launchLgNetflixTitle(contentId: String) {", 1)[1]
+        methods = methods.split("'''\npatch(vm,", 1)[0]
+        self.assertIn('setLgLaunchStatus("LG: comando enviado; aguardando resposta.")', methods)
+        self.assertIn("requestId == lgLaunchRequestSeq", methods)
+        self.assertIn('LG: comando Netflix aceito; título não confirmado.', methods)
+        self.assertIn('LG: comando aceito; aplicativo não confirmado visualmente.', methods)
+        self.assertIn('LG: comando rejeitado pela TV.', methods)
+        self.assertIn('LG: sem resposta em 10 segundos; confira a conexão webOS.', script)
+        self.assertNotIn("error?.message", methods)
+        self.assertNotIn("Aplicativo aberto na LG.", methods)
+        self.assertNotIn("reprodução iniciada", methods)
+
     def test_tcl_companion_remains_separate(self):
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertNotIn("TclTvAppApi.apps(", self.bar)
