@@ -1680,6 +1680,7 @@ internal fun TclStreamingScreens(
     isLgWebOs: Boolean = false,
     onLaunchLgApp: (String) -> Unit = {},
     onLaunchLgNetflixTitle: (String) -> Unit = {},
+    onLgTitleChange: () -> Unit = {},
     lgLaunchStatus: String? = null
 ) {
     val context = LocalContext.current
@@ -2041,6 +2042,13 @@ internal fun TclStreamingScreens(
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<StreamingTitle?>(null) }
+    LaunchedEffect(isLgWebOs, details?.media, details?.id) {
+        if (isLgWebOs) {
+            onLgTitleChange()
+            titleActionPending = false
+            titleActionFeedback = null
+        }
+    }
     var trailerLink by remember { mutableStateOf<String?>(null) }
     var relatedTitles by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     var detailCast by remember { mutableStateOf<List<StreamingActor>>(emptyList()) }
@@ -2639,6 +2647,9 @@ internal fun TclStreamingScreens(
                             val netflixId = Regex(
                                 "^https://www\\.netflix\\.com/title/([0-9]{6,8})$")
                                 .matchEntire(official.orEmpty())?.groupValues?.get(1)
+                            if (details?.media != title.media || details?.id != title.id) {
+                                return@launch
+                            }
                             if (netflixId != null) {
                                 onLaunchLgNetflixTitle(netflixId)
                                 titleActionFeedback = "Comando Netflix enviado para " +
@@ -2650,10 +2661,13 @@ internal fun TclStreamingScreens(
                                     "use o controle para procurar " + title.name + "."
                             }
                         } catch (error: Exception) {
+                            if (details?.media != title.media || details?.id != title.id) return@launch
                             titleActionFeedback = "Falha ao verificar o título Netflix: " +
                                 (error.message ?: "tente novamente")
                         } finally {
-                            titleActionPending = false
+                            if (details?.media == title.media && details?.id == title.id) {
+                                titleActionPending = false
+                            }
                         }
                     }
                 } else {
