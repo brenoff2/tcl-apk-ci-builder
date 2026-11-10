@@ -109,6 +109,20 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn("TclResponsivePad(", catalog)
         self.assertIn("PlaybackTransportBar(onRemoteKey = send)", catalog)
 
+    def test_netflix_content_id_is_verified_and_uses_existing_webos_launcher(self):
+        script = Path("scripts/apply_anytv_lg_apps.py").read_text()
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        self.assertIn('onLgNetflixTitle = tvRemoteViewModel::launchLgNetflixTitle', script)
+        self.assertIn('onLaunchLgNetflixTitle = onLgNetflixTitle', script)
+        self.assertIn('service.launchNetflix(contentId, object : Launcher.AppLaunchListener', script)
+        self.assertIn('contentId.matches(Regex("[0-9]{6,9}"))', script)
+        self.assertIn('onLaunchLgNetflixTitle: (String) -> Unit = {}', catalog)
+        self.assertIn('StreamingCatalog.titleDeepLink(token, title, "com.netflix.ninja")', catalog)
+        self.assertIn('StreamingCatalog.titleAvailableInBrazil(', catalog)
+        self.assertIn('onLaunchLgNetflixTitle(netflixId)', catalog)
+        self.assertIn('if (netflixId != null)', catalog)
+        self.assertIn('onLaunchLgApp(lgId)', catalog)
+
     def test_tcl_companion_remains_separate(self):
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertNotIn("TclTvAppApi.apps(", self.bar)
