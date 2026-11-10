@@ -2625,7 +2625,7 @@ internal fun TclStreamingScreens(
                 showPlaybackRemote = true
                 remoteMinimized = false
                 val lgId = app.packageName.removePrefix("lg:")
-                if (anyTvServiceKey(app.name) == "netflix") {
+                if (title.media == "movie" && anyTvServiceKey(app.name) == "netflix") {
                     titleActionPending = true
                     titleActionFeedback = "Verificando o identificador oficial Netflix..."
                     scope.launch {
