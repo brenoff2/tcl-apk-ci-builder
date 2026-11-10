@@ -131,6 +131,17 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('if (netflixId != null)', catalog)
         self.assertIn('onLaunchLgApp(lgId)', catalog)
 
+    def test_lg_provider_change_invalidates_pending_netflix_lookup(self):
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        detail_picker = catalog.split("eligible.forEach { app ->", 1)[1]
+        detail_picker = detail_picker.split("detailsPackage = app.packageName", 1)[0]
+        self.assertIn("if (isLgWebOs && detailsPackage != app.packageName)", detail_picker)
+        self.assertIn("lgTitleSelectionGeneration += 1", detail_picker)
+        self.assertIn("onLgTitleChange()", detail_picker)
+        self.assertIn("titleActionPending = false", detail_picker)
+        self.assertIn("titleActionFeedback = null", detail_picker)
+        self.assertIn("lookupSelectionGeneration != lgTitleSelectionGeneration", catalog)
+
     def test_lg_reopen_same_title_rejects_prior_netflix_lookup(self):
         catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
         self.assertIn("var lgTitleSelectionGeneration by remember { mutableIntStateOf(0) }", catalog)
