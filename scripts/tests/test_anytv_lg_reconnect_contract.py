@@ -40,6 +40,16 @@ class LGReconnectContract(unittest.TestCase):
         self.assertIn(".clickable(enabled = !isBusy && device.isOnline)", self.discovery)
         self.assertIn('Text("Indisponível"', self.discovery)
 
+    def test_local_rename_does_not_change_device_identity_or_tcl_transport(self):
+        nav = Path("source/app/src/main/java/com/hari/androidtvremote/navigation/AppNavGraph.kt").read_text()
+        self.assertIn("fun renameKnownTv(deviceId: String, label: String)", self.vm)
+        self.assertIn('"anytv_tv_alias_" + deviceId', self.vm)
+        self.assertIn('name = prefs.getString("anytv_tv_alias_" + id, null)', self.vm)
+        self.assertIn('onRename = tvRemoteViewModel::renameKnownTv', nav)
+        self.assertIn('Text("Renomear TV")', self.discovery)
+        self.assertIn('Text("Renomear", style =', self.discovery)
+        self.assertIn('onRename(device.id, renameDraft)', self.discovery)
+
     def test_lg_reconnect_never_uses_android_tls_host(self):
         self.assertIn('private fun scheduleLgReconnect(targetId: String)', self.vm)
         self.assertIn('for (attempt in 1..6)', self.vm)
