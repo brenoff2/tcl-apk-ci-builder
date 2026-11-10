@@ -159,6 +159,13 @@ patch(home,
                     } else TclInstalledAppsBar(''')
 # Keep the existing shared Streaming catalogue route. It displays content without
 # pretending that LG uses the TCL companion or that a banner launches a title.
+# The LG catalogue must receive REAL app inventory from the LG session, not an
+# empty TCL companion list. Prefix webOS IDs so no Android package is fabricated.
+patch(home,
+    '''                            apps = emptyList(), host = "", pairing = "",''',
+    '''                            apps = sessionState.lgWebOsApps.map { app ->
+                                TvOfficialApp("lg:" + app.id, app.name, app.icon)
+                            }, host = "", pairing = "",''')
 destination = root / "ui/app/LgWebOsAppsBar.kt"
 assert not destination.exists(), "LG_APP_FILE_ALREADY_EXISTS"
 destination.write_text(Path("overrides/LgWebOsAppsBar.kt").read_text(encoding="utf-8"), encoding="utf-8")
