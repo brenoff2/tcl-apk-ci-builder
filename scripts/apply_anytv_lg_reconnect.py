@@ -533,16 +533,16 @@ replace_one(
 
 navigation = Path("source/app/src/main/java/com/hari/androidtvremote/navigation/AppNavGraph.kt")
 nav_content = navigation.read_text(encoding="utf-8")
-nav_anchor = "                onClearStatus = tvRemoteViewModel::clearStatus\\n            )"
+nav_anchor = "                onClearStatus = tvRemoteViewModel::clearStatus\n            )"
 assert nav_content.count(nav_anchor) == 1, "KNOWN_TV_RENAME_NAV_ANCHOR_DRIFT"
 navigation.write_text(nav_content.replace(nav_anchor,
-    "                onClearStatus = tvRemoteViewModel::clearStatus,\\n"
-    "                onRename = tvRemoteViewModel::renameKnownTv\\n            )", 1), encoding="utf-8")
+    "                onClearStatus = tvRemoteViewModel::clearStatus,\n"
+    "                onRename = tvRemoteViewModel::renameKnownTv\n            )", 1), encoding="utf-8")
 
 screen = discovery.read_text(encoding="utf-8")
 patch_discovery(
-    "    onClearStatus: () -> Unit\\n) {",
-    "    onClearStatus: () -> Unit,\\n    onRename: (String, String) -> Unit\\n) {"
+    "    onClearStatus: () -> Unit\n) {",
+    "    onClearStatus: () -> Unit,\n    onRename: (String, String) -> Unit\n) {"
 )
 patch_discovery(
     "    var disconnectPendingDevice by remember { mutableStateOf<DeviceUiModel?>(null) }",
@@ -574,12 +574,12 @@ patch_discovery(
 )
 patch_discovery(
     "                                onDisconnect = { disconnectPendingDevice = device }",
-    "                                onDisconnect = { disconnectPendingDevice = device },\\n"
+    "                                onDisconnect = { disconnectPendingDevice = device },\n"
     "                                onRename = { renamePendingDevice = device }"
 )
 patch_discovery(
-    "    onDisconnect: () -> Unit\\n) {",
-    "    onDisconnect: () -> Unit,\\n    onRename: () -> Unit\\n) {"
+    "    onDisconnect: () -> Unit\n) {",
+    "    onDisconnect: () -> Unit,\n    onRename: () -> Unit\n) {"
 )
 patch_discovery(
     """                        overflow = TextOverflow.Ellipsis
