@@ -58,29 +58,31 @@ import java.net.URL
 data class LgWebOsApp(val id: String, val name: String, val icon: String = "")
 
 @Composable
-private fun LgAppIcon(app: LgWebOsApp, size: Dp = 52.dp) {
-    var image by remember(app.icon) { mutableStateOf<ImageBitmap?>(null) }
-    LaunchedEffect(app.icon) {
+private fun LgAppIcon(app: LgWebOsApp, size: Dp = 52.dp, fallbackIcon: String = "") {
+    val sources = listOf(app.icon.trim(), fallbackIcon).filter { source ->
+        source.startsWith("http://") || source.startsWith("https://")
+    }.distinct()
+    var image by remember(sources) { mutableStateOf<ImageBitmap?>(null) }
+    LaunchedEffect(sources) {
         image = null
-        val source = app.icon.trim()
-        if (source.isEmpty() ||
-            !(source.startsWith("http://") || source.startsWith("https://"))) return@LaunchedEffect
         image = withContext(Dispatchers.IO) {
-            runCatching {
-                val connection = URL(source).openConnection() as HttpURLConnection
-                connection.connectTimeout = 2500
-                connection.readTimeout = 2500
-                try {
-                    val type = connection.contentType.orEmpty().lowercase()
-                    val length = connection.contentLengthLong
-                    if (!type.startsWith("image/") || length > 512_000) null
-                    else connection.inputStream.use { input ->
-                        val bytes = input.readNBytes(512_001)
-                        if (bytes.size > 512_000) null
-                        else BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-                    }
-                } finally { connection.disconnect() }
-            }.getOrNull()
+            sources.firstNotNullOfOrNull { source ->
+                runCatching {
+                    val connection = URL(source).openConnection() as HttpURLConnection
+                    connection.connectTimeout = 2500
+                    connection.readTimeout = 2500
+                    try {
+                        val type = connection.contentType.orEmpty().lowercase()
+                        val length = connection.contentLengthLong
+                        if (!type.startsWith("image/") || length > 512_000) null
+                        else connection.inputStream.use { input ->
+                            val bytes = input.readNBytes(512_001)
+                            if (bytes.size > 512_000) null
+                            else BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                        }
+                    } finally { connection.disconnect() }
+                }.getOrNull()
+            }
         }
     }
     Box(Modifier.size(size).clip(RoundedCornerShape(15.dp))
@@ -114,6 +116,17 @@ fun LgWebOsAppsBar(
     var showLaunchPicker by remember(deviceId) { mutableStateOf(false) }
 
     val allApps = apps.distinctBy { it.id }.sortedBy { it.name.lowercase() }
+    // Use provider logos only for exact service matches; launcher IDs always come from LG.
+    var providerIcons by remember(deviceId) { mutableStateOf<Map<String, String>>(emptyMap()) }
+    LaunchedEffect(deviceId) {
+        providerIcons = runCatching {
+            anyTvBrazilProviders().filter { it.logo.isNotBlank() }.associate { provider ->
+                anyTvServiceKey(provider.name) to
+                    ("https://image.tmdb.org/t/p/w92" + provider.logo)
+            }
+        }.getOrDefault(emptyMap())
+    }
+    fun appLogo(app: LgWebOsApp): String = providerIcons[anyTvServiceKey(app.name)].orEmpty()
     val selectedApps = if (!hasUserFavorites) allApps.take(6)
         else allApps.filter { it.id in favorites }
 
@@ -127,7 +140,7 @@ fun LgWebOsAppsBar(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
-                        LgAppIcon(app, 52.dp)
+                        LgAppIcon(app, 52.dp, appLogo(app))
                         Text(app.name, fontSize = 10.sp, maxLines = 1,
                             color = Color.White, textAlign = TextAlign.Center,
                             overflow = TextOverflow.Ellipsis)
@@ -180,7 +193,7 @@ fun LgWebOsAppsBar(
                     LazyColumn(modifier = Modifier.heightIn(max = 440.dp)) {
                         items(displayed, key = { it.id }) { app ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                LgAppIcon(app, 36.dp)
+                                LgAppIcon(app, 36.dp, appLogo(app))
                                 Text(app.name, fontSize = 12.sp,
                                     modifier = Modifier.weight(1f).padding(start = 8.dp))
                                 Checkbox(checked = app.id in draft,
@@ -227,7 +240,7 @@ fun LgWebOsAppsBar(
                                 .clickable { showLaunchPicker = false; onLaunch(app.id) }
                                 .padding(vertical = 5.dp),
                                 verticalAlignment = Alignment.CenterVertically) {
-                                LgAppIcon(app, 36.dp)
+                                LgAppIcon(app, 36.dp, appLogo(app))
                                 Text(app.name, modifier = Modifier.padding(start = 9.dp),
                                     fontSize = 13.sp)
                             }
