@@ -43,8 +43,9 @@ class LgWebOsContract(unittest.TestCase):
         self.assertIn('sessionState.connectedDevice?.type == "LG webOS"', self.home)
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertIn("LgWebOsAppsBar(", self.home)
-        # Empty TCL companion data is deliberate: LG opens the shared catalog only.
-        self.assertIn('apps = emptyList(), host = "", pairing = ""', self.home)
+        # LG catalogue derives real installed-app identities, never TCL packages.
+        self.assertIn('TvOfficialApp("lg:" + app.id, app.name, app.icon)', self.home)
+        self.assertNotIn('apps = emptyList(), host = "", pairing = ""', self.home)
         self.assertIn("onOpenStreaming = { lgStreaming = true }", self.home)
         self.assertIn('if (lgStreaming && sessionState.connectedDevice?.type == "LG webOS")', self.home)
         self.assertIn('if (sessionState.connectedDevice?.type == "LG webOS") remoteKey(it)', self.home)
