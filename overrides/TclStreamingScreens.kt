@@ -1672,7 +1672,9 @@ internal fun TclStreamingScreens(
     onRemoteHoldStart: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
     onRemoteHoldEnd: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
     onKeyboardText: (String) -> Unit = {},
-    onKeyboardEnter: () -> Unit = {}
+    onKeyboardEnter: () -> Unit = {},
+    isLgWebOs: Boolean = false,
+    onLaunchLgApp: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     StreamingCatalog.configure(context)
@@ -2588,6 +2590,13 @@ internal fun TclStreamingScreens(
     }
 
     fun openOnTv(app: TvOfficialApp) {
+        if (isLgWebOs) {
+            if (app.packageName.startsWith("lg:") && app.packageName in apps.map { it.packageName }) {
+                onLaunchLgApp(app.packageName.removePrefix("lg:"))
+                message = "Abertura de " + app.name + " solicitada à LG. Confira a TV."
+            } else message = "Aplicativo não encontrado na LG conectada."
+            return
+        }
         if (host.isBlank() || pairing.isBlank()) {
             message = "Conecte o AnyTV Connect e vincule a TV antes de abrir aplicativos."
         } else {
@@ -2602,6 +2611,20 @@ internal fun TclStreamingScreens(
 
     fun searchOnTv(title: StreamingTitle, packageName: String) {
         if (titleActionPending) return
+        if (isLgWebOs) {
+            val app = apps.firstOrNull { it.packageName == packageName &&
+                it.packageName.startsWith("lg:") }
+            if (app == null) {
+                titleActionFeedback = "Selecione um aplicativo instalado na LG."
+            } else {
+                onLaunchLgApp(app.packageName.removePrefix("lg:"))
+                titleActionFeedback = "Abertura de " + app.name +
+                    " solicitada à LG. A reprodução automática de " + title.name +
+                    " não é suportada sem um link oficial compatível. " +
+                    "Confirme a abertura na TV e procure o título no aplicativo."
+            }
+            return
+        }
         if (host.isBlank() || pairing.isBlank()) {
             titleActionFeedback = "Vincule o AnyTV Connect com o código de oito dígitos. " +
                 "A conexão do controle remoto é independente."
@@ -4960,12 +4983,16 @@ internal fun TclStreamingScreens(
                             "Enviando…" else "Solicitar liberação") }
                     }
                     if (selected == null) {
-                        val eligible = displayed.filter { app ->
+                        val confirmed = displayed.filter { app ->
                             detailsOffers?.let { StreamingCatalog.appHasOffer(app, it) } == true ||
                                 (officialDisneyTitle && app.packageName == "com.disney.disneyplus")
                         }
+                        val eligible = if (isLgWebOs && confirmed.isEmpty())
+                            displayed.filter { it.packageName.startsWith("lg:") } else confirmed
                         if (eligible.isNotEmpty()) {
-                            Text("Abrir em aplicativo instalado na TV:", fontSize = 12.sp)
+                            Text(if (isLgWebOs && confirmed.isEmpty())
+                                "Aplicativos da LG (disponibilidade do título não confirmada):"
+                                else "Abrir em aplicativo instalado na TV:", fontSize = 12.sp)
                             Row(modifier = Modifier.horizontalScroll(rememberScrollState()),
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 eligible.forEach { app ->
@@ -4989,7 +5016,9 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         } else {
-                            Text("Nenhum aplicativo instalado na TCL foi confirmado para este título.",
+                            Text(if (isLgWebOs)
+                                "Nenhum aplicativo de streaming foi recebido da LG. Atualize a lista na tela principal."
+                                else "Nenhum aplicativo instalado na TCL foi confirmado para este título.",
                                 fontSize = 11.sp)
                         }
                     }
@@ -5020,7 +5049,7 @@ internal fun TclStreamingScreens(
                 Button(onClick = {
                     if (pkg.isBlank()) {
                         titleActionFeedback = "Selecione um serviço disponível para este título."
-                    } else if (!(officialDisneyTitle && pkg == "com.disney.disneyplus") &&
+                    } else if (!isLgWebOs && !(officialDisneyTitle && pkg == "com.disney.disneyplus") &&
                         detailsOffers?.let { offers ->
                             displayed.any { app -> app.packageName == pkg &&
                                 StreamingCatalog.appHasOffer(app, offers) } } != true) {
