@@ -1193,7 +1193,10 @@ internal fun AnyTvPinnedImage(
 
 /** Short interactive carousel: name and entry affordance left, official artwork right. */
 @Composable
-internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
+internal fun AnyTvHomeFilmBanner(
+    onOpenStreaming: () -> Unit,
+    onOpenTitle: ((StreamingTitle) -> Unit)? = null
+) {
     val context = LocalContext.current
     var previews by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     val previewProviders = remember { mutableStateMapOf<Int, StreamingOffer?>() }
@@ -1251,7 +1254,9 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
                     }
                 }
                 // Real TMDB art fills the hero, fading into the graphite text side.
-                Box(modifier = Modifier.fillMaxSize()) {
+                Box(modifier = Modifier.fillMaxSize().clickable {
+                    if (onOpenTitle != null) onOpenTitle(movie) else onOpenStreaming()
+                }.semantics { contentDescription = "Abrir detalhes de " + movie.name }) {
                     AnyTvPinnedImage(
                         model = "https://image.tmdb.org/t/p/w500" +
                             movie.backdrop.ifBlank { movie.poster },
@@ -1300,6 +1305,10 @@ internal fun AnyTvHomeFilmBanner(onOpenStreaming: () -> Unit) {
         }
     }
 }
+
+/** Offers are catalog identities, never LG launch IDs or automatic playback tokens. */
+internal suspend fun anyTvOffersForTitle(title: StreamingTitle): List<StreamingOffer> =
+    StreamingCatalog.offersInBrazil(title)
 
 /** Shadowed score over original poster artwork. */
 @Composable
