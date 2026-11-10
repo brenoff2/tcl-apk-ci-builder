@@ -131,6 +131,19 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('if (netflixId != null)', catalog)
         self.assertIn('onLaunchLgApp(lgId)', catalog)
 
+    def test_lg_reopen_same_title_rejects_prior_netflix_lookup(self):
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        self.assertIn("var lgTitleSelectionGeneration by remember { mutableIntStateOf(0) }", catalog)
+        effect = catalog.split("LaunchedEffect(isLgWebOs, details?.media, details?.id)", 1)[1]
+        self.assertIn("lgTitleSelectionGeneration += 1", effect.split("var trailerLink", 1)[0])
+        handler = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1]
+        lg = handler.split("if (host.isBlank() || pairing.isBlank())", 1)[0]
+        self.assertIn("val lookupSelectionGeneration = lgTitleSelectionGeneration", lg)
+        self.assertIn("lookupSelectionGeneration != lgTitleSelectionGeneration", lg)
+        self.assertIn("lookupSelectionGeneration == lgTitleSelectionGeneration", lg)
+        self.assertIn("return@launch", lg)
+        self.assertIn("onLaunchLgNetflixTitle(netflixId)", lg)
+
     def test_lg_title_switch_invalidates_old_result_and_old_netflix_lookup(self):
         script = Path("scripts/apply_anytv_lg_apps.py").read_text()
         catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
