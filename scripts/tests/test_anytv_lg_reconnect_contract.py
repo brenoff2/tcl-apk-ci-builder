@@ -28,6 +28,18 @@ class LGReconnectContract(unittest.TestCase):
         self.assertNotIn('(!pairedHost.isNullOrBlank() && device.ipAddress == pairedHost)', self.vm)
         self.assertIn('connectedDevice = snapshot.firstOrNull { it.isConnected }', self.vm)
 
+    def test_known_tvs_stay_visible_offline_without_fake_connection(self):
+        self.assertIn('"anytv_known_tvs_v1"', self.vm)
+        self.assertIn("private fun knownTvSnapshot(live: List<DeviceUiModel>)", self.vm)
+        self.assertIn("val visibleDevices = knownTvSnapshot(snapshot)", self.vm)
+        self.assertIn("discoveredDevices = visibleDevices", self.vm)
+        self.assertIn("isOnline = false", self.vm)
+        self.assertIn("val isOnline: Boolean = true",
+                      (ROOT / "UiModels.kt").read_text())
+        self.assertIn("!device.isOnline ->", self.discovery)
+        self.assertIn(".clickable(enabled = !isBusy && device.isOnline)", self.discovery)
+        self.assertIn('Text("Indisponível"', self.discovery)
+
     def test_lg_reconnect_never_uses_android_tls_host(self):
         self.assertIn('private fun scheduleLgReconnect(targetId: String)', self.vm)
         self.assertIn('for (attempt in 1..6)', self.vm)
