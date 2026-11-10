@@ -131,6 +131,24 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('if (netflixId != null)', catalog)
         self.assertIn('onLaunchLgApp(lgId)', catalog)
 
+    def test_lg_title_switch_invalidates_old_result_and_old_netflix_lookup(self):
+        script = Path("scripts/apply_anytv_lg_apps.py").read_text()
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        self.assertIn("fun resetLgLaunchStatusForTitle()", script)
+        reset = script.split("fun resetLgLaunchStatusForTitle()", 1)[1].split("fun launchLgNetflixTitle(", 1)[0]
+        self.assertIn("lgLaunchRequestSeq += 1", reset)
+        self.assertIn("setLgLaunchStatus(null)", reset)
+        self.assertIn("onLgTitleChange = tvRemoteViewModel::resetLgLaunchStatusForTitle", script)
+        self.assertIn("onLgTitleChange = onLgTitleChange,", script)
+        self.assertIn("onLgTitleChange: () -> Unit = {}", catalog)
+        self.assertIn("LaunchedEffect(isLgWebOs, details?.media, details?.id)", catalog)
+        self.assertIn("onLgTitleChange()", catalog)
+        handler = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1]
+        lg = handler.split("if (host.isBlank() || pairing.isBlank())", 1)[0]
+        self.assertIn("if (details?.media != title.media || details?.id != title.id)", lg)
+        self.assertIn("return@launch", lg)
+        self.assertIn("if (details?.media == title.media && details?.id == title.id)", lg)
+
     def test_lg_reconnect_invalidates_previous_launch_status_and_callbacks(self):
         script = Path("scripts/apply_anytv_lg_apps.py").read_text()
         restore = script.split("private fun restoreLgWebOsApps(deviceId: String)", 1)[1]
