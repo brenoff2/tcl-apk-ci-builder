@@ -660,7 +660,7 @@ private object StreamingCatalog {
             }
             when (provider) {
                 "netflix" -> uniqueClaim("P1874")
-                    ?.takeIf { it.matches(Regex("[0-9]{6,9}")) }
+                    ?.takeIf { it.matches(Regex("[0-9]{6,8}")) }
                     ?.let { "https://www.netflix.com/title/" + it }
                 "disney" -> uniqueClaim("P13902")
                     ?.takeIf { it.matches(Regex("entity-[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}")) }
@@ -2636,7 +2636,7 @@ internal fun TclStreamingScreens(
                                 StreamingCatalog.titleDeepLink(token, title, "com.netflix.ninja")
                             }.getOrNull() else null
                             val netflixId = Regex(
-                                "^https://www\\.netflix\\.com/title/([0-9]{6,9})$")
+                                "^https://www\\.netflix\\.com/title/([0-9]{6,8})$")
                                 .matchEntire(official.orEmpty())?.groupValues?.get(1)
                             if (netflixId != null) {
                                 onLaunchLgNetflixTitle(netflixId)
