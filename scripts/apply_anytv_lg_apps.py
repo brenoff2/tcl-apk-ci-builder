@@ -153,29 +153,12 @@ patch(home,
                             loading = sessionState.lgWebOsAppsBusy,
                             error = sessionState.lgWebOsAppsError,
                             onRefresh = onLgAppsRefresh,
-                            onLaunch = onLgAppLaunch
+                            onLaunch = onLgAppLaunch,
+                            onOpenStreaming = { lgStreaming = true }
                         )
                     } else TclInstalledAppsBar(''')
-# Eliminate the empty fake LG streaming screen: no companion/Android app IDs on webOS.
-patch(home,
-    '''                    if (lgStreaming && sessionState.connectedDevice?.type == "LG webOS") {
-                        TclStreamingScreens(
-                            apps = emptyList(), host = "", pairing = "",
-                            tvName = sessionState.connectedDevice?.name.orEmpty(),
-                            onDismiss = { lgStreaming = false },
-                            onRemoteKey = { remoteKey(it) },
-                            onRemoteHoldStart = { key ->
-                                if (isConnected) remoteKey(key)
-                            },
-                            onRemoteHoldEnd = { _ -> Unit },
-                            onKeyboardText = { if (isConnected) onKeyboardText(it) },
-                            onKeyboardEnter = { if (isConnected) onKeyboardEnter() }
-                        )
-                    }
-
-''', '')
-patch(home,
-    "    var lgStreaming by rememberSaveable { mutableStateOf(false) }\n", "")
+# Keep the existing shared Streaming catalogue route. It displays content without
+# pretending that LG uses the TCL companion or that a banner launches a title.
 destination = root / "ui/app/LgWebOsAppsBar.kt"
 assert not destination.exists(), "LG_APP_FILE_ALREADY_EXISTS"
 destination.write_text(Path("overrides/LgWebOsAppsBar.kt").read_text(encoding="utf-8"), encoding="utf-8")
