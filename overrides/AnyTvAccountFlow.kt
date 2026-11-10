@@ -5,26 +5,24 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
+
+internal val LocalAnyTvOpenAccount = compositionLocalOf<(() -> Unit)?> { null }
 
 /**
  * Guest-first UI: never hold the catalog behind an account gate.
@@ -33,7 +31,7 @@ import kotlinx.coroutines.launch
  */
 @Composable
 internal fun AnyTvAccountFlow(
-    gateway: AnyTvAccountGateway,
+    gateway: AnyTvAccountGateway?,
     existingApp: @Composable () -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -43,6 +41,10 @@ internal fun AnyTvAccountFlow(
     var message by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(gateway) {
+        if (gateway == null) {
+            state = AnyTvAccountSession.Guest
+            return@LaunchedEffect
+        }
         try {
             state = gateway.restoreSession()
             gateway.sessionUpdates().collect { update ->
@@ -58,15 +60,9 @@ internal fun AnyTvAccountFlow(
         }
     }
 
-    // Keep navigation and local libraries mounted regardless of account status.
-    Box(modifier = Modifier.fillMaxSize()) {
+    // The account action lives in the main remote header, not over TV discovery controls.
+    CompositionLocalProvider(LocalAnyTvOpenAccount provides { showAccount = true }) {
         existingApp()
-        IconButton(
-            onClick = { showAccount = true },
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 4.dp)
-        ) {
-            Icon(Icons.Filled.AccountCircle, contentDescription = "Minha Conta")
-        }
     }
 
     if (showAccount) {
@@ -93,7 +89,7 @@ internal fun AnyTvAccountFlow(
                 }
             },
             confirmButton = {
-                if (signedIn) {
+                if (signedIn && gateway != null) {
                     OutlinedButton(enabled = !busy, onClick = {
                         busy = true
                         scope.launch {
@@ -106,7 +102,7 @@ internal fun AnyTvAccountFlow(
                             } finally { busy = false }
                         }
                     }) { Text("Sair da conta") }
-                } else {
+                } else if (gateway != null) {
                     Button(enabled = !busy, onClick = {
                         busy = true
                         message = null
