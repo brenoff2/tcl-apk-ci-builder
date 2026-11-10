@@ -59,7 +59,9 @@ data class LgWebOsApp(val id: String, val name: String, val icon: String = "")
 
 @Composable
 private fun LgAppIcon(app: LgWebOsApp, size: Dp = 52.dp, fallbackIcon: String = "") {
-    val sources = listOf(app.icon.trim(), fallbackIcon).filter { source ->
+    val officialYouTubeIcon = if (app.name.contains("youtube", ignoreCase = true))
+        "https://www.gstatic.com/youtube/img/branding/favicon/favicon_144x144.png" else ""
+    val sources = listOf(app.icon.trim(), fallbackIcon, officialYouTubeIcon).filter { source ->
         source.startsWith("http://") || source.startsWith("https://")
     }.distinct()
     var image by remember(sources) { mutableStateOf<ImageBitmap?>(null) }
@@ -142,8 +144,11 @@ fun LgWebOsAppsBar(
         }.getOrDefault(emptyMap())
     }
     fun appLogo(app: LgWebOsApp): String = providerIcons[anyTvServiceKey(app.name)].orEmpty()
-    val selectedApps = if (!hasUserFavorites) allApps.take(6)
-        else allApps.filter { it.id in favorites }
+    val selectedApps = if (!hasUserFavorites) allApps
+        else allApps.filter { it.id in favorites }.ifEmpty {
+            // Stale webOS launcher IDs must not hide all installed applications.
+            if (favorites.isNotEmpty()) allApps else emptyList()
+        }
 
     Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         if (selectedApps.isNotEmpty()) {
