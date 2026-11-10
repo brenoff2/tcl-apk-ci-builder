@@ -1194,8 +1194,7 @@ internal fun AnyTvPinnedImage(
 /** Short interactive carousel: name and entry affordance left, official artwork right. */
 @Composable
 internal fun AnyTvHomeFilmBanner(
-    onOpenStreaming: () -> Unit,
-    onOpenTitle: ((StreamingTitle) -> Unit)? = null
+    onOpenStreaming: () -> Unit
 ) {
     val context = LocalContext.current
     var previews by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
@@ -1254,9 +1253,8 @@ internal fun AnyTvHomeFilmBanner(
                     }
                 }
                 // Real TMDB art fills the hero, fading into the graphite text side.
-                Box(modifier = Modifier.fillMaxSize().clickable {
-                    if (onOpenTitle != null) onOpenTitle(movie) else onOpenStreaming()
-                }.semantics { contentDescription = "Abrir detalhes de " + movie.name }) {
+                Box(modifier = Modifier.fillMaxSize().clickable(onClick = onOpenStreaming)
+                    .semantics { contentDescription = "Abrir Streaming" }) {
                     AnyTvPinnedImage(
                         model = "https://image.tmdb.org/t/p/w500" +
                             movie.backdrop.ifBlank { movie.poster },
