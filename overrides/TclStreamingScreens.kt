@@ -2902,6 +2902,12 @@ internal fun TclStreamingScreens(
                                                     color = Color.White, fontWeight = FontWeight.Bold)
                                             }
                                         }
+                                    } else if (app.packageName.startsWith("lg:")) {
+                                        val logo = tmdbProviderArtwork[anyTvServiceKey(app.name)].orEmpty()
+                                        LgAppIcon(LgWebOsApp(app.packageName.removePrefix("lg:"),
+                                            app.name, app.icon), 52.dp,
+                                            if (logo.startsWith("/"))
+                                                "https://image.tmdb.org/t/p/w92" + logo else "")
                                     } else OfficialTvIcon(app, 52.dp)
                                 }
                                 Text(app.name, fontSize = 10.sp, maxLines = 1,
