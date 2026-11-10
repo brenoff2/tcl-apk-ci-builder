@@ -2042,8 +2042,10 @@ internal fun TclStreamingScreens(
     var loading by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var details by remember { mutableStateOf<StreamingTitle?>(null) }
+    var lgTitleSelectionGeneration by remember { mutableIntStateOf(0) }
     LaunchedEffect(isLgWebOs, details?.media, details?.id) {
         if (isLgWebOs) {
+            lgTitleSelectionGeneration += 1
             onLgTitleChange()
             titleActionPending = false
             titleActionFeedback = null
@@ -2637,6 +2639,7 @@ internal fun TclStreamingScreens(
                 if (title.media == "movie" && anyTvServiceKey(app.name) == "netflix") {
                     titleActionPending = true
                     titleActionFeedback = "Verificando o identificador oficial Netflix..."
+                    val lookupSelectionGeneration = lgTitleSelectionGeneration
                     scope.launch {
                         try {
                             val offered = StreamingCatalog.titleAvailableInBrazil(
@@ -2647,7 +2650,8 @@ internal fun TclStreamingScreens(
                             val netflixId = Regex(
                                 "^https://www\\.netflix\\.com/title/([0-9]{6,8})$")
                                 .matchEntire(official.orEmpty())?.groupValues?.get(1)
-                            if (details?.media != title.media || details?.id != title.id) {
+                            if (lookupSelectionGeneration != lgTitleSelectionGeneration ||
+                                details?.media != title.media || details?.id != title.id) {
                                 return@launch
                             }
                             if (netflixId != null) {
@@ -2661,11 +2665,13 @@ internal fun TclStreamingScreens(
                                     "use o controle para procurar " + title.name + "."
                             }
                         } catch (error: Exception) {
-                            if (details?.media != title.media || details?.id != title.id) return@launch
+                            if (lookupSelectionGeneration != lgTitleSelectionGeneration ||
+                                details?.media != title.media || details?.id != title.id) return@launch
                             titleActionFeedback = "Falha ao verificar o título Netflix: " +
                                 (error.message ?: "tente novamente")
                         } finally {
-                            if (details?.media == title.media && details?.id == title.id) {
+                            if (lookupSelectionGeneration == lgTitleSelectionGeneration &&
+                                details?.media == title.media && details?.id == title.id) {
                                 titleActionPending = false
                             }
                         }
