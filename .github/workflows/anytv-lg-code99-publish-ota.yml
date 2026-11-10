@@ -1,15 +1,8 @@
-name: AnyTV LG code99 publish signed in-app OTA (MANUAL ONLY)
+name: AnyTV LG code99 publish signed in-app OTA (one-shot)
 on:
-  workflow_dispatch:
-    inputs:
-      signed_run_id:
-        description: GitHub Actions run ID for verified code99 signed candidate
-        required: true
-        type: string
-      signed_sha256:
-        description: Expected SHA256 for the signed code99 APK
-        required: true
-        type: string
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-lg-code99-publish-ota.yml']
 permissions:
   contents: write
   actions: read
@@ -21,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: anytv-ota-approval
     env:
-      SIGNED_SHA256: ${{ inputs.signed_sha256 }}
+      SIGNED_SHA256: 22190681c0c5d7c1b3416af72e52ce2a98b0c27a8120a9f0ac1191c83092fb4e
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
@@ -29,7 +22,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SIGNED_RUN_ID: ${{ inputs.signed_run_id }}
+          SIGNED_RUN_ID: '42837205824'
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -42,7 +35,9 @@ jobs:
               run=json.load(response)
           assert run['id']==int(run_id), 'Run ID mismatch'
           assert run['status']=='completed' and run['conclusion']=='success', 'Signed run did not pass'
-          assert run['event']=='workflow_dispatch', 'Wrong event type'
+          assert run['event']=='push', 'Wrong event type'
+          assert run['head_sha']=='fcd3cbb71f01591311975c27fd2adad066fcf846', 'Wrong signing commit'
+          assert run['head_branch']=='feat/anytv-p0-device-proof-verifier-20261020', 'Wrong signing branch'
           assert run['path'].split('@')[0]=='.github/workflows/anytv-lg-code99-signed-qa.yml', 'Wrong signing workflow'
           assert run['head_repository']['full_name']=='brenoff2/tcl-apk-ci-builder', 'Wrong repository'
           print('LG_CODE99_SIGNED_RUN_PROVENANCE_VERIFIED')
@@ -50,7 +45,7 @@ jobs:
       - name: Retrieve signed LG code99 from verified QA run
         uses: actions/download-artifact@v4
         with:
-          run-id: ${{ inputs.signed_run_id }}
+          run-id: 42837205824
           name: anytv-lg-code99-signed-candidate
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: signed-code99
