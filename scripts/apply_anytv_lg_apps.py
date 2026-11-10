@@ -165,7 +165,9 @@ patch(home,
     '''                            apps = emptyList(), host = "", pairing = "",''',
     '''                            apps = sessionState.lgWebOsApps.map { app ->
                                 TvOfficialApp("lg:" + app.id, app.name, app.icon)
-                            }, host = "", pairing = "",''')
+                            }, host = "", pairing = "",
+                            isLgWebOs = true,
+                            onLaunchLgApp = onLgAppLaunch,''')
 destination = root / "ui/app/LgWebOsAppsBar.kt"
 assert not destination.exists(), "LG_APP_FILE_ALREADY_EXISTS"
 destination.write_text(Path("overrides/LgWebOsAppsBar.kt").read_text(encoding="utf-8"), encoding="utf-8")
