@@ -118,7 +118,8 @@ fun LgWebOsAppsBar(
     val allApps = apps.distinctBy { it.id }.sortedBy { it.name.lowercase() }
     // Use provider logos only for exact service matches; launcher IDs always come from LG.
     var providerIcons by remember(deviceId) { mutableStateOf<Map<String, String>>(emptyMap()) }
-    LaunchedEffect(deviceId) {
+    LaunchedEffect(deviceId, allApps.map { it.name }) {
+        providerIcons = emptyMap()
         providerIcons = runCatching {
             anyTvBrazilProviders().filter { it.logo.isNotBlank() }.associate { provider ->
                 anyTvServiceKey(provider.name) to
