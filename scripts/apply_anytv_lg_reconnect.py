@@ -425,7 +425,7 @@ known_methods = '''    private fun knownTvSnapshot(live: List<DeviceUiModel>): L
             }
         }
         val updated = JSONArray()
-        remembered.values.takeLast(40).forEach { updated.put(it) }
+        remembered.values.toList().takeLast(40).forEach { updated.put(it) }
         val serialized = updated.toString()
         if (serialized != previous) prefs.edit { putString(key, serialized) }
         val onlineIds = live.map { it.id }.toSet()
