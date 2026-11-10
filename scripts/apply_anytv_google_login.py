@@ -84,8 +84,7 @@ main = replace_once(main,
     """                    )
                     }
                     val gateway = anyTvGoogleGateway
-                    if (gateway == null) existingApp()
-                    else AnyTvAccountFlow(gateway = gateway, existingApp = existingApp)
+                    AnyTvAccountFlow(gateway = gateway, existingApp = existingApp)
                 }
             }
         }
