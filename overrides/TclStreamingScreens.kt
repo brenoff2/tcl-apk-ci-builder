@@ -1679,7 +1679,8 @@ internal fun TclStreamingScreens(
     onKeyboardEnter: () -> Unit = {},
     isLgWebOs: Boolean = false,
     onLaunchLgApp: (String) -> Unit = {},
-    onLaunchLgNetflixTitle: (String) -> Unit = {}
+    onLaunchLgNetflixTitle: (String) -> Unit = {},
+    lgLaunchStatus: String? = null
 ) {
     val context = LocalContext.current
     StreamingCatalog.configure(context)
@@ -2598,7 +2599,7 @@ internal fun TclStreamingScreens(
         if (isLgWebOs) {
             if (app.packageName.startsWith("lg:") && app.packageName in apps.map { it.packageName }) {
                 onLaunchLgApp(app.packageName.removePrefix("lg:"))
-                message = "Abertura de " + app.name + " solicitada à LG. Confira a TV."
+                message = "Comando de abertura enviado à LG; aguarde o retorno."
             } else message = "Aplicativo não encontrado na LG conectada."
             return
         }
@@ -2640,12 +2641,12 @@ internal fun TclStreamingScreens(
                                 .matchEntire(official.orEmpty())?.groupValues?.get(1)
                             if (netflixId != null) {
                                 onLaunchLgNetflixTitle(netflixId)
-                                titleActionFeedback = "Solicitada abertura da ficha de " +
-                                    title.name + " na Netflix da LG. Confirme na televisão."
+                                titleActionFeedback = "Comando Netflix enviado para " +
+                                    title.name + ". A ficha e a reprodução ainda não foram confirmadas."
                             } else {
                                 onLaunchLgApp(lgId)
                                 titleActionFeedback = "Não foi confirmado um ID Netflix " +
-                                    "compatível para este título no Brasil. Aplicativo aberto; " +
+                                    "compatível para este título no Brasil. Abertura do app solicitada; " +
                                     "use o controle para procurar " + title.name + "."
                             }
                         } catch (error: Exception) {
@@ -4787,6 +4788,10 @@ internal fun TclStreamingScreens(
                     }
                     if (titleActionFeedback != null) {
                         Text(titleActionFeedback.orEmpty(), fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    if (isLgWebOs && lgLaunchStatus != null) {
+                        Text(lgLaunchStatus, fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     if (title.media == "movie" && title.id in cinemaIds) {
