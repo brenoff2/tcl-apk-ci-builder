@@ -1,6 +1,8 @@
-name: AnyTV LG code99 signed release candidate (MANUAL, NO OTA)
+name: AnyTV LG code99 signed candidate (one-shot, NO OTA)
 on:
-  workflow_dispatch:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-lg-code99-signed-qa.yml']
 permissions:
   contents: read
   actions: read
