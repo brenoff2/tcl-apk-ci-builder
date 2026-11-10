@@ -1678,7 +1678,8 @@ internal fun TclStreamingScreens(
     onKeyboardText: (String) -> Unit = {},
     onKeyboardEnter: () -> Unit = {},
     isLgWebOs: Boolean = false,
-    onLaunchLgApp: (String) -> Unit = {}
+    onLaunchLgApp: (String) -> Unit = {},
+    onLaunchLgNetflixTitle: (String) -> Unit = {}
 ) {
     val context = LocalContext.current
     StreamingCatalog.configure(context)
@@ -2623,11 +2624,43 @@ internal fun TclStreamingScreens(
             } else {
                 showPlaybackRemote = true
                 remoteMinimized = false
-                onLaunchLgApp(app.packageName.removePrefix("lg:"))
-                titleActionFeedback = "Abertura de " + app.name +
-                    " solicitada à LG. A reprodução automática de " + title.name +
-                    " não é suportada sem um link oficial compatível. " +
-                    "Confirme a abertura na TV e procure o título no aplicativo."
+                val lgId = app.packageName.removePrefix("lg:")
+                if (anyTvServiceKey(app.name) == "netflix") {
+                    titleActionPending = true
+                    titleActionFeedback = "Verificando o identificador oficial Netflix..."
+                    scope.launch {
+                        try {
+                            val offered = StreamingCatalog.titleAvailableInBrazil(
+                                token, title, app.name)
+                            val official = if (offered == true) runCatching {
+                                StreamingCatalog.titleDeepLink(token, title, "com.netflix.ninja")
+                            }.getOrNull() else null
+                            val netflixId = Regex(
+                                "^https://www\\.netflix\\.com/title/([0-9]{6,9})$")
+                                .matchEntire(official.orEmpty())?.groupValues?.get(1)
+                            if (netflixId != null) {
+                                onLaunchLgNetflixTitle(netflixId)
+                                titleActionFeedback = "Solicitada abertura da ficha de " +
+                                    title.name + " na Netflix da LG. Confirme na televisão."
+                            } else {
+                                onLaunchLgApp(lgId)
+                                titleActionFeedback = "Não foi confirmado um ID Netflix " +
+                                    "compatível para este título no Brasil. Aplicativo aberto; " +
+                                    "use o controle para procurar " + title.name + "."
+                            }
+                        } catch (error: Exception) {
+                            titleActionFeedback = "Falha ao verificar o título Netflix: " +
+                                (error.message ?: "tente novamente")
+                        } finally {
+                            titleActionPending = false
+                        }
+                    }
+                } else {
+                    onLaunchLgApp(lgId)
+                    titleActionFeedback = "Abertura de " + app.name +
+                        " solicitada à LG. Ainda não há deep link validado " +
+                        "para este serviço; use o controle para procurar " + title.name + "."
+                }
             }
             return
         }
