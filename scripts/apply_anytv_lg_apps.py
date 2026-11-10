@@ -116,6 +116,11 @@ methods = '''    private var lgAppsRequestSeq = 0
         }
     }
 
+    fun resetLgLaunchStatusForTitle() {
+        lgLaunchRequestSeq += 1
+        setLgLaunchStatus(null)
+    }
+
     fun launchLgNetflixTitle(contentId: String) {
         val requestId = ++lgLaunchRequestSeq
         // ConnectSDK has a dedicated Netflix content-ID launcher for webOS.
@@ -209,13 +214,15 @@ patch(nav,
     "                onQuickApp = tvRemoteViewModel::launchQuickApp,\n"
     "                onLgAppsRefresh = tvRemoteViewModel::refreshLgWebOsApps,\n"
     "                onLgAppLaunch = tvRemoteViewModel::launchLgWebOsApp,\n"
-    "                onLgNetflixTitle = tvRemoteViewModel::launchLgNetflixTitle,")
+    "                onLgNetflixTitle = tvRemoteViewModel::launchLgNetflixTitle,\n"
+    "                onLgTitleChange = tvRemoteViewModel::resetLgLaunchStatusForTitle,")
 patch(home,
     "    onQuickApp: (String) -> Unit,",
     "    onQuickApp: (String) -> Unit,\n"
     "    onLgAppsRefresh: () -> Unit,\n"
     "    onLgAppLaunch: (String) -> Unit,\n"
-    "    onLgNetflixTitle: (String) -> Unit,")
+    "    onLgNetflixTitle: (String) -> Unit,\n"
+    "    onLgTitleChange: () -> Unit,")
 patch(home,
     '''                    if (sessionState.connectedDevice?.type == "LG webOS") {
                         Button(onClick = { lgStreaming = true }) {
@@ -245,6 +252,7 @@ patch(home,
                             isLgWebOs = true,
                             onLaunchLgApp = onLgAppLaunch,
                             onLaunchLgNetflixTitle = onLgNetflixTitle,
+                            onLgTitleChange = onLgTitleChange,
                             lgLaunchStatus = sessionState.lgLaunchStatus,''')
 destination = root / "ui/app/LgWebOsAppsBar.kt"
 assert not destination.exists(), "LG_APP_FILE_ALREADY_EXISTS"
