@@ -5062,7 +5062,15 @@ internal fun TclStreamingScreens(
                                 eligible.forEach { app ->
                                     val chosen = detailsPackage == app.packageName
                                     Button(
-                                        onClick = { detailsPackage = app.packageName },
+                                        onClick = {
+                                            if (isLgWebOs && detailsPackage != app.packageName) {
+                                                lgTitleSelectionGeneration += 1
+                                                onLgTitleChange()
+                                                titleActionPending = false
+                                                titleActionFeedback = null
+                                            }
+                                            detailsPackage = app.packageName
+                                        },
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = if (chosen) Color(0xFFC50038)
                                                 else Color(0xFFFF1744)),
