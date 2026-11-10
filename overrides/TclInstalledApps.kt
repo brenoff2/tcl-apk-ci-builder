@@ -488,7 +488,7 @@ fun TclInstalledAppsBar(
                 },
                 modifier = Modifier.fillMaxWidth().height(54.dp)
             ) {
-                Text(if (host.isBlank()) "Conecte à TCL para identificar os aplicativos"
+                Text(if (host.isBlank()) "Conecte uma TV para identificar os aplicativos"
                      else if (pairing.isBlank()) "Vincular leitura de aplicativos da TV"
                      else if (busy) "Identificando aplicativos instalados..." else "Atualizar aplicativos da TV")
             }
