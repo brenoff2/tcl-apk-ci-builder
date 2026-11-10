@@ -32,7 +32,7 @@ patch(vm,
 # Ignore asynchronous responses from a TV that is no longer the active TV.
 methods = '''    private var lgAppsRequestSeq = 0
     private var lgLaunchRequestSeq = 0
-    private fun setLgLaunchStatus(status: String) {
+    private fun setLgLaunchStatus(status: String?) {
         _uiState.update { it.copy(lgLaunchStatus = status) }
     }
     private fun watchLgLaunch(deviceId: String, requestId: Int) {
@@ -50,7 +50,7 @@ methods = '''    private var lgAppsRequestSeq = 0
     private fun restoreLgWebOsApps(deviceId: String) {
         lgAppsRequestSeq += 1
         lgLaunchRequestSeq += 1
-        setLgLaunchStatus("")
+        setLgLaunchStatus(null)
         val raw = prefs.getString("anytv_lg_apps_" + deviceId, null)
         val cached = raw?.let { saved -> runCatching {
             val entries = JSONArray(saved)
