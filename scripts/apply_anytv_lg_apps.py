@@ -25,11 +25,26 @@ patch(vm,
     "    val lgWebOsAppsDeviceId: String? = null,\n"
     "    val lgWebOsAppsBusy: Boolean = false,\n"
     "    val lgWebOsAppsError: String? = null,\n"
+    "    val lgLaunchStatus: String? = null,\n"
     "    val cast: CastPlaybackUiState = CastPlaybackUiState(),")
 
 # Use only actual launcher IDs from the most recent device query.
 # Ignore asynchronous responses from a TV that is no longer the active TV.
 methods = '''    private var lgAppsRequestSeq = 0
+    private var lgLaunchRequestSeq = 0
+    private fun setLgLaunchStatus(status: String) {
+        _uiState.update { it.copy(lgLaunchStatus = status) }
+    }
+    private fun watchLgLaunch(deviceId: String, requestId: Int) {
+        viewModelScope.launch(Dispatchers.Main) {
+            delay(10_000L)
+            if (activeDeviceId == deviceId && requestId == lgLaunchRequestSeq &&
+                _uiState.value.lgLaunchStatus == "LG: comando enviado; aguardando resposta.") {
+                setLgLaunchStatus("LG: sem resposta em 10 segundos; confira a conexão webOS.")
+            }
+        }
+    }
+
 
     // Only store launch points actually returned by this LG. Never reuse a TCL cache.
     private fun restoreLgWebOsApps(deviceId: String) {
@@ -100,9 +115,11 @@ methods = '''    private var lgAppsRequestSeq = 0
     }
 
     fun launchLgNetflixTitle(contentId: String) {
+        val requestId = ++lgLaunchRequestSeq
         // ConnectSDK has a dedicated Netflix content-ID launcher for webOS.
         // Do not confuse TMDB IDs with Netflix IDs, or claim playback success.
         if (!contentId.matches(Regex("[0-9]{6,8}"))) {
+            setLgLaunchStatus("LG: ID Netflix inválido; não enviado.")
             showStatus("Identificador Netflix inválido.", isError = true)
             return
         }
@@ -110,47 +127,63 @@ methods = '''    private var lgAppsRequestSeq = 0
         val service = device?.getServiceByName(WebOSTVService.ID) as? WebOSTVService
         if (service == null || !service.isConnected ||
             _uiState.value.lgWebOsApps.none { it.name.equals("Netflix", ignoreCase = true) }) {
+            setLgLaunchStatus("LG: Netflix indisponível nesta sessão; não enviado.")
             showStatus("Netflix indisponível na LG conectada.", isError = true)
             return
         }
         val deviceId = device?.id ?: return
+        setLgLaunchStatus("LG: comando enviado; aguardando resposta.")
+        watchLgLaunch(deviceId, requestId)
         service.launchNetflix(contentId, object : Launcher.AppLaunchListener {
             override fun onSuccess(session: LaunchSession?) {
-                if (activeDeviceId == deviceId) showStatus(
-                    "Ficha Netflix solicitada na LG. Confirme na TV.", isError = false)
+                if (activeDeviceId == deviceId && requestId == lgLaunchRequestSeq) {
+                    setLgLaunchStatus("LG: comando Netflix aceito; título não confirmado.")
+                    showStatus("Comando Netflix aceito; confira a LG.", isError = false)
+                }
             }
             override fun onError(error: ServiceCommandError?) {
-                if (activeDeviceId == deviceId) showStatus(
-                    "LG não aceitou a ficha Netflix: " +
-                        (error?.message ?: "abra o app e procure o título"), isError = true)
+                if (activeDeviceId == deviceId && requestId == lgLaunchRequestSeq) {
+                    setLgLaunchStatus("LG: comando Netflix rejeitado.")
+                    showStatus("LG rejeitou o comando Netflix.", isError = true)
+                }
             }
         })
     }
 
     fun launchLgWebOsApp(id: String) {
+        val requestId = ++lgLaunchRequestSeq
         val device = currentConnectableDevice()?.takeIf { it.id == activeDeviceId }
         if (device == null) {
+            setLgLaunchStatus("LG: sem TV conectada; não enviado.")
             showStatus("Conecte a LG para abrir o aplicativo.", isError = true)
             return
         }
         val service = device.getServiceByName(WebOSTVService.ID) as? WebOSTVService
         if (service == null || !service.isConnected) {
+            setLgLaunchStatus("LG: sessão webOS desconectada; não enviado.")
             showStatus("A sessão webOS está desconectada. Reconecte a LG.", isError = true)
             return
         }
         if (id !in _uiState.value.lgWebOsApps.map { it.id }) {
+            setLgLaunchStatus("LG: aplicativo ausente do inventário; não enviado.")
             showStatus("Aplicativo não identificado nesta LG. Atualize a lista.", isError = true)
             return
         }
         val deviceId = device.id
+        setLgLaunchStatus("LG: comando enviado; aguardando resposta.")
+        watchLgLaunch(deviceId, requestId)
         service.launchApp(id, object : Launcher.AppLaunchListener {
             override fun onSuccess(session: LaunchSession?) {
-                if (activeDeviceId == deviceId) showStatus("Aplicativo aberto na LG.", isError = false)
+                if (activeDeviceId == deviceId && requestId == lgLaunchRequestSeq) {
+                    setLgLaunchStatus("LG: comando aceito; aplicativo não confirmado visualmente.")
+                    showStatus("Comando aceito; confira o aplicativo na LG.", isError = false)
+                }
             }
             override fun onError(error: ServiceCommandError?) {
-                if (activeDeviceId == deviceId) showStatus(
-                    "Falha ao abrir aplicativo na LG: " + (error?.message ?: "tente novamente"),
-                    isError = true)
+                if (activeDeviceId == deviceId && requestId == lgLaunchRequestSeq) {
+                    setLgLaunchStatus("LG: comando rejeitado pela TV.")
+                    showStatus("A LG rejeitou o comando.", isError = true)
+                }
             }
         })
     }
@@ -209,7 +242,8 @@ patch(home,
                             }, host = "", pairing = "",
                             isLgWebOs = true,
                             onLaunchLgApp = onLgAppLaunch,
-                            onLaunchLgNetflixTitle = onLgNetflixTitle,''')
+                            onLaunchLgNetflixTitle = onLgNetflixTitle,
+                            lgLaunchStatus = sessionState.lgLaunchStatus,''')
 destination = root / "ui/app/LgWebOsAppsBar.kt"
 assert not destination.exists(), "LG_APP_FILE_ALREADY_EXISTS"
 destination.write_text(Path("overrides/LgWebOsAppsBar.kt").read_text(encoding="utf-8"), encoding="utf-8")
