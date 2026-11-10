@@ -161,7 +161,8 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn("if (lookupSelectionGeneration != lgTitleSelectionGeneration ||", lg)
         self.assertIn("details?.media != title.media || details?.id != title.id)", lg)
         self.assertIn("return@launch", lg)
-        self.assertIn("if (details?.media == title.media && details?.id == title.id)", lg)
+        self.assertIn("if (lookupSelectionGeneration == lgTitleSelectionGeneration &&", lg)
+        self.assertIn("details?.media == title.media && details?.id == title.id)", lg)
 
     def test_lg_reconnect_invalidates_previous_launch_status_and_callbacks(self):
         script = Path("scripts/apply_anytv_lg_apps.py").read_text()
