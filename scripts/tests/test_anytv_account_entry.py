@@ -135,7 +135,15 @@ class GoogleOAuthIntegrationContract(unittest.TestCase):
         self.assertIn('android:host="auth"', script)
         self.assertIn('android:launchMode="singleTop"', script)
         self.assertIn('AnyTvAccountFlow(gateway = gateway, existingApp = existingApp)', script)
-        self.assertIn('if (gateway == null) existingApp()', script)
+        self.assertNotIn('if (gateway == null) existingApp()', script)
+        self.assertIn('AnyTvAccountFlow(gateway = gateway, existingApp = existingApp)', script)
+        account_flow = (ROOT / "overrides/AnyTvAccountFlow.kt").read_text(encoding="utf-8")
+        home = (ROOT / "overrides/TclApprovedHomeScreen.kt").read_text(encoding="utf-8")
+        self.assertIn('CompositionLocalProvider(LocalAnyTvOpenAccount provides { showAccount = true })', account_flow)
+        self.assertNotIn('modifier = Modifier.align(Alignment.TopEnd)', account_flow)
+        self.assertIn('TclHeaderAction(Icons.Filled.AccountCircle, "Minha Conta", TclText, onAccount)', home)
+        self.assertLess(home.index('TclHeaderAction(Icons.Filled.PowerSettingsNew'), home.index('TclHeaderAction(Icons.Filled.AccountCircle'))
+        self.assertLess(home.index('TclHeaderAction(Icons.Filled.AccountCircle'), home.index('TclHeaderAction(Icons.Filled.Cast'))
         self.assertIn('runpy.run_path("scripts/apply_anytv_google_login.py"', build)
 
 
