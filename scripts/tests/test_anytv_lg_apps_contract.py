@@ -122,6 +122,9 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('StreamingCatalog.titleDeepLink(token, title, "com.netflix.ninja")', catalog)
         self.assertIn('StreamingCatalog.titleAvailableInBrazil(', catalog)
         self.assertIn('onLaunchLgNetflixTitle(netflixId)', catalog)
+        # Upstream ConnectSDK's Netflix deep-link builder is a legacy /movies/ route.
+        # Never send a TMDB TV/series identifier to that movie-specific launcher.
+        self.assertIn('if (title.media == "movie" && anyTvServiceKey(app.name) == "netflix")', catalog)
         self.assertIn('if (netflixId != null)', catalog)
         self.assertIn('onLaunchLgApp(lgId)', catalog)
 
