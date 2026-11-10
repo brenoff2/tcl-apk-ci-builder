@@ -49,6 +49,8 @@ methods = '''    private var lgAppsRequestSeq = 0
     // Only store launch points actually returned by this LG. Never reuse a TCL cache.
     private fun restoreLgWebOsApps(deviceId: String) {
         lgAppsRequestSeq += 1
+        lgLaunchRequestSeq += 1
+        setLgLaunchStatus("")
         val raw = prefs.getString("anytv_lg_apps_" + deviceId, null)
         val cached = raw?.let { saved -> runCatching {
             val entries = JSONArray(saved)
