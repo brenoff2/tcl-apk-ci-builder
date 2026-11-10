@@ -52,6 +52,19 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn("putStringSet(prefKey, favorites.toSet())", self.bar)
         self.assertNotIn("LaunchedEffect(deviceId)", self.bar)
 
+    def test_banner_opens_real_title_details_without_forged_playback(self):
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        self.assertIn("onOpenTitle: ((StreamingTitle) -> Unit)? = null", catalog)
+        self.assertIn("onOpenTitle(movie)", catalog)
+        self.assertIn("internal suspend fun anyTvOffersForTitle(title: StreamingTitle)", catalog)
+        self.assertIn("onOpenTitle = { title -> selectedBannerTitle = title }", self.bar)
+        self.assertIn("anyTvOffersForTitle(title)", self.bar)
+        self.assertIn("anyTvServiceKey(it.name) == anyTvServiceKey(offer.name)", self.bar)
+        self.assertIn('Text("Onde assistir na TV"', self.bar)
+        self.assertIn('Text("Abrir aplicativo na LG"', self.bar)
+        self.assertNotIn("service.launchNetflix(", self.bar)
+        self.assertNotIn("launchAppWithInfo(", self.bar)
+
     def test_tcl_companion_remains_separate(self):
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertNotIn("TclTvAppApi.apps(", self.bar)
