@@ -114,6 +114,19 @@ fun LgWebOsAppsBar(
     var hasUserFavorites by remember(deviceId) { mutableStateOf(savedFavorites != null) }
     var showManager by remember(deviceId) { mutableStateOf(false) }
     var showLaunchPicker by remember(deviceId) { mutableStateOf(false) }
+    var selectedBannerTitle by remember(deviceId) { mutableStateOf<StreamingTitle?>(null) }
+    var titleOffers by remember(deviceId) { mutableStateOf<List<StreamingOffer>?>(null) }
+    var titleOffersError by remember(deviceId) { mutableStateOf(false) }
+    LaunchedEffect(deviceId, selectedBannerTitle?.id, selectedBannerTitle?.media) {
+        val title = selectedBannerTitle
+        titleOffers = null
+        titleOffersError = false
+        if (title != null) {
+            runCatching { anyTvOffersForTitle(title) }
+                .onSuccess { titleOffers = it }
+                .onFailure { titleOffersError = true }
+        }
+    }
 
     val allApps = apps.distinctBy { it.id }.sortedBy { it.name.lowercase() }
     // Use provider logos only for exact service matches; launcher IDs always come from LG.
@@ -166,7 +179,8 @@ fun LgWebOsAppsBar(
             }
         }
         // Preserve the TCL banner placement; LG's action opens its real launcher.
-        AnyTvHomeFilmBanner(onOpenStreaming = { showLaunchPicker = true })
+        AnyTvHomeFilmBanner(onOpenStreaming = { showLaunchPicker = true },
+            onOpenTitle = { title -> selectedBannerTitle = title })
         if (error != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(error, color = MaterialTheme.colorScheme.error,
@@ -218,6 +232,63 @@ fun LgWebOsAppsBar(
                             showManager = false
                         }) { Text("Salvar") }
                     }
+                }
+            }
+        }
+    }
+
+    selectedBannerTitle?.let { title ->
+        val installedForTitle = (titleOffers ?: emptyList()).mapNotNull { offer ->
+            allApps.firstOrNull { anyTvServiceKey(it.name) == anyTvServiceKey(offer.name) }
+                ?.let { offer to it }
+        }.distinctBy { (_, app) -> app.id }
+        Dialog(onDismissRequest = { selectedBannerTitle = null }) {
+            Surface(modifier = Modifier.fillMaxWidth().heightIn(max = 670.dp),
+                shape = RoundedCornerShape(22.dp),
+                color = MaterialTheme.colorScheme.surface) {
+                Column(modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(title.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    if (title.overview.isNotBlank())
+                        Text(title.overview, maxLines = 5,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 12.sp, overflow = TextOverflow.Ellipsis)
+                    Text("Onde assistir na TV", fontWeight = FontWeight.SemiBold)
+                    when {
+                        titleOffers == null && !titleOffersError ->
+                            Text("Verificando disponibilidade no Brasil...",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        titleOffersError ->
+                            Text("Não foi possível consultar onde assistir. Tente novamente.",
+                                color = MaterialTheme.colorScheme.error)
+                        installedForTitle.isEmpty() ->
+                            Text("Não foi identificado um aplicativo instalado na LG para este título.",
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        else -> {
+                            LazyColumn(modifier = Modifier.heightIn(max = 310.dp)) {
+                                items(installedForTitle, key = { (_, app) -> app.id }) { (_, app) ->
+                                    Row(modifier = Modifier.fillMaxWidth()
+                                        .clickable {
+                                            selectedBannerTitle = null
+                                            onLaunch(app.id)
+                                        }.padding(vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically) {
+                                        LgAppIcon(app, 36.dp, appLogo(app))
+                                        Column(modifier = Modifier.padding(start = 9.dp)) {
+                                            Text(app.name, fontSize = 13.sp)
+                                            Text("Abrir aplicativo na LG",
+                                                fontSize = 11.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Text("O aplicativo será aberto na TV. A reprodução automática do título depende de um link de conteúdo compatível com o streaming.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    TextButton(onClick = { selectedBannerTitle = null }) { Text("Fechar") }
                 }
             }
         }
