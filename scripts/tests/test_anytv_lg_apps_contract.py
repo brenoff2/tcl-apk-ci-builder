@@ -89,7 +89,8 @@ class LgAppsContract(unittest.TestCase):
         title_handler = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1]
         lg_handler, tcl_handler = title_handler.split("if (host.isBlank() || pairing.isBlank())", 1)
         self.assertIn("if (isLgWebOs)", lg_handler)
-        self.assertIn('onLaunchLgApp(app.packageName.removePrefix("lg:"))', lg_handler)
+        self.assertIn('val lgId = app.packageName.removePrefix("lg:")', lg_handler)
+        self.assertIn('onLaunchLgApp(lgId)', lg_handler)
         self.assertIn("reprodução automática", lg_handler)
         self.assertIn("TclTvAppApi.openTitle(", tcl_handler)
         self.assertIn('} else if (!isLgWebOs &&', catalog)
@@ -100,7 +101,7 @@ class LgAppsContract(unittest.TestCase):
         lg = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1].split("if (host.isBlank() || pairing.isBlank())", 1)[0]
         self.assertIn("showPlaybackRemote = true", lg)
         self.assertIn("remoteMinimized = false", lg)
-        self.assertIn("onLaunchLgApp(app.packageName.removePrefix", lg)
+        self.assertIn('onLaunchLgApp(lgId)', lg)
         self.assertIn('if (offer.logo.startsWith("/"))', catalog)
         self.assertIn('model = "https://image.tmdb.org/t/p/w92" + offer.logo', catalog)
         self.assertIn('installed?.packageName?.startsWith("lg:") == true', catalog)
