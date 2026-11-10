@@ -82,6 +82,9 @@ class LgAppsContract(unittest.TestCase):
         catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
         self.assertIn("isLgWebOs = true,", script)
         self.assertIn("onLaunchLgApp = onLgAppLaunch,", script)
+        self.assertIn('showStatus("Conecte a LG para abrir o aplicativo."', script)
+        self.assertIn('showStatus("A sessão webOS está desconectada.', script)
+        self.assertIn('showStatus("Aplicativo não identificado nesta LG.', script)
         self.assertIn("onLaunchLgApp: (String) -> Unit = {}", catalog)
         title_handler = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1]
         lg_handler, tcl_handler = title_handler.split("if (host.isBlank() || pairing.isBlank())", 1)
