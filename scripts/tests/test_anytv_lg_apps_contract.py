@@ -131,6 +131,16 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('if (netflixId != null)', catalog)
         self.assertIn('onLaunchLgApp(lgId)', catalog)
 
+    def test_lg_reconnect_invalidates_previous_launch_status_and_callbacks(self):
+        script = Path("scripts/apply_anytv_lg_apps.py").read_text()
+        restore = script.split("private fun restoreLgWebOsApps(deviceId: String)", 1)[1]
+        restore = restore.split("fun refreshLgWebOsApps()", 1)[0]
+        self.assertIn("lgLaunchRequestSeq += 1", restore)
+        self.assertIn("setLgLaunchStatus(null)", restore)
+        self.assertIn("restoreLgWebOsApps(connectableDevice.id)", script)
+        self.assertIn("private fun setLgLaunchStatus(status: String?)", script)
+        self.assertIn("requestId == lgLaunchRequestSeq", script)
+
     def test_lg_launcher_outcomes_are_visible_and_do_not_claim_playback(self):
         script = Path("scripts/apply_anytv_lg_apps.py").read_text()
         catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
