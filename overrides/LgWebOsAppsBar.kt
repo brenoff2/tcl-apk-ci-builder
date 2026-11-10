@@ -102,7 +102,8 @@ fun LgWebOsAppsBar(
     loading: Boolean,
     error: String?,
     onRefresh: () -> Unit,
-    onLaunch: (String) -> Unit
+    onLaunch: (String) -> Unit,
+    onOpenStreaming: () -> Unit
 ) {
     val context = LocalContext.current
     val prefs = remember(context) {
@@ -178,9 +179,8 @@ fun LgWebOsAppsBar(
                     else "Escolher aplicativos da LG")
             }
         }
-        // Preserve the TCL banner placement; LG's action opens its real launcher.
-        AnyTvHomeFilmBanner(onOpenStreaming = { showLaunchPicker = true },
-            onOpenTitle = { title -> selectedBannerTitle = title })
+        // The home banner is navigation to the Streaming catalogue, never a TV launch.
+        AnyTvHomeFilmBanner(onOpenStreaming = onOpenStreaming)
         if (error != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(error, color = MaterialTheme.colorScheme.error,
