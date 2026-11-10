@@ -102,7 +102,7 @@ methods = '''    private var lgAppsRequestSeq = 0
     fun launchLgNetflixTitle(contentId: String) {
         // ConnectSDK has a dedicated Netflix content-ID launcher for webOS.
         // Do not confuse TMDB IDs with Netflix IDs, or claim playback success.
-        if (!contentId.matches(Regex("[0-9]{6,9}"))) {
+        if (!contentId.matches(Regex("[0-9]{6,8}"))) {
             showStatus("Identificador Netflix inválido.", isError = true)
             return
         }
