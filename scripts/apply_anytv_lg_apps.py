@@ -99,6 +99,34 @@ methods = '''    private var lgAppsRequestSeq = 0
         }
     }
 
+    fun launchLgNetflixTitle(contentId: String) {
+        // ConnectSDK has a dedicated Netflix content-ID launcher for webOS.
+        // Do not confuse TMDB IDs with Netflix IDs, or claim playback success.
+        if (!contentId.matches(Regex("[0-9]{6,9}"))) {
+            showStatus("Identificador Netflix inválido.", isError = true)
+            return
+        }
+        val device = currentConnectableDevice()?.takeIf { it.id == activeDeviceId }
+        val service = device?.getServiceByName(WebOSTVService.ID) as? WebOSTVService
+        if (service == null || !service.isConnected ||
+            _uiState.value.lgWebOsApps.none { it.name.equals("Netflix", ignoreCase = true) }) {
+            showStatus("Netflix indisponível na LG conectada.", isError = true)
+            return
+        }
+        val deviceId = device.id
+        service.launchNetflix(contentId, object : Launcher.AppLaunchListener {
+            override fun onSuccess(session: LaunchSession?) {
+                if (activeDeviceId == deviceId) showStatus(
+                    "Ficha Netflix solicitada na LG. Confirme na TV.", isError = false)
+            }
+            override fun onError(error: ServiceCommandError?) {
+                if (activeDeviceId == deviceId) showStatus(
+                    "LG não aceitou a ficha Netflix: " +
+                        (error?.message ?: "abra o app e procure o título"), isError = true)
+            }
+        })
+    }
+
     fun launchLgWebOsApp(id: String) {
         val device = currentConnectableDevice()?.takeIf { it.id == activeDeviceId }
         if (device == null) {
@@ -145,12 +173,14 @@ patch(nav,
     "                onQuickApp = tvRemoteViewModel::launchQuickApp,",
     "                onQuickApp = tvRemoteViewModel::launchQuickApp,\n"
     "                onLgAppsRefresh = tvRemoteViewModel::refreshLgWebOsApps,\n"
-    "                onLgAppLaunch = tvRemoteViewModel::launchLgWebOsApp,")
+    "                onLgAppLaunch = tvRemoteViewModel::launchLgWebOsApp,\n"
+    "                onLgNetflixTitle = tvRemoteViewModel::launchLgNetflixTitle,")
 patch(home,
     "    onQuickApp: (String) -> Unit,",
     "    onQuickApp: (String) -> Unit,\n"
     "    onLgAppsRefresh: () -> Unit,\n"
-    "    onLgAppLaunch: (String) -> Unit,")
+    "    onLgAppLaunch: (String) -> Unit,\n"
+    "    onLgNetflixTitle: (String) -> Unit,")
 patch(home,
     '''                    if (sessionState.connectedDevice?.type == "LG webOS") {
                         Button(onClick = { lgStreaming = true }) {
@@ -178,7 +208,8 @@ patch(home,
                                 TvOfficialApp("lg:" + app.id, app.name, app.icon)
                             }, host = "", pairing = "",
                             isLgWebOs = true,
-                            onLaunchLgApp = onLgAppLaunch,''')
+                            onLaunchLgApp = onLgAppLaunch,
+                            onLaunchLgNetflixTitle = onLgNetflixTitle,''')
 destination = root / "ui/app/LgWebOsAppsBar.kt"
 assert not destination.exists(), "LG_APP_FILE_ALREADY_EXISTS"
 destination.write_text(Path("overrides/LgWebOsAppsBar.kt").read_text(encoding="utf-8"), encoding="utf-8")
