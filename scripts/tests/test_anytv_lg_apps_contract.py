@@ -65,6 +65,18 @@ class LgAppsContract(unittest.TestCase):
         self.assertNotIn("service.launchNetflix(", self.bar)
         self.assertNotIn("launchAppWithInfo(", self.bar)
 
+    def test_webos_inventory_reaches_streaming_and_youtube_is_not_hidden(self):
+        script = Path("scripts/apply_anytv_lg_apps.py").read_text()
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        self.assertIn('TvOfficialApp("lg:" + app.id, app.name, app.icon)', script)
+        self.assertIn('apps = sessionState.lgWebOsApps.map { app ->', script)
+        self.assertNotIn('apps = emptyList(), host = "", pairing = ""', self.home)
+        self.assertIn('val selectedApps = if (!hasUserFavorites) allApps', self.bar)
+        self.assertNotIn('allApps.take(6)', self.bar)
+        self.assertIn('www.gstatic.com/youtube/img/branding/favicon/favicon_144x144.png', self.bar)
+        self.assertIn('LgAppIcon(LgWebOsApp(', catalog)
+        self.assertIn('Nenhum aplicativo recebido da TV', catalog)
+
     def test_tcl_companion_remains_separate(self):
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertNotIn("TclTvAppApi.apps(", self.bar)
