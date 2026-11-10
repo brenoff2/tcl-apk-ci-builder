@@ -45,7 +45,7 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn("LgWebOsAppsBar(", self.home)
         self.assertIn("apps = sessionState.lgWebOsApps", self.home)
         self.assertIn("AnyTvHomeFilmBanner(onOpenStreaming = onOpenStreaming)", self.bar)
-        self.assertIn("onOpenStreaming = { lgStreaming = true }", (ROOT.parents[3] / "scripts/apply_anytv_lg_apps.py").read_text())
+        self.assertIn("onOpenStreaming = { lgStreaming = true }", Path("scripts/apply_anytv_lg_apps.py").read_text())
         self.assertIn('Text("Editar"', self.bar)
         self.assertIn("Checkbox(checked = app.id in draft", self.bar)
         self.assertIn('Text("Salvar")', self.bar)
