@@ -100,9 +100,20 @@ methods = '''    private var lgAppsRequestSeq = 0
     }
 
     fun launchLgWebOsApp(id: String) {
-        val device = currentConnectableDevice()?.takeIf { it.id == activeDeviceId } ?: return
-        val service = device.getServiceByName(WebOSTVService.ID) as? WebOSTVService ?: return
-        if (id !in _uiState.value.lgWebOsApps.map { it.id } || !service.isConnected) return
+        val device = currentConnectableDevice()?.takeIf { it.id == activeDeviceId }
+        if (device == null) {
+            showStatus("Conecte a LG para abrir o aplicativo.", isError = true)
+            return
+        }
+        val service = device.getServiceByName(WebOSTVService.ID) as? WebOSTVService
+        if (service == null || !service.isConnected) {
+            showStatus("A sessão webOS está desconectada. Reconecte a LG.", isError = true)
+            return
+        }
+        if (id !in _uiState.value.lgWebOsApps.map { it.id }) {
+            showStatus("Aplicativo não identificado nesta LG. Atualize a lista.", isError = true)
+            return
+        }
         val deviceId = device.id
         service.launchApp(id, object : Launcher.AppLaunchListener {
             override fun onSuccess(session: LaunchSession?) {
