@@ -113,7 +113,7 @@ methods = '''    private var lgAppsRequestSeq = 0
             showStatus("Netflix indisponível na LG conectada.", isError = true)
             return
         }
-        val deviceId = device.id
+        val deviceId = device?.id ?: return
         service.launchNetflix(contentId, object : Launcher.AppLaunchListener {
             override fun onSuccess(session: LaunchSession?) {
                 if (activeDeviceId == deviceId) showStatus(
