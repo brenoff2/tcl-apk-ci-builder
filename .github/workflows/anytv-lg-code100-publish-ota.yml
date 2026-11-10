@@ -1,0 +1,122 @@
+name: AnyTV LG code100 publish signed in-app OTA (one-shot)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-lg-code100-publish-ota.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: anytv-v2-official-ota-code100-publish
+  cancel-in-progress: false
+jobs:
+  publish-verified-code100:
+    runs-on: ubuntu-latest
+    environment: anytv-ota-approval
+    env:
+      SIGNED_SHA256: c00574c0a1d386d78ebf7750ec32739c351f596bb68a3bc1e118cedbfdb72ab7
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify signed code100 run provenance before downloading
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SIGNED_RUN_ID: '42842687555'
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          run_id=os.environ['SIGNED_RUN_ID']
+          assert re.fullmatch(r'[0-9]{1,18}',run_id), 'Invalid run ID'
+          url='https://api.github.com/repos/brenoff2/tcl-apk-ci-builder/actions/runs/'+run_id
+          req=urllib.request.Request(url,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'})
+          with urllib.request.urlopen(req,timeout=20) as response:
+              run=json.load(response)
+          assert run['id']==int(run_id), 'Run ID mismatch'
+          assert run['status']=='completed' and run['conclusion']=='success', 'Signed run did not pass'
+          assert run['event']=='push', 'Wrong event type'
+          assert run['head_sha']=='67dbf26e5a1a587189ecddf76c1993a632f35e74', 'Wrong signing commit'
+          assert run['head_branch']=='feat/anytv-p0-device-proof-verifier-20261020', 'Wrong signing branch'
+          assert run['path'].split('@')[0]=='.github/workflows/anytv-lg-code100-signed-qa.yml', 'Wrong signing workflow'
+          assert run['head_repository']['full_name']=='brenoff2/tcl-apk-ci-builder', 'Wrong repository'
+          print('LG_CODE100_SIGNED_RUN_PROVENANCE_VERIFIED')
+          PY
+      - name: Retrieve signed LG code100 from verified QA run
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42842687555
+          name: anytv-lg-code100-signed-candidate
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: signed-code100
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Validate signed source and immutable OTA baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SIGNED_SHA256" =~ ^[0-9a-f]{64}$ ]] || { echo 'Missing/invalid signed APK SHA256'; exit 1; }
+          APK=signed-code100/AnyTV_LG_2.9.72_code100_SIGNED_CANDIDATE.apk
+          test -s "$APK"
+          test "$(find signed-code100 -name '*.apk' -type f | wc -l)" -eq 1
+          grep -Fq "$SIGNED_SHA256" signed-code100/SHA256.txt
+          test "$(sha256sum "$APK" | cut -d ' ' -f1)" = "$SIGNED_SHA256"
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/apksigner" verify --verbose --print-certs "$APK" > signed-code100/audit-check.txt
+          grep -qi 'fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9' signed-code100/audit-check.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-code100/audit-check.txt
+          "$BT/aapt" dump badging "$APK" > signed-code100/identity-check.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='100'" signed-code100/identity-check.txt
+          grep -q "versionName='2.9.72-AnyTV'" signed-code100/identity-check.txt
+          "$BT/zipalign" -c 4 "$APK"
+          git fetch --no-tags origin feat/tcl-v22-updates-back-bluetooth
+          test "$(git rev-parse origin/feat/tcl-v22-updates-back-bluetooth)" = '4d5f4cef02f95e95517bb6cbd131902e3f42a633'
+          git show '4d5f4cef02f95e95517bb6cbd131902e3f42a633:updates/android/v2/current.apk' > previous-v2-code99.apk
+          test "$(sha256sum previous-v2-code99.apk | cut -d ' ' -f1)" = '22190681c0c5d7c1b3416af72e52ce2a98b0c27a8120a9f0ac1191c83092fb4e'
+          "$BT/apksigner" verify --verbose --print-certs previous-v2-code99.apk > previous-audit.txt
+          grep -qi 'fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9' previous-audit.txt
+          "$BT/aapt" dump badging previous-v2-code99.apk > previous-badging.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='99'" previous-badging.txt
+          grep -q "versionName='2.9.71-AnyTV'" previous-badging.txt
+          echo 'LG_CODE100_OTA_BASELINE_AND_SIGNATURE_VERIFIED'
+      - name: Publish only V2 current.apk to existing in-app OTA channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH=feat/tcl-v22-updates-back-bluetooth
+          EXPECTED=4d5f4cef02f95e95517bb6cbd131902e3f42a633
+          test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$EXPECTED"
+          git worktree add --detach ota-v2 "$EXPECTED"
+          test -s ota-v2/updates/android/cert2026/current.apk
+          cp signed-code100/AnyTV_LG_2.9.72_code100_SIGNED_CANDIDATE.apk ota-v2/updates/android/v2/current.apk
+          (
+            cd ota-v2
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add -f updates/android/v2/current.apk
+            test "$(git diff --cached --name-only)" = "updates/android/v2/current.apk"
+            git diff --cached --check
+            git commit -m 'release(anytv-v2): LG webOS signed code100 in-app OTA'
+            test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$EXPECTED"
+            git push origin HEAD:"$BRANCH"
+          )
+          echo 'LG_CODE100_OTA_PUSH_COMPLETE'
+      - name: Read back published binary using immutable commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXPECTED_SHA=$SIGNED_SHA256
+          NEW_COMMIT="$(git -C ota-v2 rev-parse HEAD)"
+          CURRENT="$(git ls-remote origin refs/heads/feat/tcl-v22-updates-back-bluetooth | cut -f1)"
+          test "$NEW_COMMIT" = "$CURRENT"
+          for n in 1 2 3 4 5 6; do
+            curl --fail --silent --show-error --location --retry 2 "https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/$NEW_COMMIT/updates/android/v2/current.apk?verify=$n" -o readback-code100.apk || true
+            if test -s readback-code100.apk && test "$(sha256sum readback-code100.apk | cut -d ' ' -f1)" = "$EXPECTED_SHA"; then
+              echo "LG_CODE100_OTA_READBACK_VERIFIED_SHA256_$EXPECTED_SHA"
+              echo "LG_CODE100_OTA_COMMIT_$NEW_COMMIT"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo 'LG_CODE100_PUBLISHED_BUT_READBACK_UNVERIFIED'
+          exit 1
