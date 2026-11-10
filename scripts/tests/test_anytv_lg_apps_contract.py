@@ -131,6 +131,26 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('if (netflixId != null)', catalog)
         self.assertIn('onLaunchLgApp(lgId)', catalog)
 
+    def test_lg_launcher_outcomes_are_visible_and_do_not_claim_playback(self):
+        script = Path("scripts/apply_anytv_lg_apps.py").read_text()
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        self.assertIn('lgLaunchStatus: String? = null', script)
+        self.assertIn('lgLaunchStatus = sessionState.lgLaunchStatus,', script)
+        self.assertIn('lgLaunchStatus: String? = null', catalog)
+        self.assertIn('if (isLgWebOs && lgLaunchStatus != null)', catalog)
+        self.assertIn('Text(lgLaunchStatus, fontSize = 12.sp', catalog)
+        self.assertIn('setLgLaunchStatus("LG: comando enviado; aguardando resposta.")', script)
+        self.assertIn('setLgLaunchStatus("LG: comando aceito; aplicativo não confirmado visualmente.")', script)
+        self.assertIn('setLgLaunchStatus("LG: comando Netflix aceito; título não confirmado.")', script)
+        self.assertIn('setLgLaunchStatus("LG: comando rejeitado pela TV.")', script)
+        self.assertIn('setLgLaunchStatus("LG: comando Netflix rejeitado.")', script)
+        self.assertIn('setLgLaunchStatus("LG: sem resposta em 10 segundos; confira a conexão webOS.")', script)
+        self.assertIn('requestId == lgLaunchRequestSeq', script)
+        self.assertIn('activeDeviceId == deviceId', script)
+        self.assertNotIn('showStatus("Aplicativo aberto na LG."', script)
+        self.assertIn('A ficha e a reprodução ainda não foram confirmadas.', catalog)
+        self.assertNotIn('Ficha Netflix solicitada na LG. Confirme na TV.', script)
+
     def test_tcl_companion_remains_separate(self):
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertNotIn("TclTvAppApi.apps(", self.bar)
