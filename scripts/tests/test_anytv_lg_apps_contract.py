@@ -95,6 +95,20 @@ class LgAppsContract(unittest.TestCase):
         self.assertIn('} else if (!isLgWebOs &&', catalog)
         self.assertIn("Aplicativos da LG (disponibilidade do título não confirmada)", catalog)
 
+    def test_same_playback_remote_and_offer_logos_across_lg_tcl(self):
+        catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
+        lg = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1].split("if (host.isBlank() || pairing.isBlank())", 1)[0]
+        self.assertIn("showPlaybackRemote = true", lg)
+        self.assertIn("remoteMinimized = false", lg)
+        self.assertIn("onLaunchLgApp(app.packageName.removePrefix", lg)
+        self.assertIn('if (offer.logo.startsWith("/"))', catalog)
+        self.assertIn('model = "https://image.tmdb.org/t/p/w92" + offer.logo', catalog)
+        self.assertIn('installed?.packageName?.startsWith("lg:") == true', catalog)
+        self.assertIn("LgAppIcon(LgWebOsApp(", catalog)
+        self.assertIn("if (showPlaybackRemote)", catalog)
+        self.assertIn("TclResponsivePad(", catalog)
+        self.assertIn("PlaybackTransportBar(onRemoteKey = send)", catalog)
+
     def test_tcl_companion_remains_separate(self):
         self.assertIn("} else TclInstalledAppsBar(", self.home)
         self.assertNotIn("TclTvAppApi.apps(", self.bar)
