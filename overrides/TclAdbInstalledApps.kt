@@ -291,9 +291,13 @@ internal class TclAdbInstalledApps(private val context: Context) {
         withAdb(host, 90000L) { adb ->
             val installed = parsePackages(shell(adb, "pm list packages")).toSet()
             // Deliberately fail closed when firmware cannot enumerate launcher activities.
-            val launchable = parseLaunchablePackages(shell(adb,
+            val leanback = parseLaunchablePackages(shell(adb,
                 "cmd package query-activities --brief -a android.intent.action.MAIN " +
                     "-c android.intent.category.LEANBACK_LAUNCHER"))
+            val standard = parseLaunchablePackages(shell(adb,
+                "cmd package query-activities --brief -a android.intent.action.MAIN " +
+                    "-c android.intent.category.LAUNCHER"))
+            val launchable = leanback + standard
             require(launchable.isNotEmpty()) {
                 "A TCL não retornou os aplicativos do launcher. Inventário indisponível."
             }
@@ -370,9 +374,17 @@ internal class TclAdbInstalledApps(private val context: Context) {
                     !response.contains("unable", ignoreCase = true)) {
                     true
                 } else {
-                    shell(adb, "monkey -p " + packageName +
-                        " -c android.intent.category.LEANBACK_LAUNCHER 1")
-                        .contains("Events injected: 1")
+                    val standard = shell(adb,
+                        "am start -a android.intent.action.MAIN " +
+                            "-c android.intent.category.LAUNCHER -p " + packageName)
+                    if (standard.contains("Starting: Intent") &&
+                        !standard.contains("Error:", ignoreCase = true) &&
+                        !standard.contains("unable", ignoreCase = true)) {
+                        true
+                    } else {
+                        shell(adb, "monkey -p " + packageName + " 1")
+                            .contains("Events injected: 1")
+                    }
                 }
             }
         }
