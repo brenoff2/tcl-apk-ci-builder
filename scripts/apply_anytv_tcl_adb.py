@@ -128,6 +128,16 @@ text = replace_once(text,
     '''                    if (pairing.isNotBlank()) refresh++ else showPair = true''',
     '''                    if (useAdb || pairing.isNotBlank()) refresh++ else showPair = true''',
     "ADB retry")
+# Share the selected TCL transport with the Streaming film/series screens.
+# Android TV Remote v2 and ADB app launch are distinct from title-specific deep links.
+text = replace_once(text,
+    '''        TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
+            tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },''',
+    '''        TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
+            useTclAdb = useAdb,
+            onTclAdbLaunch = { pkg -> adbApps.launch(host, pkg) },
+            tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },''',
+    "Streaming ADB route")
 SOURCE.write_text(text, encoding="utf-8")
 
 gradle = ROOT / "app/build.gradle.kts"
@@ -137,4 +147,81 @@ assert "dependencies {" in build
 build = build.replace("dependencies {",
     'dependencies {\n    implementation("com.tananaev:adblib:1.3")', 1)
 gradle.write_text(build, encoding="utf-8")
+
+# Inject a standalone, fail-closed TCL ADB branch in the shared streaming screen.
+# Do not change LG routes or the existing companion title/deeplink behavior.
+STREAM = SRC / "TclStreamingScreens.kt"
+stream = STREAM.read_text(encoding="utf-8")
+stream = replace_once(stream,
+    '''    apps: List<TvOfficialApp>, host: String, pairing: String,
+    tvName: String, onDismiss: () -> Unit,''',
+    '''    apps: List<TvOfficialApp>, host: String, pairing: String,
+    useTclAdb: Boolean = false,
+    onTclAdbLaunch: suspend (String) -> Boolean = { false },
+    tvName: String, onDismiss: () -> Unit,''',
+    "Streaming route parameters")
+stream = replace_once(stream,
+    '''        if (host.isBlank() || pairing.isBlank()) {
+            message = "Conecte o AnyTV Connect e vincule a TV antes de abrir aplicativos."''',
+    '''        if (useTclAdb) {
+            if (host.isBlank() || apps.none { it.packageName == app.packageName }) {
+                message = "Aplicativo não encontrado na TCL conectada."
+            } else scope.launch {
+                message = "Enviando abertura do aplicativo por ADB Wi-Fi..."
+                runCatching { onTclAdbLaunch(app.packageName) }
+                    .onSuccess { ok ->
+                        message = if (ok) "Comando ADB enviado à TCL; confira a TV."
+                            else "A TCL não confirmou o comando ADB para este aplicativo."
+                    }
+                    .onFailure { error ->
+                        message = error.message ?: "Não foi possível abrir pelo ADB Wi-Fi."
+                    }
+            }
+            return
+        }
+        if (host.isBlank() || pairing.isBlank()) {
+            message = "Conecte o AnyTV Connect e vincule a TV antes de abrir aplicativos."''',
+    "Streaming launch by ADB")
+stream = replace_once(stream,
+    '''        if (host.isBlank() || pairing.isBlank()) {
+            titleActionFeedback = "Vincule o AnyTV Connect com o código de oito dígitos. " +
+                "A conexão do controle remoto é independente."
+            return
+        }''',
+    '''        if (useTclAdb) {
+            if (host.isBlank() || apps.none { it.packageName == packageName }) {
+                titleActionFeedback = "Selecione um aplicativo instalado na TCL."
+                return
+            }
+            titleActionPending = true
+            showPlaybackRemote = true
+            remoteMinimized = false
+            titleActionFeedback = "Abrindo aplicativo por ADB Wi-Fi..."
+            scope.launch {
+                try {
+                    val ok = onTclAdbLaunch(packageName)
+                    titleActionFeedback = if (ok) {
+                        "Comando de abertura enviado ao aplicativo na TCL. " +
+                            "A ficha de " + title.name +
+                            " não foi aberta automaticamente; procure o título na TV."
+                    } else {
+                        "A TCL não confirmou a abertura do aplicativo. Confira a TV."
+                    }
+                } catch (error: Exception) {
+                    titleActionFeedback = error.message
+                        ?: "Falha ao enviar abertura por ADB Wi-Fi."
+                } finally {
+                    titleActionPending = false
+                }
+            }
+            return
+        }
+        if (host.isBlank() || pairing.isBlank()) {
+            titleActionFeedback = "Vincule o AnyTV Connect com o código de oito dígitos. " +
+                "A conexão do controle remoto é independente."
+            return
+        }''',
+    "TCL title fallback to ADB app launch")
+STREAM.write_text(stream, encoding="utf-8")
+
 print("ANYTV_TCL_ADB_PHONE_DEV_OPT_IN_PREPARED")
