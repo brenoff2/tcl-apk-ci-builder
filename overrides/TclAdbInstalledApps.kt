@@ -28,6 +28,10 @@ import java.util.concurrent.TimeUnit
  * ADB TCP/5555 is unencrypted; use only on a trusted local network.
  */
 internal class TclAdbInstalledApps(private val context: Context) {
+    @Volatile
+    var lastInventoryWarnings: List<String> = emptyList()
+        private set
+
     companion object {
         private val packagePattern = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")
         private const val maxShellBytes = 2 * 1024 * 1024
@@ -172,16 +176,20 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 files.add(local)
                 copyApk(adb, path, local)
             }
-            val archive = context.packageManager.getPackageArchiveInfo(
-                files[0].absolutePath, 0) ?: return TvOfficialApp(pkg, pkg, "")
-            val info = archive.applicationInfo ?: return TvOfficialApp(pkg, pkg, "")
-            info.sourceDir = files[0].absolutePath
-            info.publicSourceDir = files[0].absolutePath
-            if (files.size > 1) {
-                info.splitSourceDirs = files.drop(1).map { it.absolutePath }.toTypedArray()
-                info.splitPublicSourceDirs = info.splitSourceDirs
+            // The phone may refuse to parse the TV's archive as an installed APK.
+            // Archive metadata is independent of the phone's PackageManager.
+            val archive = runCatching {
+                context.packageManager.getPackageArchiveInfo(files[0].absolutePath, 0)
+            }.getOrNull()
+            val info = archive?.applicationInfo?.apply {
+                sourceDir = files[0].absolutePath
+                publicSourceDir = files[0].absolutePath
+                if (files.size > 1) {
+                    splitSourceDirs = files.drop(1).map { it.absolutePath }.toTypedArray()
+                    splitPublicSourceDirs = splitSourceDirs
+                }
             }
-            // Label/icon must resolve from the APK's own manifest/resources, not a catalog.
+            // Prefer real manifest and resources in the APK, never an app catalog.
             // Do not request the remote package through the phone's installed-PM
             // namespace. Its package is installed only on the TV.
             val parsed = runCatching {
@@ -204,7 +212,7 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 }
             }.getOrNull()
             val label = parsed?.first ?: runCatching {
-                val name = context.packageManager.getApplicationLabel(info).toString()
+                val name = context.packageManager.getApplicationLabel(requireNotNull(info)).toString()
                 name.takeIf { it.isNotBlank() && it != pkg }
             }.getOrNull() ?: pkg
             val icon = parsed?.second?.let { data ->
@@ -221,9 +229,10 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 }
             } ?: runCatching {
                 // Legacy archive resource fallback, never an invented icon.
-                require(info.icon != 0) { "Aplicativo sem ícone de manifesto" }
-                val resources = context.packageManager.getResourcesForApplication(info)
-                val drawable = resources.getDrawable(info.icon, null)
+                val appInfo = requireNotNull(info) { "Pacote ausente do PM local" }
+                require(appInfo.icon != 0) { "Aplicativo sem ícone de manifesto" }
+                val resources = context.packageManager.getResourcesForApplication(appInfo)
+                val drawable = resources.getDrawable(appInfo.icon, null)
                 val bmp = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
                 try {
                     drawable.setBounds(0, 0, 96, 96)
@@ -265,10 +274,19 @@ internal class TclAdbInstalledApps(private val context: Context) {
             require(launchable.isNotEmpty()) {
                 "A TCL não retornou os aplicativos do launcher. Inventário indisponível."
             }
-            launchable.filter { it in installed }.sorted().map { pkg ->
+            val warnings = mutableListOf<String>()
+            val apps = launchable.filter { it in installed }.sorted().map { pkg ->
                 runCatching { readRealApp(adb, host, pkg) }
-                    .getOrDefault(TvOfficialApp(pkg, pkg, ""))
+                    .getOrElse { error ->
+                        warnings.add(pkg + ": " + error.javaClass.simpleName)
+                        TvOfficialApp(pkg, pkg, "")
+                    }
             }.sortedBy { it.name.lowercase() }
+            if (apps.none { it.name != it.packageName || it.icon.isNotBlank() }) {
+                warnings.add("Nenhum nome ou ícone foi resolvido; verifique os recursos dos APKs.")
+            }
+            lastInventoryWarnings = warnings.take(6)
+            apps
         }
     }
 
