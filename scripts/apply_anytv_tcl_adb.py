@@ -140,6 +140,7 @@ text = replace_once(text,
     '''        TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
             useTclAdb = useAdb,
             onTclAdbLaunch = { pkg -> adbApps.launch(host, pkg) },
+            onTclAdbTitleLink = { pkg, url -> adbApps.openTitleLink(host, pkg, url) },
             tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },''',
     "Streaming ADB route")
 
@@ -284,6 +285,7 @@ stream = replace_once(stream,
     '''    apps: List<TvOfficialApp>, host: String, pairing: String,
     useTclAdb: Boolean = false,
     onTclAdbLaunch: suspend (String) -> Boolean = { false },
+    onTclAdbTitleLink: suspend (String, String) -> Boolean = { _, _ -> false },
     tvName: String, onDismiss: () -> Unit,''',
     "Streaming route parameters")
 stream = replace_once(stream,
@@ -325,13 +327,41 @@ stream = replace_once(stream,
             titleActionFeedback = "Abrindo aplicativo por ADB Wi-Fi..."
             scope.launch {
                 try {
-                    val ok = onTclAdbLaunch(packageName)
-                    titleActionFeedback = if (ok) {
-                        "Comando de abertura enviado ao aplicativo na TCL. " +
-                            "A ficha de " + title.name +
-                            " não foi aberta automaticamente; procure o título na TV."
+                    // Prefer a provider-specific HTTPS title link when one is
+                    // available; a launcher command alone cannot open a title.
+                    val direct = runCatching {
+                        AnyTvPersonalLinks.resolve(context, title, packageName)
+                    }.getOrNull()
+                    if (direct is AnyTvPersonalResult.NotInSubscription) {
+                        titleActionFeedback = "Este título não está confirmado na assinatura escolhida."
+                        return@launch
+                    }
+                    val personalUrl = (direct as? AnyTvPersonalResult.Direct)?.url
+                    val appName = apps.firstOrNull { it.packageName == packageName }?.name
+                        ?: "serviço selecionado"
+                    val officialUrl = if (personalUrl == null) {
+                        val available = runCatching {
+                            StreamingCatalog.titleAvailableInBrazil(token, title, appName)
+                        }.getOrNull()
+                        if (available == true) runCatching {
+                            StreamingCatalog.titleDeepLink(token, title, packageName)
+                        }.getOrNull() else null
+                    } else null
+                    val url = personalUrl ?: officialUrl
+                    val requested = url != null && runCatching {
+                        onTclAdbTitleLink(packageName, url)
+                    }.getOrDefault(false)
+                    if (requested) {
+                        titleActionFeedback = "Link do título enviado ao aplicativo por ADB. " +
+                            "Confira na TCL se a ficha correta abriu."
                     } else {
-                        "A TCL não confirmou a abertura do aplicativo. Confira a TV."
+                        val ok = onTclAdbLaunch(packageName)
+                        titleActionFeedback = if (ok) {
+                            "Aplicativo aberto via ADB. O link específico do título não " +
+                                "foi aceito ou não está disponível; procure " + title.name + " na TV."
+                        } else {
+                            "A TCL não confirmou a abertura do aplicativo. Confira a TV."
+                        }
                     }
                 } catch (error: Exception) {
                     titleActionFeedback = error.message
