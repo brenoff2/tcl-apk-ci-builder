@@ -118,7 +118,8 @@ class StreamingScreens(unittest.TestCase):
 
     def test_real_installed_apps_are_the_source(self):
         self.assertIn('request(host, code, "/apps")', self.apps)
-        self.assertIn("TclStreamingScreens(apps = allApps", self.apps)
+        self.assertIn("TclStreamingScreens(apps = if (inventoryVerified) allApps else emptyList()", self.apps)
+        self.assertIn("val verifiedApps = if (inventoryVerified", self.apps)
         self.assertIn("OfficialTvIcon(app, 52.dp)", self.screen)
         self.assertNotIn("listOf(TvOfficialApp(", self.screen)
         self.assertIn('"favorites:$deviceKey"', self.apps)
@@ -163,8 +164,10 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('if (offered == null)', self.screen)
         self.assertIn('return@launch', self.screen)
         self.assertIn('titleDeepLink(token, title, packageName)', self.screen)
-        self.assertLess(self.screen.index('if (offered == false)'),
-                        self.screen.index('titleDeepLink(token, title, packageName)', self.screen.index('fun searchOnTv(')))
+        # Validate the companion title route independently of the new ADB route.
+        legacy = self.screen[self.screen.index('// Verified Disney+ Brazil entity'):]
+        self.assertLess(legacy.index('if (offered == false)'),
+                        legacy.index('titleDeepLink(token, title, packageName)'))
         self.assertIn('Confira \'Onde assistir e links disponíveis\'', self.screen)
 
     def test_compact_catalog_layout_regression(self):
