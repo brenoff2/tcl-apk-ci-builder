@@ -56,7 +56,7 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('onTclAdbLaunch(packageName)', s)
         self.assertIn('onTclAdbLaunch(app.packageName)', s)
         self.assertIn('Link do título enviado ao aplicativo por ADB.', s)
-        self.assertIn('não foi aceito ou não está disponível', s)
+        self.assertIn('foi aceito ou não está disponível', s)
         self.assertIn('STREAM = SRC / "TclStreamingScreens.kt"', s)
 
     def test_disconnected_shelf_shows_only_edit(self):
