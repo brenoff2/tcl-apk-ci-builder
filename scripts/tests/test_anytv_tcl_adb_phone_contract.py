@@ -40,6 +40,11 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('val name = meta.label?.trim()', s)
         self.assertIn('apk.allIcons.filterIsInstance<Icon>()', s)
         self.assertIn('val icon = parsed?.second?.let', s)
+        self.assertIn('java.util.zip.ZipFile(split)', s)
+        self.assertIn('it.name.endsWith("/" + filename)', s)
+        self.assertIn('BitmapFactory.Options()', s)
+        self.assertIn('lastInventoryWarnings = warnings.take(6)', s)
+        self.assertIn('am start -a android.intent.action.MAIN', s)
         self.assertNotIn('TvOfficialApp(pkg, "Netflix"', s)
         self.assertIn('require(info.icon != 0)', s)
         inventory = s[s.index('suspend fun inventory('):s.index('suspend fun openTitleLink(')]
@@ -73,7 +78,7 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('if (inventoryVerified) allApps else emptyList()', p)
         self.assertIn('Text("Editar"', p)
         self.assertIn('if (inventoryVerified) showManager = true', p)
-        self.assertIn('if (errorText != null && inventoryVerified)', p)
+        self.assertIn('if (errorText != null && inventoryVerified && !useAdb)', p)
         self.assertNotIn('ADB Wi-Fi: ativado (toque para usar complemento)', p)
 
     def test_first_connection_guide_only_in_editor(self):
@@ -128,6 +133,7 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('onTclAdbTitleLink = { pkg, url -> adbApps.openTitleLink(host, pkg, url) }', p)
         self.assertIn('StreamingCatalog.titleDeepLink(token, title, packageName)', p)
         self.assertIn('onTclAdbLaunch(packageName)', p)
+        self.assertIn('adbApps.lastInventoryWarnings.take(2)', p)
         self.assertIn('Link do título enviado ao aplicativo por ADB.', p)
         self.assertIn('val uri = java.net.URI(url)', source)
         self.assertIn('uri.userInfo == null', source)
