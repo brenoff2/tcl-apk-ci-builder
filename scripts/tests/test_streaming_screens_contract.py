@@ -13,6 +13,15 @@ class StreamingScreens(unittest.TestCase):
         cls.apps = (UI / "TclInstalledApps.kt").read_text(encoding="utf-8")
         cls.gradle = Path("source/app/build.gradle.kts").read_text()
 
+    def test_tcl_provider_routing_does_not_depend_on_remote_apk_label(self):
+        s = self.screen
+        self.assertIn('name == "com.netflix.ninja"', s)
+        self.assertIn('name == "com.amazon.amazonvideo.livingroom"', s)
+        self.assertIn('name == "com.wbd.stream"', s)
+        self.assertIn('provider(app.packageName) != null', s)
+        self.assertIn('provider(app.name) ?: provider(app.packageName) ?: return false', s)
+        self.assertIn('StreamingCatalog.appHasOffer(app, offers)', s)
+
     def test_anime_separate_from_general_catalog_and_genres_default_list(self):
         self.assertIn('val matchGenre = genre == 0 || genre == ANYTV_ANIME_FILTER', self.screen)
         self.assertIn('if (resolved > 0 || resolved == ANYTV_ANIME_FILTER)', self.screen)
