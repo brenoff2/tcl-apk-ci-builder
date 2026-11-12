@@ -101,6 +101,21 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('suspend fun ping(host: String)', source)
         self.assertNotIn('deleteRecursively', source)
 
+    def test_connection_has_bounded_probe_and_no_infinite_busy_spinner(self):
+        patch = PATCH.read_text()
+        client = SOURCE.read_text()
+        self.assertIn('adbApps.probe(host)', patch)
+        self.assertIn('connectionActive = true', patch)
+        self.assertIn('busy = false', patch)
+        self.assertIn('"Verificando autorização ADB..."', patch)
+        self.assertIn('"ADB autorizado; lendo aplicativos..."', patch)
+        self.assertIn('A TV aceitou a conexão, mas a leitura dos aplicativos falhou.', patch)
+        self.assertIn('private fun <T> withAdb(', client)
+        self.assertIn('val watchdog = java.util.Timer(', client)
+        self.assertIn('socket.close()', client)
+        self.assertIn('suspend fun probe(host: String)', client)
+        self.assertIn('withAdb(host, 90000L)', client)
+
     def test_title_link_over_adb_falls_back_to_app(self):
         p = PATCH.read_text()
         source = SOURCE.read_text()
