@@ -1,0 +1,37 @@
+name: AnyTV TCL Android TV ADB probe synthetic QA only (NO APK / NO OTA)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths:
+      - 'scripts/qa/tcl_adb_apps_probe.py'
+      - 'scripts/tests/test_tcl_adb_apps_probe.py'
+      - '.github/workflows/anytv-tcl-adb-apps-probe-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-no-device-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Syntax and deterministic synthetic tests (NO TV connection)
+        run: |
+          python3 -m py_compile scripts/qa/tcl_adb_apps_probe.py scripts/tests/test_tcl_adb_apps_probe.py
+          python3 -m unittest discover -s scripts/tests -p 'test_tcl_adb_apps_probe.py' -v
+      - name: Confirm no build, signer, OTA or TV write steps
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import ast
+          code=Path('scripts/qa/tcl_adb_apps_probe.py').read_text()
+          ast.parse(code)
+          assert 'adb install' not in code and 'adb uninstall' not in code
+          assert 'def export_icon(' in code and 'def packages_from_pm(' in code
+          print('TCL_ADB_PROBE_SYNTHETIC_ONLY_PASS; PHYSICAL_TV_NOT_TESTED')
+          PY
