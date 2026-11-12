@@ -3,7 +3,10 @@ package com.hari.androidtvremote.ui.app
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
+import net.dongliu.apk.parser.ApkFile
+import net.dongliu.apk.parser.bean.Icon
 import android.util.Base64
 import com.tananaev.adblib.AdbBase64
 import com.tananaev.adblib.AdbConnection
@@ -179,11 +182,45 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 info.splitPublicSourceDirs = info.splitSourceDirs
             }
             // Label/icon must resolve from the APK's own manifest/resources, not a catalog.
-            val label = runCatching {
-                context.packageManager.getApplicationLabel(info).toString()
-            }.getOrNull()?.takeIf { it.isNotBlank() } ?: pkg
-            val icon = runCatching {
-                // Never serialize PackageManager's fallback Android icon as a real TV icon.
+            // Do not request the remote package through the phone's installed-PM
+            // namespace. Its package is installed only on the TV.
+            val parsed = runCatching {
+                ApkFile(files[0]).use { apk ->
+                    apk.setPreferredLocale(java.util.Locale.forLanguageTag("pt-BR"))
+                    val meta = apk.apkMeta
+                    val name = meta.label?.trim()?.takeIf {
+                        it.isNotEmpty() && !it.startsWith("@") && it != pkg
+                    }
+                    val iconBytes = apk.allIcons.filterIsInstance<Icon>()
+                        .filter { it.data != null }
+                        .sortedByDescending { it.density }
+                        .firstNotNullOfOrNull { item ->
+                            item.data?.takeIf { data ->
+                                data.size in 100..(2 * 1024 * 1024) &&
+                                    BitmapFactory.decodeByteArray(data, 0, data.size) != null
+                            }
+                        }
+                    Pair(name, iconBytes)
+                }
+            }.getOrNull()
+            val label = parsed?.first ?: runCatching {
+                val name = context.packageManager.getApplicationLabel(info).toString()
+                name.takeIf { it.isNotBlank() && it != pkg }
+            }.getOrNull() ?: pkg
+            val icon = parsed?.second?.let { data ->
+                val bmp = BitmapFactory.decodeByteArray(data, 0, data.size)
+                bmp?.let { original ->
+                    try {
+                        val scaled = Bitmap.createScaledBitmap(original, 96, 96, true)
+                        try {
+                            val output = ByteArrayOutputStream()
+                            check(scaled.compress(Bitmap.CompressFormat.PNG, 100, output))
+                            Base64.encodeToString(output.toByteArray(), Base64.NO_WRAP)
+                        } finally { if (scaled !== original) scaled.recycle() }
+                    } finally { original.recycle() }
+                }
+            } ?: runCatching {
+                // Legacy archive resource fallback, never an invented icon.
                 require(info.icon != 0) { "Aplicativo sem ícone de manifesto" }
                 val resources = context.packageManager.getResourcesForApplication(info)
                 val drawable = resources.getDrawable(info.icon, null)
