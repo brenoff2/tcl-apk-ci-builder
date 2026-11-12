@@ -1,0 +1,41 @@
+# TCL Android TV — prova ADB isolada de inventário, ícones e abertura (12/11/2026)
+
+**Escopo:** DEV / QA, **sem APK auxiliar novo, sem OTA, sem assinatura, sem alterações de TV em produção**. Não há integração dentro do aplicativo Android AnyTV nesta etapa. O objetivo é comprovar as três capacidades por meio de uma estação de teste previamente autorizada, antes de escolher o transporte ADB adequado ao celular.
+
+## Gate e evidência prévia
+
+- Usuário autorizou **estudar e preparar** o teste ADB pela rede com pareamento aprovado na própria TCL. Não autorizou remover o companion, publicar OTA ou abrir depuração sem consentimento na TV.
+- Metas cumulativas: inventário real de apps; nome/ícone do mesmo pacote instalado; abertura do pacote escolhido **visualizada fisicamente** na TCL.
+- O protocolo Android TV Remote v2, já usado pelo telefone, permite tentativa de abertura via `RemoteAppLinkLaunchRequest`, mas **não enumera todos os pacotes e ícones**. O `RemoteAppInfo` exibido em mensagens de estado não é inventário geral.
+- **Fonte oficial:** https://developer.android.com/tools/adb (comandos `adb shell pm list packages`, `pm path`, depuração via rede). Para TVs, pareamento sem fio por código é documentado para Android **13+**; versões anteriores podem exigir autorização inicial por USB, métodos do fabricante ou não suportar o fluxo. Não presumir suporte sem verificar versão exata.
+- Complemento upstream: https://github.com/tronikos/androidtvremote2 e https://github.com/sonalder-darlene/libremote-android-tv/blob/main/PROTOCOL.md
+
+## Prova de bancada segura, em máquina com Android SDK Platform Tools + Build Tools (`adb` e `aapt`)
+
+1. Verificar com o proprietário o modelo e a versão Android TV, ativar conscientemente a depuração **somente na rede confiável**, parear/autenticar a estação pela **tela da TCL**. Não gravar IP, porta ou códigos no GitHub.
+2. Confirmar `adb devices`: dispositivo aparece com status `device`; `unauthorized` e `offline` são bloqueios. `adb pair IP:PORTA` quando realmente suportado pela TV, seguido de `adb connect IP:PORTA_DE_DEPURACAO` quando necessário, com autorização local.
+3. Somente inventário (não abre nem copia apps):
+   `python3 scripts/qa/tcl_adb_apps_probe.py --serial IP:PORTA --output /caminho/qa-tcl`
+4. Testar nomes/ícones de pacotes **constatados no inventário**, por exemplo:
+   `python3 scripts/qa/tcl_adb_apps_probe.py --serial IP:PORTA --output /caminho/qa-tcl --inspect com.netflix.ninja`
+   O script consulta `pm path`, copia temporariamente APKs dessa TV para a máquina, lê `aapt dump badging`, salva apenas ícones PNG/WebP referenciados diretamente. APKs temporários são eliminados ao terminar. **Recursos adaptativos XML, ícones em splits dinâmicos e recursos não acessíveis podem permanecer `UNSUPPORTED_RESOURCE_OR_SPLIT`**; nunca apresentar ícone presumido como extraído.
+5. Abertura **apenas após escolha explícita do pacote e autorização**:
+   `python3 scripts/qa/tcl_adb_apps_probe.py --serial IP:PORTA --output /caminho/qa-tcl --launch com.netflix.ninja --confirm-launch`
+   O comando `monkey -p PACKAGE -c android.intent.category.LEANBACK_LAUNCHER 1` pode reportar envio, mas **não prova a tela exibida**. Registrar foto ou observação visual independente, sem credenciais.
+6. Após testes, desabilitar depuração da TV/revogar autorizações não necessárias. O arquivo local `inventory.json` contém nomes dos pacotes; inspecionar antes de compartilhar. Não publicar APKs extraídos nem endereços/IPs.
+
+## Critérios para a futura integração de celular
+
+| Gate | Evidência exigida | Situação |
+| --- | --- | --- |
+| TCL-A1 | Android TV real autorizada e inventário íntegro, incluindo apps novos | NÃO TESTADO |
+| TCL-A2 | Nomes e ícones correspondentes a **todos** os apps que a interface promete listar (inclusive adaptativos/split) | NÃO TESTADO |
+| TCL-A3 | Cada app selecionado inicia de fato e sua tela é observada na TV | NÃO TESTADO |
+| TCL-A4 | Pareamento/reconexão seguros, isolamento por TV, comportamento após reboot e revogação | NÃO TESTADO |
+| TCL-A5 | Implementação nativa no celular, compilação e testes sem regressão LG/TCL | NÃO IMPLEMENTADO |
+
+**Nota:** este script de bancada **não é** integração de ADB ao APK Android do celular. Ele verifica a viabilidade e revela limitações de firmware antes de adotar uma biblioteca ADB Android (sem exigir computador no uso final). Não remover o APK auxiliar nem desativar seus fluxos enquanto TCL-A1..A5 não passarem.
+
+## Segurança e isolamento
+
+Nenhum `adb tcpip 5555` automático; nenhum pareamento ou consentimento automatizado; nenhum `adb install`, `adb uninstall`, `pm clear` ou modificação de credenciais. A única ação mutante da prova é o `--launch` explícito. O script não se conecta ao Worker/D1/OTA e não modifica o repositório/TV companion.
