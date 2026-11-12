@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import net.dongliu.apk.parser.ApkFile
 import net.dongliu.apk.parser.bean.Icon
+import net.dongliu.apk.parser.bean.AdaptiveIcon
 import android.util.Base64
 import com.tananaev.adblib.AdbBase64
 import com.tananaev.adblib.AdbConnection
@@ -205,8 +206,15 @@ internal class TclAdbInstalledApps(private val context: Context) {
                     // The manifest names the icon; its bitmap may live in a
                     // density split. Resolve only the referenced filename, not
                     // a guessed icon or a fixed package-to-artwork catalog.
-                    val iconBytes = apk.allIcons.filterIsInstance<Icon>()
-                        .sortedByDescending { it.density }
+                    val iconBytes = apk.allIcons.flatMap { face ->
+                        when (face) {
+                            is Icon -> listOf(face)
+                            // Android TV 9 supports adaptive launcher icons. The
+                            // parser returns these as AdaptiveIcon, NOT Icon.
+                            is AdaptiveIcon -> listOfNotNull(face.foreground)
+                            else -> emptyList()
+                        }
+                    }.sortedByDescending { it.density }
                         .firstNotNullOfOrNull { item ->
                             val filename = item.path.substringAfterLast('/')
                             val bytes = item.data ?: files.drop(1).asSequence()
