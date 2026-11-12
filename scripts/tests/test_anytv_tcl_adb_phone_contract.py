@@ -130,6 +130,15 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('suspend fun probe(host: String)', client)
         self.assertIn('withAdb(host, 90000L)', client)
 
+    def test_metadata_failures_visible_without_fake_brand_assets(self):
+        patch = PATCH.read_text()
+        source = SOURCE.read_text()
+        self.assertIn('Text("Diagnóstico da TCL: " + warnings.joinToString("; ")', patch)
+        self.assertIn('Text("Atualizar nomes e ícones da TV")', patch)
+        self.assertIn('warnings: MutableList<String>', source)
+        self.assertIn('falha do parser APK', source)
+        self.assertIn('readRealApp(adb, host, pkg, warnings)', source)
+
     def test_title_link_over_adb_falls_back_to_app(self):
         p = PATCH.read_text()
         source = SOURCE.read_text()
