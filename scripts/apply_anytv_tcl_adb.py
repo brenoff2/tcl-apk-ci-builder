@@ -237,10 +237,7 @@ text = replace_once(text,
             title = { Text("Conectar aplicativos da TCL") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (host.isBlank()) {
-                        Text("Conecte a TCL ao controle AnyTV para configurar os aplicativos.",
-                            fontSize = 13.sp)
-                    } else if (!onboardingSeen) {
+                    if (!onboardingSeen) {
                         Text("1. Na TCL, ative Depuração USB nas opções do desenvolvedor.",
                             fontSize = 13.sp)
                         Text("2. Conecte celular e TCL na mesma rede Wi-Fi.",
@@ -248,8 +245,10 @@ text = replace_once(text,
                         Text("3. Toque em Conectar e autorize a chave deste celular na TV.",
                             fontSize = 13.sp)
                     } else {
-                        Text("A leitura dos aplicativos não está conectada. " +
-                            "Use Conectar para tentar novamente.", fontSize = 13.sp)
+                        Text(if (connectionActive)
+                            "Conexão ADB autorizada e salva no celular."
+                            else "Vínculo ADB salvo. Tentando reconectar automaticamente.",
+                            fontSize = 13.sp)
                     }
                     OutlinedTextField(
                         value = setupHostText,
@@ -268,7 +267,7 @@ text = replace_once(text,
             },
             confirmButton = {
                 TextButton(
-                    enabled = !busy && setupHostText.matches(
+                    enabled = setupHostText.matches(
                         Regex("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}")),
                     onClick = {
                         // Reconnect without depending on remote-control discovery.
