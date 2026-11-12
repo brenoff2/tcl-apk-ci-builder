@@ -162,7 +162,10 @@ internal class TclAdbInstalledApps(private val context: Context) {
         }
     }
 
-    private fun readRealApp(adb: AdbConnection, host: String, pkg: String): TvOfficialApp {
+    private fun readRealApp(
+        adb: AdbConnection, host: String, pkg: String,
+        warnings: MutableList<String>
+    ): TvOfficialApp {
         val paths = parseApkPaths(shell(adb, "pm path " + pkg))
         if (paths.isEmpty()) return TvOfficialApp(pkg, pkg, "")
         val tmp = File(context.cacheDir, "anytv_adb_apks").apply { mkdirs() }
@@ -233,6 +236,9 @@ internal class TclAdbInstalledApps(private val context: Context) {
                         }
                     Pair(name, iconBytes)
                 }
+            }.onFailure { error ->
+                warnings.add(pkg + ": falha do parser APK (" +
+                    error.javaClass.simpleName + ")")
             }.getOrNull()
             val label = parsed?.first ?: runCatching {
                 val name = context.packageManager.getApplicationLabel(requireNotNull(info)).toString()
@@ -303,7 +309,7 @@ internal class TclAdbInstalledApps(private val context: Context) {
             }
             val warnings = mutableListOf<String>()
             val apps = launchable.filter { it in installed }.sorted().map { pkg ->
-                runCatching { readRealApp(adb, host, pkg) }
+                runCatching { readRealApp(adb, host, pkg, warnings) }
                     .getOrElse { error ->
                         warnings.add(pkg + ": " + error.javaClass.simpleName)
                         TvOfficialApp(pkg, pkg, "")
