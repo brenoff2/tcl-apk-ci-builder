@@ -22,6 +22,7 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('Autorize o AnyTV', s)
         self.assertIn('context.filesDir', s)
         self.assertIn('InetSocketAddress(host, 5555)', s)
+        self.assertIn('ADB permitido apenas na rede local privada', s)
         self.assertNotIn('adb tcpip 5555', s)
         self.assertNotIn('adb root', s)
 
@@ -32,6 +33,8 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('parseLaunchablePackages', s)
         self.assertIn('getPackageArchiveInfo', s)
         self.assertIn('splitSourceDirs', s)
+        self.assertIn('getResourcesForApplication(info)', s)
+        self.assertIn('require(info.icon != 0)', s)
         self.assertNotIn('com.netflix.ninja', s)
         self.assertNotIn('com.spotify.tv.android', s)
 
