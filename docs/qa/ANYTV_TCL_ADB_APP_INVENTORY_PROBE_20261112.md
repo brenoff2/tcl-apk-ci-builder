@@ -1,5 +1,38 @@
 # TCL Android TV — prova ADB isolada de inventário, ícones e abertura (12/11/2026)
 
+## Ready-for-QA — candidato PHONE DEV (atualizado 12/11/2026)
+
+**Estado: BUILD_READY_UNSIGNED / DEVICE_QA_PENDING / RELEASE_BLOCKED.** Este documento agora abrange duas etapas independentes: (a) a prova inicial da bancada (PC com ADB) e (b) uma implementação opcional ADB no **celular** em DEV, que não foi instalada na TCL/celular. A observação histórica abaixo sobre "não há integração Android" se refere SOMENTE à etapa (a).
+
+**Proveniência verificável:**
+- branch: \`feat/anytv-p0-device-proof-verifier-20261020\`; source run commit \`293225f81531ed8e9db79eafdfda44bd1fcddd64\`.
+- workflow: \`.github/workflows/anytv-tcl-adb-phone-unsigned-ci.yml\`; GitHub Actions **43258575485 COMPLETED/SUCCESS**, job 131323400978, todas as etapas PASS (preparação, contratos, Gradle, auditoria do unsigned, upload).
+- artifact **13962632327** \`anytv-tcl-adb-phone-code103-unsigned-audit\`; ZIP digest \`sha256:98315b31d0250afb3d2d28d8e2a87aff662dfa6d2710e57420c00fb1fddba448\`; **não assinado; não é atualização instalável sobre o V2 assinado.**
+- Código: \`overrides/TclAdbInstalledApps.kt\`, aplicado somente pelo overlay DEV \`scripts/apply_anytv_tcl_adb.py\` após a preparação normal. \`scripts/tests/test_anytv_tcl_adb_phone_contract.py\` cobre opt-in, inventário, autorização e limites em modo **sintético/estático**. Biblioteca upstream \`com.tananaev:adblib:1.3\` adicionada somente no overlay.
+- Preservados: companion, LG, main, Worker/D1, OTA code103, assinaturas/certificados, produção.
+
+### Contrato QA físico e de aceitação (sem tarefas manuais de extração de APK)
+| Gate | Exercício no celular/TCL | Aprovação necessária |
+|---|---|---|
+| TCL-M1 — Segurança/autorização | TV com depuração voluntariamente ativa; celular e TV na LAN privada; habilitar ADB Wi-Fi no AnyTV; observar e autorizar a **nova chave do celular** no aviso da TCL | Conexão do celular autorizada, nenhum bypass, nenhuma exposição pública da porta 5555 |
+| TCL-M2 — Inventário real | Refresh na TV conectada, apps do launcher (pré-instalados e de terceiros); instalar/remover um app na TV e atualizar | Variações reais refletidas; nenhum serviço Android tratado como aplicativo; catálogo fixo nunca usado como inventário |
+| TCL-M3 — Identidade gráfica | Verificar nomes e ícones na tela do celular para Spotify, Netflix, Prime Video e pelo menos um app com recursos split/adaptive | Correspondência visual com launcher TCL, sem ícone fictício; ausência/erro exibida com status claro |
+| TCL-M4 — Lançamento | Tocar Spotify, Netflix, Prime Video na lista do celular | App correto visível na TV; ACK \`Events injected: 1\` isolado não basta |
+| TCL-M5 — Reconexão | Encerrar app, desconectar Wi-Fi, religar, reiniciar TCL e celular com depuração sob controle humano | Volta a funcionar sem computador, quando adbd TCP permanece ativo; se não, erro explícito sem reativar depuração silenciosamente |
+| TCL-M6 — Regressão | Desativar opt-in ADB, exercitar fluxo companion e controle remoto TCL; navegar LG | Funcionalidade anterior não degradada; nenhum OTA ou TV APK alterado |
+
+### Riscos concretos ainda pendentes antes de assinatura privada
+1. A autorização RSA aceita no computador **não autoriza** automaticamente a chave gerada pelo AnyTV no celular. QA precisa confirmar popup e persistência da identidade do celular.
+2. O firmware Android TV 9 pode não suportar ou pode responder em formato diferente ao comando \`cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.LEANBACK_LAUNCHER\`: nesse caso o protótipo falha fechado, sem inventar apps. Exigir inspeção da saída **pelo próprio app**, não instruir usuário a extrair arquivos.
+3. Resolver ícones e labels a partir de \`PackageManager.getResourcesForApplication(applicationInfo)\` com caminhos locais de base/splits ainda **não foi validado em runtime**; manifests, ícones adaptativos, referência por locale/densidade e pacotes com recursos ausentes podem falhar. PNG genérico não pode ser falsamente apresentado como ícone original.
+4. Transferência temporária de APK pelo ADB \`sync:RECV\` é feita internamente no celular (não manual); verificar tempo, memória, peso de apps e limpeza dos temporários. Segurança: ADB TCP legado sem criptografia; redes confiáveis apenas. Chaves RSA em storage privado requerem revisão de threat model antes de assinatura.
+5. \`shell monkey\` confirma comando, não resultado visual. Limite de uso/estado em TVs após reboot e possível desativação de adbd TCP permanecem desconhecidos.
+6. Workflow é **unsigned** e seu artifact não deve ser instalado como update do app assinado já existente. Assinar QA privada, publicar OTA e remover companion dependem de aprovações separadas.
+
+**Critério de passagem:** somente após TCL-M1..M6 com evidência física; no presente estado = **QA PENDENTE** e release BLOQUEADO.
+
+
+
 **Escopo:** DEV / QA, **sem APK auxiliar novo, sem OTA, sem assinatura, sem alterações de TV em produção**. Não há integração dentro do aplicativo Android AnyTV nesta etapa. O objetivo é comprovar as três capacidades por meio de uma estação de teste previamente autorizada, antes de escolher o transporte ADB adequado ao celular.
 
 ## Gate e evidência prévia
