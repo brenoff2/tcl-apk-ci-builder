@@ -26,7 +26,12 @@ text = replace_once(text,
     "    var showPair by remember(deviceKey, host) { mutableStateOf(false) }",
     '''    val adbApps = remember(context) { TclAdbInstalledApps(context.applicationContext) }
     var useAdb by remember(host) {
-        mutableStateOf(host.isNotBlank() && prefs.getBoolean("adb_enabled:" + host, false))
+        mutableStateOf(host.isNotBlank() && prefs.getBoolean("adb_enabled:" + host, true))
+    }
+    var inventoryVerified by remember(host, useAdb) { mutableStateOf(false) }
+    var showAdbSetup by remember(host) { mutableStateOf(false) }
+    var onboardingSeen by remember(host) {
+        mutableStateOf(prefs.getBoolean("adb_onboarded:" + host, false))
     }
     var showPair by remember(deviceKey, host) { mutableStateOf(false) }''', "ADB state")
 text = replace_once(text,
@@ -59,6 +64,7 @@ text = replace_once(text,
         }
     }''',
     '''    LaunchedEffect(host, pairing, refresh, useAdb) {
+        inventoryVerified = false
         if (host.isNotBlank() && (useAdb || pairing.isNotBlank())) {
             busy = true
             val firstAttempt = runCatching {
@@ -69,9 +75,13 @@ text = replace_once(text,
                 runCatching { TclTvAppApi.apps(host, pairing) }
             } else firstAttempt
             result.onSuccess { list ->
+                inventoryVerified = true
                 allApps = list
                 storeApps(list)
-                if (!useAdb) storePair(pairing)
+                if (useAdb) {
+                    onboardingSeen = true
+                    prefs.edit().putBoolean("adb_onboarded:" + host, true).apply()
+                } else storePair(pairing)
                 errorText = null
             }.onFailure {
                 errorText = it.message ?: "Não foi possível consultar aplicativos da TCL."
@@ -84,23 +94,17 @@ text = replace_once(text,
             busy = false
         }
     }''', "ADB fetch and fallback")
+# No permanent "Use ADB Wi-Fi" banner in the home screen. ADB is the chosen
+# TCL mode by default, but connection setup stays accessible under "Editar".
+# Only a fresh inventory from the actual connected TV unlocks app icons.
 text = replace_once(text,
     '''    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        val byPackage''',
+        val byPackage = remember(allApps) { allApps.associateBy { it.packageName } }''',
     '''    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        if (host.isNotBlank()) {
-            TextButton(onClick = {
-                useAdb = !useAdb
-                prefs.edit().putBoolean("adb_enabled:" + host, useAdb).apply()
-                errorText = null
-                refresh++
-            }) {
-                Text(if (useAdb) "ADB Wi-Fi: ativado (toque para usar complemento)"
-                    else "Usar ADB Wi-Fi (depuração autorizada na TV)",
-                    fontSize = 11.sp)
-            }
-        }
-        val byPackage''', "ADB opt-in toggle")
+        val verifiedApps = if (inventoryVerified && host.isNotBlank()) allApps else emptyList()
+        val byPackage = verifiedApps.associateBy { it.packageName }''',
+    "Only verified inventory appears")
+
 text = replace_once(text,
     '''                            if (pairing.isBlank()) {
                                 showPair = true
@@ -138,6 +142,128 @@ text = replace_once(text,
             onTclAdbLaunch = { pkg -> adbApps.launch(host, pkg) },
             tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },''',
     "Streaming ADB route")
+
+# Replace the old disconnected CTA and cached-app shelf with an Edit-only shelf.
+# A saved cache is never evidence that the current TV is connected.
+shelf_start = text.index('''        if (selectedApps.isNotEmpty()) {
+            Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),''')
+shelf_end = text.index('''        // Keep TV streaming app icons above the dynamic 75dp movie banner.''', shelf_start)
+old_shelf = text[shelf_start:shelf_end]
+assert old_shelf.count('Text("Editar"') == 1, "edit shelf anchor changed"
+assert old_shelf.count('OutlinedButton(') == 1, "empty-state anchor changed"
+text = text[:shelf_start] + '''        Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            selectedApps.forEach { app ->
+                Column(
+                    modifier = Modifier.width(56.dp).clickable {
+                        if (!useAdb && pairing.isBlank()) {
+                            showPair = true
+                        } else scope.launch {
+                            errorText = null
+                            runCatching {
+                                if (useAdb) adbApps.launch(host, app.packageName)
+                                else TclTvAppApi.open(host, pairing, app.packageName)
+                            }.onFailure {
+                                errorText = it.message ?: ("Não foi possível abrir " + app.name)
+                            }.onSuccess { opened ->
+                                if (!opened) errorText = "A TCL não confirmou abertura de " + app.name
+                            }
+                        }
+                    },
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    OfficialTvIcon(app = app, size = 52.dp)
+                    Text(app.name, fontSize = 10.sp, maxLines = 1,
+                        color = androidx.compose.ui.graphics.Color.White,
+                        textAlign = TextAlign.Center, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            Box(
+                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(15.dp))
+                    .background(Color(0xFF1C1E25))
+                    .clickable {
+                        if (inventoryVerified) showManager = true
+                        else if (useAdb) showAdbSetup = true
+                        else showPair = true
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Editar", color = MaterialTheme.colorScheme.primary,
+                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
+''' + text[shelf_end:]
+# Do not display legacy companion connection errors below the film banner.
+# The current error is available in the Edit/setup dialog instead.
+text = replace_once(text,
+    '''        if (errorText != null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {''',
+    '''        if (errorText != null && inventoryVerified) {
+            Row(verticalAlignment = Alignment.CenterVertically) {''',
+    "Hide disconnected error banner")
+text = replace_once(text,
+    '''        TclStreamingScreens(apps = allApps, host = host, pairing = pairing,''',
+    '''        TclStreamingScreens(apps = if (inventoryVerified) allApps else emptyList(),
+            host = host, pairing = pairing,''',
+    "No stale apps in Streaming screen")
+text = replace_once(text,
+    '''    if (showPair) {
+        AlertDialog(''',
+    '''    if (showAdbSetup) {
+        AlertDialog(
+            onDismissRequest = { showAdbSetup = false },
+            title = { Text("Conectar aplicativos da TCL") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!onboardingSeen) {
+                        Text("1. Na TCL, ative Depuração USB nas opções do desenvolvedor.",
+                            fontSize = 13.sp)
+                        Text("2. Conecte celular e TCL na mesma rede Wi-Fi.",
+                            fontSize = 13.sp)
+                        Text("3. Toque em Conectar e autorize a chave deste celular na TV.",
+                            fontSize = 13.sp)
+                    } else {
+                        Text("A leitura dos aplicativos não está conectada. " +
+                            "Use Conectar para tentar novamente.", fontSize = 13.sp)
+                    }
+                    if (busy) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    if (!errorText.isNullOrBlank()) {
+                        Text(errorText.orEmpty(), fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    errorText = null
+                    refresh++
+                    showAdbSetup = false
+                }) { Text("Conectar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAdbSetup = false }) { Text("Cancelar") }
+            }
+        )
+    }
+
+    if (showPair) {
+        AlertDialog(''',
+    "First connection instructions only in Edit dialog")
+# Keep the fallback switch inside the favorites manager, not on the home shelf.
+text = replace_once(text,
+    '''                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)''',
+    '''                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    TextButton(onClick = {
+                        useAdb = !useAdb
+                        prefs.edit().putBoolean("adb_enabled:" + host, useAdb).apply()
+                        showManager = false
+                        errorText = null
+                        refresh++
+                    }) {
+                        Text(if (useAdb) "Usar conexão antiga da TCL" else "Usar ADB Wi-Fi")
+                    }''',
+    "Fallback inside editor")
 SOURCE.write_text(text, encoding="utf-8")
 
 gradle = ROOT / "app/build.gradle.kts"
