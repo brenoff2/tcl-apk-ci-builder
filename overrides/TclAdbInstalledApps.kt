@@ -333,9 +333,20 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 require(packageName in parsePackages(shell(adb, "pm list packages"))) {
                     "Aplicativo não instalado"
                 }
-                shell(adb, "monkey -p " + packageName +
-                    " -c android.intent.category.LEANBACK_LAUNCHER 1")
-                    .contains("Events injected: 1")
+                // Prefer the TV's own launchable activity, including system apps.
+                // Fall back only when the activity manager rejects the intent.
+                val response = shell(adb,
+                    "am start -a android.intent.action.MAIN " +
+                        "-c android.intent.category.LEANBACK_LAUNCHER -p " + packageName)
+                if (response.contains("Starting: Intent") &&
+                    !response.contains("Error:", ignoreCase = true) &&
+                    !response.contains("unable", ignoreCase = true)) {
+                    true
+                } else {
+                    shell(adb, "monkey -p " + packageName +
+                        " -c android.intent.category.LEANBACK_LAUNCHER 1")
+                        .contains("Events injected: 1")
+                }
             }
         }
 }
