@@ -1,3 +1,8 @@
+## 12/11/2026 — caminhos TCL ADB QA isolados (sem alterar app ou companion)
+- `scripts/qa/tcl_adb_apps_probe.py`: ferramenta host-side **QA**, apenas para dispositivo previamente autorizado no ADB. Inventario `pm list packages`, inspecao opt-in de APK/icone por pacote com `pm path`, `adb pull`, `aapt dump badging` e resources PNG/WebP; comando `monkey ... LEANBACK_LAUNCHER` somente com `--confirm-launch`, retorno nunca prova visual. Nao se integra ainda ao APK do celular.
+- `scripts/tests/test_tcl_adb_apps_probe.py`: 4 testes sinteticos sem TV; `.github/workflows/anytv-tcl-adb-apps-probe-ci.yml`: workflow read-only para testes do script, sem signer, build Android ou OTA; `docs/qa/ANYTV_TCL_ADB_APP_INVENTORY_PROBE_20261112.md`: gate/roteiro e escopo de seguranca. CI `43239762988` SUCCESS.
+- `overrides/TclInstalledApps.kt` e companion TCL nao mudaram; protocolo antigo `/apps`, `/launch` e recursos Bluetooth permanecem inalterados ate homologacao cumulativa TCL-A1..A5.
+
 ## 09/11/2026 — LG first-screen timeout e ciclo de vida listeners code98
 - scripts/apply_anytv_lg_reconnect.py: helper LG-only armLgConnectWatchdog separa handshake (12s) e consentimento FIRST_SCREEN (120s); helpers lgListenerDevice/lgListener/clearLgListener evitam acumulo em ConnectSDK e removem listener em falha/reconnect/manual/onCleared. onConnectionFailed guarda pendingDeviceId e invalida generation antes do teardown. Testes em scripts/tests/test_anytv_lg_reconnect_contract.py. Codigo a6552ff; P0 run 42713453786 SUCCESS, unsigned 42713453782 pendente no registro inicial. Upstream fixado ConnectSDK 16c68f0. TCL e OTA sem alteracao.
 
