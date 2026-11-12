@@ -49,7 +49,7 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('lastInventoryWarnings = warnings.take(6)', s)
         self.assertIn('am start -a android.intent.action.MAIN', s)
         self.assertNotIn('TvOfficialApp(pkg, "Netflix"', s)
-        self.assertIn('require(info.icon != 0)', s)
+        self.assertIn('require(appInfo.icon != 0)', s)
         inventory = s[s.index('suspend fun inventory('):s.index('suspend fun openTitleLink(')]
         self.assertNotIn('com.netflix.ninja', inventory)
         self.assertNotIn('com.spotify.tv.android', inventory)
