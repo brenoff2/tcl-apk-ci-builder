@@ -187,6 +187,13 @@ internal class TclAdbInstalledApps(private val context: Context) {
         }
     }
 
+    /** Read-only heartbeat. An authorized TV may briefly drop its TCP socket. */
+    suspend fun ping(host: String): Boolean = withContext(Dispatchers.IO) {
+        withAdb(host) { adb ->
+            shell(adb, "echo ANYTV_ADB_CONNECTED").contains("ANYTV_ADB_CONNECTED")
+        }
+    }
+
     suspend fun inventory(host: String): List<TvOfficialApp> = withContext(Dispatchers.IO) {
         withAdb(host) { adb ->
             val installed = parsePackages(shell(adb, "pm list packages")).toSet()
