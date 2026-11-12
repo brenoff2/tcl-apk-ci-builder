@@ -13,7 +13,7 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('adb_enabled:', s)
         self.assertIn('if (useAdb) adbApps.inventory(host) else TclTvAppApi.apps(host, pairing)', s)
         self.assertIn('if (useAdb) adbApps.launch(host, app.packageName)', s)
-        self.assertIn('if (!useAdb) storePair(pairing)', s)
+        self.assertIn('} else storePair(pairing)', s)
         self.assertNotIn('adb_enabled:", true', s)
 
     def test_adb_requires_tv_authorization(self):
@@ -35,8 +35,9 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('splitSourceDirs', s)
         self.assertIn('getResourcesForApplication(info)', s)
         self.assertIn('require(info.icon != 0)', s)
-        self.assertNotIn('com.netflix.ninja', s)
-        self.assertNotIn('com.spotify.tv.android', s)
+        inventory = s[s.index('suspend fun inventory('):s.index('suspend fun openTitleLink(')]
+        self.assertNotIn('com.netflix.ninja', inventory)
+        self.assertNotIn('com.spotify.tv.android', inventory)
 
     def test_scope_and_bounded_data(self):
         s = SOURCE.read_text()
@@ -54,8 +55,8 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('if (useTclAdb)', s)
         self.assertIn('onTclAdbLaunch(packageName)', s)
         self.assertIn('onTclAdbLaunch(app.packageName)', s)
-        self.assertIn('A ficha de ', s)
-        self.assertIn('não foi aberta automaticamente', s)
+        self.assertIn('Link do título enviado ao aplicativo por ADB.', s)
+        self.assertIn('não foi aceito ou não está disponível', s)
         self.assertIn('STREAM = SRC / "TclStreamingScreens.kt"', s)
 
     def test_disconnected_shelf_shows_only_edit(self):
