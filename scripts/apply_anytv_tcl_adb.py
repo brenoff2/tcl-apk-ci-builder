@@ -328,6 +328,18 @@ text = replace_once(text,
 text = replace_once(text,
     '''                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)''',
     '''                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    if (useAdb) {
+                        val warnings = adbApps.lastInventoryWarnings
+                        if (warnings.isNotEmpty()) {
+                            Text("Diagnóstico da TCL: " + warnings.joinToString("; "),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.error)
+                        }
+                        TextButton(onClick = {
+                            refresh++
+                            errorText = null
+                        }) { Text("Atualizar nomes e ícones da TV") }
+                    }
                     TextButton(onClick = {
                         showManager = false
                         showAdbSetup = true
