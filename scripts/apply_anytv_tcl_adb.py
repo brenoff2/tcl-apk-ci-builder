@@ -356,7 +356,7 @@ build = gradle.read_text(encoding="utf-8")
 assert "com.tananaev:adblib:1.3" not in build
 assert "dependencies {" in build
 build = build.replace("dependencies {",
-    'dependencies {\n    implementation("com.tananaev:adblib:1.3")', 1)
+    'dependencies {\n    implementation("net.dongliu:apk-parser:2.6.10")\n    implementation("com.tananaev:adblib:1.3")', 1)
 gradle.write_text(build, encoding="utf-8")
 
 # Inject a standalone, fail-closed TCL ADB branch in the shared streaming screen.
