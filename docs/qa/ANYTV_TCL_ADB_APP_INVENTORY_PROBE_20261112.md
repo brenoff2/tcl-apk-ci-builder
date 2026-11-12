@@ -47,3 +47,9 @@ Nenhum `adb tcpip 5555` automático; nenhum pareamento ou consentimento automati
 - A alternativa USB fisica deve ser considerada apenas apos modelo/firmware/portas confirmados; o fluxo `adb tcpip 5555` usa host ADB ja autorizado. Evitar cabos USB-A para USB-A entre duas portas host ou energia potencialmente perigosa.
 - Qualquer sucesso de conexao ADB e apenas TCL-A0, NAO comprova TCL-A1 inventario, TCL-A2 icones, TCL-A3 lancamento, TCL-A4 reconexao e TCL-A5 integracao no celular. Preservar companion e OTA.
 
+
+## Relato de QA fisica TCL — Spotify (12/11/2026)
+- Usuario forneceu saida real `adb devices`: `192.168.1.9:5555 device` em Android TV 9; ADB TCP autorizado e conectado na LAN.
+- Saida real `adb shell pm list packages -3`: 17 pacotes; consulta sem filtro adicional identificou Netflix (`com.netflix.ninja`), Prime Video (`com.amazon.amazonvideo.livingroom`), YouTube TV (`com.google.android.youtube.tv`) e YouTube Music. `pm path com.spotify.tv.android` retornou `base.apk` e 3 splits (armeabi_v7a, pt, xhdpi), confirmando necessidade de tratar split APK.
+- Depois do comando `adb shell monkey -p com.spotify.tv.android -c android.intent.category.LEANBACK_LAUNCHER 1`, o usuario confirmou `funcionou`, em resposta a pergunta se o Spotify abriu na tela. Registrar como **confirmacao visual relatada pelo proprietario**, nao recibo automatizado/video ou prova para todos os aplicativos. TCL-A3 = PASS parcial somente para Spotify; A1 inventario de pacotes real = PARCIAL, A2 icones = PENDENTE, A4 e A5 = PENDENTE. Nao remover companion nem atualizar OTA.
+- Proximo passo: copiar somente APKs Spotify via `adb pull` para extrair e comparar nome e icone com recursos reais. Nao publicar APKs extraidos nem registrar IPs de rede privada em repositorio.
