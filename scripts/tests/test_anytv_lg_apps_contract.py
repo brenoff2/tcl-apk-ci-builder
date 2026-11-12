@@ -251,7 +251,9 @@ class LgAppsContract(unittest.TestCase):
     def test_lg05_lg06_do_not_invent_youtube_or_provider_deep_links(self):
         catalog = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclStreamingScreens.kt").read_text()
         handler = catalog.split("fun searchOnTv(title: StreamingTitle, packageName: String)", 1)[1]
-        lg = handler.split("if (host.isBlank() || pairing.isBlank())", 1)[0]
+        # Inspect only the LG branch; TCL ADB has its own allowlisted link path.
+        lg = handler.split("if (useTclAdb) {", 1)[0] if "if (useTclAdb) {" in handler else (
+            handler.split("if (host.isBlank() || pairing.isBlank())", 1)[0])
         self.assertIn('if (title.media == "movie" && anyTvServiceKey(app.name) == "netflix")', lg)
         fallback = lg.split('} else {\n                    onLaunchLgApp(lgId)', 1)[1]
         self.assertIn("Ainda não há deep link validado", fallback)
