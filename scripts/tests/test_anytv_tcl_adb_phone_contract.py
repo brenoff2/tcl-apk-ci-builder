@@ -47,6 +47,17 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertNotIn('pm uninstall', s)
         self.assertNotIn('pm install', s)
 
+    def test_streaming_uses_selected_adb_transport(self):
+        s = PATCH.read_text()
+        self.assertIn('useTclAdb = useAdb', s)
+        self.assertIn('onTclAdbLaunch = { pkg -> adbApps.launch(host, pkg) }', s)
+        self.assertIn('if (useTclAdb)', s)
+        self.assertIn('onTclAdbLaunch(packageName)', s)
+        self.assertIn('onTclAdbLaunch(app.packageName)', s)
+        self.assertIn('A ficha de ', s)
+        self.assertIn('não foi aberta automaticamente', s)
+        self.assertIn('STREAM = SRC / "TclStreamingScreens.kt"', s)
+
     def test_overlay_only_in_dev(self):
         s = PATCH.read_text()
         self.assertIn('copyfile("overrides/TclAdbInstalledApps.kt"', s)
