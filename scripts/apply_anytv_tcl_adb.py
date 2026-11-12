@@ -268,7 +268,7 @@ text = replace_once(text,
             confirmButton = {
                 TextButton(
                     enabled = setupHostText.matches(
-                        Regex("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}")),
+                        Regex("(?:[0-9]{1,3}[.]){3}[0-9]{1,3}")),
                     onClick = {
                         // Reconnect without depending on remote-control discovery.
                         requestedHost = setupHostText
