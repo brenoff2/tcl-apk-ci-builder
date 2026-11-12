@@ -34,7 +34,7 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('parseLaunchablePackages', s)
         self.assertIn('getPackageArchiveInfo', s)
         self.assertIn('splitSourceDirs', s)
-        self.assertIn('getResourcesForApplication(info)', s)
+        self.assertIn('getResourcesForApplication(appInfo)', s)
         self.assertIn('ApkFile(files[0])', s)
         self.assertIn('apk.setPreferredLocale(java.util.Locale.forLanguageTag("pt-BR"))', s)
         self.assertIn('val name = meta.label?.trim()', s)
