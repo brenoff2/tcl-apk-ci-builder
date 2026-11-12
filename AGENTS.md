@@ -1,3 +1,7 @@
+## 12/11/2026 — Prova ADB TCL permitida somente em DEV/QA sem OTA
+- Nova autorizacao humana: investigar e preparar prova isolada ADB pela rede na TCL Android TV com pareamento visivel aprovado na propria TV. Os criterios cumulativos para remover o companion sao inventario verdadeiro de aplicativos instalados + nomes/icones correspondentes + abertura real de cada app, inclusive recuperacao apos reboot. Sem prova fisica, manter o APK auxiliar e transporte existente.
+- Script de bancada `scripts/qa/tcl_adb_apps_probe.py` e contrato `docs/qa/ANYTV_TCL_ADB_APP_INVENTORY_PROBE_20261112.md` nao sao integracao Android/telefonia nem licenca para ativar ADB da TV sem consentimento. Nao permitir ponte ADB exposta, segredos/IPs em Git ou remocao do companion; OTA/main/Worker/D1/signer/cert2026 preservados. CI apenas sintetica, homologacao TV pendente.
+
 ## 09/11/2026 — Escopo autorizado LG webOS isolado
 - Usuário autorizou conexão LG webOS no AnyTV; outras marcas somente após nova decisão. Usar o ConnectSDK WebOSTVService/SSDP do upstream fixado; manter TCL/Android TV inalterado e a UI remota existente.
 - Primeira prova LG: `scripts/apply_anytv_lg_webos.py`, workflow `anytv-lg-webos-unsigned-ci.yml`, code93/2.9.65 apenas UNSIGNED. Não confundir com code91 pop-up nem code92 recuperação; não assinar/publicar/alterar main, OTA, Worker, D1, TV companion ou certificado por este escopo.
