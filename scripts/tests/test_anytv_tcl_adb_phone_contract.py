@@ -14,7 +14,7 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('val list = if (useAdb) adbApps.inventory(host)', s)
         self.assertIn('else TclTvAppApi.apps(host, pairing)', s)
         self.assertIn('if (useAdb) adbApps.launch(host, app.packageName)', s)
-        self.assertIn('} else storePair(pairing)', s)
+        self.assertIn('if (!useAdb) storePair(pairing)', s)
         self.assertNotIn('adb_enabled:", true', s)
 
     def test_adb_requires_tv_authorization(self):
