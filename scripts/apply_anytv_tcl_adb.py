@@ -75,38 +75,46 @@ text = replace_once(text,
             var retryMs = 2500L
             var lastInventoryOk = false
             while (true) {
-                busy = !inventoryVerified
                 try {
+                    if (useAdb && !connectionActive) {
+                        busy = true
+                        // First prove ADB authorization, independently of slow APK metadata.
+                        adbApps.probe(host)
+                        connectionActive = true
+                        onboardingSeen = true
+                        prefs.edit().putBoolean("adb_onboarded:" + host, true)
+                            .putString("adb_last_host", host).apply()
+                        errorText = null
+                        busy = false
+                    }
                     if (useAdb && lastInventoryOk) {
-                        // No repeated full APK transfer during idle heartbeats.
                         adbApps.ping(host)
                         connectionActive = true
+                        busy = false
                         errorText = null
                         kotlinx.coroutines.delay(25000L)
                         continue
                     }
+                    busy = true
                     val list = if (useAdb) adbApps.inventory(host)
                                else TclTvAppApi.apps(host, pairing)
                     allApps = list
                     inventoryVerified = true
                     connectionActive = true
+                    lastInventoryOk = useAdb
                     storeApps(list)
-                    if (useAdb) {
-                        lastInventoryOk = true
-                        onboardingSeen = true
-                        prefs.edit().putBoolean("adb_onboarded:" + host, true)
-                            .putString("adb_last_host", host).apply()
-                    } else storePair(pairing)
+                    if (!useAdb) storePair(pairing)
                     errorText = null
                     retryMs = 2500L
+                    busy = false
                     kotlinx.coroutines.delay(25000L)
                 } catch (cancel: kotlinx.coroutines.CancellationException) {
                     throw cancel
                 } catch (error: Exception) {
-                    connectionActive = false
+                    busy = false
                     lastInventoryOk = false
-                    errorText = error.message ?: "Não foi possível conectar à TCL."
-                    // Retain an already-approved device and identity across outages.
+                    // The ADB handshake can be healthy even if the app inventory fails.
+                    errorText = error.message ?: "Falha ao identificar aplicativos da TCL."
                     kotlinx.coroutines.delay(retryMs)
                     retryMs = (retryMs * 2).coerceAtMost(30000L)
                 } finally {
@@ -258,10 +266,21 @@ text = replace_once(text,
                         label = { Text("IP da TCL na rede Wi-Fi") },
                         singleLine = true
                     )
-                    if (busy) CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                    if (busy) {
+                        Row(verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp))
+                            Text(if (connectionActive) "ADB autorizado; lendo aplicativos..."
+                                 else "Verificando autorização ADB...", fontSize = 12.sp)
+                        }
+                    }
                     if (!errorText.isNullOrBlank()) {
                         Text(errorText.orEmpty(), fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.error)
+                        if (connectionActive) {
+                            Text("A TV aceitou a conexão, mas a leitura dos aplicativos falhou.",
+                                fontSize = 12.sp)
+                        }
                     }
                 }
             },
