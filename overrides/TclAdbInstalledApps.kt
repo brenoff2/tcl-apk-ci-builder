@@ -63,7 +63,11 @@ internal class TclAdbInstalledApps(private val context: Context) {
         return crypto
     }
 
-    private fun <T> withAdb(host: String, callback: (AdbConnection) -> T): T {
+    private fun <T> withAdb(
+        host: String,
+        timeoutMs: Long = 30000L,
+        callback: (AdbConnection) -> T
+    ): T {
         val octets = host.split('.').map { it.toIntOrNull() }
         require(octets.size == 4 && octets.all { it != null && it in 0..255 }) {
             "Endereço IPv4 inválido"
@@ -74,6 +78,14 @@ internal class TclAdbInstalledApps(private val context: Context) {
             "ADB permitido apenas na rede local privada"
         }
         val socket = Socket()
+        val watchdog = java.util.Timer("anytv-adb-deadline", true)
+        val expired = java.util.concurrent.atomic.AtomicBoolean(false)
+        watchdog.schedule(object : java.util.TimerTask() {
+            override fun run() {
+                expired.set(true)
+                runCatching { socket.close() }
+            }
+        }, timeoutMs)
         try {
             socket.connect(InetSocketAddress(host, 5555), 4000)
             socket.soTimeout = 15000
@@ -83,7 +95,12 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 }
                 return callback(adb)
             }
+        } catch (error: Exception) {
+            if (expired.get()) throw java.io.IOException(
+                "Tempo limite na comunicação ADB. Verifique a autorização e a TV.", error)
+            throw error
         } finally {
+            watchdog.cancel()
             runCatching { socket.close() }
         }
     }
@@ -188,8 +205,12 @@ internal class TclAdbInstalledApps(private val context: Context) {
     }
 
     /** Read-only heartbeat. An authorized TV may briefly drop its TCP socket. */
+    suspend fun probe(host: String): Boolean = withContext(Dispatchers.IO) {
+        withAdb(host, 28000L) { true }
+    }
+
     suspend fun ping(host: String): Boolean = withContext(Dispatchers.IO) {
-        withAdb(host) { adb ->
+        withAdb(host, 18000L) { adb ->
             check(shell(adb, "echo ANYTV_ADB_CONNECTED")
                 .contains("ANYTV_ADB_CONNECTED")) { "A conexão ADB foi interrompida" }
             true
@@ -197,7 +218,8 @@ internal class TclAdbInstalledApps(private val context: Context) {
     }
 
     suspend fun inventory(host: String): List<TvOfficialApp> = withContext(Dispatchers.IO) {
-        withAdb(host) { adb ->
+        // Bounded: a stalled APK transfer must never leave the UI in perpetual loading.
+        withAdb(host, 90000L) { adb ->
             val installed = parsePackages(shell(adb, "pm list packages")).toSet()
             // Deliberately fail closed when firmware cannot enumerate launcher activities.
             val launchable = parseLaunchablePackages(shell(adb,
