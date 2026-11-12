@@ -8,6 +8,7 @@ on:
       - 'overrides/TclAdbInstalledApps.kt'
       - 'scripts/tests/test_anytv_tcl_adb_phone_contract.py'
       - 'scripts/tests/test_streaming_screens_contract.py'
+      - 'scripts/tests/test_anytv_lg_apps_contract.py'
 permissions:
   contents: read
 concurrency:
