@@ -77,6 +77,9 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('inventoryVerified = false', p)
         self.assertIn('inventoryVerified = true', p)
         self.assertIn('prefs.getBoolean("adb_enabled:" + host, true)', p)
+        self.assertIn('Text("Usar conexão antiga")', p)
+        self.assertIn('if (host.isBlank() || useAdb) showAdbSetup = true', p)
+        self.assertIn('enabled = host.isNotBlank() && !busy', p)
 
     def test_title_link_over_adb_falls_back_to_app(self):
         p = PATCH.read_text()
