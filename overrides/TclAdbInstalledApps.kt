@@ -64,11 +64,15 @@ internal class TclAdbInstalledApps(private val context: Context) {
     }
 
     private fun <T> withAdb(host: String, callback: (AdbConnection) -> T): T {
-        val chunks = host.split('.')
-        require(chunks.size == 4 && chunks.all {
-            val n = it.toIntOrNull()
-            n != null && n in 0..255
-        }) { "Endereço IPv4 inválido" }
+        val octets = host.split('.').map { it.toIntOrNull() }
+        require(octets.size == 4 && octets.all { it != null && it in 0..255 }) {
+            "Endereço IPv4 inválido"
+        }
+        val a = octets[0]!!
+        val b = octets[1]!!
+        require(a == 10 || (a == 172 && b in 16..31) || (a == 192 && b == 168)) {
+            "ADB permitido apenas na rede local privada"
+        }
         val socket = Socket()
         try {
             socket.connect(InetSocketAddress(host, 5555), 4000)
@@ -162,7 +166,10 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 context.packageManager.getApplicationLabel(info).toString()
             }.getOrNull()?.takeIf { it.isNotBlank() } ?: pkg
             val icon = runCatching {
-                val drawable = info.loadIcon(context.packageManager)
+                // Never serialize PackageManager's fallback Android icon as a real TV icon.
+                require(info.icon != 0) { "Aplicativo sem ícone de manifesto" }
+                val resources = context.packageManager.getResourcesForApplication(info)
+                val drawable = resources.getDrawable(info.icon, null)
                 val bmp = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
                 try {
                     drawable.setBounds(0, 0, 96, 96)
