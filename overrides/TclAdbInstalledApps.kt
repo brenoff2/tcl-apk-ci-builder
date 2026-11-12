@@ -199,13 +199,36 @@ internal class TclAdbInstalledApps(private val context: Context) {
                     val name = meta.label?.trim()?.takeIf {
                         it.isNotEmpty() && !it.startsWith("@") && it != pkg
                     }
+                    // The manifest names the icon; its bitmap may live in a
+                    // density split. Resolve only the referenced filename, not
+                    // a guessed icon or a fixed package-to-artwork catalog.
                     val iconBytes = apk.allIcons.filterIsInstance<Icon>()
-                        .filter { it.data != null }
                         .sortedByDescending { it.density }
                         .firstNotNullOfOrNull { item ->
-                            item.data?.takeIf { data ->
-                                data.size in 100..(2 * 1024 * 1024) &&
-                                    BitmapFactory.decodeByteArray(data, 0, data.size) != null
+                            val filename = item.path.substringAfterLast('/')
+                            val bytes = item.data ?: files.drop(1).asSequence()
+                                .mapNotNull { split ->
+                                    if (!filename.matches(Regex(
+                                            "[A-Za-z0-9_]+[.](png|webp|jpg|jpeg)"))) {
+                                        null
+                                    } else java.util.zip.ZipFile(split).use { zip ->
+                                        val entry = zip.entries().asSequence()
+                                            .firstOrNull { it.name.startsWith("res/") &&
+                                                it.name.endsWith("/" + filename) &&
+                                                it.size in 100..(2 * 1024 * 1024) }
+                                        entry?.let { zip.getInputStream(it).use { stream ->
+                                            stream.readBytes()
+                                        } }
+                                    }
+                                }.firstOrNull()
+                            bytes?.takeIf { data ->
+                                if (data.size !in 100..(2 * 1024 * 1024)) false else {
+                                    val bounds = BitmapFactory.Options().apply {
+                                        inJustDecodeBounds = true
+                                    }
+                                    BitmapFactory.decodeByteArray(data, 0, data.size, bounds)
+                                    bounds.outWidth in 1..4096 && bounds.outHeight in 1..4096
+                                }
                             }
                         }
                     Pair(name, iconBytes)
@@ -280,6 +303,10 @@ internal class TclAdbInstalledApps(private val context: Context) {
                     .getOrElse { error ->
                         warnings.add(pkg + ": " + error.javaClass.simpleName)
                         TvOfficialApp(pkg, pkg, "")
+                    }.also { app ->
+                        if (app.name == pkg && app.icon.isBlank()) {
+                            warnings.add(pkg + ": metadados não resolvidos")
+                        }
                     }
             }.sortedBy { it.name.lowercase() }
             if (apps.none { it.name != it.packageName || it.icon.isNotBlank() }) {
