@@ -35,6 +35,12 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('getPackageArchiveInfo', s)
         self.assertIn('splitSourceDirs', s)
         self.assertIn('getResourcesForApplication(info)', s)
+        self.assertIn('ApkFile(files[0])', s)
+        self.assertIn('apk.setPreferredLocale(java.util.Locale.forLanguageTag("pt-BR"))', s)
+        self.assertIn('val name = meta.label?.trim()', s)
+        self.assertIn('apk.allIcons.filterIsInstance<Icon>()', s)
+        self.assertIn('val icon = parsed?.second?.let', s)
+        self.assertNotIn('TvOfficialApp(pkg, "Netflix"', s)
         self.assertIn('require(info.icon != 0)', s)
         inventory = s[s.index('suspend fun inventory('):s.index('suspend fun openTitleLink(')]
         self.assertNotIn('com.netflix.ninja', inventory)
@@ -132,6 +138,7 @@ class PhoneAdbContract(unittest.TestCase):
         s = PATCH.read_text()
         self.assertIn('copyfile("overrides/TclAdbInstalledApps.kt"', s)
         self.assertIn('implementation("com.tananaev:adblib:1.3")', s)
+        self.assertIn('implementation("net.dongliu:apk-parser:2.6.10")', s)
         self.assertNotIn('updates/android/', s)
         self.assertNotIn('signingConfig', s)
 
