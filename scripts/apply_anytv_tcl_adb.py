@@ -185,7 +185,7 @@ text = text[:shelf_start] + '''        Row(modifier = Modifier.fillMaxWidth().ho
                     .background(Color(0xFF1C1E25))
                     .clickable {
                         if (inventoryVerified) showManager = true
-                        else if (useAdb) showAdbSetup = true
+                        else if (host.isBlank() || useAdb) showAdbSetup = true
                         else showPair = true
                     },
                 contentAlignment = Alignment.Center
@@ -217,7 +217,10 @@ text = replace_once(text,
             title = { Text("Conectar aplicativos da TCL") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!onboardingSeen) {
+                    if (host.isBlank()) {
+                        Text("Conecte a TCL ao controle AnyTV para configurar os aplicativos.",
+                            fontSize = 13.sp)
+                    } else if (!onboardingSeen) {
                         Text("1. Na TCL, ative Depuração USB nas opções do desenvolvedor.",
                             fontSize = 13.sp)
                         Text("2. Conecte celular e TCL na mesma rede Wi-Fi.",
@@ -236,14 +239,29 @@ text = replace_once(text,
                 }
             },
             confirmButton = {
-                TextButton(onClick = {
-                    errorText = null
-                    refresh++
-                    showAdbSetup = false
-                }) { Text("Conectar") }
+                TextButton(
+                    enabled = host.isNotBlank() && !busy,
+                    onClick = {
+                        errorText = null
+                        refresh++
+                        showAdbSetup = false
+                    }
+                ) { Text("Conectar") }
             },
             dismissButton = {
-                TextButton(onClick = { showAdbSetup = false }) { Text("Cancelar") }
+                Column {
+                    TextButton(onClick = {
+                        if (host.isNotBlank()) {
+                            useAdb = false
+                            prefs.edit().putBoolean("adb_enabled:" + host, false).apply()
+                            inventoryVerified = false
+                            errorText = null
+                            showAdbSetup = false
+                            if (pairing.isBlank()) showPair = true else refresh++
+                        }
+                    }) { Text("Usar conexão antiga") }
+                    TextButton(onClick = { showAdbSetup = false }) { Text("Cancelar") }
+                }
             }
         )
     }
