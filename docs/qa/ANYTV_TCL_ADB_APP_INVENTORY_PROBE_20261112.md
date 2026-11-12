@@ -39,3 +39,11 @@
 ## Segurança e isolamento
 
 Nenhum `adb tcpip 5555` automático; nenhum pareamento ou consentimento automatizado; nenhum `adb install`, `adb uninstall`, `pm clear` ou modificação de credenciais. A única ação mutante da prova é o `--launch` explícito. O script não se conecta ao Worker/D1/OTA e não modifica o repositório/TV companion.
+
+## Diagnostico TCL Android TV 9 com somente "Depuracao USB" (12/11/2026)
+- Fato relatado pelo proprietario: a TCL usa Android TV **9** e so mostra **Depuracao USB** nas opcoes de desenvolvedor. Modelo exato, firmware e estado da porta ADB sao desconhecidos.
+- Fonte oficial Android ADB: https://developer.android.com/tools/adb#wireless e Google Android TV https://developers.google.com/cast/docs/android_tv_receiver/debugging : para Android <=10, a rota documentada em aparelhos retail e autorizacao USB inicial, depois `adb tcpip 5555`, e `adb connect TV_IP:5555`. A TV pode nao fornecer porta USB configurada como device/gadget, portanto nao prometer conexao por cabo sem confirmar hardware. Nao utilizar pareamento por codigo `adb pair` de Android 11+ neste Android 9.
+- Alguns firmwares TCL podem ativar ADB TCP 5555 com a chave "Depuracao USB" sem exibirem "Depuracao pela rede". Essa possibilidade e relatada por terceiros, nao e garantia oficial para o modelo especifico. Primeiro teste autorizado somente em rede privada: habilitar temporariamente USB Debugging na TV e, da estacao confiavel com Platform Tools, executar `adb connect TV_IP:5555` e `adb devices`. Aceitar prompt de autorizacao reconhecido na TCL. Se receber `connection refused` / `timed out`, a porta nao esta comprovadamente habilitada; nao tentar menus de servico ocultos, exploits, root, forwarding WAN ou `setprop` sem autorizacao e evidencia.
+- A alternativa USB fisica deve ser considerada apenas apos modelo/firmware/portas confirmados; o fluxo `adb tcpip 5555` usa host ADB ja autorizado. Evitar cabos USB-A para USB-A entre duas portas host ou energia potencialmente perigosa.
+- Qualquer sucesso de conexao ADB e apenas TCL-A0, NAO comprova TCL-A1 inventario, TCL-A2 icones, TCL-A3 lancamento, TCL-A4 reconexao e TCL-A5 integracao no celular. Preservar companion e OTA.
+
