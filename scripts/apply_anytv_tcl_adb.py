@@ -104,7 +104,10 @@ text = replace_once(text,
                     lastInventoryOk = useAdb
                     storeApps(list)
                     if (!useAdb) storePair(pairing)
-                    errorText = null
+                    errorText = if (useAdb && adbApps.lastInventoryWarnings.isNotEmpty()) {
+                        "A TCL respondeu, mas parte dos nomes/ícones não foi resolvida: " +
+                            adbApps.lastInventoryWarnings.take(2).joinToString("; ")
+                    } else null
                     retryMs = 2500L
                     busy = false
                     kotlinx.coroutines.delay(25000L)
@@ -228,9 +231,9 @@ text = text[:shelf_start] + '''        Row(modifier = Modifier.fillMaxWidth().ho
 text = replace_once(text,
     '''        if (errorText != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {''',
-    '''        if (errorText != null && inventoryVerified) {
+    '''        if (errorText != null && inventoryVerified && !useAdb) {
             Row(verticalAlignment = Alignment.CenterVertically) {''',
-    "Hide disconnected error banner")
+    "Keep ADB diagnostics only inside Edit")
 text = replace_once(text,
     '''        TclStreamingScreens(apps = allApps, host = host, pairing = pairing,''',
     '''        TclStreamingScreens(apps = if (inventoryVerified) allApps else emptyList(),
