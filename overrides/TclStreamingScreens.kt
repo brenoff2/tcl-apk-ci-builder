@@ -413,8 +413,16 @@ private object StreamingCatalog {
         .replace(Regex("[^a-z0-9]"), "")
 
     private fun provider(name: String): String? {
+        // TV APK identifiers can be reported before the actual Android resources
+        // have yielded a label. Resolve the *provider* for linking only; this
+        // must never be used as a substitute for a real installed-app name/icon.
         val v = norm(name)
         return when {
+            name == "com.amazon.amazonvideo.livingroom" ||
+                name == "com.amazon.avod.thirdpartyclient" -> "amazonprimevideo"
+            name == "com.wbd.stream" -> "hbomax"
+            name == "com.netflix.ninja" || name == "com.netflix.mediaclient" -> "netflix"
+            name == "com.apple.atve.androidtv.appletv" -> "appletv"
             "netflix" in v -> "netflix"
             "primevideo" in v -> "amazonprimevideo"
             "disney" in v -> "disneyplus"
@@ -439,7 +447,7 @@ private object StreamingCatalog {
             provider(service) == provider(offer.name) }
 
     fun streaming(app: TvOfficialApp): Boolean =
-        provider(app.name) != null ||
+        provider(app.name) != null || provider(app.packageName) != null ||
             listOf("youtube", "spotify", "plex", "twitch", "vimeo", "dazn")
                 .any { it in norm(app.name) || it in norm(app.packageName) }
 
@@ -595,7 +603,7 @@ private object StreamingCatalog {
         }
 
     fun appHasOffer(app: TvOfficialApp, offers: List<StreamingOffer>): Boolean {
-        val service = provider(app.name) ?: return false
+        val service = provider(app.name) ?: provider(app.packageName) ?: return false
         return offers.any { provider(it.name) == service }
     }
 
