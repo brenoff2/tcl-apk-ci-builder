@@ -28,11 +28,17 @@ text = replace_once(text,
     var useAdb by remember(host) {
         mutableStateOf(host.isNotBlank() && prefs.getBoolean("adb_enabled:" + host, true))
     }
-    var inventoryVerified by remember(host, useAdb) { mutableStateOf(false) }
+    var inventoryVerified by remember(host, useAdb) {
+        mutableStateOf(host.isNotBlank() &&
+            prefs.getBoolean("adb_onboarded:" + host, false) &&
+            !prefs.getString("installed:" + host, null).isNullOrBlank())
+    }
     var showAdbSetup by remember(host) { mutableStateOf(false) }
     var onboardingSeen by remember(host) {
         mutableStateOf(prefs.getBoolean("adb_onboarded:" + host, false))
     }
+    var setupHostText by remember(host, showAdbSetup) { mutableStateOf(host) }
+    var connectionActive by remember(host, useAdb) { mutableStateOf(false) }
     var showPair by remember(deviceKey, host) { mutableStateOf(false) }''', "ADB state")
 text = replace_once(text,
     "if (host.isNotBlank() && pairing.isBlank()) {",
@@ -64,34 +70,49 @@ text = replace_once(text,
         }
     }''',
     '''    LaunchedEffect(host, pairing, refresh, useAdb) {
-        inventoryVerified = false
+        connectionActive = false
         if (host.isNotBlank() && (useAdb || pairing.isNotBlank())) {
-            busy = true
-            val firstAttempt = runCatching {
-                if (useAdb) adbApps.inventory(host) else TclTvAppApi.apps(host, pairing)
-            }
-            val result = if (!useAdb && firstAttempt.isFailure && refresh == 0) {
-                kotlinx.coroutines.delay(1400L)
-                runCatching { TclTvAppApi.apps(host, pairing) }
-            } else firstAttempt
-            result.onSuccess { list ->
-                inventoryVerified = true
-                allApps = list
-                storeApps(list)
-                if (useAdb) {
-                    onboardingSeen = true
-                    prefs.edit().putBoolean("adb_onboarded:" + host, true).apply()
-                } else storePair(pairing)
-                errorText = null
-            }.onFailure {
-                errorText = it.message ?: "Não foi possível consultar aplicativos da TCL."
-                if (!useAdb && it.message?.contains("Código incorreto") == true) {
-                    codeEntry = pairing
-                    showPair = true
+            var retryMs = 2500L
+            var lastInventoryOk = false
+            while (true) {
+                busy = !inventoryVerified
+                try {
+                    if (useAdb && lastInventoryOk) {
+                        // No repeated full APK transfer during idle heartbeats.
+                        adbApps.ping(host)
+                        connectionActive = true
+                        errorText = null
+                        kotlinx.coroutines.delay(25000L)
+                        continue
+                    }
+                    val list = if (useAdb) adbApps.inventory(host)
+                               else TclTvAppApi.apps(host, pairing)
+                    allApps = list
+                    inventoryVerified = true
+                    connectionActive = true
+                    storeApps(list)
+                    if (useAdb) {
+                        lastInventoryOk = true
+                        onboardingSeen = true
+                        prefs.edit().putBoolean("adb_onboarded:" + host, true)
+                            .putString("adb_last_host", host).apply()
+                    } else storePair(pairing)
+                    errorText = null
+                    retryMs = 2500L
+                    kotlinx.coroutines.delay(25000L)
+                } catch (cancel: kotlinx.coroutines.CancellationException) {
+                    throw cancel
+                } catch (error: Exception) {
+                    connectionActive = false
+                    lastInventoryOk = false
+                    errorText = error.message ?: "Não foi possível conectar à TCL."
+                    // Retain an already-approved device and identity across outages.
+                    kotlinx.coroutines.delay(retryMs)
+                    retryMs = (retryMs * 2).coerceAtMost(30000L)
+                } finally {
+                    busy = false
                 }
-                // Keep last confirmed apps visible, never replace with invented data.
             }
-            busy = false
         }
     }''', "ADB fetch and fallback")
 # No permanent "Use ADB Wi-Fi" banner in the home screen. ADB is the chosen
@@ -185,8 +206,7 @@ text = text[:shelf_start] + '''        Row(modifier = Modifier.fillMaxWidth().ho
                     .background(Color(0xFF1C1E25))
                     .clickable {
                         if (inventoryVerified) showManager = true
-                        else if (host.isBlank() || useAdb) showAdbSetup = true
-                        else showPair = true
+                        else showAdbSetup = true
                     },
                 contentAlignment = Alignment.Center
             ) {
@@ -231,6 +251,14 @@ text = replace_once(text,
                         Text("A leitura dos aplicativos não está conectada. " +
                             "Use Conectar para tentar novamente.", fontSize = 13.sp)
                     }
+                    OutlinedTextField(
+                        value = setupHostText,
+                        onValueChange = { setupHostText = it.filter { c ->
+                            c.isDigit() || c == '.'
+                        }.take(15) },
+                        label = { Text("IP da TCL na rede Wi-Fi") },
+                        singleLine = true
+                    )
                     if (busy) CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     if (!errorText.isNullOrBlank()) {
                         Text(errorText.orEmpty(), fontSize = 12.sp,
@@ -240,8 +268,14 @@ text = replace_once(text,
             },
             confirmButton = {
                 TextButton(
-                    enabled = host.isNotBlank() && !busy,
+                    enabled = !busy && setupHostText.matches(
+                        Regex("(?:[0-9]{1,3}\\.){3}[0-9]{1,3}")),
                     onClick = {
+                        // Reconnect without depending on remote-control discovery.
+                        requestedHost = setupHostText
+                        prefs.edit().putString("adb_last_host", setupHostText)
+                            .putBoolean("adb_enabled:" + setupHostText, true).apply()
+                        useAdb = true
                         errorText = null
                         refresh++
                         showAdbSetup = false
@@ -274,6 +308,10 @@ text = replace_once(text,
     '''                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)''',
     '''                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)
                     TextButton(onClick = {
+                        showManager = false
+                        showAdbSetup = true
+                    }) { Text("Conexão da TCL / Reconectar") }
+                    TextButton(onClick = {
                         useAdb = !useAdb
                         prefs.edit().putBoolean("adb_enabled:" + host, useAdb).apply()
                         showManager = false
@@ -283,6 +321,16 @@ text = replace_once(text,
                         Text(if (useAdb) "Usar conexão antiga da TCL" else "Usar ADB Wi-Fi")
                     }''',
     "Fallback inside editor")
+# Retain the approved TV IP even when the remote-control transport has no host.
+text = replace_once(text,
+    '''    val host = tvHost.orEmpty()''',
+    '''    var requestedHost by remember(tvIdentity, tvName) { mutableStateOf("") }
+    val host = requestedHost.ifBlank {
+        tvHost?.takeIf { it.isNotBlank() }
+            ?: prefs.getString("adb_last_host", "").orEmpty()
+    }''',
+    "Persistent TCL host")
+
 SOURCE.write_text(text, encoding="utf-8")
 
 gradle = ROOT / "app/build.gradle.kts"
