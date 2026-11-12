@@ -204,6 +204,42 @@ internal class TclAdbInstalledApps(private val context: Context) {
         }
     }
 
+    /**
+     * Best-effort, provider-scoped HTTPS deep link; requests an Android intent,
+     * not playback confirmation. A rejected link must not be advertised as opened.
+     * No URL from a catalog is interpolated into a shell without validation.
+     */
+    suspend fun openTitleLink(host: String, packageName: String, url: String): Boolean =
+        withContext(Dispatchers.IO) {
+            require(packagePattern.matches(packageName)) { "Pacote inválido" }
+            val uri = java.net.URI(url)
+            val domain = uri.host?.lowercase() ?: ""
+            val allowed = when (packageName) {
+                "com.netflix.ninja" -> setOf("www.netflix.com", "netflix.com")
+                "com.disney.disneyplus" -> setOf("www.disneyplus.com", "disneyplus.com")
+                "com.amazon.amazonvideo.livingroom" ->
+                    setOf("www.primevideo.com", "primevideo.com")
+                "com.wbd.stream" -> setOf("www.max.com", "max.com", "play.max.com")
+                "com.apple.atve.androidtv.appletv" -> setOf("tv.apple.com")
+                else -> emptySet()
+            }
+            require(uri.scheme.equals("https", ignoreCase = true) &&
+                uri.userInfo == null && uri.port == -1 && domain in allowed &&
+                url.length in 10..2048 && url.none { it == '\'' || it.isISOControl() }) {
+                "Link não autorizado para este aplicativo"
+            }
+            withAdb(host) { adb ->
+                require(packageName in parsePackages(shell(adb, "pm list packages"))) {
+                    "Aplicativo não está instalado na TCL."
+                }
+                val response = shell(adb,
+                    "am start -a android.intent.action.VIEW -d '$url' -p $packageName")
+                response.contains("Starting: Intent") &&
+                    !response.contains("Error:", ignoreCase = true) &&
+                    !response.contains("unable", ignoreCase = true)
+            }
+        }
+
     suspend fun launch(host: String, packageName: String): Boolean =
         withContext(Dispatchers.IO) {
             require(packagePattern.matches(packageName)) { "Pacote inválido" }
