@@ -58,6 +58,38 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('não foi aberta automaticamente', s)
         self.assertIn('STREAM = SRC / "TclStreamingScreens.kt"', s)
 
+    def test_disconnected_shelf_shows_only_edit(self):
+        p = PATCH.read_text()
+        self.assertIn('val verifiedApps = if (inventoryVerified && host.isNotBlank()) allApps else emptyList()', p)
+        self.assertIn('val byPackage = verifiedApps.associateBy { it.packageName }', p)
+        self.assertIn('if (inventoryVerified) allApps else emptyList()', p)
+        self.assertIn('Text("Editar"', p)
+        self.assertIn('if (inventoryVerified) showManager = true', p)
+        self.assertIn('if (errorText != null && inventoryVerified)', p)
+        self.assertNotIn('ADB Wi-Fi: ativado (toque para usar complemento)', p)
+
+    def test_first_connection_guide_only_in_editor(self):
+        p = PATCH.read_text()
+        self.assertIn('if (!onboardingSeen)', p)
+        self.assertIn('adb_onboarded:', p)
+        self.assertIn('showAdbSetup = true', p)
+        self.assertIn('Text("3. Toque em Conectar e autorize a chave deste celular na TV."', p)
+        self.assertIn('inventoryVerified = false', p)
+        self.assertIn('inventoryVerified = true', p)
+        self.assertIn('prefs.getBoolean("adb_enabled:" + host, true)', p)
+
+    def test_title_link_over_adb_falls_back_to_app(self):
+        p = PATCH.read_text()
+        source = SOURCE.read_text()
+        self.assertIn('onTclAdbTitleLink = { pkg, url -> adbApps.openTitleLink(host, pkg, url) }', p)
+        self.assertIn('StreamingCatalog.titleDeepLink(token, title, packageName)', p)
+        self.assertIn('onTclAdbLaunch(packageName)', p)
+        self.assertIn('Link do título enviado ao aplicativo por ADB.', p)
+        self.assertIn('val uri = java.net.URI(url)', source)
+        self.assertIn('uri.userInfo == null', source)
+        self.assertIn('domain in allowed', source)
+        self.assertIn('!response.contains("Error:", ignoreCase = true)', source)
+
     def test_overlay_only_in_dev(self):
         s = PATCH.read_text()
         self.assertIn('copyfile("overrides/TclAdbInstalledApps.kt"', s)
