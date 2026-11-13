@@ -141,6 +141,31 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('falha do parser APK', source)
         self.assertIn('readRealApp(adb, host, pkg, warnings)', source)
 
+    def test_streaming_hosts_agree_across_resolver_and_tcl_adb(self):
+        client = SOURCE.read_text()
+        personal = (ROOT / "overrides/AnyTvPersonalLinks.kt").read_text()
+        catalog = (ROOT / "overrides/TclStreamingScreens.kt").read_text()
+        self.assertIn('"app.primevideo.com"', client)
+        self.assertIn('"play.hbomax.com"', client)
+        self.assertIn('"com.amazon.avod.thirdpartyclient"', client)
+        self.assertIn('"com.netflix.mediaclient"', client)
+        self.assertIn('https://app.primevideo.com/detail?gti=', personal)
+        self.assertIn('https://play.hbomax.com', personal)
+        self.assertIn('https://app.primevideo.com/detail?gti=', catalog)
+        self.assertIn('https://play.hbomax.com/', catalog)
+        # Do not allow arbitrary URLs just because host rules are aligned.
+        self.assertIn('uri.userInfo == null && uri.port == -1 && domain in allowed', client)
+        self.assertIn('url.none { it ==', client)
+
+    def test_tv_home_launch_fallback_uses_leanback_category(self):
+        client = SOURCE.read_text()
+        patch = PATCH.read_text()
+        self.assertIn('adbApps.launch(host, app.packageName)', patch)
+        self.assertIn('android.intent.category.LEANBACK_LAUNCHER', client)
+        self.assertIn('"monkey -p " + packageName +', client)
+        self.assertIn('" -c android.intent.category.LEANBACK_LAUNCHER 1"', client)
+        self.assertNotIn('shell(adb, "monkey -p " + packageName + " 1")', client)
+
     def test_title_link_over_adb_falls_back_to_app(self):
         p = PATCH.read_text()
         source = SOURCE.read_text()
