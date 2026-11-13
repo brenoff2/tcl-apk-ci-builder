@@ -499,18 +499,10 @@ private fun TclApprovedHeader(
 private fun TclEmbossedDisc() {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val r = size.minDimension / 2f
-        drawCircle(Color(0xFF080808), radius = r * .96f,
-            style = Stroke(width = 2.dp.toPx()))
-        drawCircle(Color(0xFF777777).copy(alpha = .8f), radius = r * .91f,
-            style = Stroke(width = .7.dp.toPx()))
-        drawCircle(Color(0xFF141414), radius = r * .84f,
-            style = Stroke(width = 1.8.dp.toPx()))
-        drawArc(Color(0xFFAAAAAA).copy(alpha = .55f),
-            startAngle = 196f, sweepAngle = 125f, useCenter = false,
-            style = Stroke(width = .9.dp.toPx()))
-        drawArc(Color(0xFF050505),
-            startAngle = 17f, sweepAngle = 150f, useCenter = false,
-            style = Stroke(width = 1.2.dp.toPx()))
+        drawCircle(Color(0xFF36373A).copy(alpha = .7f), radius = r * .96f,
+            style = Stroke(width = 1.dp.toPx()))
+        drawCircle(Color(0xFF17181A), radius = r * .89f,
+            style = Stroke(width = .75.dp.toPx()))
     }
 }
 
@@ -525,9 +517,9 @@ internal fun TclHeaderAction(
         modifier = Modifier.size(38.dp)
             .clip(CircleShape)
             .background(Brush.verticalGradient(
-                listOf(Color(0xFF303030), Color(0xFF151515))
+                listOf(Color(0xFF191A1D), Color(0xFF111215))
             ))
-            .border(1.dp, Color(0xFF4A4A4A).copy(alpha = 0.85f), CircleShape)
+            .border(1.dp, Color(0xFF343538).copy(alpha = 0.85f), CircleShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
@@ -550,9 +542,9 @@ internal fun TclSideRocker(
     Box(
         modifier = modifier.clip(shape)
             .background(Brush.verticalGradient(
-                listOf(Color(0xFF303030), Color(0xFF131313), Color(0xFF252525))
+                listOf(Color(0xFF191A1D), Color(0xFF111215), Color(0xFF19191B))
             ))
-            .border(1.dp, Color(0xFF3D3D3D), shape)
+            .border(1.dp, Color(0xFF303134), shape)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(vertical = 12.dp, horizontal = 3.dp),
@@ -607,9 +599,9 @@ internal fun TclQuickAction(
             modifier = Modifier.size(diameter)
                 .clip(CircleShape)
                 .background(Brush.verticalGradient(
-                    listOf(Color(0xFF353535), Color(0xFF161616))
+                    listOf(Color(0xFF191A1D), Color(0xFF111215))
                 ))
-                .border(1.dp, Color(0xFF484848), CircleShape)
+                .border(1.dp, Color(0xFF35363A), CircleShape)
                 .clickable(onClick = onClick)
                 .semantics { contentDescription = title },
             contentAlignment = Alignment.Center
