@@ -101,7 +101,7 @@ import com.hari.androidtvremote.utils.Constant
  * 1.7 APK whose private signing key is not currently available.
  */
 // Scoped visual palette; settings and other screens retain their own theme.
-private val TclBg = Color(0xFF08090D)
+private val TclBg = Color(0xFF1E1F22)
 private val TclSurface = Color(0xFF0F1117)
 private val TclSurfaceHigh = Color(0xFF1C1E25)
 private val TclOutline = Color(0xFF2A2C32)
@@ -233,7 +233,7 @@ fun TclApprovedHomeScreen(
     }
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF11141B), TclBg, TclBg)))
+            .background(Brush.verticalGradient(listOf(Color(0xFF222326), TclBg, TclBg)))
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
         val compactHeight = maxHeight < 760.dp
@@ -494,15 +494,24 @@ private fun TclApprovedHeader(
     }
 }
 
-/** Decorative physical-button bezel; never participates in hit-testing. */
+/** Same-height graphite face: a 1-2px machined cut, not a raised shadow. */
+internal fun Modifier.anyTvCutGraphite(shape: androidx.compose.ui.graphics.Shape): Modifier =
+    this.clip(shape)
+        .background(Brush.linearGradient(listOf(
+            Color(0xFF222326), Color(0xFF1F2023), Color(0xFF1E1F22))), shape)
+        .border(1.5.dp, Color(0xFF0A0B0D), shape)
+        .border(0.6.dp, Brush.linearGradient(listOf(
+            Color(0xFF424346).copy(alpha = .50f),
+            Color(0xFF292A2C).copy(alpha = .20f),
+            Color.Transparent)), shape)
+
+/** A tiny interior edge reflection, without a raised bezel or added touch area. */
 @Composable
 private fun TclEmbossedDisc() {
     Canvas(modifier = Modifier.fillMaxSize()) {
         val r = size.minDimension / 2f
-        drawCircle(Color(0xFF36373A).copy(alpha = .7f), radius = r * .96f,
-            style = Stroke(width = 1.dp.toPx()))
-        drawCircle(Color(0xFF17181A), radius = r * .89f,
-            style = Stroke(width = .75.dp.toPx()))
+        drawCircle(Color(0xFF353638).copy(alpha = .28f), radius = r * .965f,
+            style = Stroke(width = .55.dp.toPx()))
     }
 }
 
@@ -515,11 +524,7 @@ internal fun TclHeaderAction(
 ) {
     Box(
         modifier = Modifier.size(38.dp)
-            .clip(CircleShape)
-            .background(Brush.verticalGradient(
-                listOf(Color(0xFF191A1D), Color(0xFF111215))
-            ))
-            .border(1.dp, Color(0xFF343538).copy(alpha = 0.85f), CircleShape)
+            .anyTvCutGraphite(CircleShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
@@ -540,11 +545,7 @@ internal fun TclSideRocker(
 ) {
     val shape = RoundedCornerShape(30.dp)
     Box(
-        modifier = modifier.clip(shape)
-            .background(Brush.verticalGradient(
-                listOf(Color(0xFF191A1D), Color(0xFF111215), Color(0xFF19191B))
-            ))
-            .border(1.dp, Color(0xFF303134), shape)
+        modifier = modifier.anyTvCutGraphite(shape)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(vertical = 12.dp, horizontal = 3.dp),
@@ -597,11 +598,7 @@ internal fun TclQuickAction(
     ) {
         Box(
             modifier = Modifier.size(diameter)
-                .clip(CircleShape)
-                .background(Brush.verticalGradient(
-                    listOf(Color(0xFF191A1D), Color(0xFF111215))
-                ))
-                .border(1.dp, Color(0xFF35363A), CircleShape)
+                .anyTvCutGraphite(CircleShape)
                 .clickable(onClick = onClick)
                 .semantics { contentDescription = title },
             contentAlignment = Alignment.Center
