@@ -582,7 +582,7 @@ class StreamingScreens(unittest.TestCase):
             'sourcePage < payload.optInt("total_pages", sourcePage)',
             'genreMore[key] = result.more',
             'items(shelf.take(ANYTV_EDITORIAL_LIMIT),',
-            'items(shelf.take(sectionVisibleCount).chunked(3))',
+            'items(shelf.chunked(3))',
             'items(genreTitles.chunked(3))',
             'StreamingCatalog.discoveryGenrePage(',
             '"Mostrar mais"', 'genreShelves[genreKey] =',
@@ -846,6 +846,26 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('sectionPage < 42 && sectionAll.size >= ANYTV_LIST_BATCH',
                          self.screen)
 
+    def test_library_full_without_item_cap_and_preserves_legacy_favorites(self):
+        s = self.screen
+        self.assertIn('items(shelf.chunked(3))', s)
+        self.assertIn('items(inProgress.chunked(3))', s)
+        self.assertNotIn('items(shelf.take(sectionVisibleCount).chunked(3))', s)
+        self.assertNotIn('items(inProgress.take(sectionVisibleCount).chunked(3))', s)
+        self.assertIn('pkg.ifBlank { "library" }', s)
+        self.assertIn('val history = (watchedFilms.mapNotNull', s)
+        self.assertIn('val trackedIds = trackedSeries +', s)
+
+    def test_graphite_streaming_actions_and_reddish_selected_states(self):
+        s = self.screen
+        self.assertIn('private fun AnyTvStreamOutlinedButton(', s)
+        self.assertIn('containerColor = Color.Transparent, contentColor = Color(0xFFECECEE)', s)
+        self.assertIn('Color(0xFF191A1D)', s)
+        self.assertIn('Color(0xFF422128)', s)
+        self.assertIn('Color(0xFF804049)', s)
+        self.assertIn('AnyTvStreamOutlinedButton(onClick =', s)
+        self.assertIn('selectedContainerColor = Color(0xFF422128)', s)
+
     def test_watched_film_uses_independent_prefs_snapshot_and_legacy_cache_migration(self):
         block = self.screen.split('var watchedMovieTitles by remember(prefs)', 1)[1].split(
             'fun isFavorite(title: StreamingTitle', 1)[0]
@@ -892,7 +912,7 @@ class StreamingScreens(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, library)
         # The poster card keeps its 2:3 aspect and draws only real titles.
-        self.assertIn('items(shelf.take(sectionVisibleCount).chunked(3))', self.screen)
+        self.assertIn('items(shelf.chunked(3))', self.screen)
         self.assertNotIn('StreamingTitle(id, "Filme', library)
         self.assertNotIn('https://image.tmdb.org/t/p/w342" + id', library)
 
@@ -1107,7 +1127,7 @@ class StreamingScreens(unittest.TestCase):
             'else unique.take(ANYTV_EDITORIAL_LIMIT))',
             'val sectionTitles = sectionAll.take(sectionVisibleCount)',
             'sectionVisibleCount += ANYTV_LIST_BATCH',
-            'items(shelf.take(sectionVisibleCount).chunked(3))',
+            'items(shelf.chunked(3))',
             'LaunchedEffect(librarySection, homeLibrary)',
             'LaunchedEffect(watchingQuery)',
             'Nenhuma série corresponde à sua busca.',
@@ -1122,7 +1142,7 @@ class StreamingScreens(unittest.TestCase):
             'val cardWidth = (maxWidth - 18.dp) / 3f',
             'items(genreTitles.chunked(3))',
             'items(sectionTitles.chunked(3))',
-            'items(shelf.take(sectionVisibleCount).chunked(3))',
+            'items(shelf.chunked(3))',
             'items(inProgress.take(sectionVisibleCount).chunked(3))',
             'globalSearchResults.chunked(3)',
         ):
@@ -1271,7 +1291,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('"Séries acompanhadas"', self.screen)
         self.assertNotIn('"Continuando"', self.screen)
         self.assertIn('items(inProgress.take(sectionVisibleCount).chunked(3))', self.screen)
-        self.assertIn('items(shelf.take(sectionVisibleCount).chunked(3))', self.screen)
+        self.assertIn('items(shelf.chunked(3))', self.screen)
         self.assertIn('contentScale = ContentScale.Fit)', self.screen)
         self.assertNotIn('private fun AnyTvCinemaHero(', self.screen)
         self.assertIn('Brush.verticalGradient(listOf(', self.screen)
