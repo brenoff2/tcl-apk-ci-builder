@@ -242,8 +242,8 @@ private fun TclHoldDPad(
             // Tiny solid triangle, like the reference's printed D-pad arrows.
             // The four large touch zones and their key callbacks remain unchanged.
             Canvas(modifier = Modifier.size(12.dp)) {
-                val w = size.width
-                val h = size.height
+                val w = this.size.width
+                val h = this.size.height
                 val triangle = Path().apply {
                     when (key) {
                         Remotemessage.RemoteKeyCode.KEYCODE_DPAD_UP -> {
@@ -283,7 +283,7 @@ private fun TclHoldDPad(
     ) {
         // Non-interactive engraved concentric rims. They do not own pointer events.
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val radius = size.minDimension / 2f
+            val radius = minOf(this.size.width, this.size.height) / 2f
             drawCircle(Color(0xFF090909), radius = radius * .987f,
                 style = Stroke(width = 2.dp.toPx()))
             drawCircle(Color(0xFF666666), radius = radius * .971f,
@@ -347,9 +347,9 @@ private fun TclHoldDPad(
             onHoldEnd = onHoldEnd
         ) {
             Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(Color(0xFF0B0B0B), radius = size.minDimension * .475f,
+                drawCircle(Color(0xFF0B0B0B), radius = minOf(this.size.width, this.size.height) * .475f,
                     style = Stroke(width = 2.dp.toPx()))
-                drawCircle(Color(0xFF646464), radius = size.minDimension * .445f,
+                drawCircle(Color(0xFF646464), radius = minOf(this.size.width, this.size.height) * .445f,
                     style = Stroke(width = .8.dp.toPx()))
             }
             Text(
