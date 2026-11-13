@@ -74,6 +74,7 @@ text = replace_once(text,
         if (host.isNotBlank() && (useAdb || pairing.isNotBlank())) {
             var retryMs = 2500L
             var lastInventoryOk = false
+            var incompleteRetries = 0
             while (true) {
                 try {
                     if (useAdb && !connectionActive) {
@@ -93,15 +94,24 @@ text = replace_once(text,
                         busy = false
                         errorText = null
                         kotlinx.coroutines.delay(25000L)
+                        if (allApps.any { it.name == it.packageName || it.icon.isBlank() } &&
+                            incompleteRetries < 2) {
+                            incompleteRetries++
+                            lastInventoryOk = false
+                        }
                         continue
                     }
                     busy = true
-                    val list = if (useAdb) adbApps.inventory(host)
-                               else TclTvAppApi.apps(host, pairing)
+                    val list = if (useAdb) {
+                        mergeTclInventoryMetadata(allApps, adbApps.inventory(host))
+                    } else TclTvAppApi.apps(host, pairing)
                     allApps = list
                     inventoryVerified = true
                     connectionActive = true
                     lastInventoryOk = useAdb
+                    if (list.all { it.name != it.packageName && it.icon.isNotBlank() }) {
+                        incompleteRetries = 0
+                    }
                     storeApps(list)
                     if (!useAdb) storePair(pairing)
                     errorText = if (useAdb && adbApps.lastInventoryWarnings.isNotEmpty()) {
