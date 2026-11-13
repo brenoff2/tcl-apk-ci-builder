@@ -72,8 +72,9 @@ class AnyTvGraphiteVisualQaTest {
                 AndroidColor.green(edge) in 32..44 &&
                 AndroidColor.blue(edge) in 32..44
         )
-        val dir = InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null)
-            ?: error("No screenshot output directory")
+        // Internal debug-app storage is readable through adb run-as, avoiding
+        // scoped-storage restrictions in /sdcard/Android/data on API 35.
+        val dir = InstrumentationRegistry.getInstrumentation().targetContext.filesDir
         val file = File(dir, "anytv-code122-graphite-real-compose.png")
         FileOutputStream(file).use { stream ->
             check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream))
