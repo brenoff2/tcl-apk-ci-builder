@@ -371,7 +371,7 @@ class StreamingScreens(unittest.TestCase):
                      'saved_title_', 'anytv_artwork_saved', 'drawable.toBitmap()',
                      'AnyTvPinnedImage(', 'fun previousTitle(',
                      'anyTvGenreLabels(title, allMovieGenres, tvGenres)', 'title.genreIds',
-                     'it.id.toString() !in watchedFilms'):
+                     'val savedFilms = films'):
             self.assertIn(text, self.screen)
         self.assertNotIn('90L * 86400000L', self.screen)
         self.assertIn('OutlinedButton(onClick = {\n                    details = null', self.screen)
