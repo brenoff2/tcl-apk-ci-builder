@@ -71,10 +71,10 @@ jobs:
           assert ".anyTvCutGraphite(CircleShape)" in pad
           assert "internal fun Modifier.anyTvCutGraphite(" in home
           assert "Color(0xFF2B2B2B)" in home and "Color(0xFF242424)" in home
-          assert "Color(0xFFA0A0A0).copy(alpha = if (largePad) .34f else .17f)" in home
-          assert ".border(0.42.dp, Brush.sweepGradient(" in home
+          assert "Color(0xFFA0A0A0).copy(alpha = if (largePad) .41f else .205f)" in home
+          assert ".border(0.50.dp, Brush.sweepGradient(" in home
           assert "0.90f to Color.Transparent" in home
-          assert "if (largePad) .20f else .10f" in home
+          assert "if (largePad) .25f else .125f" in home
           assert ".anyTvCutGraphite(RoundedCornerShape(17.dp))" in pad
           assert ".anyTvCutGraphite(CircleShape, largePad = true)" in pad
           assert "drawArc(Color(0xFF090A0B)" not in pad
