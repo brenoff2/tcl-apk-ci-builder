@@ -1659,6 +1659,42 @@ private fun AnyTvStreamOutlinedButton(
     )
 }
 
+/** Flat tactile variants for ordinary streaming actions, not fake controls. */
+@Composable
+private fun AnyTvStreamButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(17.dp),
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    colors: androidx.compose.material3.ButtonColors =
+        ButtonDefaults.buttonColors(containerColor = Color.Transparent,
+            contentColor = Color(0xFFECECEE)),
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    Button(onClick = onClick, enabled = enabled, shape = shape,
+        modifier = modifier.clip(shape).background(
+            Brush.verticalGradient(listOf(Color(0xFF191A1D), Color(0xFF101113))), shape),
+        colors = colors, contentPadding = contentPadding, content = content)
+}
+
+@Composable
+private fun AnyTvStreamTextButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    val shape = RoundedCornerShape(13.dp)
+    TextButton(onClick = onClick, enabled = enabled,
+        modifier = modifier.clip(shape).background(
+            Brush.verticalGradient(listOf(Color(0xFF18191C), Color(0xFF111214))), shape),
+        colors = ButtonDefaults.textButtonColors(
+            containerColor = Color.Transparent, contentColor = Color(0xFFECECEE)),
+        contentPadding = contentPadding, shape = shape, content = content)
+}
+
 @Composable
 private fun AnyTvCompactChip(label: String, selected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(13.dp)
@@ -3074,7 +3110,7 @@ internal fun TclStreamingScreens(
                                 selectedHomeGenre = kind.id; selected = null; homeLibrary = false
                             }
                         }
-                        TextButton(onClick = {
+                        AnyTvStreamTextButton(onClick = {
                             editingGenreIds = preferredGenreIds; showGenreSettings = true
                         }, contentPadding = PaddingValues(horizontal = 5.dp)) {
                             Text("⚙ Listas", fontSize = 11.sp)
@@ -3443,7 +3479,7 @@ internal fun TclStreamingScreens(
                                 selectedProvider != null || selectedGenreProvider != null ||
                                 homeProvider != null || sectionTitle == "Em breve · Filmes e séries"
                             item {
-                                TextButton(onClick = { openedSection = null }) {
+                                AnyTvStreamTextButton(onClick = { openedSection = null }) {
                                     Text("‹ Voltar às seções")
                                 }
                                 Text(sectionTitle, fontSize = 17.sp,
@@ -4164,7 +4200,7 @@ internal fun TclStreamingScreens(
                                         fontSize = 12.sp)
                                     if (genreShelves[genreKey] == null &&
                                         genreLoading[genreKey] != true) {
-                                        TextButton(onClick = { genreFirstPageRetry++ }) {
+                                        AnyTvStreamTextButton(onClick = { genreFirstPageRetry++ }) {
                                             Text("Tentar novamente")
                                         }
                                     }
@@ -4231,7 +4267,7 @@ internal fun TclStreamingScreens(
                                 } else if (!restoringWatchedMovies &&
                                     missingIds.any { it !in absentWatchedMovieIds }) {
                                     item {
-                                        TextButton(onClick = { watchedMoviesRetry++ }) {
+                                        AnyTvStreamTextButton(onClick = { watchedMoviesRetry++ }) {
                                             Text("Recuperar mais 12")
                                         }
                                     }
@@ -4431,7 +4467,7 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                             }
-                            TextButton(onClick = {
+                            AnyTvStreamTextButton(onClick = {
                                 globalSearchHistory = emptyList()
                                 prefs.edit().remove("anytv_global_search_history_v1").apply()
                             }) { Text("Limpar histórico", color = Color.LightGray) }
@@ -4475,7 +4511,7 @@ internal fun TclStreamingScreens(
                                     Text("Ficha oficial confirmada; o catálogo pode usar o título Love of Your Life.",
                                         fontSize = 10.sp)
                                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                                        TextButton(onClick = {
+                                        AnyTvStreamTextButton(onClick = {
                                             val link = Uri.parse(
                                                 "https://www.primevideo.com/detail/0HM3DRN79M0E7QOBLMYTS41IG0")
                                             runCatching {
@@ -4489,7 +4525,7 @@ internal fun TclStreamingScreens(
                                             it.packageName == "com.amazon.amazonvideo.livingroom" ||
                                             it.packageName == "com.amazon.avod.thirdpartyclient"
                                         }
-                                        if (prime != null) TextButton(onClick = {
+                                        if (prime != null) AnyTvStreamTextButton(onClick = {
                                             if (host.isBlank() || pairing.isBlank()) {
                                                 globalSearchError = "Vincule o AnyTV Connect à televisão."
                                             } else scope.launch {
@@ -4564,7 +4600,7 @@ internal fun TclStreamingScreens(
                 }
             },
             confirmButton = {
-                Button(onClick = {
+                AnyTvStreamButton(onClick = {
                     hiddenInstalledServices = installedDraft
                     visibleCatalogServices = extrasDraft
                     catalogPrefs.edit()
@@ -4576,7 +4612,7 @@ internal fun TclStreamingScreens(
                 }) { Text("Salvar") }
             },
             dismissButton = {
-                TextButton(onClick = { showCatalogEditor = false }) { Text("Cancelar") }
+                AnyTvStreamTextButton(onClick = { showCatalogEditor = false }) { Text("Cancelar") }
             })
     }
     if (showMyStreamingSettings) {
@@ -4594,7 +4630,7 @@ internal fun TclStreamingScreens(
                         Column(modifier = Modifier.weight(1f).heightIn(max = 350.dp)
                             .verticalScroll(rememberScrollState())) {
                             Text("Streamings", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
-                            TextButton(onClick = {
+                            AnyTvStreamTextButton(onClick = {
                                 editingMyServices = if (subscriptionNames.all {
                                         it in editingMyServices }) emptySet()
                                     else subscriptionNames.toSet()
@@ -4623,7 +4659,7 @@ internal fun TclStreamingScreens(
                             .verticalScroll(rememberScrollState())) {
                             Text("Gêneros", fontWeight = FontWeight.SemiBold, fontSize = 12.sp)
                             val allGenreIds = availableGenres.flatMap { it.second }.toSet()
-                            TextButton(onClick = {
+                            AnyTvStreamTextButton(onClick = {
                                 editingFilterGenres = if (allGenreIds.isNotEmpty() &&
                                     allGenreIds.all { it in editingFilterGenres }) emptySet()
                                     else allGenreIds
@@ -4648,7 +4684,7 @@ internal fun TclStreamingScreens(
                 }
             },
             confirmButton = {
-                Button(shape = RoundedCornerShape(22.dp), onClick = {
+                AnyTvStreamButton(shape = RoundedCornerShape(22.dp), onClick = {
                     myServices = editingMyServices
                     filterGenreIds = editingFilterGenres
                     prefs.edit().putString("anytv_my_streamings",
@@ -4689,7 +4725,7 @@ internal fun TclStreamingScreens(
                 }
             },
             confirmButton = {
-                TextButton(
+                AnyTvStreamTextButton(
                     enabled = editingGenreIds.isNotEmpty(),
                     onClick = {
                         preferredGenreIds = editingGenreIds
@@ -4700,7 +4736,7 @@ internal fun TclStreamingScreens(
                     }) { Text("Aplicar") }
             },
             dismissButton = {
-                TextButton(onClick = { showGenreSettings = false }) { Text("Cancelar") }
+                AnyTvStreamTextButton(onClick = { showGenreSettings = false }) { Text("Cancelar") }
             }
         )
     }
@@ -4723,7 +4759,7 @@ internal fun TclStreamingScreens(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showCredits = false }) { Text("Fechar") }
+                AnyTvStreamTextButton(onClick = { showCredits = false }) { Text("Fechar") }
             })
     }
     val title = details
@@ -4889,7 +4925,7 @@ internal fun TclStreamingScreens(
                     if (detailLoading) CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     val video = trailerLink
                     if (video != null) {
-                        TextButton(onClick = {
+                        AnyTvStreamTextButton(onClick = {
                             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(video)))
                         }) { Text("▶ Ver trailer") }
                     } else if (!detailLoading) {
@@ -4966,7 +5002,7 @@ internal fun TclStreamingScreens(
                             }
                             val seasonNum = manualSeason.toIntOrNull()
                             val epNum = manualEpisode.toIntOrNull()
-                            TextButton(onClick = {
+                            AnyTvStreamTextButton(onClick = {
                                 if (seasonNum != null && epNum != null)
                                     toggleWatched(title, seasonNum, epNum)
                             }, enabled = seasonNum != null && seasonNum in 1..999 &&
@@ -4984,7 +5020,7 @@ internal fun TclStreamingScreens(
                                     } else null
                                 }.sortedWith(compareBy({ it.first }, { it.second }))
                                 .forEach { (sn, en) ->
-                                    TextButton(onClick = { toggleWatched(title, sn, en) }) {
+                                    AnyTvStreamTextButton(onClick = { toggleWatched(title, sn, en) }) {
                                         Text("✓ T$sn · E$en   ×", fontSize = 11.sp)
                                     }
                                 }
@@ -5044,7 +5080,7 @@ internal fun TclStreamingScreens(
                         Text("Solicite a liberação segura desta instalação. " +
                             "A solicitação não concede acesso automaticamente.",
                             fontSize = 11.sp)
-                        TextButton(enabled = !deviceActivationPending,
+                        AnyTvStreamTextButton(enabled = !deviceActivationPending,
                             onClick = {
                                 scope.launch {
                                     deviceActivationPending = true
@@ -5085,7 +5121,7 @@ internal fun TclStreamingScreens(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 eligible.forEach { app ->
                                     val chosen = detailsPackage == app.packageName
-                                    Button(
+                                    AnyTvStreamButton(
                                         onClick = {
                                             if (isLgWebOs && detailsPackage != app.packageName) {
                                                 lgTitleSelectionGeneration += 1
@@ -5143,7 +5179,7 @@ internal fun TclStreamingScreens(
                 }
             },
             confirmButton = {
-                Button(onClick = {
+                AnyTvStreamButton(onClick = {
                     if (pkg.isBlank()) {
                         titleActionFeedback = "Selecione um serviço disponível para este título."
                     } else if (!isLgWebOs && !(officialDisneyTitle && pkg == "com.disney.disneyplus") &&
@@ -5182,7 +5218,7 @@ internal fun TclStreamingScreens(
         if (remoteMinimized) {
             Box(modifier = Modifier.fillMaxSize().padding(16.dp),
                 contentAlignment = Alignment.BottomEnd) {
-                Button(onClick = { remoteMinimized = false }) {
+                AnyTvStreamButton(onClick = { remoteMinimized = false }) {
                     Icon(Icons.Filled.Tv, contentDescription = null,
                         modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
@@ -5218,7 +5254,7 @@ internal fun TclStreamingScreens(
                                         fontSize = 11.sp)
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    TextButton(onClick = { remoteMinimized = true }) {
+                                    AnyTvStreamTextButton(onClick = { remoteMinimized = true }) {
                                         Text("Minimizar")
                                     }
                                     IconButton(onClick = { showPlaybackRemote = false }) {
@@ -5290,8 +5326,8 @@ internal fun TclStreamingScreens(
                                 Row(modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.End,
                                     verticalAlignment = Alignment.CenterVertically) {
-                                    TextButton(onClick = onKeyboardEnter) { Text("Enter") }
-                                    Button(enabled = remoteText.isNotBlank(), onClick = {
+                                    AnyTvStreamTextButton(onClick = onKeyboardEnter) { Text("Enter") }
+                                    AnyTvStreamButton(enabled = remoteText.isNotBlank(), onClick = {
                                         onKeyboardText(remoteText)
                                         remoteText = ""
                                     }) { Text("Enviar texto") }
