@@ -28,6 +28,22 @@ import java.util.concurrent.TimeUnit
  * RSA authorization, change TV settings, or install a TV-side component.
  * ADB TCP/5555 is unencrypted; use only on a trusted local network.
  */
+
+/** A partial ADB read never replaces a previously verified label or real PNG. */
+internal fun mergeTclInventoryMetadata(
+    previous: List<TvOfficialApp>, fresh: List<TvOfficialApp>
+): List<TvOfficialApp> {
+    val old = previous.associateBy { it.packageName }
+    return fresh.map { item ->
+        val cached = old[item.packageName]
+        val name = item.name.takeIf { it.isNotBlank() && it != item.packageName }
+            ?: cached?.name?.takeIf { it.isNotBlank() && it != item.packageName }
+            ?: item.packageName
+        val icon = item.icon.ifBlank { cached?.icon.orEmpty() }
+        item.copy(name = name, icon = icon)
+    }
+}
+
 internal class TclAdbInstalledApps(private val context: Context) {
     @Volatile
     var lastInventoryWarnings: List<String> = emptyList()
@@ -287,6 +303,60 @@ internal class TclAdbInstalledApps(private val context: Context) {
         }
     }
 
+
+    /** Temporary remote DEX: no TV APK installation, no RSA changes, no persistent helper. */
+    private fun nativeMetadata(adb: AdbConnection): Map<String, TvOfficialApp> {
+        val dex = context.assets.open("anytv_remote_meta.dex").use { it.readBytes() }
+        require(dex.size in 256..(192 * 1024)) { "Metadados remotos ausentes" }
+        val remote = "/data/local/tmp/anytv_meta_" +
+            java.util.UUID.randomUUID().toString().replace("-", "") + ".dex"
+        try {
+            val target = (remote + ",0644").toByteArray(Charsets.UTF_8)
+            adb.open("sync:").use { stream ->
+                stream.write(ByteBuffer.allocate(8 + target.size).order(ByteOrder.LITTLE_ENDIAN)
+                    .put("SEND".toByteArray(Charsets.US_ASCII))
+                    .putInt(target.size).put(target).array())
+                dex.asList().chunked(16384).forEach { chunk ->
+                    val bytes = chunk.toByteArray()
+                    stream.write(ByteBuffer.allocate(8 + bytes.size)
+                        .order(ByteOrder.LITTLE_ENDIAN)
+                        .put("DATA".toByteArray(Charsets.US_ASCII))
+                        .putInt(bytes.size).put(bytes).array())
+                }
+                stream.write(ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN)
+                    .put("DONE".toByteArray(Charsets.US_ASCII)).putInt(0).array())
+                var response = ByteArray(0)
+                while (response.size < 8) response += stream.read()
+                require(response.copyOfRange(0, 4).toString(Charsets.US_ASCII) == "OKAY") {
+                    "TCL recusou auxiliar temporário de metadados"
+                }
+            }
+            val answer = shell(adb,
+                "CLASSPATH=" + remote + " app_process / anytv.adb.AnyTvRemoteMeta")
+            require(answer.contains("ANYTV_REMOTE_META_V1") &&
+                answer.contains("ANYTV_REMOTE_META_END")) { "Runtime da TCL não aceitou metadados nativos" }
+            val found = linkedMapOf<String, TvOfficialApp>()
+            for (line in answer.lineSequence()) {
+                if (!line.startsWith("ANYTV_APP\t")) continue
+                val fields = line.trimEnd().split('\t', limit = 4)
+                if (fields.size != 4 || !packagePattern.matches(fields[1])) continue
+                val name = runCatching {
+                    Base64.decode(fields[2], Base64.DEFAULT).toString(Charsets.UTF_8)
+                        .trim().take(100)
+                }.getOrDefault(fields[1])
+                val icon = fields[3].takeIf { it.length <= 45000 &&
+                    runCatching { Base64.decode(it, Base64.DEFAULT).size in 100..32768 }
+                        .getOrDefault(false) }.orEmpty()
+                found[fields[1]] = TvOfficialApp(fields[1], name, icon)
+            }
+            require(found.isNotEmpty()) { "TCL retornou lista nativa vazia" }
+            return found
+        } finally {
+            // ADB shell runs as authorized user; remove only our unique temporary DEX.
+            runCatching { shell(adb, "rm -f " + remote) }
+        }
+    }
+
     /** Read-only heartbeat. An authorized TV may briefly drop its TCP socket. */
     suspend fun probe(host: String): Boolean = withContext(Dispatchers.IO) {
         withAdb(host, 28000L) { true }
@@ -316,16 +386,25 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 "A TCL não retornou os aplicativos do launcher. Inventário indisponível."
             }
             val warnings = mutableListOf<String>()
+            val native = runCatching { nativeMetadata(adb) }
+                .onFailure { warnings.add("Extração nativa: " + it.javaClass.simpleName) }
+                .getOrDefault(emptyMap())
             val apps = launchable.filter { it in installed }.sorted().map { pkg ->
-                runCatching { readRealApp(adb, host, pkg, warnings) }
-                    .getOrElse { error ->
-                        warnings.add(pkg + ": " + error.javaClass.simpleName)
-                        TvOfficialApp(pkg, pkg, "")
-                    }.also { app ->
-                        if (app.name == pkg && app.icon.isBlank()) {
-                            warnings.add(pkg + ": metadados não resolvidos")
+                val fromTv = native[pkg]
+                if (fromTv?.name != pkg && !fromTv?.icon.isNullOrBlank()) {
+                    fromTv!!
+                } else {
+                    val archive = runCatching { readRealApp(adb, host, pkg, warnings) }
+                        .getOrElse { error ->
+                            warnings.add(pkg + ": " + error.javaClass.simpleName)
+                            TvOfficialApp(pkg, pkg, "")
                         }
+                    mergeTclInventoryMetadata(listOfNotNull(fromTv), listOf(archive))[0]
+                }.also { app ->
+                    if (app.name == pkg || app.icon.isBlank()) {
+                        warnings.add(pkg + ": nome ou ícone incompleto")
                     }
+                }
             }.sortedBy { it.name.lowercase() }
             if (apps.none { it.name != it.packageName || it.icon.isNotBlank() }) {
                 warnings.add("Nenhum nome ou ícone foi resolvido; verifique os recursos dos APKs.")
