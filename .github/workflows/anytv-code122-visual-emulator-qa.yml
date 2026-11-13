@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/anytv-code122-visual-emulator-qa.yml'
       - 'scripts/qa/AnyTvGraphiteVisualQaTest.kt'
+      - 'scripts/qa/run_anytv_graphite_emulator_qa.sh'
 permissions:
   contents: read
 concurrency:
@@ -146,7 +147,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: bash -euo pipefail -c 'cd source && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.hari.androidtvremote.ui.app.AnyTvGraphiteVisualQaTest --no-daemon --stacktrace && cd .. && mkdir -p visual-qa && adb shell pm list packages -3 && APP=$(adb shell pm list packages -3 | tr -d "\\r" | sed -n "s/^package://p" | grep -E "tclremote|androidtvremote" | grep -v "test" | head -1) && test -n "$APP" && echo "ANYTV_EMULATOR_TARGET_PACKAGE=$APP" && adb shell run-as "$APP" ls files/anytv-code122-graphite-real-compose.png && adb exec-out run-as "$APP" cat files/anytv-code122-graphite-real-compose.png > visual-qa/graphite-code122-compose.png && test -s visual-qa/graphite-code122-compose.png && file visual-qa/graphite-code122-compose.png && echo ANYTV_CODE122_REAL_COMPOSE_SCREENSHOT_CAPTURED'
+          script: bash scripts/qa/run_anytv_graphite_emulator_qa.sh
       - uses: actions/upload-artifact@v4
         with:
           name: anytv-code122-graphite-real-compose-screenshot
