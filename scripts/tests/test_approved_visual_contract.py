@@ -135,9 +135,9 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertNotIn('TclLiquidFill(', self.skin)
         self.assertNotIn('fluidLevel = sessionState.volumeFraction', self.skin)
         for fragment in (
-            'val accent = Color(0xFFE9003B)',
+            'val accent = Color(0xFF464646)',
             'modifier = Modifier.size(size * .28f)',
-            '.border(2.5.dp, accent, CircleShape)',
+            '.border(1.5.dp, accent, CircleShape)',
             'onHoldStart = onHoldStart',
             'onHoldEnd = onHoldEnd',
         ):
@@ -152,6 +152,31 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('KEYCODE_MEDIA_PAUSE', playback)
         self.assertIn('KEYCODE_MEDIA_STOP', playback)
         self.assertNotIn('KEYCODE_MEDIA_PREVIOUS', playback)
+
+    def test_graphite_remote_buttons_preserve_order_and_press_zones(self):
+        pad = (KOTLIN / "TclResponsivePad.kt").read_text()
+        home = self.skin
+        self.assertIn('val top = Color(0xFF292929)', pad)
+        self.assertIn('val bottom = Color(0xFF111111)', pad)
+        self.assertIn('.border(1.dp, Color(0xFF414141), CircleShape)', pad)
+        self.assertIn('Color(0xFF353535)', pad)
+        self.assertIn('.border(1.5.dp, accent, CircleShape)', pad)
+        for code in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN",
+                     "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT",
+                     "KEYCODE_DPAD_CENTER"):
+            self.assertIn(code, pad)
+        for zone in ("size * .61f", "size * .32f", "size * .28f"):
+            self.assertIn(zone, pad)
+        self.assertIn('onHoldStart = onHoldStart', pad)
+        self.assertIn('onHoldEnd = onHoldEnd', pad)
+        self.assertIn('Color(0xFF4A4A4A).copy(alpha = 0.85f)', home)
+        self.assertIn('Color(0xFF484848)', home)
+        order = ('TclQuickAction("Teclado"', 'TclQuickAction("Início"',
+                 'TclQuickAction("Microfone"', 'TclQuickAction("Voltar"')
+        self.assertTrue(all(x in home for x in order))
+        self.assertLess(home.index(order[0]), home.index(order[1]))
+        self.assertLess(home.index(order[1]), home.index(order[2]))
+        self.assertLess(home.index(order[2]), home.index(order[3]))
 
     def test_headphones_use_companion_not_remote_red_key(self):
         self.assertIn("TclTvAppApi.headphones(host, code)", self.skin)
