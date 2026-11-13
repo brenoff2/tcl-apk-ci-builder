@@ -153,6 +153,26 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('domain in allowed', source)
         self.assertIn('!response.contains("Error:", ignoreCase = true)', source)
 
+    def test_native_tv_metadata_uses_device_package_manager_without_install(self):
+        native = (ROOT / "scripts/qa/AnyTvRemoteMeta.java").read_text()
+        client = SOURCE.read_text()
+        overlay = PATCH.read_text()
+        for phrase in ('queryIntentActivities', 'CATEGORY_LEANBACK_LAUNCHER',
+                       'loadLabel(pm)', 'loadIcon(pm)', 'Drawable', 'Bitmap',
+                       'ANYTV_REMOTE_META_V1', 'ANYTV_REMOTE_META_END'):
+            self.assertIn(phrase, native)
+        self.assertIn('CLASSPATH=', client)
+        self.assertIn('app_process / anytv.adb.AnyTvRemoteMeta', client)
+        self.assertIn('anytv_remote_meta.dex', client)
+        self.assertIn('sync:', client)
+        self.assertIn('rm -f ', client)
+        self.assertIn('mergeTclInventoryMetadata(allApps, adbApps.inventory(host))', overlay)
+        self.assertIn('val icon = item.icon.ifBlank { cached?.icon.orEmpty() }', client)
+        self.assertIn('cached?.name?.takeIf', client)
+        self.assertIn('incompleteRetries < 2', overlay)
+        self.assertNotIn('pm install', native)
+        self.assertNotIn('pm uninstall', native)
+
     def test_overlay_only_in_dev(self):
         s = PATCH.read_text()
         self.assertIn('copyfile("overrides/TclAdbInstalledApps.kt"', s)
