@@ -504,9 +504,9 @@ internal fun TclHeaderAction(
         modifier = Modifier.size(38.dp)
             .clip(CircleShape)
             .background(Brush.verticalGradient(
-                listOf(Color(0xFF202229), Color(0xFF111319))
+                listOf(Color(0xFF303030), Color(0xFF151515))
             ))
-            .border(1.dp, Color.White.copy(alpha = 0.055f), CircleShape)
+            .border(1.dp, Color(0xFF4A4A4A).copy(alpha = 0.85f), CircleShape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
@@ -528,8 +528,9 @@ internal fun TclSideRocker(
     Box(
         modifier = modifier.clip(shape)
             .background(Brush.verticalGradient(
-                listOf(Color(0xFF202128), Color(0xFF101116), Color(0xFF18191F))
+                listOf(Color(0xFF303030), Color(0xFF131313), Color(0xFF252525))
             ))
+            .border(1.dp, Color(0xFF3D3D3D), shape)
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(vertical = 12.dp, horizontal = 3.dp),
@@ -584,8 +585,9 @@ internal fun TclQuickAction(
             modifier = Modifier.size(diameter)
                 .clip(CircleShape)
                 .background(Brush.verticalGradient(
-                    listOf(Color(0xFF22242C), Color(0xFF12141B))
+                    listOf(Color(0xFF353535), Color(0xFF161616))
                 ))
+                .border(1.dp, Color(0xFF484848), CircleShape)
                 .clickable(onClick = onClick)
                 .semantics { contentDescription = title },
             contentAlignment = Alignment.Center
