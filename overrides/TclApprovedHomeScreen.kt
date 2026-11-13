@@ -521,12 +521,12 @@ internal fun Modifier.anyTvCutGraphite(
         ), shape)
         // Rim reflection: ONLY upper left, fading to ZERO on lower/right edges.
         // Half intensity for OK, header, quick actions, side rockers and chips.
-        .border(0.42.dp, Brush.sweepGradient(
+        .border(0.50.dp, Brush.sweepGradient(
             0.00f to Color.Transparent,
             0.30f to Color.Transparent,
-            0.48f to Color(0xFF939393).copy(alpha = if (largePad) .20f else .10f),
-            0.62f to Color(0xFFA0A0A0).copy(alpha = if (largePad) .34f else .17f),
-            0.75f to Color(0xFF858585).copy(alpha = if (largePad) .16f else .08f),
+            0.48f to Color(0xFF939393).copy(alpha = if (largePad) .25f else .125f),
+            0.62f to Color(0xFFA0A0A0).copy(alpha = if (largePad) .41f else .205f),
+            0.75f to Color(0xFF858585).copy(alpha = if (largePad) .20f else .10f),
             0.90f to Color.Transparent,
             1.00f to Color.Transparent
         ), shape)
