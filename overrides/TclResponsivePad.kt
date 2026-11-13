@@ -217,8 +217,8 @@ private fun TclHoldDPad(
     onHoldStart: (Remotemessage.RemoteKeyCode) -> Unit,
     onHoldEnd: (Remotemessage.RemoteKeyCode) -> Unit,
 ) {
-    val top = Color(0xFF292929)
-    val bottom = Color(0xFF111111)
+    val top = Color(0xFF202123)
+    val bottom = Color(0xFF101113)
     val accent = Color(0xFF464646)
     val foreground = Color(0xFFF9F9FB)
     val arrow = (size * .13f).coerceIn(27.dp, 38.dp)
@@ -286,13 +286,13 @@ private fun TclHoldDPad(
             val radius = minOf(this.size.width, this.size.height) / 2f
             drawCircle(Color(0xFF090909), radius = radius * .987f,
                 style = Stroke(width = 2.dp.toPx()))
-            drawCircle(Color(0xFF666666), radius = radius * .971f,
+            drawCircle(Color(0xFF4E4F51), radius = radius * .971f,
                 style = Stroke(width = .8.dp.toPx()))
             drawCircle(Color(0xFF171717), radius = radius * .946f,
                 style = Stroke(width = 3.dp.toPx()))
-            drawCircle(Color(0xFF424242), radius = radius * .925f,
+            drawCircle(Color(0xFF393A3D), radius = radius * .925f,
                 style = Stroke(width = .8.dp.toPx()))
-            drawArc(Color(0xFF828282).copy(alpha = .55f),
+            drawArc(Color(0xFF696A6C).copy(alpha = .33f),
                 startAngle = 195f, sweepAngle = 145f, useCenter = false,
                 style = Stroke(width = 1.dp.toPx()))
             drawArc(Color(0xFF020202).copy(alpha = .85f),
@@ -333,9 +333,9 @@ private fun TclHoldDPad(
             modifier = Modifier.size(size * .28f)
                 .clip(CircleShape)
                 .background(Brush.verticalGradient(listOf(
-                    Color(0xFF353535),
-                    Color(0xFF242424),
-                    Color(0xFF151515)
+                    Color(0xFF28292B),
+                    Color(0xFF202123),
+                    Color(0xFF17181A)
                 )))
                 .border(1.5.dp, accent, CircleShape),
             label = "OK",
