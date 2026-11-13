@@ -295,7 +295,7 @@ class StreamingScreens(unittest.TestCase):
             'fun toggleFilmWatched(title: StreamingTitle)',
             '"anytv_watched_movies"', '"anytv_watched_episodes"',
             'fun toggleWatched(title: StreamingTitle, season: Int, episode: Int)',
-            '"Filmes para assistir"', '"Séries acompanhadas"',
+            '"Filmes favoritos"', '"Séries acompanhadas"',
             '"Filmes e séries assistidos"', 'val filteredShelves',
             'val uniqueShelves', 'it.media}:',
         ):
@@ -845,6 +845,18 @@ class StreamingScreens(unittest.TestCase):
         # A partially filtered first 24-title page must not hide later pages.
         self.assertNotIn('sectionPage < 42 && sectionAll.size >= ANYTV_LIST_BATCH',
                          self.screen)
+
+    def test_favorite_movies_remain_visible_when_marked_watched(self):
+        library = self.screen.split('} else if (homeLibrary) {', 1)[1].split(
+            '} else {\\n                            if (selectedHomeGenre == 0)', 1
+        )[0]
+        self.assertIn('val savedFilms = films', library)
+        self.assertIn('put("Filmes favoritos", savedFilms)', library)
+        self.assertNotIn('val unseen = films.filter', library)
+        self.assertNotIn('it.id.toString() !in watchedFilms', library)
+        # Never delete favorites or watched IDs as a side effect of displaying a shelf.
+        self.assertNotIn('favorites =', library)
+        self.assertNotIn('watchedFilms =', library)
 
     def test_library_full_without_item_cap_and_preserves_legacy_favorites(self):
         s = self.screen
