@@ -147,7 +147,7 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('OfficialTvIcon(app = app, size = 52.dp)', apps)
         self.assertIn('Brush.horizontalGradient(listOf(', streaming)
         self.assertIn('modifier = Modifier.fillMaxWidth().height(92.dp)', streaming)
-        self.assertIn('containerColor = Color(0xFF181A20)', playback)
+        self.assertIn('containerColor = Color(0xFF131416)', playback)
         self.assertIn('KEYCODE_MEDIA_PLAY', playback)
         self.assertIn('KEYCODE_MEDIA_PAUSE', playback)
         self.assertIn('KEYCODE_MEDIA_STOP', playback)
@@ -158,7 +158,7 @@ class ApprovedUiContract(unittest.TestCase):
         home = self.skin
         # Rounded concentric grooves, miniature triangles, center depression.
         self.assertIn("Non-interactive engraved concentric rims", pad)
-        self.assertIn("drawCircle(Color(0xFF666666)", pad)
+        self.assertIn("drawCircle(Color(0xFF4E4F51)", pad)
         self.assertIn("drawArc(Color(0xFF828282)", pad)
         self.assertIn("val triangle = Path().apply", pad)
         self.assertIn("drawPath(triangle, foreground)", pad)
@@ -180,10 +180,10 @@ class ApprovedUiContract(unittest.TestCase):
     def test_graphite_remote_buttons_preserve_order_and_press_zones(self):
         pad = (KOTLIN / "TclResponsivePad.kt").read_text()
         home = self.skin
-        self.assertIn('val top = Color(0xFF292929)', pad)
-        self.assertIn('val bottom = Color(0xFF111111)', pad)
+        self.assertIn('val top = Color(0xFF202123)', pad)
+        self.assertIn('val bottom = Color(0xFF101113)', pad)
         self.assertIn('.border(1.dp, Color(0xFF414141), CircleShape)', pad)
-        self.assertIn('Color(0xFF353535)', pad)
+        self.assertIn('Color(0xFF28292B)', pad)
         self.assertIn('.border(1.5.dp, accent, CircleShape)', pad)
         for code in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN",
                      "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT",
@@ -193,8 +193,8 @@ class ApprovedUiContract(unittest.TestCase):
             self.assertIn(zone, pad)
         self.assertIn('onHoldStart = onHoldStart', pad)
         self.assertIn('onHoldEnd = onHoldEnd', pad)
-        self.assertIn('Color(0xFF4A4A4A).copy(alpha = 0.85f)', home)
-        self.assertIn('Color(0xFF484848)', home)
+        self.assertIn('Color(0xFF343538).copy(alpha = 0.85f)', home)
+        self.assertIn('Color(0xFF35363A)', home)
         order = ('"Teclado", Icons.Filled.Keyboard', 'TclQuickAction("Início"',
                  'TclQuickAction("Microfone"', '"Voltar", Icons.Filled.KeyboardBackspace')
         self.assertTrue(all(x in home for x in order))
