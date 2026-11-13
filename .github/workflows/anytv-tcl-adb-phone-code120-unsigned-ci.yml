@@ -36,7 +36,10 @@ jobs:
       - name: Prepare pinned upstream and AnyTV extensions
         run: |
           set -euo pipefail
-          git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
+          git init -q source
+          git -C source remote add origin https://github.com/harimoradiya/androidtvremote.git
+          git -C source fetch --depth 1 origin 16c68f0bb9d23f929ee8240f105fdb9000262d85
+          git -C source checkout --detach FETCH_HEAD
           test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
           TCL_RESCUE_STABLE=1 TCL_APPROVED_UI=1 TCL_RELEASE_SINGLE_APP=1 python3 scripts/prepare_tcl.py
           python3 scripts/apply_tcl_v21.py
