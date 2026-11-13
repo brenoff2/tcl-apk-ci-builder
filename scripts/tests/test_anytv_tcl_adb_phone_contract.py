@@ -154,6 +154,18 @@ class PhoneAdbContract(unittest.TestCase):
         self.assertIn('domain in allowed', source)
         self.assertIn('!response.contains("Error:", ignoreCase = true)', source)
 
+    def test_native_sync_chunks_fit_adblib_v1_payload(self):
+        source = SOURCE.read_text()
+        self.assertIn('while (offset < dex.size)', source)
+        self.assertIn('val length = minOf(2048, dex.size - offset)', source)
+        self.assertIn('ByteBuffer.allocate(8 + length)', source)
+        self.assertIn('.put(dex, offset, length).array()', source)
+        self.assertNotIn('dex.asList().chunked(16384)', source)
+        self.assertLessEqual(2048 + 8, 4096)
+        self.assertIn('val code = response.copyOfRange(0, 4)', source)
+        self.assertIn('if (code == "FAIL")', source)
+        self.assertIn('it.message.orEmpty().take(90)', source)
+
     def test_native_tv_metadata_uses_device_package_manager_without_install(self):
         native = (ROOT / "scripts/qa/AnyTvRemoteMeta.java").read_text()
         client = SOURCE.read_text()
