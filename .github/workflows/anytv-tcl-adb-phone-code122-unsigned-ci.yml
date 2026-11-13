@@ -1,0 +1,171 @@
+name: AnyTV TCL ADB phone code122 unsigned candidate (NO OTA)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths:
+      - '.github/workflows/anytv-tcl-adb-phone-code122-unsigned-ci.yml'
+      - 'scripts/apply_anytv_tcl_adb.py'
+      - 'scripts/apply_tcl_sticky_controls.py'
+      - 'scripts/apply_anytv_graphite_settings.py'
+      - 'scripts/apply_anytv_brand.py'
+      - 'overrides/TclAdbInstalledApps.kt'
+      - 'scripts/tests/test_anytv_tcl_adb_phone_contract.py'
+      - 'scripts/qa/AnyTvRemoteMeta.java'
+      - 'scripts/tests/test_streaming_screens_contract.py'
+      - 'scripts/tests/test_approved_visual_contract.py'
+      - 'overrides/TclStreamingScreens.kt'
+      - 'overrides/TclApprovedHomeScreen.kt'
+      - 'overrides/TclResponsivePad.kt'
+      - 'overrides/PlaybackTransportBar.kt'
+      - 'scripts/tests/test_anytv_lg_apps_contract.py'
+permissions:
+  contents: read
+concurrency:
+  group: anytv-tcl-adb-phone-code122-unsigned-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  phone-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Prepare pinned upstream and AnyTV extensions
+        run: |
+          set -euo pipefail
+          git init -q source
+          git -C source remote add origin https://github.com/harimoradiya/androidtvremote.git
+          git -C source fetch --depth 1 origin 16c68f0bb9d23f929ee8240f105fdb9000262d85
+          git -C source checkout --detach FETCH_HEAD
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+          TCL_RESCUE_STABLE=1 TCL_APPROVED_UI=1 TCL_RELEASE_SINGLE_APP=1 python3 scripts/prepare_tcl.py
+          python3 scripts/apply_tcl_v21.py
+          python3 scripts/apply_tcl_v22.py
+          python3 scripts/apply_tcl_ptbr_cleanup.py
+          python3 scripts/apply_tcl_i18n.py
+          python3 scripts/apply_tcl_sticky_controls.py
+          python3 scripts/apply_anytv_brand.py
+          python3 scripts/apply_anytv_graphite_settings.py
+          python3 scripts/apply_anytv_tv_tls_alias_isolation.py
+          python3 scripts/apply_anytv_restore_connection.py
+          python3 scripts/apply_anytv_premiere_reminder_manifest.py
+          python3 scripts/apply_anytv_lg_webos.py
+          python3 scripts/apply_anytv_lg_pointer_fix.py
+          python3 scripts/apply_anytv_lg_apps.py
+          python3 scripts/apply_anytv_lg_reconnect.py
+          python3 scripts/apply_anytv_tcl_adb.py
+      - name: Verify remote skin colors and untouched key layout (source-level)
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          pad = Path("overrides/TclResponsivePad.kt").read_text()
+          home = Path("overrides/TclApprovedHomeScreen.kt").read_text()
+          assert "val top = Color(0xFF212225)" in pad
+          assert "val bottom = Color(0xFF1E1F22)" in pad
+          assert ".anyTvCutGraphite(CircleShape)" in pad
+          assert "internal fun Modifier.anyTvCutGraphite(" in home
+          assert "Color(0xFF242424), shape" in home
+          assert "Color(0xFF777777).copy(alpha = .27f)" in home
+          assert ".anyTvCutGraphite(CircleShape, largePad = true)" in pad
+          assert "drawArc(Color(0xFF090A0B)" not in pad
+          theme = Path("source/app/src/main/java/com/hari/androidtvremote/ui/theme/Theme.kt").read_text()
+          assert "background = Color(0xFF242424)" in theme
+          backdrop = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/UiBackdrop.kt").read_text()
+          assert "rememberInfiniteTransition" not in backdrop.split("fun AppBackdrop(")[1]
+          assert ".background(Color(0xFF242424))" in backdrop
+          settings = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/SettingComponents.kt").read_text()
+          assert settings.count(".anyTvCutGraphite(") >= 3
+          assert ".border(0.72.dp, Color(0xFF101010).copy(alpha = .72f), shape)" in home
+          assert "Color(0xFF422128).copy(alpha = .32f)" in Path("overrides/TclStreamingScreens.kt").read_text()
+          assert all(k in pad for k in ["KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN", "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER"])
+          labels = ['"Teclado", Icons.Filled.Keyboard', 'TclQuickAction("Início"', 'TclQuickAction("Microfone"', '"Voltar", Icons.Filled.KeyboardBackspace']
+          indices = [home.index(s) for s in labels]
+          assert indices == sorted(indices)
+          assert home.index("onCyclePadMode()") < indices[2]
+          assert "TclSideRocker(" in home and "TclHeaderAction(" in home
+          print("ANYTV_REMOTE_GRAPHITE_SKIN_AND_LAYOUT_CONTRACT_PASS")
+          PY
+      - name: Compile one-shot Android TV metadata helper as bundled DEX (NO TV INSTALL)
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/anytv-remote-class source/app/src/main/assets
+          javac -source 8 -target 8 -cp "$ANDROID_HOME/platforms/android-36/android.jar" -d /tmp/anytv-remote-class scripts/qa/AnyTvRemoteMeta.java
+          "$ANDROID_HOME/build-tools/36.0.0/d8" --min-api 28 --output source/app/src/main/assets /tmp/anytv-remote-class/anytv/adb/AnyTvRemoteMeta.class
+          mv source/app/src/main/assets/classes.dex source/app/src/main/assets/anytv_remote_meta.dex
+          test -s source/app/src/main/assets/anytv_remote_meta.dex
+          echo ANYTV_NATIVE_TV_METADATA_DEX_COMPILED
+      - name: Prepare current V2 version without signing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('source/app/build.gradle.kts')
+          source=p.read_text()
+          assert source.count('versionCode = 34') == 1
+          assert source.count('versionName = "2.9.5-AnyTV"') == 1
+          p.write_text(source.replace('versionCode = 34','versionCode = 39')
+                      .replace('versionName = "2.9.5-AnyTV"','versionName = "2.9.10-AnyTV"'))
+          PY
+      - name: Existing UI, link and safety contract tests
+        env:
+          TCL_V39: '1'
+          TCL_V37: '1'
+          TCL_V36: '1'
+          TCL_V35: '1'
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_account_entry.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_ux_regression.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_lg_webos_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_lg_pointer_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_lg_apps_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_lg_reconnect_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_tcl_adb_phone_contract.py' -v
+      - name: Apply V2 package identity and compile current candidate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          baseline=json.loads(Path('release/anytv-v2.json').read_text())
+          assert baseline == {'versionName': '2.9.62-AnyTV', 'versionCode': 90}, 'Published baseline changed: review candidate version before compiling'
+          p=Path('source/app/build.gradle.kts')
+          s=p.read_text()
+          assert s.count('versionCode = 39') == 1
+          assert s.count('versionName = "2.9.10-AnyTV"') == 1
+          p.write_text(s.replace('versionCode = 39','versionCode = 122')
+                      .replace('versionName = "2.9.10-AnyTV"','versionName = "2.9.94-AnyTV"'))
+          PY
+          python3 scripts/apply_anytv_phone_v2_identity.py
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Verify unsigned candidate identity; never sign or publish
+        run: |
+          set -euo pipefail
+          APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='122'" candidate-identity.txt
+          grep -q "versionName='2.9.94-AnyTV'" candidate-identity.txt
+          sha256sum "$APK" > candidate-sha256.txt
+          printf '%s\n' 'AUDITORIA APENAS: APK sem assinatura. NAO instalar como atualizacao da V2 assinada.' > candidate-NOT-INSTALL.txt
+          echo 'ANYTV_TCL_ADB_PHONE_UNSIGNED_COMPILE_SUCCESS; no signer, OTA, Worker deploy or TV update.'
+      - name: Store unsigned TCL ADB phone proof for audit only
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-tcl-adb-phone-code122-unsigned-audit
+          path: |
+            source/app/build/outputs/apk/release/app-release-unsigned.apk
+            candidate-identity.txt
+            candidate-sha256.txt
+            candidate-NOT-INSTALL.txt
+          retention-days: 14
+          if-no-files-found: error
