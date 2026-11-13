@@ -1954,7 +1954,7 @@ internal fun TclStreamingScreens(
                 val id = o.optInt("id")
                 val kind = o.optString("media")
                 val pkg = o.optString("package")
-                if (id <= 0 || pkg.isBlank() || (kind != "tv" && kind != "movie"))
+                if (id <= 0 || (kind != "tv" && kind != "movie"))
                     return@mapNotNull null
                 StreamingFavorite(
                     StreamingTitle(id, o.optString("name"), o.optString("overview"),
@@ -1963,7 +1963,7 @@ internal fun TclStreamingScreens(
                         votes = o.optInt("votes", 0), date = o.optString("date"),
                         genreIds = o.optJSONArray("genres")?.let { arr ->
                             (0 until arr.length()).map { arr.optInt(it) }.filter { it > 0 }
-                        } ?: emptyList()), pkg)
+                        } ?: emptyList()), pkg.ifBlank { "library" })
             }
         }.getOrDefault(emptyList<StreamingFavorite>()))
     }
@@ -4159,7 +4159,7 @@ internal fun TclStreamingScreens(
                                         modifier = Modifier.padding(vertical = 16.dp))
                                 }
                             }
-                            items(inProgress.take(sectionVisibleCount).chunked(3)) { group ->
+                            items(inProgress.chunked(3)) { group ->
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .padding(vertical = 7.dp),
                                     horizontalArrangement = Arrangement.spacedBy(9.dp),
@@ -4170,16 +4170,7 @@ internal fun TclStreamingScreens(
                                     repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
                                 }
                             }
-                            if (inProgress.size > sectionVisibleCount) {
-                                item {
-                                    OutlinedButton(onClick = {
-                                        sectionVisibleCount += ANYTV_LIST_BATCH
-                                    }, modifier = Modifier.fillMaxWidth().height(38.dp),
-                                        shape = RoundedCornerShape(20.dp)) {
-                                        Text("Mostrar mais")
-                                    }
-                                }
-                            }
+
                         } else {
                         if (homeLibrary && librarySection == "watched") {
                             // Old releases stored only TMDB IDs for some watched films.
@@ -4249,7 +4240,7 @@ internal fun TclStreamingScreens(
                             }
                             if (homeLibrary) {
                                 // Saved and watched pages share the exact home card.
-                                items(shelf.take(sectionVisibleCount).chunked(3)) { group ->
+                                items(shelf.chunked(3)) { group ->
                                     Row(modifier = Modifier.fillMaxWidth()
                                         .padding(vertical = 7.dp),
                                         horizontalArrangement = Arrangement.spacedBy(9.dp),
@@ -4262,15 +4253,7 @@ internal fun TclStreamingScreens(
                                         }
                                     }
                                 }
-                                if (shelf.size > sectionVisibleCount) {
-                                    item {
-                                        OutlinedButton(
-                                            onClick = { sectionVisibleCount += ANYTV_LIST_BATCH },
-                                            modifier = Modifier.fillMaxWidth().height(38.dp),
-                                            shape = RoundedCornerShape(20.dp)
-                                        ) { Text("Mostrar mais") }
-                                    }
-                                }
+
                             } else if (shelf.isEmpty() && heading in setOf(
                                 "Filmes recém-lançados", "Séries novas", "Novas temporadas")) {
                                 item {
