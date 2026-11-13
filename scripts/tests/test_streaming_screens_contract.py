@@ -860,15 +860,17 @@ class StreamingScreens(unittest.TestCase):
         s = self.screen
         self.assertIn('private fun AnyTvStreamOutlinedButton(', s)
         self.assertIn('containerColor = Color.Transparent, contentColor = Color(0xFFECECEE)', s)
-        self.assertIn('Color(0xFF191A1D)', s)
+        self.assertIn('modifier = modifier.anyTvCutGraphite(shape)', s)
         self.assertIn('Color(0xFF422128)', s)
-        self.assertIn('Color(0xFF804049)', s)
+        self.assertIn('Color(0xFF71383F).copy(alpha = .72f)', s)
         self.assertIn('AnyTvStreamOutlinedButton(onClick =', s)
         self.assertIn('private fun AnyTvStreamButton(', s)
         self.assertIn('private fun AnyTvStreamTextButton(', s)
         self.assertIn('AnyTvStreamButton(onClick =', s)
         self.assertIn('AnyTvStreamTextButton(onClick =', s)
         self.assertIn('selectedContainerColor = Color(0xFF422128)', s)
+        self.assertIn('Color(0xFF422128).copy(alpha = .32f)', s)
+        self.assertIn('else Color.Transparent, shape)', s)
 
     def test_watched_film_uses_independent_prefs_snapshot_and_legacy_cache_migration(self):
         block = self.screen.split('var watchedMovieTitles by remember(prefs)', 1)[1].split(
