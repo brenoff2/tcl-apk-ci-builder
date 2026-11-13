@@ -139,13 +139,15 @@ private fun PlaybackChip(
     modifier: Modifier,
     onClick: () -> Unit
 ) {
+    val shape = RoundedCornerShape(17.dp)
     FilledTonalButton(
         onClick = onClick,
-        modifier = modifier.height(43.dp).semantics { contentDescription = description },
-        shape = RoundedCornerShape(17.dp),
+        modifier = modifier.height(43.dp).anyTvCutGraphite(shape)
+            .semantics { contentDescription = description },
+        shape = shape,
         contentPadding = PaddingValues(horizontal = 1.dp),
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = Color(0xFF131416),
+            containerColor = Color.Transparent,
             contentColor = Color(0xFFF9F9FB)
         )
     ) {
