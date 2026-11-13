@@ -159,7 +159,7 @@ class ApprovedUiContract(unittest.TestCase):
         # Rounded concentric grooves, miniature triangles, center depression.
         self.assertIn("Non-interactive engraved concentric rims", pad)
         self.assertIn("drawCircle(Color(0xFF4E4F51)", pad)
-        self.assertIn("drawArc(Color(0xFF828282)", pad)
+        self.assertIn("drawArc(Color(0xFF696A6C)", pad)
         self.assertIn("val triangle = Path().apply", pad)
         self.assertIn("drawPath(triangle, foreground)", pad)
         self.assertIn("drawCircle(Color(0xFF0B0B0B)", pad)
@@ -169,8 +169,8 @@ class ApprovedUiContract(unittest.TestCase):
                     "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER"):
             self.assertIn(key, pad)
         self.assertIn("private fun TclEmbossedDisc()", home)
-        self.assertIn("drawCircle(Color(0xFF777777)", home)
-        self.assertIn("drawArc(Color(0xFFAAAAAA)", home)
+        self.assertIn("drawCircle(Color(0xFF36373A)", home)
+        self.assertIn("drawCircle(Color(0xFF17181A)", home)
         # Header and quick-action visuals share the same non-clickable face.
         self.assertEqual(home.count("TclEmbossedDisc()"), 3)
         self.assertIn(".clickable(onClick = onClick)", home)
