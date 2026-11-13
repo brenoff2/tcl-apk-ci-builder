@@ -145,7 +145,7 @@ private fun PlaybackChip(
         shape = RoundedCornerShape(17.dp),
         contentPadding = PaddingValues(horizontal = 1.dp),
         colors = ButtonDefaults.filledTonalButtonColors(
-            containerColor = Color(0xFF181A20),
+            containerColor = Color(0xFF131416),
             contentColor = Color(0xFFF9F9FB)
         )
     ) {
