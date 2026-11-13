@@ -72,7 +72,7 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertNotIn("darkColorScheme(", self.skin)
         self.assertNotIn("bottomBar = {", self.skin)
         # Main remote alone uses the screenshot's dark graphite/red palette.
-        self.assertIn('private val TclBg = Color(0xFF1E1F22)', self.skin)
+        self.assertIn('private val TclBg = Color(0xFF242424)', self.skin)
         self.assertIn('private val TclBlue = Color(0xFFE9003B)', self.skin)
         self.assertIn("windowInsetsPadding(WindowInsets.safeDrawing)", self.skin)
 
@@ -116,7 +116,7 @@ class ApprovedUiContract(unittest.TestCase):
         playback = (KOTLIN / "PlaybackTransportBar.kt").read_text()
         streaming = (KOTLIN / "TclStreamingScreens.kt").read_text()
         for fragment in (
-            'private val TclBg = Color(0xFF1E1F22)',
+            'private val TclBg = Color(0xFF242424)',
             'private val TclSurface = Color(0xFF0F1117)',
             'private val TclBlue = Color(0xFFE9003B)',
             'val systemBg = TclBg',
@@ -170,8 +170,10 @@ class ApprovedUiContract(unittest.TestCase):
             self.assertIn(key, pad)
         self.assertIn("private fun TclEmbossedDisc()", home)
         self.assertIn("internal fun Modifier.anyTvCutGraphite(", home)
-        self.assertIn(".border(1.5.dp, Color(0xFF0A0B0D), shape)", home)
-        self.assertIn("drawCircle(Color(0xFF353638)", home)
+        self.assertIn(".border(1.6.dp, Color(0xFF080808), shape)", home)
+        self.assertIn("No concentric raised highlight", home)
+        self.assertIn("Color(0xFF242424), shape", home)
+        self.assertIn("Color(0xFF858585).copy(alpha = .36f)", home)
         self.assertIn("anyTvCutGraphite(shape)", home)
         # Header and quick-action visuals share the same non-clickable face.
         self.assertEqual(home.count("TclEmbossedDisc()"), 3)
@@ -196,7 +198,7 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('onHoldStart = onHoldStart', pad)
         self.assertIn('onHoldEnd = onHoldEnd', pad)
         self.assertIn('Color(0xFF424346).copy(alpha = .50f)', home)
-        self.assertIn('Color(0xFF0A0B0D)', home)
+        self.assertIn('Color(0xFF080808)', home)
         order = ('"Teclado", Icons.Filled.Keyboard', 'TclQuickAction("Início"',
                  'TclQuickAction("Microfone"', '"Voltar", Icons.Filled.KeyboardBackspace')
         self.assertTrue(all(x in home for x in order))
