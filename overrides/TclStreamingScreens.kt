@@ -1637,15 +1637,38 @@ private fun AnyTvStreamNavBar(
     }
 }
 
+/** Unified low-relief streaming button, preserving original actions and dimensions. */
+@Composable
+private fun AnyTvStreamOutlinedButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp),
+    contentPadding: PaddingValues = ButtonDefaults.ContentPadding,
+    colors: androidx.compose.material3.ButtonColors =
+        ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.Transparent, contentColor = Color(0xFFECECEE)),
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
+) {
+    OutlinedButton(
+        onClick = onClick, enabled = enabled, shape = shape,
+        modifier = modifier.clip(shape).background(
+            Brush.verticalGradient(listOf(Color(0xFF191A1D), Color(0xFF101113))), shape),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF343538)),
+        contentPadding = contentPadding, colors = colors, content = content
+    )
+}
+
 @Composable
 private fun AnyTvCompactChip(label: String, selected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(13.dp)
     Box(modifier = Modifier.padding(end = 2.dp)
         .clip(shape)
-        .background(if (selected) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.surfaceContainerLow)
-        .border(1.dp, if (selected) MaterialTheme.colorScheme.primary
-               else MaterialTheme.colorScheme.outlineVariant, shape)
+        .background(Brush.verticalGradient(if (selected)
+            listOf(Color(0xFF402128), Color(0xFF241417))
+            else listOf(Color(0xFF18191C), Color(0xFF101113))), shape)
+        .border(1.dp, if (selected) Color(0xFF804049)
+               else Color(0xFF333438), shape)
         .clickable(onClick = onClick)
         .padding(horizontal = 7.dp, vertical = 5.dp)) {
         Text(label, fontSize = 11.sp, maxLines = 1,
@@ -1664,10 +1687,11 @@ private fun AnyTvGenreViewIcon(
     val shape = RoundedCornerShape(12.dp)
     Box(modifier = Modifier.size(34.dp)
         .clip(shape)
-        .background(if (selected) MaterialTheme.colorScheme.primaryContainer
-                    else MaterialTheme.colorScheme.surfaceContainerLow)
-        .border(1.dp, if (selected) MaterialTheme.colorScheme.primary
-               else MaterialTheme.colorScheme.outlineVariant, shape)
+        .background(Brush.verticalGradient(if (selected)
+            listOf(Color(0xFF402128), Color(0xFF241417))
+            else listOf(Color(0xFF18191C), Color(0xFF101113))), shape)
+        .border(1.dp, if (selected) Color(0xFF804049)
+               else Color(0xFF333438), shape)
         .clickable(onClick = onClick),
         contentAlignment = Alignment.Center) {
         Icon(image, contentDescription = label,
@@ -2881,7 +2905,7 @@ internal fun TclStreamingScreens(
                 Spacer(Modifier.height(9.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
-                    OutlinedButton(onClick = {
+                    AnyTvStreamOutlinedButton(onClick = {
                         scope.launch {
                             val video = runCatching {
                                 StreamingCatalog.trailer(title.media, title.id)
@@ -2904,7 +2928,7 @@ internal fun TclStreamingScreens(
                         modifier = Modifier.height(34.dp)) {
                         Text("▶ Trailer", fontSize = 11.sp, maxLines = 1)
                     }
-                    OutlinedButton(onClick = {
+                    AnyTvStreamOutlinedButton(onClick = {
                         details = title; detailsPackage = null
                     }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
                         modifier = Modifier.height(34.dp)) {
@@ -3452,7 +3476,7 @@ internal fun TclStreamingScreens(
                                     (sectionAll.isNotEmpty() ||
                                         sectionTitle == "Em breve · Filmes e séries"))) {
                                 item {
-                                    OutlinedButton(
+                                    AnyTvStreamOutlinedButton(
                                         enabled = !sectionLoading,
                                         onClick = {
                                             if (sectionAll.size > sectionVisibleCount) {
@@ -3590,7 +3614,7 @@ internal fun TclStreamingScreens(
                                         fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
                                     if (selected != null || (selectedHomeGenre != 0 &&
                                             selectedHomeGenre != ANYTV_CINEMA_FILTER && !homeLibrary)) {
-                                        OutlinedButton(onClick = {
+                                        AnyTvStreamOutlinedButton(onClick = {
                                             if (selected != null) providerListMode = !providerListMode
                                             else { genreSectionsMode = !genreSectionsMode; genreViewMode = "grade" }
                                         }, shape = RoundedCornerShape(11.dp),
@@ -3876,7 +3900,7 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                                 if (sources.any { providerListMore[it.first] == true }) {
-                                    OutlinedButton(modifier = Modifier.fillMaxWidth(),
+                                    AnyTvStreamOutlinedButton(modifier = Modifier.fillMaxWidth(),
                                         enabled = sources.none { providerListLoading[it.first] == true },
                                         onClick = {
                                             val requests = sources.filter {
@@ -4084,7 +4108,7 @@ internal fun TclStreamingScreens(
                             }
                             item {
                                 if (genreSources.any { (key, _) -> genreMore[key] == true }) {
-                                    OutlinedButton(enabled = genreSources.none { (key, _) ->
+                                    AnyTvStreamOutlinedButton(enabled = genreSources.none { (key, _) ->
                                         genreLoading[key] == true },
                                         onClick = {
                                             if (genreSources.none { (key, _) ->
@@ -4638,7 +4662,7 @@ internal fun TclStreamingScreens(
                 }) { Text("Aplicar filtros") }
             },
             dismissButton = {
-                OutlinedButton(shape = RoundedCornerShape(22.dp), onClick = { showMyStreamingSettings = false }) { Text("Cancelar") }
+                AnyTvStreamOutlinedButton(shape = RoundedCornerShape(22.dp), onClick = { showMyStreamingSettings = false }) { Text("Cancelar") }
             }
         )
     }
@@ -4785,7 +4809,7 @@ internal fun TclStreamingScreens(
                 if (scoreLine.isNotBlank()) Text(scoreLine, fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                    OutlinedButton(onClick = {
+                    AnyTvStreamOutlinedButton(onClick = {
                         showPlaybackRemote = true
                         remoteMinimized = false
                     }, colors = ButtonDefaults.outlinedButtonColors(
@@ -4809,7 +4833,7 @@ internal fun TclStreamingScreens(
                         Text("Em cartaz no Brasil (TMDB). Consulte a programação da sua cidade:",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        OutlinedButton(onClick = {
+                        AnyTvStreamOutlinedButton(onClick = {
                             // Official movie pages expose venues and sessions per
                             // selected city; this is navigation, not invented showtimes.
                             val slug = Normalizer.normalize(
@@ -4882,7 +4906,16 @@ internal fun TclStreamingScreens(
                                     FilterChip(
                                         selected = selectedSeriesSeason == season.number,
                                         onClick = { selectedSeriesSeason = season.number },
-                                        label = { Text(season.name, fontSize = 11.sp) })
+                                        label = { Text(season.name, fontSize = 11.sp) },
+                                        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                                            containerColor = Color(0xFF151619),
+                                            selectedContainerColor = Color(0xFF422128),
+                                            selectedLabelColor = Color.White),
+                                        border = androidx.compose.material3.FilterChipDefaults.filterChipBorder(
+                                            enabled = true,
+                                            selected = selectedSeriesSeason == season.number,
+                                            borderColor = Color(0xFF35363A),
+                                            selectedBorderColor = Color(0xFF804049)))
                                 }
                             }
                             val watchedThisSeason = seasonEpisodes.count {
@@ -4980,7 +5013,7 @@ internal fun TclStreamingScreens(
                             }
                         }
                     }
-                    OutlinedButton(onClick = {
+                    AnyTvStreamOutlinedButton(onClick = {
                         scope.launch {
                             val state = AnyTvPersonalLinks.activationStatus(context)
                             deviceIdSuffix = withContext(Dispatchers.IO) {
@@ -5063,8 +5096,9 @@ internal fun TclStreamingScreens(
                                             detailsPackage = app.packageName
                                         },
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (chosen) Color(0xFFC50038)
-                                                else Color(0xFFFF1744)),
+                                            containerColor = if (chosen) Color(0xFF422128)
+                                                else Color(0xFF191A1D),
+                                            contentColor = Color.White),
                                         shape = RoundedCornerShape(20.dp),
                                         contentPadding = PaddingValues(horizontal = 12.dp,
                                             vertical = 4.dp)) {
@@ -5121,13 +5155,15 @@ internal fun TclStreamingScreens(
                         searchOnTv(title, pkg)
                     }
                 }, enabled = !titleActionPending,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF1744))) {
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF2D1C20),
+                        contentColor = Color.White)) {
                     Text(if (titleActionPending) "Abrindo…" else
                         "Abrir na " + tvName.ifBlank { "TV conectada" })
                 }
             },
             dismissButton = {
-                OutlinedButton(onClick = {
+                AnyTvStreamOutlinedButton(onClick = {
                     details = null; detailsPackage = null; titleActionFeedback = null
                     linkActivationRequired = false; deviceLinkStatus = null
                     deviceIdSuffix = null
