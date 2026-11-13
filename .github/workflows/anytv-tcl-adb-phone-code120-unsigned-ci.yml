@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/anytv-tcl-adb-phone-code120-unsigned-ci.yml'
       - 'scripts/apply_anytv_tcl_adb.py'
+      - 'scripts/apply_tcl_sticky_controls.py'
       - 'overrides/TclAdbInstalledApps.kt'
       - 'scripts/tests/test_anytv_tcl_adb_phone_contract.py'
       - 'scripts/qa/AnyTvRemoteMeta.java'
