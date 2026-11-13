@@ -67,7 +67,7 @@ jobs:
           pad = Path("overrides/TclResponsivePad.kt").read_text()
           home = Path("overrides/TclApprovedHomeScreen.kt").read_text()
           assert "val top = Color(0xFF212225)" in pad
-          assert "val bottom = Color(0xFF242424)" in pad
+          assert "val bottom = Color(0xFF1E1F22)" in pad
           assert ".anyTvCutGraphite(CircleShape)" in pad
           assert "internal fun Modifier.anyTvCutGraphite(" in home
           assert "Color(0xFF242424), shape" in home
