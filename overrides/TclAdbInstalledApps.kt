@@ -316,20 +316,33 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 stream.write(ByteBuffer.allocate(8 + target.size).order(ByteOrder.LITTLE_ENDIAN)
                     .put("SEND".toByteArray(Charsets.US_ASCII))
                     .putInt(target.size).put(target).array())
-                dex.asList().chunked(16384).forEach { chunk ->
-                    val bytes = chunk.toByteArray()
-                    stream.write(ByteBuffer.allocate(8 + bytes.size)
+                // tananaev/adblib 1.3 advertises CONNECT_MAXDATA=4096.
+                // A sync DATA record (8-byte header included) must fit one WRTE.
+                var offset = 0
+                while (offset < dex.size) {
+                    val length = minOf(2048, dex.size - offset)
+                    stream.write(ByteBuffer.allocate(8 + length)
                         .order(ByteOrder.LITTLE_ENDIAN)
                         .put("DATA".toByteArray(Charsets.US_ASCII))
-                        .putInt(bytes.size).put(bytes).array())
+                        .putInt(length).put(dex, offset, length).array())
+                    offset += length
                 }
                 stream.write(ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN)
                     .put("DONE".toByteArray(Charsets.US_ASCII)).putInt(0).array())
                 var response = ByteArray(0)
                 while (response.size < 8) response += stream.read()
-                require(response.copyOfRange(0, 4).toString(Charsets.US_ASCII) == "OKAY") {
-                    "TCL recusou auxiliar temporário de metadados"
+                val code = response.copyOfRange(0, 4).toString(Charsets.US_ASCII)
+                if (code == "FAIL") {
+                    val size = ByteBuffer.wrap(response, 4, 4)
+                        .order(ByteOrder.LITTLE_ENDIAN).int
+                    if (size in 1..2048) {
+                        while (response.size < 8 + size) response += stream.read()
+                        val reason = response.copyOfRange(8, 8 + size)
+                            .toString(Charsets.UTF_8).take(180)
+                        error("A TCL recusou o DEX: " + reason)
+                    }
                 }
+                require(code == "OKAY") { "TCL recusou upload DEX: " + code }
             }
             val answer = shell(adb,
                 "CLASSPATH=" + remote + " app_process / anytv.adb.AnyTvRemoteMeta")
@@ -387,7 +400,8 @@ internal class TclAdbInstalledApps(private val context: Context) {
             }
             val warnings = mutableListOf<String>()
             val native = runCatching { nativeMetadata(adb) }
-                .onFailure { warnings.add("Extração nativa: " + it.javaClass.simpleName) }
+                .onFailure { warnings.add("Extração nativa: " +
+                    it.javaClass.simpleName + ": " + it.message.orEmpty().take(90)) }
                 .getOrDefault(emptyMap())
             val apps = launchable.filter { it in installed }.sorted().map { pkg ->
                 val fromTv = native[pkg]
@@ -396,7 +410,8 @@ internal class TclAdbInstalledApps(private val context: Context) {
                 } else {
                     val archive = runCatching { readRealApp(adb, host, pkg, warnings) }
                         .getOrElse { error ->
-                            warnings.add(pkg + ": " + error.javaClass.simpleName)
+                            warnings.add(pkg + ": " + error.javaClass.simpleName +
+                                ": " + error.message.orEmpty().take(90))
                             TvOfficialApp(pkg, pkg, "")
                         }
                     mergeTclInventoryMetadata(listOfNotNull(fromTv), listOf(archive))[0]
