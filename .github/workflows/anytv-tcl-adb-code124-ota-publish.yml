@@ -1,0 +1,106 @@
+name: AnyTV V2 | Publish verified TCL ADB code124 OTA on owner request
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-tcl-adb-code124-ota-publish.yml']
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: anytv-phone-v2-new-package-release
+  cancel-in-progress: false
+jobs:
+  publish-exact-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Validate signed QA source run and artifact metadata
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 120); do
+            gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/43501228586 > /tmp/anytv-run.json
+            if jq -e '.status == "completed"' /tmp/anytv-run.json >/dev/null; then break; fi
+            sleep 10
+          done
+          jq -e '.id == 43501228586 and .status == "completed" and .conclusion == "success" and .event == "push" and .head_branch == "feat/anytv-p0-device-proof-verifier-20261020" and .head_sha == "f73dcad31ace74c090ab9162aa07220bc4cba64f"' /tmp/anytv-run.json >/dev/null
+          gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/43501228586/artifacts > /tmp/anytv-artifacts.json
+          jq -e '[.artifacts[] | select(.name == "anytv-tcl-adb-code124-signed-candidate" and .expired == false and .workflow_run.id == 43501228586 and (.digest | startswith("sha256:")))] | length == 1' /tmp/anytv-artifacts.json >/dev/null
+          echo ANYTV_CODE124_SOURCE_RUN_AND_ARTIFACT_VERIFIED
+      - name: Download exact signed code124 (no rebuild or resign)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43501228586
+          name: anytv-tcl-adb-code124-signed-candidate
+          github-token: ${{ github.token }}
+          path: signed-proof
+      - name: Verify signed APK SHA-256, package, version and original V2 certificate
+        shell: bash
+        run: |
+          set -euo pipefail
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          APK="signed-proof/AnyTV_TCL_ADB_2.9.96_code124_SIGNED_CANDIDATE.apk"
+          test -s "$APK"
+          test "$(find signed-proof -type f -name '*.apk' | wc -l)" -eq 1
+          SIGNED_SHA="$(awk 'NF {print $1; exit}' signed-proof/SHA256.txt)"
+          test "${#SIGNED_SHA}" -eq 64
+          test "$(sha256sum "$APK" | cut -d' ' -f1)" = "$SIGNED_SHA"
+          echo "SIGNED_SHA=$SIGNED_SHA" >> "$GITHUB_ENV"
+          "$BT/aapt" dump badging "$APK" > /tmp/anytv-code124-badging.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='124'" /tmp/anytv-code124-badging.txt
+          grep -q "versionName='2.9.96-AnyTV'" /tmp/anytv-code124-badging.txt
+          "$BT/apksigner" verify --verbose --print-certs "$APK" > /tmp/anytv-code124-cert.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/anytv-code124-cert.txt
+          grep -qi 'fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9' /tmp/anytv-code124-cert.txt
+          "$BT/zipalign" -c 4 "$APK"
+          echo ANYTV_CODE124_SIGNED_IDENTITY_AND_HASH_VERIFIED
+      - name: Publish only V2 current.apk, with immutable old-HEAD and version gates
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH="feat/tcl-v22-updates-back-bluetooth"
+          EXPECTED_OLD_HEAD="10fa217cebbd42c1245ffae98731f6cb37e99360"
+          APK="signed-proof/AnyTV_TCL_ADB_2.9.96_code124_SIGNED_CANDIDATE.apk"
+          git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+          test "$(git rev-parse "refs/remotes/origin/$BRANCH")" = "$EXPECTED_OLD_HEAD"
+          git worktree add --detach ota-v2 "refs/remotes/origin/$BRANCH"
+          test -s ota-v2/updates/android/v2/current.apk
+          test -s ota-v2/updates/android/cert2026/current.apk
+          OLD_CODE="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging ota-v2/updates/android/v2/current.apk | sed -nE "s/.*versionCode='([0-9]+)'.*/\1/p" | head -1)"
+          test "$OLD_CODE" = "123"
+          LEGACY_BEFORE="$(git -C ota-v2 rev-parse HEAD:updates/android/cert2026/current.apk)"
+          test "$LEGACY_BEFORE" = "44c766b433ddb370f4589b87843f1edfd9cd7b7a"
+          cp "$APK" ota-v2/updates/android/v2/current.apk
+          git -C ota-v2 config user.name "github-actions[bot]"
+          git -C ota-v2 config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C ota-v2 add -f updates/android/v2/current.apk
+          test "$(git -C ota-v2 diff --cached --name-only)" = "updates/android/v2/current.apk"
+          git -C ota-v2 diff --cached --check
+          git -C ota-v2 commit -m "release(anytv-v2): publish verified signed TCL ADB 2.9.96 code124 OTA"
+          RELEASE_COMMIT="$(git -C ota-v2 rev-parse HEAD)"
+          test "$(git -C ota-v2 rev-parse HEAD:updates/android/cert2026/current.apk)" = "$LEGACY_BEFORE"
+          git -C ota-v2 push origin "HEAD:refs/heads/$BRANCH"
+          test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$RELEASE_COMMIT"
+          echo "release_commit=$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "ANYTV_CODE124_OTA_PUSH_AND_LEGACY_PRESERVATION_PASS $RELEASE_COMMIT"
+      - name: Read back published OTA exact bytes and signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT="${{ steps.publish.outputs.release_commit }}"
+          URL="https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/$COMMIT/updates/android/v2/current.apk"
+          curl --fail --location --silent --show-error --retry 3 "$URL" -o /tmp/anytv-v2-code124-remote.apk
+          test "$(sha256sum /tmp/anytv-v2-code124-remote.apk | cut -d' ' -f1)" = "$SIGNED_SHA"
+          cmp /tmp/anytv-v2-code124-remote.apk signed-proof/AnyTV_TCL_ADB_2.9.96_code124_SIGNED_CANDIDATE.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs /tmp/anytv-v2-code124-remote.apk | grep -qi 'fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9'
+          echo "ANYTV_V2_GITHUB_OTA_BYTE_READBACK_SUCCESS"
+          echo "ANYTV_TCL_ADB_CODE124_2_9_91_PUBLISHED_WITHOUT_PHYSICAL_QA"
