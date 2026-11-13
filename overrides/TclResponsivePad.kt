@@ -277,18 +277,15 @@ private fun TclHoldDPad(
     Box(
         modifier = Modifier.size(size)
             .clip(CircleShape)
-            .anyTvCutGraphite(CircleShape),
+            .anyTvCutGraphite(CircleShape, largePad = true),
         contentAlignment = Alignment.Center
     ) {
         // Non-interactive engraved rim: a thin cut, lit only along upper-left.
         Canvas(modifier = Modifier.fillMaxSize()) {
             val radius = minOf(this.size.width, this.size.height) / 2f
-            drawArc(Color(0xFF515255).copy(alpha = .31f),
-                startAngle = 165f, sweepAngle = 110f, useCenter = false,
-                style = Stroke(width = .65.dp.toPx()))
-            drawArc(Color(0xFF090A0B),
-                startAngle = 275f, sweepAngle = 245f, useCenter = false,
-                style = Stroke(width = 1.5.dp.toPx()))
+            drawArc(Color(0xFF777777).copy(alpha = .12f),
+                startAngle = 165f, sweepAngle = 105f, useCenter = false,
+                style = Stroke(width = .35.dp.toPx()))
         }
         // Four independent, generous hit rectangles around the central OK.
         // None is squeezed by fixed heights from media cards above.
