@@ -1597,7 +1597,7 @@ private fun AnyTvStreamNavBar(
     onContentType: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val primary = MaterialTheme.colorScheme.primary
+    val primary = Color(0xFFAD6B73) // Streaming-only muted selected state
     val neutral = MaterialTheme.colorScheme.onSurfaceVariant
     val actionScroll = rememberScrollState()
     val chips: @Composable () -> Unit = {
