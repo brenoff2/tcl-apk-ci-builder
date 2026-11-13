@@ -338,7 +338,7 @@ internal class TclAdbInstalledApps(private val context: Context) {
             val found = linkedMapOf<String, TvOfficialApp>()
             for (line in answer.lineSequence()) {
                 if (!line.startsWith("ANYTV_APP\t")) continue
-                val fields = line.trimEnd().split('\t', limit = 4)
+                val fields = line.trimEnd('\r', '\n').split('\t', limit = 4)
                 if (fields.size != 4 || !packagePattern.matches(fields[1])) continue
                 val name = runCatching {
                     Base64.decode(fields[2], Base64.DEFAULT).toString(Charsets.UTF_8)
