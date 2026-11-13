@@ -851,7 +851,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('items(shelf.chunked(3))', s)
         self.assertIn('items(inProgress.chunked(3))', s)
         self.assertNotIn('items(shelf.take(sectionVisibleCount).chunked(3))', s)
-        self.assertNotIn('items(inProgress.chunked(3))', s)
+        self.assertNotIn('items(inProgress.take(sectionVisibleCount).chunked(3))', s)
         self.assertIn('pkg.ifBlank { "library" }', s)
         self.assertIn('val history = (watchedFilms.mapNotNull', s)
         self.assertIn('val trackedIds = trackedSeries +', s)
