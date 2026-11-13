@@ -117,9 +117,7 @@ private fun LgWebOsPointerPad(
     val view = LocalView.current
     Box(
         modifier = Modifier.size(width)
-            .clip(RoundedCornerShape(24.dp))
-            .background(Color(0xFF17191F))
-            .border(1.dp, Color(0xFF424550), RoundedCornerShape(24.dp))
+            .anyTvCutGraphite(RoundedCornerShape(24.dp))
             .semantics { contentDescription = "Mouse LG webOS: arraste para mover, toque para clicar" }
             .pointerInput(isConnected) {
                 detectDragGestures { change, dragAmount ->
@@ -368,12 +366,7 @@ private fun TclNumberPad(
     )
     Column(
         modifier = Modifier.width(width).height(height)
-            .clip(RoundedCornerShape(24.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainer)
-            .border(
-                1.dp, MaterialTheme.colorScheme.outlineVariant,
-                RoundedCornerShape(24.dp)
-            )
+            .anyTvCutGraphite(RoundedCornerShape(24.dp))
             .padding(7.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp)
     ) {
@@ -385,8 +378,7 @@ private fun TclNumberPad(
                 items.forEachIndexed { columnIndex, label ->
                     Box(
                         modifier = Modifier.weight(1f).fillMaxSize()
-                            .clip(RoundedCornerShape(17.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .anyTvCutGraphite(RoundedCornerShape(17.dp))
                             .clickable {
                                 onShort(codes[rowIndex * 3 + columnIndex])
                             },
