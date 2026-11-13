@@ -36,4 +36,22 @@ assert source.count(old_row) == 1, "Settings row renderer changed"
 source = source.replace(old_row, new_row, 1)
 
 target.write_text(source, encoding="utf-8")
-print("ANYTV_SETTINGS_SHARED_GRAPHITE_CUT_APPLIED")
+
+# All settings/inner pages reuse AppBackdrop. Its former animated radial glows
+# made the graphite look raised, regardless of the Material color scheme.
+backdrop = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/UiBackdrop.kt")
+background = backdrop.read_text(encoding="utf-8")
+start = background.index("@Composable\nfun AppBackdrop(")
+assert "rememberInfiniteTransition" in background[start:], "Upstream backdrop contract changed"
+background = background[:start] + """@Composable
+fun AppBackdrop(content: @Composable () -> Unit) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+            .background(Color(0xFF242424))
+    ) {
+        content()
+    }
+}
+"""
+backdrop.write_text(background, encoding="utf-8")
+print("ANYTV_SETTINGS_AND_INNER_PAGES_GRAPHITE_CUT_APPLIED")
