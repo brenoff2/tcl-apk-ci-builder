@@ -3205,7 +3205,9 @@ internal fun TclStreamingScreens(
                                 .map { it.title }.distinctBy { it.id }
                             val series = favorites.filter { it.title.media == "tv" }
                                 .map { it.title }.distinctBy { it.id }
-                            val unseen = films.filter { it.id.toString() !in watchedFilms }
+                            // A favorite remains in Minha lista even after it is marked watched.
+                            // Watching status belongs to Assistidos, never filters favorites.
+                            val savedFilms = films
                             val history = (watchedFilms.mapNotNull { key ->
                                 key.toIntOrNull()?.let { restoreTrackedTitle("movie", it) }
                             } + watchedEpisodes.mapNotNull { key ->
@@ -3220,7 +3222,7 @@ internal fun TclStreamingScreens(
                             }.distinctBy { it.id }
                                 .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })
                             if (librarySection == "saved") {
-                                if (unseen.isNotEmpty()) put("Filmes para assistir", unseen)
+                                if (savedFilms.isNotEmpty()) put("Filmes favoritos", savedFilms)
                                 if (series.isNotEmpty()) put("Minhas séries", series)
                             } else if (librarySection == "watching") {
                                 if (watching.isNotEmpty()) put("Séries acompanhadas", watching)
