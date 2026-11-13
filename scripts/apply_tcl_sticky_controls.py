@@ -14,7 +14,7 @@ p = Path("source/app/src/main/java/com/hari/androidtvremote/ui/app/TclApprovedHo
 source = p.read_text(encoding="utf-8")
 top = """    BoxWithConstraints(
         modifier = Modifier.fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFF11141B), TclBg, TclBg)))
+            .background(Brush.verticalGradient(listOf(Color(0xFF222326), TclBg, TclBg)))
             .windowInsetsPadding(WindowInsets.safeDrawing)
     ) {
 """
