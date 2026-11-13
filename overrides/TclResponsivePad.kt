@@ -2,6 +2,7 @@ package com.hari.androidtvremote.ui.app
 
 import android.os.SystemClock
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -33,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -236,7 +239,38 @@ private fun TclHoldDPad(
             onHoldStart = onHoldStart,
             onHoldEnd = onHoldEnd
         ) {
-            Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(arrow))
+            // Tiny solid triangle, like the reference's printed D-pad arrows.
+            // The four large touch zones and their key callbacks remain unchanged.
+            Canvas(modifier = Modifier.size(12.dp)) {
+                val w = size.width
+                val h = size.height
+                val triangle = Path().apply {
+                    when (key) {
+                        Remotemessage.RemoteKeyCode.KEYCODE_DPAD_UP -> {
+                            moveTo(w * .5f, h * .16f)
+                            lineTo(w * .89f, h * .82f)
+                            lineTo(w * .11f, h * .82f)
+                        }
+                        Remotemessage.RemoteKeyCode.KEYCODE_DPAD_DOWN -> {
+                            moveTo(w * .11f, h * .18f)
+                            lineTo(w * .89f, h * .18f)
+                            lineTo(w * .5f, h * .84f)
+                        }
+                        Remotemessage.RemoteKeyCode.KEYCODE_DPAD_LEFT -> {
+                            moveTo(w * .16f, h * .5f)
+                            lineTo(w * .82f, h * .11f)
+                            lineTo(w * .82f, h * .89f)
+                        }
+                        else -> {
+                            moveTo(w * .84f, h * .5f)
+                            lineTo(w * .18f, h * .89f)
+                            lineTo(w * .18f, h * .11f)
+                        }
+                    }
+                    close()
+                }
+                drawPath(triangle, foreground)
+            }
         }
     }
 
@@ -247,6 +281,24 @@ private fun TclHoldDPad(
             .border(1.dp, Color(0xFF414141), CircleShape),
         contentAlignment = Alignment.Center
     ) {
+        // Non-interactive engraved concentric rims. They do not own pointer events.
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val radius = size.minDimension / 2f
+            drawCircle(Color(0xFF090909), radius = radius * .987f,
+                style = Stroke(width = 2.dp.toPx()))
+            drawCircle(Color(0xFF666666), radius = radius * .971f,
+                style = Stroke(width = .8.dp.toPx()))
+            drawCircle(Color(0xFF171717), radius = radius * .946f,
+                style = Stroke(width = 3.dp.toPx()))
+            drawCircle(Color(0xFF424242), radius = radius * .925f,
+                style = Stroke(width = .8.dp.toPx()))
+            drawArc(Color(0xFF828282).copy(alpha = .55f),
+                startAngle = 195f, sweepAngle = 145f, useCenter = false,
+                style = Stroke(width = 1.dp.toPx()))
+            drawArc(Color(0xFF020202).copy(alpha = .85f),
+                startAngle = 18f, sweepAngle = 150f, useCenter = false,
+                style = Stroke(width = 1.5.dp.toPx()))
+        }
         // Four independent, generous hit rectangles around the central OK.
         // None is squeezed by fixed heights from media cards above.
         directional(
@@ -294,6 +346,12 @@ private fun TclHoldDPad(
             onHoldStart = onHoldStart,
             onHoldEnd = onHoldEnd
         ) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                drawCircle(Color(0xFF0B0B0B), radius = size.minDimension * .475f,
+                    style = Stroke(width = 2.dp.toPx()))
+                drawCircle(Color(0xFF646464), radius = size.minDimension * .445f,
+                    style = Stroke(width = .8.dp.toPx()))
+            }
             Text(
                 "OK",
                 color = foreground,
