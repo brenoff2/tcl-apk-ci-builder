@@ -864,6 +864,10 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Color(0xFF422128)', s)
         self.assertIn('Color(0xFF804049)', s)
         self.assertIn('AnyTvStreamOutlinedButton(onClick =', s)
+        self.assertIn('private fun AnyTvStreamButton(', s)
+        self.assertIn('private fun AnyTvStreamTextButton(', s)
+        self.assertIn('AnyTvStreamButton(onClick =', s)
+        self.assertIn('AnyTvStreamTextButton(onClick =', s)
         self.assertIn('selectedContainerColor = Color(0xFF422128)', s)
 
     def test_watched_film_uses_independent_prefs_snapshot_and_legacy_cache_migration(self):
