@@ -11,7 +11,8 @@ class PhoneAdbContract(unittest.TestCase):
     def test_opt_in_and_companion_fallback(self):
         s = PATCH.read_text()
         self.assertIn('adb_enabled:', s)
-        self.assertIn('val list = if (useAdb) adbApps.inventory(host)', s)
+        self.assertIn('val list = if (useAdb) {', s)
+        self.assertIn('mergeTclInventoryMetadata(allApps, adbApps.inventory(host))', s)
         self.assertIn('else TclTvAppApi.apps(host, pairing)', s)
         self.assertIn('if (useAdb) adbApps.launch(host, app.packageName)', s)
         self.assertIn('if (!useAdb) storePair(pairing)', s)
