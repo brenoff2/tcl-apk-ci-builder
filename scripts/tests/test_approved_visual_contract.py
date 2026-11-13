@@ -171,12 +171,13 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('onHoldEnd = onHoldEnd', pad)
         self.assertIn('Color(0xFF4A4A4A).copy(alpha = 0.85f)', home)
         self.assertIn('Color(0xFF484848)', home)
-        order = ('TclQuickAction("Teclado"', 'TclQuickAction("Início"',
-                 'TclQuickAction("Microfone"', 'TclQuickAction("Voltar"')
+        order = ('"Teclado", Icons.Filled.Keyboard', 'TclQuickAction("Início"',
+                 'TclQuickAction("Microfone"', '"Voltar", Icons.Filled.KeyboardBackspace')
         self.assertTrue(all(x in home for x in order))
-        self.assertLess(home.index(order[0]), home.index(order[1]))
-        self.assertLess(home.index(order[1]), home.index(order[2]))
-        self.assertLess(home.index(order[2]), home.index(order[3]))
+        self.assertEqual(sorted(home.index(x) for x in order),
+                         [home.index(x) for x in order])
+        # The middle pad-mode control remains between Home and Microphone.
+        self.assertLess(home.index('onCyclePadMode()'), home.index(order[2]))
 
     def test_headphones_use_companion_not_remote_red_key(self):
         self.assertIn("TclTvAppApi.headphones(host, code)", self.skin)
