@@ -146,7 +146,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
-          script: bash -euo pipefail -c 'cd source && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.hari.androidtvremote.ui.app.AnyTvGraphiteVisualQaTest --no-daemon --stacktrace && cd .. && mkdir -p visual-qa && IMG=$(adb shell find /sdcard/Android/data -name anytv-code122-graphite-real-compose.png | tr -d '\\r' | head -1) && test -n "$IMG" && adb pull "$IMG" visual-qa/graphite-code122-compose.png && test -s visual-qa/graphite-code122-compose.png && echo ANYTV_CODE122_REAL_COMPOSE_SCREENSHOT_CAPTURED'
+          script: bash -euo pipefail -c 'cd source && ./gradlew :app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.hari.androidtvremote.ui.app.AnyTvGraphiteVisualQaTest --no-daemon --stacktrace && cd .. && mkdir -p visual-qa && IMG=$(adb shell find /sdcard/Android/data -name anytv-code122-graphite-real-compose.png | tr -d "\\r" | head -1) && test -n "$IMG" && adb pull "$IMG" visual-qa/graphite-code122-compose.png && test -s visual-qa/graphite-code122-compose.png && echo ANYTV_CODE122_REAL_COMPOSE_SCREENSHOT_CAPTURED'
       - uses: actions/upload-artifact@v4
         with:
           name: anytv-code122-graphite-real-compose-screenshot
