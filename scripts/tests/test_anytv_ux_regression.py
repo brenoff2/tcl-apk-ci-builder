@@ -65,12 +65,12 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertNotIn("Abrir controle da TV para escolher perfil", detail)
         self.assertIn('contentDescription = "Controle da TV"', detail)
         self.assertIn('"Abrir na " + tvName.ifBlank { "TV conectada" }', detail)
-        self.assertIn('OutlinedButton(onClick = {', detail)
+        self.assertIn('AnyTvStreamOutlinedButton(onClick = {', detail)
         self.assertNotIn("A TV poderá abrir a busca do título", detail)
         self.assertNotIn("Ofertas informadas pelo TMDB/JustWatch", detail)
         self.assertNotIn('Text("Cartaz original"', detail)
         self.assertIn("Modifier.width(190.dp).height(285.dp)", detail)
-        self.assertIn("containerColor = if (chosen) Color(0xFFC50038)", detail)
+        self.assertIn("containerColor = if (chosen) Color(0xFF422128)", detail)
 
     def test_only_confirmed_streaming_preselected(self):
         self.assertIn("StreamingCatalog.appHasOffer(app, offers)", self.catalog)
