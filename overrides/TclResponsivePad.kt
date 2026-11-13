@@ -217,9 +217,9 @@ private fun TclHoldDPad(
     onHoldStart: (Remotemessage.RemoteKeyCode) -> Unit,
     onHoldEnd: (Remotemessage.RemoteKeyCode) -> Unit,
 ) {
-    val top = Color(0xFF202123)
-    val bottom = Color(0xFF101113)
-    val accent = Color(0xFF464646)
+    val top = Color(0xFF212225)
+    val bottom = Color(0xFF1E1F22)
+    val accent = Color(0xFF0A0B0D)
     val foreground = Color(0xFFF9F9FB)
     val arrow = (size * .13f).coerceIn(27.dp, 38.dp)
     @Composable
@@ -277,26 +277,17 @@ private fun TclHoldDPad(
     Box(
         modifier = Modifier.size(size)
             .clip(CircleShape)
-            .background(Brush.verticalGradient(listOf(top, bottom, Color(0xFF101010))))
-            .border(1.dp, Color(0xFF414141), CircleShape),
+            .anyTvCutGraphite(CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        // Non-interactive engraved concentric rims. They do not own pointer events.
+        // Non-interactive engraved rim: a thin cut, lit only along upper-left.
         Canvas(modifier = Modifier.fillMaxSize()) {
             val radius = minOf(this.size.width, this.size.height) / 2f
-            drawCircle(Color(0xFF090909), radius = radius * .987f,
-                style = Stroke(width = 2.dp.toPx()))
-            drawCircle(Color(0xFF4E4F51), radius = radius * .971f,
-                style = Stroke(width = .8.dp.toPx()))
-            drawCircle(Color(0xFF171717), radius = radius * .946f,
-                style = Stroke(width = 3.dp.toPx()))
-            drawCircle(Color(0xFF393A3D), radius = radius * .925f,
-                style = Stroke(width = .8.dp.toPx()))
-            drawArc(Color(0xFF696A6C).copy(alpha = .33f),
-                startAngle = 195f, sweepAngle = 145f, useCenter = false,
-                style = Stroke(width = 1.dp.toPx()))
-            drawArc(Color(0xFF020202).copy(alpha = .85f),
-                startAngle = 18f, sweepAngle = 150f, useCenter = false,
+            drawArc(Color(0xFF515255).copy(alpha = .31f),
+                startAngle = 165f, sweepAngle = 110f, useCenter = false,
+                style = Stroke(width = .65.dp.toPx()))
+            drawArc(Color(0xFF090A0B),
+                startAngle = 275f, sweepAngle = 245f, useCenter = false,
                 style = Stroke(width = 1.5.dp.toPx()))
         }
         // Four independent, generous hit rectangles around the central OK.
@@ -332,12 +323,7 @@ private fun TclHoldDPad(
         TclHeldZone(
             modifier = Modifier.size(size * .28f)
                 .clip(CircleShape)
-                .background(Brush.verticalGradient(listOf(
-                    Color(0xFF28292B),
-                    Color(0xFF202123),
-                    Color(0xFF17181A)
-                )))
-                .border(1.5.dp, accent, CircleShape),
+                .anyTvCutGraphite(CircleShape),
             label = "OK",
             key = Remotemessage.RemoteKeyCode.KEYCODE_DPAD_CENTER,
             isConnected = isConnected,
@@ -346,12 +332,7 @@ private fun TclHoldDPad(
             onHoldStart = onHoldStart,
             onHoldEnd = onHoldEnd
         ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(Color(0xFF0B0B0B), radius = minOf(this.size.width, this.size.height) * .475f,
-                    style = Stroke(width = 2.dp.toPx()))
-                drawCircle(Color(0xFF646464), radius = minOf(this.size.width, this.size.height) * .445f,
-                    style = Stroke(width = .8.dp.toPx()))
-            }
+            // OK follows the same small-button micro-cut; no raised concentric ring.
             Text(
                 "OK",
                 color = foreground,
