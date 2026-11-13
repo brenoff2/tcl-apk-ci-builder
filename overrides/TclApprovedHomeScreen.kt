@@ -494,31 +494,42 @@ private fun TclApprovedHeader(
     }
 }
 
-/** One-material machined cut: identical graphite face, no cast shadow.
- * The light is ON THE RIM only and vanishes toward the bottom-right.
- * This modifier decorates existing controls; it never changes their dimensions or hits.
+/** Approved graphite micro-cavity. ONE material, never a drop shadow.
+ * Physical groove = a shaded sub-dp outer edge + an upper-left inner reflection.
+ * Small controls have half the edge light of the large direction pad.
+ * No padding, hit-box changes or raised/elevation layer.
  */
 internal fun Modifier.anyTvCutGraphite(
     shape: androidx.compose.ui.graphics.Shape,
     largePad: Boolean = false
 ): Modifier =
     this.clip(shape)
-        // Large directional disc receives a faint upper-left face reflection.
-        // All smaller controls remain the same graphite as their background.
         .background(
             if (largePad) Brush.linearGradient(listOf(
-                Color(0xFF2B2B2B), Color(0xFF262626), Color(0xFF242424)))
+                Color(0xFF2B2B2B), Color(0xFF282828), Color(0xFF242424)))
             else Brush.linearGradient(listOf(
-                Color(0xFF262626), Color(0xFF242424), Color(0xFF242424))),
+                Color(0xFF272727), Color(0xFF252525), Color(0xFF242424))),
             shape
         )
-        // The 1-pixel groove is a cut into the surface, NOT a raised black outline.
-        .border(0.72.dp, Color(0xFF101010).copy(alpha = .72f), shape)
-        // Almost invisible upper-left reflected edge, fading to zero at bottom-right.
-        .border(0.38.dp, Brush.linearGradient(listOf(
-            Color(0xFF777777).copy(alpha = .27f),
-            Color(0xFF555555).copy(alpha = .10f),
-            Color.Transparent)), shape)
+        // The dark trace follows a cut through the graphite, not a projected shadow.
+        .border(0.74.dp, Brush.sweepGradient(
+            0.0f to Color(0xFF101010).copy(alpha = .62f),
+            0.35f to Color(0xFF101010).copy(alpha = .64f),
+            0.58f to Color(0xFF101010).copy(alpha = .48f),
+            0.77f to Color(0xFF101010).copy(alpha = .46f),
+            1.0f to Color(0xFF101010).copy(alpha = .62f)
+        ), shape)
+        // Rim reflection: ONLY upper left, fading to ZERO on lower/right edges.
+        // Half intensity for OK, header, quick actions, side rockers and chips.
+        .border(0.42.dp, Brush.sweepGradient(
+            0.00f to Color.Transparent,
+            0.30f to Color.Transparent,
+            0.48f to Color(0xFF939393).copy(alpha = if (largePad) .20f else .10f),
+            0.62f to Color(0xFFA0A0A0).copy(alpha = if (largePad) .34f else .17f),
+            0.75f to Color(0xFF858585).copy(alpha = if (largePad) .16f else .08f),
+            0.90f to Color.Transparent,
+            1.00f to Color.Transparent
+        ), shape)
 
 /** No concentric raised highlight: the shared cut paints the entire rim. */
 @Composable
