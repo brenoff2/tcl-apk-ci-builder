@@ -1652,9 +1652,8 @@ private fun AnyTvStreamOutlinedButton(
 ) {
     OutlinedButton(
         onClick = onClick, enabled = enabled, shape = shape,
-        modifier = modifier.clip(shape).background(
-            Brush.verticalGradient(listOf(Color(0xFF191A1D), Color(0xFF101113))), shape),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF343538)),
+        modifier = modifier.anyTvCutGraphite(shape),
+        border = androidx.compose.foundation.BorderStroke(0.dp, Color.Transparent),
         contentPadding = contentPadding, colors = colors, content = content
     )
 }
@@ -1673,8 +1672,7 @@ private fun AnyTvStreamButton(
     content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit
 ) {
     Button(onClick = onClick, enabled = enabled, shape = shape,
-        modifier = modifier.clip(shape).background(
-            Brush.verticalGradient(listOf(Color(0xFF191A1D), Color(0xFF101113))), shape),
+        modifier = modifier.anyTvCutGraphite(shape),
         colors = colors, contentPadding = contentPadding, content = content)
 }
 
@@ -1688,8 +1686,7 @@ private fun AnyTvStreamTextButton(
 ) {
     val shape = RoundedCornerShape(13.dp)
     TextButton(onClick = onClick, enabled = enabled,
-        modifier = modifier.clip(shape).background(
-            Brush.verticalGradient(listOf(Color(0xFF18191C), Color(0xFF111214))), shape),
+        modifier = modifier.anyTvCutGraphite(shape),
         colors = ButtonDefaults.textButtonColors(
             containerColor = Color.Transparent, contentColor = Color(0xFFECECEE)),
         contentPadding = contentPadding, shape = shape, content = content)
@@ -1700,11 +1697,11 @@ private fun AnyTvCompactChip(label: String, selected: Boolean, onClick: () -> Un
     val shape = RoundedCornerShape(13.dp)
     Box(modifier = Modifier.padding(end = 2.dp)
         .clip(shape)
-        .background(Brush.verticalGradient(if (selected)
-            listOf(Color(0xFF402128), Color(0xFF241417))
-            else listOf(Color(0xFF18191C), Color(0xFF101113))), shape)
-        .border(1.dp, if (selected) Color(0xFF804049)
-               else Color(0xFF333438), shape)
+        .anyTvCutGraphite(shape)
+        .background(if (selected) Color(0xFF422128).copy(alpha = .32f)
+                    else Color.Transparent, shape)
+        .border(0.8.dp, if (selected) Color(0xFF71383F).copy(alpha = .72f)
+               else Color.Transparent, shape)
         .clickable(onClick = onClick)
         .padding(horizontal = 7.dp, vertical = 5.dp)) {
         Text(label, fontSize = 11.sp, maxLines = 1,
@@ -1723,11 +1720,11 @@ private fun AnyTvGenreViewIcon(
     val shape = RoundedCornerShape(12.dp)
     Box(modifier = Modifier.size(34.dp)
         .clip(shape)
-        .background(Brush.verticalGradient(if (selected)
-            listOf(Color(0xFF402128), Color(0xFF241417))
-            else listOf(Color(0xFF18191C), Color(0xFF101113))), shape)
-        .border(1.dp, if (selected) Color(0xFF804049)
-               else Color(0xFF333438), shape)
+        .anyTvCutGraphite(shape)
+        .background(if (selected) Color(0xFF422128).copy(alpha = .32f)
+                    else Color.Transparent, shape)
+        .border(0.8.dp, if (selected) Color(0xFF71383F).copy(alpha = .72f)
+               else Color.Transparent, shape)
         .clickable(onClick = onClick),
         contentAlignment = Alignment.Center) {
         Icon(image, contentDescription = label,
