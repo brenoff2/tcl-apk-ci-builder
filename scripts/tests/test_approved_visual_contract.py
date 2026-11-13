@@ -158,8 +158,8 @@ class ApprovedUiContract(unittest.TestCase):
         home = self.skin
         # A single micro-cut edge, miniature triangles, no raised central button.
         self.assertIn("Non-interactive engraved rim", pad)
-        self.assertIn("drawArc(Color(0xFF515255)", pad)
-        self.assertIn("drawArc(Color(0xFF090A0B)", pad)
+        self.assertIn("drawArc(Color(0xFF777777)", pad)
+        self.assertNotIn("drawArc(Color(0xFF090A0B)", pad)
         self.assertIn("val triangle = Path().apply", pad)
         self.assertIn("drawPath(triangle, foreground)", pad)
         self.assertIn("OK follows the same small-button micro-cut", pad)
@@ -170,10 +170,10 @@ class ApprovedUiContract(unittest.TestCase):
             self.assertIn(key, pad)
         self.assertIn("private fun TclEmbossedDisc()", home)
         self.assertIn("internal fun Modifier.anyTvCutGraphite(", home)
-        self.assertIn(".border(1.6.dp, Color(0xFF080808), shape)", home)
+        self.assertIn(".border(0.72.dp, Color(0xFF101010).copy(alpha = .72f), shape)", home)
         self.assertIn("No concentric raised highlight", home)
-        self.assertIn("Color(0xFF242424), shape", home)
-        self.assertIn("Color(0xFF858585).copy(alpha = .36f)", home)
+        self.assertIn("Color(0xFF242424))),", home)
+        self.assertIn("Color(0xFF777777).copy(alpha = .27f)", home)
         self.assertIn("anyTvCutGraphite(shape)", home)
         # Header and quick-action visuals share the same non-clickable face.
         self.assertEqual(home.count("TclEmbossedDisc()"), 3)
@@ -188,6 +188,8 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('val bottom = Color(0xFF1E1F22)', pad)
         self.assertIn('.anyTvCutGraphite(CircleShape)', pad)
         self.assertIn('Color(0xFF212225)', pad)
+        self.assertIn('.anyTvCutGraphite(CircleShape, largePad = true)', pad)
+        self.assertNotIn('style = Stroke(width = 1.5.dp.toPx())', pad)
         self.assertIn('.anyTvCutGraphite(CircleShape)', pad)
         for code in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN",
                      "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT",
@@ -197,8 +199,8 @@ class ApprovedUiContract(unittest.TestCase):
             self.assertIn(zone, pad)
         self.assertIn('onHoldStart = onHoldStart', pad)
         self.assertIn('onHoldEnd = onHoldEnd', pad)
-        self.assertIn('Color(0xFF424346).copy(alpha = .50f)', home)
-        self.assertIn('Color(0xFF080808)', home)
+        self.assertIn('Color(0xFF777777).copy(alpha = .27f)', home)
+        self.assertIn('Color(0xFF101010).copy(alpha = .72f)', home)
         order = ('"Teclado", Icons.Filled.Keyboard', 'TclQuickAction("Início"',
                  'TclQuickAction("Microfone"', '"Voltar", Icons.Filled.KeyboardBackspace')
         self.assertTrue(all(x in home for x in order))
