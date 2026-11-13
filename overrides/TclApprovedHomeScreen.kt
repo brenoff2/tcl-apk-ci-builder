@@ -498,14 +498,26 @@ private fun TclApprovedHeader(
  * The light is ON THE RIM only and vanishes toward the bottom-right.
  * This modifier decorates existing controls; it never changes their dimensions or hits.
  */
-internal fun Modifier.anyTvCutGraphite(shape: androidx.compose.ui.graphics.Shape): Modifier =
+internal fun Modifier.anyTvCutGraphite(
+    shape: androidx.compose.ui.graphics.Shape,
+    largePad: Boolean = false
+): Modifier =
     this.clip(shape)
-        .background(Color(0xFF242424), shape)
-        .border(1.6.dp, Color(0xFF080808), shape)
-        .border(0.7.dp, Brush.linearGradient(listOf(
-            Color(0xFF858585).copy(alpha = .36f),
-            Color(0xFF555555).copy(alpha = .20f),
-            Color(0xFF363636).copy(alpha = .07f),
+        // Large directional disc receives a faint upper-left face reflection.
+        // All smaller controls remain the same graphite as their background.
+        .background(
+            if (largePad) Brush.linearGradient(listOf(
+                Color(0xFF2B2B2B), Color(0xFF262626), Color(0xFF242424)))
+            else Brush.linearGradient(listOf(
+                Color(0xFF262626), Color(0xFF242424), Color(0xFF242424))),
+            shape
+        )
+        // The 1-pixel groove is a cut into the surface, NOT a raised black outline.
+        .border(0.72.dp, Color(0xFF101010).copy(alpha = .72f), shape)
+        // Almost invisible upper-left reflected edge, fading to zero at bottom-right.
+        .border(0.38.dp, Brush.linearGradient(listOf(
+            Color(0xFF777777).copy(alpha = .27f),
+            Color(0xFF555555).copy(alpha = .10f),
             Color.Transparent)), shape)
 
 /** No concentric raised highlight: the shared cut paints the entire rim. */
