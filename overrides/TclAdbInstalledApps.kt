@@ -440,11 +440,13 @@ internal class TclAdbInstalledApps(private val context: Context) {
             val uri = java.net.URI(url)
             val domain = uri.host?.lowercase() ?: ""
             val allowed = when (packageName) {
-                "com.netflix.ninja" -> setOf("www.netflix.com", "netflix.com")
+                "com.netflix.ninja", "com.netflix.mediaclient" ->
+                    setOf("www.netflix.com", "netflix.com")
                 "com.disney.disneyplus" -> setOf("www.disneyplus.com", "disneyplus.com")
-                "com.amazon.amazonvideo.livingroom" ->
-                    setOf("www.primevideo.com", "primevideo.com")
-                "com.wbd.stream" -> setOf("www.max.com", "max.com", "play.max.com")
+                "com.amazon.amazonvideo.livingroom", "com.amazon.avod.thirdpartyclient" ->
+                    setOf("www.primevideo.com", "primevideo.com", "app.primevideo.com")
+                "com.wbd.stream" ->
+                    setOf("www.max.com", "max.com", "play.max.com", "play.hbomax.com")
                 "com.apple.atve.androidtv.appletv" -> setOf("tv.apple.com")
                 else -> emptySet()
             }
@@ -490,7 +492,10 @@ internal class TclAdbInstalledApps(private val context: Context) {
                         !standard.contains("unable", ignoreCase = true)) {
                         true
                     } else {
-                        shell(adb, "monkey -p " + packageName + " 1")
+                        // Android TV launchers may expose only LEANBACK_LAUNCHER.
+                        // Monkey defaults to LAUNCHER/MONKEY unless -c is supplied.
+                        shell(adb, "monkey -p " + packageName +
+                            " -c android.intent.category.LEANBACK_LAUNCHER 1")
                             .contains("Events injected: 1")
                     }
                 }
