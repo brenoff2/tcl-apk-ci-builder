@@ -72,7 +72,7 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertNotIn("darkColorScheme(", self.skin)
         self.assertNotIn("bottomBar = {", self.skin)
         # Main remote alone uses the screenshot's dark graphite/red palette.
-        self.assertIn('private val TclBg = Color(0xFF08090D)', self.skin)
+        self.assertIn('private val TclBg = Color(0xFF1E1F22)', self.skin)
         self.assertIn('private val TclBlue = Color(0xFFE9003B)', self.skin)
         self.assertIn("windowInsetsPadding(WindowInsets.safeDrawing)", self.skin)
 
@@ -116,7 +116,7 @@ class ApprovedUiContract(unittest.TestCase):
         playback = (KOTLIN / "PlaybackTransportBar.kt").read_text()
         streaming = (KOTLIN / "TclStreamingScreens.kt").read_text()
         for fragment in (
-            'private val TclBg = Color(0xFF08090D)',
+            'private val TclBg = Color(0xFF1E1F22)',
             'private val TclSurface = Color(0xFF0F1117)',
             'private val TclBlue = Color(0xFFE9003B)',
             'val systemBg = TclBg',
@@ -135,9 +135,9 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertNotIn('TclLiquidFill(', self.skin)
         self.assertNotIn('fluidLevel = sessionState.volumeFraction', self.skin)
         for fragment in (
-            'val accent = Color(0xFF464646)',
+            'val accent = Color(0xFF0A0B0D)',
             'modifier = Modifier.size(size * .28f)',
-            '.border(1.5.dp, accent, CircleShape)',
+            '.anyTvCutGraphite(CircleShape)',
             'onHoldStart = onHoldStart',
             'onHoldEnd = onHoldEnd',
         ):
@@ -147,7 +147,7 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('OfficialTvIcon(app = app, size = 52.dp)', apps)
         self.assertIn('Brush.horizontalGradient(listOf(', streaming)
         self.assertIn('modifier = Modifier.fillMaxWidth().height(92.dp)', streaming)
-        self.assertIn('containerColor = Color(0xFF131416)', playback)
+        self.assertIn('containerColor = Color.Transparent', playback)
         self.assertIn('KEYCODE_MEDIA_PLAY', playback)
         self.assertIn('KEYCODE_MEDIA_PAUSE', playback)
         self.assertIn('KEYCODE_MEDIA_STOP', playback)
@@ -156,21 +156,23 @@ class ApprovedUiContract(unittest.TestCase):
     def test_reference_button_geometry_is_drawn_not_only_recolored(self):
         pad = (KOTLIN / "TclResponsivePad.kt").read_text()
         home = self.skin
-        # Rounded concentric grooves, miniature triangles, center depression.
-        self.assertIn("Non-interactive engraved concentric rims", pad)
-        self.assertIn("drawCircle(Color(0xFF4E4F51)", pad)
-        self.assertIn("drawArc(Color(0xFF696A6C)", pad)
+        # A single micro-cut edge, miniature triangles, no raised central button.
+        self.assertIn("Non-interactive engraved rim", pad)
+        self.assertIn("drawArc(Color(0xFF515255)", pad)
+        self.assertIn("drawArc(Color(0xFF090A0B)", pad)
         self.assertIn("val triangle = Path().apply", pad)
         self.assertIn("drawPath(triangle, foreground)", pad)
-        self.assertIn("drawCircle(Color(0xFF0B0B0B)", pad)
+        self.assertIn("OK follows the same small-button micro-cut", pad)
         # The visual is inside the original pressable regions; all five keycodes survive.
         self.assertEqual(pad.count("TclHeldZone("), 3)
         for key in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN",
                     "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER"):
             self.assertIn(key, pad)
         self.assertIn("private fun TclEmbossedDisc()", home)
-        self.assertIn("drawCircle(Color(0xFF36373A)", home)
-        self.assertIn("drawCircle(Color(0xFF17181A)", home)
+        self.assertIn("internal fun Modifier.anyTvCutGraphite(", home)
+        self.assertIn(".border(1.5.dp, Color(0xFF0A0B0D), shape)", home)
+        self.assertIn("drawCircle(Color(0xFF353638)", home)
+        self.assertIn("anyTvCutGraphite(shape)", home)
         # Header and quick-action visuals share the same non-clickable face.
         self.assertEqual(home.count("TclEmbossedDisc()"), 3)
         self.assertIn(".clickable(onClick = onClick)", home)
@@ -180,11 +182,11 @@ class ApprovedUiContract(unittest.TestCase):
     def test_graphite_remote_buttons_preserve_order_and_press_zones(self):
         pad = (KOTLIN / "TclResponsivePad.kt").read_text()
         home = self.skin
-        self.assertIn('val top = Color(0xFF202123)', pad)
-        self.assertIn('val bottom = Color(0xFF101113)', pad)
-        self.assertIn('.border(1.dp, Color(0xFF414141), CircleShape)', pad)
-        self.assertIn('Color(0xFF28292B)', pad)
-        self.assertIn('.border(1.5.dp, accent, CircleShape)', pad)
+        self.assertIn('val top = Color(0xFF212225)', pad)
+        self.assertIn('val bottom = Color(0xFF1E1F22)', pad)
+        self.assertIn('.anyTvCutGraphite(CircleShape)', pad)
+        self.assertIn('Color(0xFF212225)', pad)
+        self.assertIn('.anyTvCutGraphite(CircleShape)', pad)
         for code in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN",
                      "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT",
                      "KEYCODE_DPAD_CENTER"):
@@ -193,8 +195,8 @@ class ApprovedUiContract(unittest.TestCase):
             self.assertIn(zone, pad)
         self.assertIn('onHoldStart = onHoldStart', pad)
         self.assertIn('onHoldEnd = onHoldEnd', pad)
-        self.assertIn('Color(0xFF343538).copy(alpha = 0.85f)', home)
-        self.assertIn('Color(0xFF35363A)', home)
+        self.assertIn('Color(0xFF424346).copy(alpha = .50f)', home)
+        self.assertIn('Color(0xFF0A0B0D)', home)
         order = ('"Teclado", Icons.Filled.Keyboard', 'TclQuickAction("Início"',
                  'TclQuickAction("Microfone"', '"Voltar", Icons.Filled.KeyboardBackspace')
         self.assertTrue(all(x in home for x in order))
