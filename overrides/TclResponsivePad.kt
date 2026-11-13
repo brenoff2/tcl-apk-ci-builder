@@ -214,9 +214,9 @@ private fun TclHoldDPad(
     onHoldStart: (Remotemessage.RemoteKeyCode) -> Unit,
     onHoldEnd: (Remotemessage.RemoteKeyCode) -> Unit,
 ) {
-    val top = Color(0xFF22242C)
-    val bottom = Color(0xFF101217)
-    val accent = Color(0xFFE9003B)
+    val top = Color(0xFF292929)
+    val bottom = Color(0xFF111111)
+    val accent = Color(0xFF464646)
     val foreground = Color(0xFFF9F9FB)
     val arrow = (size * .13f).coerceIn(27.dp, 38.dp)
     @Composable
@@ -243,7 +243,8 @@ private fun TclHoldDPad(
     Box(
         modifier = Modifier.size(size)
             .clip(CircleShape)
-            .background(Brush.radialGradient(listOf(top, bottom))),
+            .background(Brush.verticalGradient(listOf(top, bottom, Color(0xFF101010))))
+            .border(1.dp, Color(0xFF414141), CircleShape),
         contentAlignment = Alignment.Center
     ) {
         // Four independent, generous hit rectangles around the central OK.
@@ -279,11 +280,12 @@ private fun TclHoldDPad(
         TclHeldZone(
             modifier = Modifier.size(size * .28f)
                 .clip(CircleShape)
-                .background(Brush.radialGradient(listOf(
-                    Color(0xFF292B33),
-                    Color(0xFF111218)
+                .background(Brush.verticalGradient(listOf(
+                    Color(0xFF353535),
+                    Color(0xFF242424),
+                    Color(0xFF151515)
                 )))
-                .border(2.5.dp, accent, CircleShape),
+                .border(1.5.dp, accent, CircleShape),
             label = "OK",
             key = Remotemessage.RemoteKeyCode.KEYCODE_DPAD_CENTER,
             isConnected = isConnected,
