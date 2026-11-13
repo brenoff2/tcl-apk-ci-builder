@@ -74,6 +74,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.sin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -493,6 +494,26 @@ private fun TclApprovedHeader(
     }
 }
 
+/** Decorative physical-button bezel; never participates in hit-testing. */
+@Composable
+private fun TclEmbossedDisc() {
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val r = size.minDimension / 2f
+        drawCircle(Color(0xFF080808), radius = r * .96f,
+            style = Stroke(width = 2.dp.toPx()))
+        drawCircle(Color(0xFF777777).copy(alpha = .8f), radius = r * .91f,
+            style = Stroke(width = .7.dp.toPx()))
+        drawCircle(Color(0xFF141414), radius = r * .84f,
+            style = Stroke(width = 1.8.dp.toPx()))
+        drawArc(Color(0xFFAAAAAA).copy(alpha = .55f),
+            startAngle = 196f, sweepAngle = 125f, useCenter = false,
+            style = Stroke(width = .9.dp.toPx()))
+        drawArc(Color(0xFF050505),
+            startAngle = 17f, sweepAngle = 150f, useCenter = false,
+            style = Stroke(width = 1.2.dp.toPx()))
+    }
+}
+
 @Composable
 internal fun TclHeaderAction(
     icon: ImageVector,
@@ -511,6 +532,7 @@ internal fun TclHeaderAction(
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center
     ) {
+        TclEmbossedDisc()
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(21.dp))
     }
 }
@@ -592,6 +614,7 @@ internal fun TclQuickAction(
                 .semantics { contentDescription = title },
             contentAlignment = Alignment.Center
         ) {
+            TclEmbossedDisc()
             Icon(icon, contentDescription = null, tint = TclText,
                 modifier = Modifier.size(if (diameter < 54.dp) 22.dp else 27.dp))
         }
