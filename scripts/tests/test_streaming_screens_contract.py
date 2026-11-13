@@ -851,7 +851,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('items(shelf.chunked(3))', s)
         self.assertIn('items(inProgress.chunked(3))', s)
         self.assertNotIn('items(shelf.take(sectionVisibleCount).chunked(3))', s)
-        self.assertNotIn('items(inProgress.take(sectionVisibleCount).chunked(3))', s)
+        self.assertNotIn('items(inProgress.chunked(3))', s)
         self.assertIn('pkg.ifBlank { "library" }', s)
         self.assertIn('val history = (watchedFilms.mapNotNull', s)
         self.assertIn('val trackedIds = trackedSeries +', s)
@@ -1143,7 +1143,7 @@ class StreamingScreens(unittest.TestCase):
             'items(genreTitles.chunked(3))',
             'items(sectionTitles.chunked(3))',
             'items(shelf.chunked(3))',
-            'items(inProgress.take(sectionVisibleCount).chunked(3))',
+            'items(inProgress.chunked(3))',
             'globalSearchResults.chunked(3)',
         ):
             self.assertIn(snippet, self.screen)
@@ -1198,7 +1198,7 @@ class StreamingScreens(unittest.TestCase):
             'suspend fun lookupSeries(id: Int): StreamingTitle?',
             'val restored = runCatching { StreamingCatalog.lookupSeries(id) }.getOrNull()',
             '!it.name.startsWith("saved_title_")',
-            'items(inProgress.take(sectionVisibleCount).chunked(3))',
+            'items(inProgress.chunked(3))',
             'sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.name })',
             'value = libraryQuery',
             'Text("Buscar nesta lista",',
@@ -1290,7 +1290,7 @@ class StreamingScreens(unittest.TestCase):
     def test_library_labels_and_cinema_overlay_share_home_visual_contract(self):
         self.assertIn('"Séries acompanhadas"', self.screen)
         self.assertNotIn('"Continuando"', self.screen)
-        self.assertIn('items(inProgress.take(sectionVisibleCount).chunked(3))', self.screen)
+        self.assertIn('items(inProgress.chunked(3))', self.screen)
         self.assertIn('items(shelf.chunked(3))', self.screen)
         self.assertIn('contentScale = ContentScale.Fit)', self.screen)
         self.assertNotIn('private fun AnyTvCinemaHero(', self.screen)
