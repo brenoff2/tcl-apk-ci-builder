@@ -153,6 +153,30 @@ class ApprovedUiContract(unittest.TestCase):
         self.assertIn('KEYCODE_MEDIA_STOP', playback)
         self.assertNotIn('KEYCODE_MEDIA_PREVIOUS', playback)
 
+    def test_reference_button_geometry_is_drawn_not_only_recolored(self):
+        pad = (KOTLIN / "TclResponsivePad.kt").read_text()
+        home = self.skin
+        # Rounded concentric grooves, miniature triangles, center depression.
+        self.assertIn("Non-interactive engraved concentric rims", pad)
+        self.assertIn("drawCircle(Color(0xFF666666)", pad)
+        self.assertIn("drawArc(Color(0xFF828282)", pad)
+        self.assertIn("val triangle = Path().apply", pad)
+        self.assertIn("drawPath(triangle, foreground)", pad)
+        self.assertIn("drawCircle(Color(0xFF0B0B0B)", pad)
+        # The visual is inside the original pressable regions; all five keycodes survive.
+        self.assertEqual(pad.count("TclHeldZone("), 3)
+        for key in ("KEYCODE_DPAD_UP", "KEYCODE_DPAD_DOWN",
+                    "KEYCODE_DPAD_LEFT", "KEYCODE_DPAD_RIGHT", "KEYCODE_DPAD_CENTER"):
+            self.assertIn(key, pad)
+        self.assertIn("private fun TclEmbossedDisc()", home)
+        self.assertIn("drawCircle(Color(0xFF777777)", home)
+        self.assertIn("drawArc(Color(0xFFAAAAAA)", home)
+        # Header and quick-action visuals share the same non-clickable face.
+        self.assertEqual(home.count("TclEmbossedDisc()"), 3)
+        self.assertIn(".clickable(onClick = onClick)", home)
+        self.assertIn("modifier = Modifier.size(38.dp)", home)
+        self.assertIn("modifier = Modifier.size(diameter)", home)
+
     def test_graphite_remote_buttons_preserve_order_and_press_zones(self):
         pad = (KOTLIN / "TclResponsivePad.kt").read_text()
         home = self.skin
