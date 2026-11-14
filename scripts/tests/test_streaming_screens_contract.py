@@ -212,18 +212,37 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('genreEditorialPools["$kind:$id"].orEmpty()', home)
         self.assertIn('(1..3).map { page ->', home)
 
-    def test_filtered_pages_wait_for_real_catalogues_and_hide_empty_rails(self):
+    def test_catalogue_initial_loading_is_one_opaque_overlay_for_every_route(self):
         home = self.screen
-        self.assertIn('val filteredPageLoading = when {', home)
-        self.assertIn('key !in providerEditorialPools', home)
-        self.assertIn('kind == "tv" && key !in providerMiniseries', home)
-        self.assertIn('selected == null && selectedHomeGenre != 0 -> false', home)
-        self.assertIn('if (filteredPageLoading || (selected == null &&', home)
-        self.assertIn('CircularProgressIndicator(modifier = Modifier.size(22.dp))', home)
+        gate = home.split('val catalogueInitialLoading =', 1)[1].split(
+            'Dialog(onDismissRequest = onDismiss', 1)[0]
+        self.assertIn('selected != null && !providerListMode', gate)
+        self.assertIn('key !in providerEditorialPools', gate)
+        self.assertIn('kind == "tv" && key !in providerMiniseries', gate)
+        self.assertIn('genreMetadataLoading', gate)
+        self.assertIn('key !in genreShelves && key !in genreErrors', gate)
+        self.assertIn('discoveryShelves.isEmpty() && discoveryError == null', gate)
+        self.assertIn('openedSection == null', gate)
+        self.assertIn('if (catalogueInitialLoading) {', home)
+        self.assertIn('Modifier.fillMaxSize()\n                    .background(MaterialTheme.colorScheme.background)', home)
+        self.assertIn('contentAlignment = Alignment.Center', home)
+        self.assertNotIn('val filteredPageLoading', home)
         render = home.split('previewShelves.filterNot { (heading, shelf) ->', 1)[1]
-        self.assertIn('filteredPageLoading ||', render)
+        self.assertNotIn('filteredPageLoading ||', render)
         self.assertIn('selectedHomeGenre != ANYTV_CINEMA_FILTER)) && shelf.isEmpty()', render)
         self.assertIn('}.forEach { (heading, shelf) ->', render)
+
+    def test_one_catalogue_scope_applies_media_and_genre_to_all_entries(self):
+        home = self.screen
+        scope = home.split('fun matchesCatalogueScope(title: StreamingTitle)', 1)[1].split(
+            'val animeSeparatedShelves =', 1)[0]
+        self.assertIn('homeContentType != "all" && title.media != homeContentType', scope)
+        self.assertIn('selectedHomeGenre == ANYTV_ANIME_FILTER', scope)
+        self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', scope)
+        self.assertIn('anyTvResolvedGenre(selectedHomeGenre, title.media', scope)
+        self.assertIn('id > 0 && id in title.genreIds', scope)
+        self.assertIn('titles.filter(::matchesCatalogueScope)', home)
+        self.assertNotIn('activeServiceNames', scope)
 
     def test_genre_action_uses_all_media_and_real_catalogue_without_subscriptions(self):
         home = self.screen
@@ -245,7 +264,8 @@ class StreamingScreens(unittest.TestCase):
 
     def test_genre_is_not_hidden_behind_deeper_pool_and_header_is_named(self):
         home = self.screen
-        self.assertIn('selected == null && selectedHomeGenre != 0 -> false', home)
+        self.assertIn('val catalogueInitialLoading =', home)
+        self.assertIn('id > 0 && "$kind:$id:$genreSort" !in genreShelves', home)
         self.assertNotIn('id > 0 && "$kind:$id" !in genreEditorialPools', home)
         self.assertIn('if (!homeLibrary && (selected != null || selectedHomeGenre != 0)) {',
                       home)
