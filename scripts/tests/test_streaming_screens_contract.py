@@ -88,7 +88,7 @@ class StreamingScreens(unittest.TestCase):
         for value in (
             'fun homeEditorial(): Map<String, List<StreamingTitle>>',
             'fun saveHomeEditorial(sections: Map<String, List<StreamingTitle>>)',
-            'read("anytv:home-editorial:v4")',
+            'read("anytv:home-editorial:v5")',
             '6L * 3600000L',
             'fun cinemaIndex(): Set<Int>?',
             '12L * 3600000L',
