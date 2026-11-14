@@ -52,6 +52,8 @@ jobs:
           target=source/app/src/test/java/com/hari/androidtvremote/ui/app
           mkdir -p "$target"
           cp scripts/qa/AnyTvGenreJvmFixtureTest.kt "$target/"
+          # Use real JSONObject/JSONArray in JVM unit tests; ephemeral runner only.
+          sed -i '/testImplementation(libs.junit)/a\    testImplementation("org.json:json:20240303")' source/app/build.gradle.kts
           grep -Fq 'private fun anyTvIsAnime(' overrides/TclStreamingScreens.kt
           grep -Fq 'private fun anyTvBackfillEditorial(' overrides/TclStreamingScreens.kt
           grep -Fq 'private fun anyTvCurate(' overrides/TclStreamingScreens.kt
