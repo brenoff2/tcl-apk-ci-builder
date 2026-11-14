@@ -3262,9 +3262,39 @@ internal fun TclStreamingScreens(
                         }
                     }
                     val currentGenreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"
-                    // A failed first-page request must not leave an endless spinner.
-                    if (discoveryLoading || (selectedHomeGenre != 0 &&
-                            genreLoading[currentGenreKey] == true)) {
+                    // A filtered page waits for both genuine movie/TV sources before
+                    // rendering. No premature empty shelves or empty-state flash.
+                    val filteredPageLoading = when {
+                        homeLibrary -> false
+                        selected != null && !providerListMode -> {
+                            val app = selected!!
+                            listOf("movie", "tv").filter {
+                                homeContentType == "all" || homeContentType == it
+                            }.any { kind ->
+                                val id = anyTvProviderGenre(kind, selectedHomeGenre,
+                                    allMovieGenres, tvGenres)
+                                val key = "${app.name}:$kind:$id"
+                                key !in providerEditorialPools ||
+                                    (kind == "tv" && key !in providerMiniseries)
+                            }
+                        }
+                        selected == null && selectedHomeGenre != 0 &&
+                            selectedHomeGenre != ANYTV_CINEMA_FILTER &&
+                            genreSectionsMode -> {
+                            listOf("movie", "tv").filter {
+                                homeContentType == "all" || homeContentType == it
+                            }.any { kind ->
+                                val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                    ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                        selectedHomeGenre, kind, allMovieGenres, tvGenres)
+                                id > 0 && "$kind:$id" !in genreEditorialPools
+                            }
+                        }
+                        else -> false
+                    }
+                    if (filteredPageLoading || (selected == null &&
+                            (discoveryLoading || (selectedHomeGenre != 0 &&
+                                genreLoading[currentGenreKey] == true)))) {
                         CircularProgressIndicator(modifier = Modifier.size(22.dp))
                     }
                     if (discoveryError != null && selectedHomeGenre == 0) {
@@ -4442,7 +4472,10 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         }
-                        previewShelves.filterNot { (heading, _) ->
+                        previewShelves.filterNot { (heading, shelf) ->
+                            filteredPageLoading ||
+                            ((selected != null || (selectedHomeGenre != 0 &&
+                                selectedHomeGenre != ANYTV_CINEMA_FILTER)) && shelf.isEmpty()) ||
                             // Genre and Anime have their own dedicated list/sections below;
                             // repeating source rails here pollutes their pages.
                             (!homeLibrary && selected == null && selectedHomeGenre != 0 &&
