@@ -234,6 +234,17 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val genreTitles = genreCandidates\n                                .filter(::matchesCatalogueScope)', home)
         self.assertNotIn('activeServiceNames', scope)
 
+    def test_provider_genre_waits_for_metadata_and_reloads_filtered_pools(self):
+        home = self.screen
+        self.assertIn(
+            'providerListMode, allMovieGenres, tvGenres) {', home)
+        self.assertIn(
+            'allMovieGenres, tvGenres) {\n        val app = selected ?: return@LaunchedEffect', home)
+        ready = home.split('val catalogueInitialLoading =', 1)[1].split(
+            'selectedHomeGenre == ANYTV_CINEMA_FILTER ->', 1)[0]
+        self.assertIn('selectedHomeGenre > 0 && genreMetadataLoading', ready)
+        self.assertIn('if (selectedHomeGenre > 0 && id == 0) false', ready)
+
     def test_genre_failure_and_retry_are_visible_in_default_sections(self):
         home = self.screen
         self.assertIn('var genreMetadataRetry by remember { mutableIntStateOf(0) }', home)
