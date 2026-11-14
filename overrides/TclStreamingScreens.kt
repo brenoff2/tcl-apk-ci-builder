@@ -379,7 +379,7 @@ private object StreamingDiskCache {
     // routes retain their existing TTL and last-good offline response.
     // This avoids rebuilding hundreds of source pages on every opening.
     fun homeEditorial(): Map<String, List<StreamingTitle>> {
-        val snapshot = read("anytv:home-editorial:v4") ?: return emptyMap()
+        val snapshot = read("anytv:home-editorial:v5") ?: return emptyMap()
         val result = linkedMapOf<String, List<StreamingTitle>>()
         val sections = snapshot.optJSONArray("sections") ?: return emptyMap()
         for (i in 0 until sections.length()) {
@@ -419,7 +419,7 @@ private object StreamingDiskCache {
             }
             result.put(JSONObject().put("heading", heading).put("titles", records))
         }
-        write("anytv:home-editorial:v4", JSONObject().put("sections", result), 6L * 3600000L)
+        write("anytv:home-editorial:v5", JSONObject().put("sections", result), 6L * 3600000L)
     }
     fun cinemaIndex(): Set<Int>? {
         val entries = read("anytv:cinema-index:v2")?.optJSONArray("ids") ?: return null
