@@ -174,7 +174,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('Recomendados para você$service', provider)
         self.assertNotIn('Vale a pena assistir$service', provider)
         self.assertNotIn('Filmes e séries · ', genre)
-        render = home.split('previewShelves.filterNot { (heading, _) ->', 1)[1]
+        render = home.split('previewShelves.filterNot { (heading, shelf) ->', 1)[1]
         self.assertIn('(!genreSectionsMode ||', render)
         self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER)', render)
         self.assertIn('selected != null && providerListMode', render)
@@ -191,6 +191,39 @@ class StreamingScreens(unittest.TestCase):
                       home)
         self.assertIn('if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER)',
                       home)
+
+    def test_filtered_catalogue_backfills_to_forty_without_fabricating_categories(self):
+        home = self.screen
+        helper = home.split('private fun anyTvBackfillEditorial(', 1)[1].split(
+            'private const val ANYTV_LIST_BATCH', 1)[0]
+        self.assertIn('target: Int = 40', helper)
+        self.assertIn('it.votes >= 50 && it.rating >= 6.0', helper)
+        self.assertIn('it.votes >= 10', helper)
+        self.assertIn('+ eligible)', helper)
+        for factual in ['"No cinema"', '"Em breve · Filmes e séries"',
+                        '"Novas temporadas"', '"Minisséries imperdíveis"',
+                        'heading.startsWith("Lançamentos ·")']:
+            self.assertIn(factual, helper)
+        self.assertIn('kind == null || item.media == kind', helper)
+        self.assertIn('anyTvBackfillEditorial(heading, titles, pool)', home)
+        self.assertIn('anyTvBackfillEditorial(heading, titles, genrePool)', home)
+        self.assertIn('StreamingCatalog.confirmedMiniseries(providerEditorialPools[poolKey]',
+                      home)
+        self.assertIn('genreEditorialPools["$kind:$id"].orEmpty()', home)
+        self.assertIn('(1..3).map { page ->', home)
+
+    def test_filtered_pages_wait_for_real_catalogues_and_hide_empty_rails(self):
+        home = self.screen
+        self.assertIn('val filteredPageLoading = when {', home)
+        self.assertIn('key !in providerEditorialPools', home)
+        self.assertIn('kind == "tv" && key !in providerMiniseries', home)
+        self.assertIn('id > 0 && "$kind:$id" !in genreEditorialPools', home)
+        self.assertIn('if (filteredPageLoading || (selected == null &&', home)
+        self.assertIn('CircularProgressIndicator(modifier = Modifier.size(22.dp))', home)
+        render = home.split('previewShelves.filterNot { (heading, shelf) ->', 1)[1]
+        self.assertIn('filteredPageLoading ||', render)
+        self.assertIn('selectedHomeGenre != ANYTV_CINEMA_FILTER)) && shelf.isEmpty()', render)
+        self.assertIn('}.forEach { (heading, shelf) ->', render)
 
     def test_home_cache_persists_and_reuses_real_catalogue(self):
         home = self.screen
