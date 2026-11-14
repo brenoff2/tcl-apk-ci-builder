@@ -79,6 +79,59 @@ class GenreFlowDiagnostic(unittest.TestCase):
             "with_genres=16 was applied upstream, missing genre_ids drops candidate",
         )
 
+    def test_R08_retry_state_trace_empty_successful_response_is_reused(self):
+        """Source-backed state trace, NOT Compose instrumentation."""
+        effect = self.screen.split(
+            "LaunchedEffect(mainGenres, tvGenres, filterGenreIds, selectedHomeGenre,", 1
+        )[1].split(
+            "LaunchedEffect(selectedHomeGenre, homeContentType, genreSort, genreFirstPageRetry)", 1
+        )[0]
+        self.assertIn("if (key !in genreShelves) {", effect)
+        self.assertIn("genreShelves[key] = result.titles", effect)
+        self.assertIn("genreErrors.remove(key)", effect)
+        key = "movie:18:popular"
+        shelves = {}
+        fetches = []
+        for retry in [0, 1]:
+            # Model the literal keyed guard in the Compose LaunchedEffect.
+            if key not in shelves:
+                fetches.append(retry)
+                shelves[key] = []  # HTTP 200 with empty results is a cached success
+        self.assertEqual(fetches, [0])
+        self.assertIn(key, shelves)
+        self.assertEqual(shelves[key], [])
+
+    def test_R09_retry_with_partial_editorial_success_can_be_skipped(self):
+        """A successful partial pool without a surviving error is not refreshed."""
+        effect = self.screen.split(
+            "// Populate editorial genre shelves independently of user-controlled list pages.", 1
+        )[1].split("// Provider pages reuse the home carousel", 1)[0]
+        self.assertIn(
+            "if (key in genreEditorialPools && key !in genreEditorialErrors) continue",
+            effect,
+        )
+        self.assertIn("if (pages.any { it.isFailure }) genreEditorialErrors[key] = true", effect)
+        key = "movie:18"
+        pools = {key: ["existing"]}
+        errors = {}
+        fetches = 0
+        for retry in [0, 1]:
+            if key in pools and key not in errors:
+                continue
+            fetches += 1
+        self.assertEqual(fetches, 0)
+
+    def test_R10_approved_ui_pipeline_uses_source_pools_and_not_provider_offers(self):
+        """Verify exact entrypoint boundaries; does not render Compose UI."""
+        self.assertIn('genreShelves["$kind:$id:$genreSort"].orEmpty() +', self.screen)
+        self.assertIn('genreEditorialPools["$kind:$id"].orEmpty()', self.screen)
+        self.assertIn('putAll(scopedEditorial(pool))', self.screen)
+        self.assertIn('val pool = poolInput.filter(::matchesCatalogueScope)', self.screen)
+        self.assertIn('put(heading, anyTvBackfillEditorial(heading, titles, pool,', self.screen)
+        self.assertIn('val genreTitles = genreCandidates', self.screen)
+        self.assertIn('.filter(::matchesCatalogueScope)', self.screen)
+        self.assertIn('selected != null || selectedHomeGenre != 0) animeSeparatedShelves', self.screen)
+
     def test_R05_disk_cache_retains_discover_responses_for_48_hours(self):
         """Cache retention is verified behavior, not evidence of the physical cause."""
         self.assertIn(
