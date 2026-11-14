@@ -13,6 +13,24 @@ class StreamingScreens(unittest.TestCase):
         cls.apps = (UI / "TclInstalledApps.kt").read_text(encoding="utf-8")
         cls.gradle = Path("source/app/build.gradle.kts").read_text()
 
+    def test_genre_device_qa_count_stages_have_no_user_data(self):
+        s = self.screen
+        self.assertEqual(s.count('"AnyTVGenreQA"'), 5)
+        self.assertIn('"stage=tmdb genre=$id media=$media sourcePage=$sourcePage "', s)
+        self.assertIn('"raw=${raw.length()} parsed=${parsed.size} accepted=${accepted.size}"', s)
+        self.assertIn('"stage=page genre=$id media=$media page=$page sort=$sort "', s)
+        self.assertIn('"stage=first genre=$id media=$mediaKind sort=$genreSort "', s)
+        self.assertIn('"stage=editorial genre=$id media=$kind success=${successfulPages.size} "', s)
+        self.assertIn('"stage=render $genreQaSnapshot"', s)
+        self.assertIn('LaunchedEffect(genreQaSnapshot)', s)
+        self.assertIn('selectedHomeGenre != ANYTV_CINEMA_FILTER', s)
+        self.assertIn('first=$firstCount editorial=$editorialCount', s)
+        self.assertIn('"visible=${uniqueShelves.sumOf { it.second.size }} "', s)
+        trace = s.split('// Diagnostic summary is emitted only when counts change;', 1)[1].split(
+            '// A single LazyListScope renderer for both provider and genre lists.', 1)[0]
+        for forbidden in ['token=', 'email=', 'password=', 'packageName=']:
+            self.assertNotIn(forbidden, trace)
+
     def test_tcl_provider_routing_does_not_depend_on_remote_apk_label(self):
         s = self.screen
         self.assertIn('name == "com.netflix.ninja"', s)
