@@ -24,7 +24,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_anime_separate_from_general_catalog_and_genres_default_list(self):
         self.assertIn('val matchGenre = genre == 0 || genre == ANYTV_ANIME_FILTER', self.screen)
-        self.assertIn('if (resolved > 0 || resolved == ANYTV_ANIME_FILTER)', self.screen)
+        self.assertIn('if (id == 0) emptyList()', self.screen)
         self.assertIn('private fun anyTvIsAnime(title: StreamingTitle)', self.screen)
         self.assertIn('.filter { id != ANYTV_ANIME_FILTER || anyTvIsAnime(it) }', self.screen)
         self.assertIn('genre == ANYTV_ANIME_FILTER', self.screen)
@@ -34,10 +34,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('var genreSectionsMode by remember { mutableStateOf(true) }', self.screen)
         self.assertIn('else { genreSectionsMode = !genreSectionsMode; genreViewMode = "grade" }', self.screen)
         self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
-        self.assertIn('"Lançamentos · Filmes" to', self.screen)
-        self.assertIn('"Lançamentos · Séries" to', self.screen)
-        self.assertIn('"Mais bem avaliados" to genreTitles.sortedByDescending', self.screen)
-        self.assertIn('AnyTvOneRowPreview(heading, sectionTitles)', self.screen)
+        self.assertIn('"Lançamentos · Filmes", "Lançamentos · Séries"', self.screen)
+        self.assertIn('genrePool.filter { it.votes > 0 }', self.screen)
+        self.assertIn('previewShelves.filterNot { (heading, _) ->', self.screen)
 
     def test_detailed_card_has_compact_metadata_spacing(self):
         self.assertIn('verticalArrangement = Arrangement.spacedBy(1.dp)) {', self.screen)
@@ -92,7 +91,7 @@ class StreamingScreens(unittest.TestCase):
         primary = section.split('val primary = listOf(', 1)[1].split(')', 1)[0]
         ordered = [
             '"Destaques da semana · Filmes"', '"Destaques da semana · Séries"',
-            '"Em alta agora"', '"Indicados para você"', '"Populares no TMDB"',
+            '"Em alta agora"', '"Indicados para você"', '"Populares"',
             '"Lançamentos · Filmes"', '"Lançamentos · Séries"',
         ]
         for before, after in zip(ordered, ordered[1:]):
@@ -102,8 +101,8 @@ class StreamingScreens(unittest.TestCase):
                         after_cinema.index('"Novas temporadas"'))
         self.assertLess(after_cinema.index('"Novas temporadas"'),
                         after_cinema.index('"Mais bem avaliados"'))
-        self.assertIn('val hiddenHome = setOf("Você pode gostar", "Vale a pena assistir")',
-                      section)
+        self.assertNotIn('put("Você pode gostar"', section)
+        self.assertNotIn('put("Vale a pena assistir"', section)
         position = [
             'primary.forEach { heading ->',
             'put("Em breve · Filmes e séries", future)',
@@ -127,22 +126,25 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('listOf("movie", "tv").filter {', home)
         self.assertIn('genreSources.any { (key, _) -> genreMore[key] == true }', home)
         self.assertIn('genreSources.forEach { (sourceKey, _) ->', home)
-        genre_rails = home.split('val genreSections = linkedMapOf(', 1)[1].split(
-            'genreSections.forEach', 1)[0]
+        genre_rails = home.split('private val ANYTV_EDITORIAL_SECTIONS = listOf(', 1)[1].split(
+            ')', 1)[0]
         order = ['"Destaques da semana · Filmes"', '"Destaques da semana · Séries"',
-                 '"Em alta agora"', '"Indicados para você"', '"Populares no TMDB"',
+                 '"Em alta agora"', '"Indicados para você"', '"Populares"',
                  '"Lançamentos · Filmes"', '"Lançamentos · Séries"',
                  '"Em breve · Filmes e séries"', '"No cinema"', '"Novas temporadas"',
                  '"Mais bem avaliados"', '"Minisséries imperdíveis"']
+        self.assertEqual(genre_rails.count('",'), 11)
         for before, after in zip(order, order[1:]):
             self.assertLess(genre_rails.index(before), genre_rails.index(after))
+        self.assertGreaterEqual(home.count('ANYTV_EDITORIAL_SECTIONS.forEach { heading ->'), 2)
+        self.assertNotIn('val genreSections = linkedMapOf(', home)
         self.assertIn('fun matchesGenre(title: StreamingTitle)', home)
         self.assertIn('resolved in title.genreIds', home)
 
     def test_home_genres_are_terminal_without_secondary_rails(self):
         home = self.screen
         start = home.index('filterGenreIds.forEach { id ->', home.index('val primary = listOf('))
-        end = home.index('} else {\n                                if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', start)
+        end = home.index('} else if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', start)
         section = home[start:end]
         self.assertIn('put("Por gênero: $label", titles)', section)
         self.assertNotIn('discoveryShelves.forEach { (heading, titles) ->', section)
@@ -170,7 +172,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('suspend fun confirmedMiniseries(candidates:', self.screen)
         self.assertIn('?.equals("Miniseries", ignoreCase = true) == true', self.screen)
         self.assertIn('put("Minisséries imperdíveis",', self.screen)
-        self.assertIn('"Minisséries imperdíveis$service"', self.screen)
+        self.assertIn('"Minisséries imperdíveis" -> pool.filter {', self.screen)
 
     def test_personalized_editorial_and_service_feeds(self):
         self.assertIn('private const val ANYTV_EDITORIAL_LIMIT = 50', self.screen)
@@ -181,10 +183,10 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val providerEditorialPools = remember', self.screen)
         self.assertIn('(1..3).map { page ->', self.screen)
         self.assertIn('StreamingCatalog.discover(token, app.name, kind, page, id, "", sort)', self.screen)
-        self.assertIn('"Filmes recém-lançados$service"', self.screen)
-        self.assertIn('"Séries novas$service"', self.screen)
-        self.assertIn('"Novas temporadas$service"', self.screen)
-        self.assertIn('"Recomendados para você$service"', self.screen)
+        self.assertIn('"Lançamentos · Filmes" -> pool.filter {', self.screen)
+        self.assertIn('"Lançamentos · Séries" -> pool.filter {', self.screen)
+        self.assertIn('"Novas temporadas" -> pool.filter {', self.screen)
+        self.assertIn('"Indicados para você" -> pool.filter {', self.screen)
         self.assertIn('"Em alta agora" to daily', self.screen)
         self.assertIn('"Surpresas do catálogo" to cataloguePool', self.screen)
         self.assertIn('suspend fun traktTrendingSignals()', self.screen)
@@ -342,7 +344,7 @@ class StreamingScreens(unittest.TestCase):
             'Text("⚙ Listas", fontSize = 11.sp)',
             'putString("anytv_home_genres"',
             'filterGenreIds.mapNotNull { selectedId ->',
-            '"Por gênero: " + kind.name',
+            'put("Por gênero: $label", titles)',
         ):
             with self.subTest(piece=piece):
                 self.assertIn(piece, self.screen)
@@ -372,14 +374,14 @@ class StreamingScreens(unittest.TestCase):
             'Text("Streamings"', 'Text("Gêneros"',
             'myServices = editingMyServices', 'filterGenreIds = editingFilterGenres',
             'StreamingCatalog.discover(token, name, kind',
-            'activeServiceNames.forEach { name ->',
+            'val genrePool = sources.filter { title ->',
             'val filteredShelves = if (activeServiceNames.isEmpty() || homeLibrary ||',
             'val uniqueShelves = curatedShelves.mapNotNull',
             '"Marcar todos"', '"Desmarcar todos"',
             'editingFilterGenres = if (allGenreIds.isNotEmpty()',
             'val requested = if (selectedHomeGenre == 0)',
             'filterGenreIds.mapNotNull { selectedId ->',
-            'put("Por gênero: " + kind.name, it)',
+            'put("Por gênero: $label", titles)',
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, self.screen)
@@ -638,8 +640,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('AnyTvGenreViewIcon(Icons.Filled.ViewList, "Detalhado", genreViewMode == "detalhado")', self.screen)
         self.assertIn('if (genreViewMode == "detalhado"', self.screen)
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
-        self.assertIn('"movie" -> "Filmes"', self.screen)
-        self.assertIn('"tv" -> "Séries"', self.screen)
+        self.assertIn('val genreMedia = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('listOf("movie", "tv").filter {', self.screen)
         self.assertIn('anyTvGenreLabels(title, allMovieGenres, tvGenres)', self.screen)
         self.assertIn('anyTvGenreLabels(', self.screen)
         self.assertIn('Text(genreLabel, modifier = Modifier.fillMaxWidth()', self.screen)
@@ -881,18 +883,19 @@ class StreamingScreens(unittest.TestCase):
     def test_selected_provider_uses_genre_keys_consistent_with_tv_tab(self):
         provider = self.screen.split('if (selected != null && !homeLibrary) {', 1)[1].split(
             '} else if (homeLibrary)', 1)[0]
-        self.assertIn('anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)',
+        self.assertIn('anyTvProviderGenre(kind, selectedHomeGenre,', provider)
+        self.assertIn('providerEditorialPools["${app.name}:$kind:$genreId"]', provider)
+        self.assertIn('ANYTV_EDITORIAL_SECTIONS.forEach { heading ->', provider)
+        self.assertIn('StreamingCatalog.matchesSelectedSubscription(it, listOf(app.name))',
                       provider)
-        self.assertIn('val key = app.name + ":" + kind + ":" + chosenGenre', provider)
-        self.assertIn('selectedHomeGenre == 0 && titles.isNotEmpty()', provider)
-        self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
+        self.assertIn('homeContentType == "all" || it == homeContentType', provider)
         self.assertIn('homeContentType = kind', self.screen)
         self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) continue', self.screen)
-        self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach', self.screen)
         self.assertNotIn('homeContentType = kind; selectedHomeGenre = 0', self.screen)
         provider_entry = self.screen.split('selected = app; providerListMode = false', 1)[1].split(
             'homeLibrary = false; showGlobalSearch = false', 1)[0]
-        self.assertNotIn('homeContentType = "all"', provider_entry)
+        self.assertIn('homeContentType = "all"', provider_entry)
+        self.assertIn('selectedHomeGenre = 0', provider_entry)
 
     def test_genre_page_combines_movies_and_series_only_when_all_selected(self):
         self.assertIn('if (homeContentType == "all") listOf("movie", "tv")', self.screen)
@@ -1310,7 +1313,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('background(Color(0xFF1769E0))', self.screen)
         self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', self.screen)
         self.assertIn('if (item.media == "movie" && inCinema)', self.screen)
-        self.assertIn('"Em cartaz no Brasil"', self.screen)
+        self.assertIn('"Cinema · Em cartaz no Brasil"', self.screen)
         self.assertIn('"Em cartaz · Brasil · TMDB"', self.screen)
         self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) emptyList()', self.screen)
         self.assertIn('anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)', self.screen)
@@ -1415,7 +1418,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('.background(Color.Black.copy(alpha = 0.60f), RoundedCornerShape(16.dp))', card)
 
     def test_cinema_grid_uses_common_section_header_spacing(self):
-        self.assertIn('"Em cartaz no Brasil"', self.screen)
+        self.assertIn('"Cinema · Em cartaz no Brasil"', self.screen)
         self.assertIn('.padding(top = 24.dp, bottom = 12.dp)', self.screen)
 
     def test_new_compact_streaming_contract(self):
