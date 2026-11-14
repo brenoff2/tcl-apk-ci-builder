@@ -3125,10 +3125,25 @@ internal fun TclStreamingScreens(
         }
     }
 
+    // Shared scope for the Home rails, streaming sections/list and genre sections/list.
+    // Source pools keep BR provider attribution and factual TMDB classification.
+    fun matchesCatalogueScope(title: StreamingTitle): Boolean {
+        if (homeContentType != "all" && title.media != homeContentType) return false
+        if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+            return title.media == "movie" && title.id in cinemaIds
+        if (selectedHomeGenre == ANYTV_ANIME_FILTER) return anyTvIsAnime(title)
+        if (selectedHomeGenre > 0) {
+            val id = anyTvResolvedGenre(selectedHomeGenre, title.media,
+                allMovieGenres, tvGenres)
+            return id > 0 && id in title.genreIds && !anyTvIsAnime(title)
+        }
+        return !anyTvIsAnime(title)
+    }
+
     // One catalogue readiness gate for Home, provider and genre. Only the
     // initial movie/TV set blocks rendering; deeper pagination remains async.
     val catalogueInitialLoading = !homeLibrary && openedSection == null && when {
-        selected != null && !providerListMode -> {
+        selected != null -> {
             val app = selected!!
             listOf("movie", "tv").filter {
                 homeContentType == "all" || it == homeContentType
@@ -3136,7 +3151,9 @@ internal fun TclStreamingScreens(
                 val id = anyTvProviderGenre(kind, selectedHomeGenre,
                     allMovieGenres, tvGenres)
                 val key = "${app.name}:$kind:$id"
-                key !in providerEditorialPools ||
+                if (providerListMode)
+                    key !in providerListTitles && key !in providerListErrors
+                else key !in providerEditorialPools ||
                     (kind == "tv" && key !in providerMiniseries)
             }
         }
@@ -3528,22 +3545,6 @@ internal fun TclStreamingScreens(
                         "$selectedGenreKind:$selectedHomeGenre:$genreSort" in genreShelves &&
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
-                    }
-                    // Apply the same final scope to all three catalogue entries.
-                    // The source pools remain authoritative for BR offers and TMDB.
-                    fun matchesCatalogueScope(title: StreamingTitle): Boolean {
-                        if (homeContentType != "all" && title.media != homeContentType)
-                            return false
-                        if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                            return title.media == "movie" && title.id in cinemaIds
-                        if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                            return anyTvIsAnime(title)
-                        if (selectedHomeGenre > 0) {
-                            val id = anyTvResolvedGenre(selectedHomeGenre, title.media,
-                                allMovieGenres, tvGenres)
-                            return id > 0 && id in title.genreIds && !anyTvIsAnime(title)
-                        }
-                        return !anyTvIsAnime(title)
                     }
                     val animeSeparatedShelves = linkedMapOf<String, List<StreamingTitle>>().apply {
                         visibleShelves.forEach { (heading, titles) ->
@@ -4085,10 +4086,8 @@ internal fun TclStreamingScreens(
                                     films.getOrNull(index)?.let { add(it) }
                                     shows.getOrNull(index)?.let { add(it) }
                                 }
-                            }.distinctBy { "${it.media}:${it.id}" }.filter { title ->
-                                if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(title)
-                                else !anyTvIsAnime(title)
-                            }.let { results ->
+                            }.distinctBy { "${it.media}:${it.id}" }
+                                .filter(::matchesCatalogueScope).let { results ->
                                 when (genreSort) {
                                     "rating" -> results.sortedByDescending { it.rating }
                                     "recent" -> results.sortedByDescending { it.date }
@@ -4276,8 +4275,7 @@ internal fun TclStreamingScreens(
                                 }
                             }
                             val genreTitles = genreCandidates
-                                .filter { title -> if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                    anyTvIsAnime(title) else !anyTvIsAnime(title) }
+                                .filter(::matchesCatalogueScope)
                                 .distinctBy { "${it.media}:${it.id}" }
                             if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                             item {
