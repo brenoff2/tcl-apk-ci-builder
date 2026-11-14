@@ -3413,9 +3413,6 @@ internal fun TclStreamingScreens(
                                     put(heading, titles)
                                 }
                             }
-                        }
-
-
                     }
                     if (selectedHomeGenre != 0 &&
                         "$selectedGenreKind:$selectedHomeGenre:$genreSort" in genreShelves &&
@@ -3509,6 +3506,8 @@ internal fun TclStreamingScreens(
                             }
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty() &&
+                            !(selected != null || (selectedHomeGenre != 0 &&
+                                selectedHomeGenre != ANYTV_CINEMA_FILTER)) &&
                             heading !in setOf("Filmes recém-lançados", "Séries novas",
                                 "Lançamentos · Filmes", "Lançamentos · Séries",
                                 "Novas temporadas") &&
@@ -4203,9 +4202,7 @@ internal fun TclStreamingScreens(
                                         }
                                     }
                                 }
-                                }
                             }
-
                             }
                             if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER) {
                                 // All twelve canonical rails render once through previewShelves.
@@ -4365,7 +4362,9 @@ internal fun TclStreamingScreens(
                         previewShelves.filterNot { (heading, _) ->
                             // Genre and Anime have their own dedicated list/sections below;
                             // repeating source rails here pollutes their pages.
-                            (!homeLibrary && selected == null && selectedHomeGenre != 0) ||
+                            (!homeLibrary && selected == null && selectedHomeGenre != 0 &&
+                                (!genreSectionsMode ||
+                                    selectedHomeGenre == ANYTV_CINEMA_FILTER)) ||
                             (!homeLibrary && selected != null && providerListMode) ||
                             (!homeLibrary && selected == null && selectedHomeGenre == 0 &&
                                 heading == ANYTV_CINEMA_SHELF)
@@ -4402,6 +4401,18 @@ internal fun TclStreamingScreens(
                                     }
                                 }
 
+                            } else if (shelf.isEmpty() && selected != null) {
+                                item {
+                                    Text("Nenhum título com disponibilidade confirmada neste streaming.",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            } else if (shelf.isEmpty() && selectedHomeGenre != 0) {
+                                item {
+                                    Text("Nenhum título confirmado nesta seção do gênero.",
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
                             } else if (shelf.isEmpty() && heading in setOf(
                                 "Filmes recém-lançados", "Séries novas", "Novas temporadas")) {
                                 item {
