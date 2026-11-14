@@ -103,6 +103,13 @@ private const val ANYTV_ANIME_FILTER = -2
 private fun anyTvIsAnime(title: StreamingTitle): Boolean =
     title.originalLanguage == "ja" && 16 in title.genreIds
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
+private val ANYTV_EDITORIAL_SECTIONS = listOf(
+    "Destaques da semana · Filmes", "Destaques da semana · Séries",
+    "Em alta agora", "Indicados para você", "Populares",
+    "Lançamentos · Filmes", "Lançamentos · Séries",
+    "Em breve · Filmes e séries", "No cinema", "Novas temporadas",
+    "Mais bem avaliados", "Minisséries imperdíveis"
+)
 private const val ANYTV_LIST_BATCH = 24
 private const val ANYTV_EDITORIAL_LIMIT = 50
 /**
@@ -3200,79 +3207,66 @@ internal fun TclStreamingScreens(
                             val kinds = listOf("movie", "tv").filter {
                                 homeContentType == "all" || it == homeContentType
                             }
-                            val selectedPools = kinds.flatMap { kind ->
+                            // Only the selected Brazilian streaming provider's real catalogue.
+                            val pool = kinds.flatMap { kind ->
                                 val genreId = anyTvProviderGenre(kind, selectedHomeGenre,
                                     allMovieGenres, tvGenres)
                                 providerEditorialPools["${app.name}:$kind:$genreId"].orEmpty()
-                            }.distinctBy { "${it.media}:${it.id}" }.filter {
-                                it.media != "movie" || it.id !in cinemaIds
-                            }
-                            if (selectedPools.isNotEmpty()) {
-                                val service = " · " + app.name
-                                val weeklyIds = (
-                                    discoveryShelves["Destaques da semana · Filmes"].orEmpty() +
-                                    discoveryShelves["Destaques da semana · Séries"].orEmpty())
-                                    .map { "${it.media}:${it.id}" }.toSet()
-                                val dailyIds = discoveryShelves["Em alta agora"].orEmpty()
-                                    .map { "${it.media}:${it.id}" }.toSet()
-                                val seasonsIds = discoveryShelves["Novas temporadas"].orEmpty()
-                                    .map { "${it.media}:${it.id}" }.toSet()
-                                val groups = linkedMapOf(
-                                    "Destaques da semana$service" to selectedPools.filter {
-                                        "${it.media}:${it.id}" in weeklyIds
-                                    },
-                                    "Filmes recém-lançados$service" to selectedPools.filter {
-                                        it.media == "movie" && anyTvRecentPremiere(it)
-                                    },
-                                    "Séries novas$service" to selectedPools.filter {
-                                        it.media == "tv" && anyTvRecentPremiere(it)
-                                    },
-                                    "Novas temporadas$service" to selectedPools.filter {
-                                        "${it.media}:${it.id}" in seasonsIds
-                                    },
-                                    "Em alta agora$service" to selectedPools.filter {
+                            }.distinctBy { "${it.media}:${it.id}" }
+                            val weeklyFilms = discoveryShelves["Destaques da semana · Filmes"]
+                                .orEmpty().map { "movie:${it.id}" }.toSet()
+                            val weeklyShows = discoveryShelves["Destaques da semana · Séries"]
+                                .orEmpty().map { "tv:${it.id}" }.toSet()
+                            val dailyIds = discoveryShelves["Em alta agora"]
+                                .orEmpty().map { "${it.media}:${it.id}" }.toSet()
+                            val seasonIds = discoveryShelves["Novas temporadas"]
+                                .orEmpty().map { "${it.media}:${it.id}" }.toSet()
+                            val suggestedIds = discoveryShelves["Indicados para você"]
+                                .orEmpty().map { "${it.media}:${it.id}" }.toSet()
+                            fun providerHasVerifiedOffer(title: StreamingTitle): Boolean =
+                                offerCache["${title.media}:${title.id}"].orEmpty().any {
+                                    StreamingCatalog.matchesSelectedSubscription(it, listOf(app.name))
+                                }
+                            ANYTV_EDITORIAL_SECTIONS.forEach { heading ->
+                                val titles = when (heading) {
+                                    "Destaques da semana · Filmes" -> pool.filter {
+                                        it.media == "movie" && "movie:${it.id}" in weeklyFilms
+                                    }
+                                    "Destaques da semana · Séries" -> pool.filter {
+                                        it.media == "tv" && "tv:${it.id}" in weeklyShows
+                                    }
+                                    "Em alta agora" -> pool.filter {
                                         "${it.media}:${it.id}" in dailyIds
-                                    },
-                                    "Recomendados para você$service" to selectedPools,
-                                    "Você pode gostar$service" to selectedPools.filter {
-                                        it.votes >= 25
-                                    },
-                                    "Surpresas do catálogo$service" to selectedPools.filter {
-                                        it.votes in 30..3000 && it.rating >= 7.0
-                                    },
-                                    "Vale a pena assistir$service" to selectedPools.filter {
-                                        it.votes >= 150 && it.rating >= 7.0
-                                    },
-                                    "Minisséries imperdíveis$service" to selectedPools.filter { title ->
-                                        title.media == "tv" && confirmedMiniseries.any { it.id == title.id }
                                     }
-                                )
-                                groups.forEach { (heading, candidates) ->
-                                    if (candidates.isNotEmpty()) put(heading, candidates)
-                                }
-                            }
-                            kinds.forEach { kind ->
-                                val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
-                                if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach
-                                val key = app.name + ":" + kind + ":" + chosenGenre
-                                myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
-                                    put(if (kind == "tv") "Séries · " + app.name
-                                        else "Filmes · " + app.name, it)
-                                }
-                            }
-                            if (selectedHomeGenre == 0 && titles.isNotEmpty() &&
-                                (homeContentType == "all" || homeContentType == media)) {
-                                put("Em destaque · " + app.name, titles)
-                            }
-                            val possibleGenres = if (homeContentType == "tv") tvGenres
-                                else allMovieGenres
-                            possibleGenres.filter { kind ->
-                                selectedHomeGenre == 0 && kind.id in filterGenreIds
-                            }.forEach { kind ->
-                                myServiceShelves[app.name + ":" + media + ":" + kind.id]
-                                    ?.takeIf { it.isNotEmpty() }?.let {
-                                        put("Por gênero: " + kind.name, it)
+                                    "Indicados para você" -> pool.filter {
+                                        "${it.media}:${it.id}" in suggestedIds
+                                    }.ifEmpty { pool }
+                                    "Populares" -> pool.sortedByDescending { it.votes }
+                                    "Lançamentos · Filmes" -> pool.filter {
+                                        it.media == "movie" && anyTvRecentPremiere(it)
                                     }
+                                    "Lançamentos · Séries" -> pool.filter {
+                                        it.media == "tv" && anyTvRecentPremiere(it)
+                                    }
+                                    "Em breve · Filmes e séries" -> upcomingStreaming.filter {
+                                        (homeContentType == "all" || it.media == homeContentType) &&
+                                            providerHasVerifiedOffer(it)
+                                    }
+                                    "No cinema" -> pool.filter {
+                                        it.media == "movie" && it.id in cinemaIds
+                                    }
+                                    "Novas temporadas" -> pool.filter {
+                                        it.media == "tv" && "tv:${it.id}" in seasonIds
+                                    }
+                                    "Mais bem avaliados" -> pool.filter { it.votes > 0 }
+                                        .sortedByDescending { it.rating }
+                                    "Minisséries imperdíveis" -> pool.filter {
+                                        it.media == "tv" &&
+                                            confirmedMiniseries.any { series -> series.id == it.id }
+                                    }
+                                    else -> emptyList()
+                                }
+                                put(heading, titles.distinctBy { "${it.media}:${it.id}" })
                             }
                         } else if (homeLibrary) {
                             val films = favorites.filter { it.title.media == "movie" }
@@ -3307,11 +3301,10 @@ internal fun TclStreamingScreens(
                             if (selectedHomeGenre == 0) {
                                 val primary = listOf(
                                     "Destaques da semana · Filmes", "Destaques da semana · Séries",
-                                    "Em alta agora", "Indicados para você", "Populares no TMDB",
+                                    "Em alta agora", "Indicados para você", "Populares",
                                     "Lançamentos · Filmes", "Lançamentos · Séries")
                                 val afterCinema = listOf(
                                     "No cinema", "Novas temporadas", "Mais bem avaliados")
-                                val hiddenHome = setOf("Você pode gostar", "Vale a pena assistir")
                                 fun addEditorialHeading(heading: String, titles: List<StreamingTitle>) {
                                     val selectedTitles = titles.filter {
                                         (homeContentType == "all" ||
@@ -3320,7 +3313,9 @@ internal fun TclStreamingScreens(
                                     if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
                                 }
                                 primary.forEach { heading ->
-                                    discoveryShelves[heading]?.let { addEditorialHeading(heading, it) }
+                                    val source = if (heading == "Populares") "Populares no TMDB"
+                                        else heading
+                                    discoveryShelves[source]?.let { addEditorialHeading(heading, it) }
                                 }
                                 val future = upcomingStreaming.filter {
                                     homeContentType == "all" || it.media == homeContentType
@@ -3330,15 +3325,13 @@ internal fun TclStreamingScreens(
                                 afterCinema.forEach { heading ->
                                     discoveryShelves[heading]?.let { addEditorialHeading(heading, it) }
                                 }
-                                // Two recurring titles are not an editorial shelf.
-                                // Keep miniseries below fresh discoveries and rotate genuine matches.
                                 if (homeContentType != "movie" && confirmedMiniseries.size >= 4) {
                                     val week = (System.currentTimeMillis() / 604800000L).toInt()
                                     val start = week % confirmedMiniseries.size
                                     put("Minisséries imperdíveis",
                                         confirmedMiniseries.drop(start) + confirmedMiniseries.take(start))
                                 }
-                                // Genres conclude the Home; no editorial rail follows them.
+                                // Genre shortcuts are at the end of the Home, never on genre/provider pages.
                                 filterGenreIds.forEach { id ->
                                     val label = (allMovieGenres + tvGenres).firstOrNull {
                                         it.id == id
@@ -3354,50 +3347,74 @@ internal fun TclStreamingScreens(
                                     }.distinctBy { "${it.media}:${it.id}" }
                                     if (titles.isNotEmpty()) put("Por gênero: $label", titles)
                                 }
+                            } else if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
+                                genreShelves["movie:$ANYTV_CINEMA_FILTER:$genreSort"]
+                                    ?.takeIf { it.isNotEmpty() }?.let {
+                                        put("Cinema · Em cartaz no Brasil", it)
+                                    }
                             } else {
-                                if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
-                                    genreShelves["movie:$ANYTV_CINEMA_FILTER:$genreSort"]
-                                        ?.takeIf { it.isNotEmpty() }?.let {
-                                            put("Cinema · Em cartaz no Brasil", it)
+                                val sources = listOf("movie", "tv").filter {
+                                    homeContentType == "all" || it == homeContentType
+                                }.flatMap { kind ->
+                                    val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                        ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                            selectedHomeGenre, kind, allMovieGenres, tvGenres)
+                                    if (id == 0) emptyList()
+                                    else genreShelves["$kind:$id:$genreSort"].orEmpty()
+                                }.distinctBy { "${it.media}:${it.id}" }
+                                fun matchesGenre(title: StreamingTitle): Boolean {
+                                    if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                        return anyTvIsAnime(title)
+                                    val resolved = anyTvResolvedGenre(selectedHomeGenre, title.media,
+                                        allMovieGenres, tvGenres)
+                                    return resolved > 0 && resolved in title.genreIds &&
+                                        !anyTvIsAnime(title)
+                                }
+                                fun genreEditorial(heading: String): List<StreamingTitle> {
+                                    val source = if (heading == "Populares") "Populares no TMDB"
+                                        else heading
+                                    return discoveryShelves[source].orEmpty().filter(::matchesGenre)
+                                }
+                                val genrePool = sources.filter { title ->
+                                    activeServiceNames.isEmpty() ||
+                                        offerCache["${title.media}:${title.id}"].orEmpty().any {
+                                            StreamingCatalog.matchesSelectedSubscription(
+                                                it, activeServiceNames)
                                         }
                                 }
-                                val kind = (allMovieGenres + tvGenres).firstOrNull {
-                                    it.id == selectedHomeGenre
-                                }
-                                listOf("movie", "tv").filter {
-                                    homeContentType == "all" || homeContentType == it
-                                }.forEach { mediaKind ->
-                                    val resolved = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                        ANYTV_ANIME_FILTER else anyTvResolvedGenre(selectedHomeGenre,
-                                        mediaKind, allMovieGenres, tvGenres)
-                                    if (resolved > 0 || resolved == ANYTV_ANIME_FILTER) {
-                                        genreShelves["$mediaKind:$resolved:$genreSort"]
-                                            ?.takeIf { it.isNotEmpty() }?.let {
-                                                put((if (mediaKind == "tv") "Séries" else "Filmes") +
-                                                    " · " + (if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                                        "Anime" else kind?.name ?: "Gênero"), it)
+                                ANYTV_EDITORIAL_SECTIONS.forEach { heading ->
+                                    val titles = when (heading) {
+                                        "Indicados para você" ->
+                                            genreEditorial(heading).ifEmpty { genrePool }
+                                        "Populares" ->
+                                            genreEditorial(heading).ifEmpty {
+                                                genrePool.sortedByDescending { it.votes }
                                             }
-                                    }
+                                        "Em breve · Filmes e séries" ->
+                                            upcomingStreaming.filter(::matchesGenre)
+                                        "Mais bem avaliados" ->
+                                            genreEditorial(heading).ifEmpty {
+                                                genrePool.filter { it.votes > 0 }
+                                                    .sortedByDescending { it.rating }
+                                            }
+                                        "Minisséries imperdíveis" ->
+                                            confirmedMiniseries.filter(::matchesGenre)
+                                        else -> genreEditorial(heading)
+                                    }.filter { title ->
+                                        (homeContentType == "all" ||
+                                            title.media == homeContentType) &&
+                                            (activeServiceNames.isEmpty() ||
+                                                offerCache["${title.media}:${title.id}"].orEmpty().any {
+                                                    StreamingCatalog.matchesSelectedSubscription(
+                                                        it, activeServiceNames)
+                                                })
+                                    }.distinctBy { "${it.media}:${it.id}" }
+                                    put(heading, titles)
                                 }
                             }
                         }
 
-                        if (!homeLibrary && selected == null && selectedHomeGenre != 0) {
-                            activeServiceNames.forEach { name ->
-                                val kinds = listOf("movie", "tv").filter {
-                                    homeContentType == "all" || it == homeContentType
-                                }
-                                kinds.forEach { kind ->
-                                    val chosenGenre = anyTvProviderGenre(kind, selectedHomeGenre, allMovieGenres, tvGenres)
-                                    if (selectedHomeGenre > 0 && chosenGenre == 0) return@forEach
-                                    val key = name + ":" + kind + ":" + chosenGenre
-                                    myServiceShelves[key]?.takeIf { it.isNotEmpty() }?.let {
-                                        put("Destaques " + name +
-                                            if (kind == "tv") " · Séries" else " · Filmes", it)
-                                    }
-                                }
-                            }
-                        }
+
                     }
                     if (selectedHomeGenre != 0 &&
                         "$selectedGenreKind:$selectedHomeGenre:$genreSort" in genreShelves &&
