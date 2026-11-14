@@ -78,7 +78,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('bannerCinemaIds', banner)
         self.assertIn('if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"', banner)
         self.assertIn('onOpenStreaming', banner)
-        self.assertIn('confirmedMiniseries.size >= 4', home)
+        self.assertIn('confirmedMiniseries.isNotEmpty()', home)
         self.assertLess(home.index('primary.forEach { heading ->'), home.index('put("Minisséries imperdíveis",'))
         self.assertLess(home.index('put("Minisséries imperdíveis",'),
                         home.index('put("Por gênero: $label", titles)'))
@@ -217,13 +217,43 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val filteredPageLoading = when {', home)
         self.assertIn('key !in providerEditorialPools', home)
         self.assertIn('kind == "tv" && key !in providerMiniseries', home)
-        self.assertIn('id > 0 && "$kind:$id" !in genreEditorialPools', home)
+        self.assertIn('selected == null && selectedHomeGenre != 0 -> false', home)
         self.assertIn('if (filteredPageLoading || (selected == null &&', home)
         self.assertIn('CircularProgressIndicator(modifier = Modifier.size(22.dp))', home)
         render = home.split('previewShelves.filterNot { (heading, shelf) ->', 1)[1]
         self.assertIn('filteredPageLoading ||', render)
         self.assertIn('selectedHomeGenre != ANYTV_CINEMA_FILTER)) && shelf.isEmpty()', render)
         self.assertIn('}.forEach { (heading, shelf) ->', render)
+
+    def test_genre_action_uses_all_media_and_real_catalogue_without_subscriptions(self):
+        home = self.screen
+        genre = home.split('val genrePool = sources.filter(::matchesGenre)', 1)[1].split(
+            'ANYTV_EDITORIAL_SECTIONS.forEach { heading ->', 1)[0]
+        self.assertNotIn('activeServiceNames', genre)
+        genre_rail = home.split('val genrePool = sources.filter(::matchesGenre)', 1)[1].split(
+            'val animeSeparatedShelves =', 1)[0]
+        self.assertIn('matchesGenre(title) &&', genre_rail)
+        self.assertNotIn('offerCache["${title.media}:${title.id}"]', genre_rail)
+        self.assertIn('selected != null || selectedHomeGenre != 0) animeSeparatedShelves else',
+                      home)
+        self.assertIn('val genreTitles = genreCandidates', home)
+        self.assertIn('val genrePool = sources.filter(::matchesGenre)', home)
+        self.assertIn('anyTvBackfillEditorial(heading, titles, genrePool)', home)
+        self.assertIn('listOf("movie", "tv").filter {', home)
+        self.assertIn('selectedHomeGenre = kind.id; homeContentType = "all"', home)
+
+    def test_genre_is_not_hidden_behind_deeper_pool_and_header_is_named(self):
+        home = self.screen
+        self.assertIn('selected == null && selectedHomeGenre != 0 -> false', home)
+        self.assertNotIn('id > 0 && "$kind:$id" !in genreEditorialPools', home)
+        self.assertIn('if (!homeLibrary && (selected != null || selectedHomeGenre != 0)) {',
+                      home)
+        self.assertIn('selectedHomeGenre > 0 -> (allMovieGenres + tvGenres).firstOrNull', home)
+        self.assertIn('?.name ?: "Gênero"', home)
+        self.assertIn('selectedHomeGenre != 0 || title.media != "movie"', home)
+        self.assertIn('!cinemaIndexReady || it.id !in cinemaIds', home)
+        self.assertIn('confirmedMiniseries.isNotEmpty()', home)
+        self.assertNotIn('confirmedMiniseries.size >= 4', home)
 
     def test_home_cache_persists_and_reuses_real_catalogue(self):
         home = self.screen
@@ -449,7 +479,7 @@ class StreamingScreens(unittest.TestCase):
             'Text("Streamings"', 'Text("Gêneros"',
             'myServices = editingMyServices', 'filterGenreIds = editingFilterGenres',
             'StreamingCatalog.discover(token, name, kind',
-            'val genrePool = sources.filter { title ->',
+            'val genrePool = sources.filter(::matchesGenre)',
             'val filteredShelves = if (activeServiceNames.isEmpty() || homeLibrary ||',
             'val uniqueShelves = curatedShelves.mapNotNull',
             '"Marcar todos"', '"Desmarcar todos"',
@@ -1582,8 +1612,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn("var cinemaIndexReady by remember { mutableStateOf(false) }", self.screen)
         self.assertIn("for (page in 1..42)", self.screen)
         self.assertIn("cinemaIndexReady = true", self.screen)
-        self.assertIn('(cinemaIndexReady && it.id !in cinemaIds)', self.screen)
-        self.assertIn('(cinemaIndexReady && title.id !in cinemaIds)', self.screen)
+        self.assertIn('!cinemaIndexReady || it.id !in cinemaIds', self.screen)
+        self.assertIn('(!cinemaIndexReady || title.id !in cinemaIds)', self.screen)
         self.assertNotIn("(1..4).flatMap { page -> StreamingCatalog.discoveryCinemaPage(page).titles }", self.screen)
 
     def test_poster_ratings_reject_tiny_vote_samples(self):
