@@ -1069,18 +1069,28 @@ private object StreamingCatalog {
                 "title" -> if (media == "tv") "name.asc" else "title.asc"
                 else -> "popularity.desc"
             }
-            catalogPage24(page) { sourcePage ->
+            val pageResult = catalogPage24(page) { sourcePage ->
                 val route = "discover/$media?language=pt-BR&include_adult=false" +
                     "&sort_by=$sorting&with_genres=${if (id == ANYTV_ANIME_FILTER) 16 else id}" +
                     "&page=$sourcePage"
                 val payload = get("backend", route)
-                StreamingResults(
-                    // The discover endpoint has already applied with_genres. Do not
-                    // remove genuine titles a second time for missing genre_ids/date.
-                    mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
-                        .filter { id != ANYTV_ANIME_FILTER || anyTvIsAnime(it) },
+                val raw = payload.optJSONArray("results") ?: JSONArray()
+                // The discover endpoint has already applied with_genres. Do not
+                // remove genuine titles a second time for missing genre_ids/date.
+                val parsed = mapTitles(raw, media, 0)
+                val accepted = parsed.filter {
+                    id != ANYTV_ANIME_FILTER || anyTvIsAnime(it)
+                }
+                android.util.Log.i("AnyTVGenreQA",
+                    "stage=tmdb genre=$id media=$media sourcePage=$sourcePage " +
+                        "raw=${raw.length()} parsed=${parsed.size} accepted=${accepted.size}")
+                StreamingResults(accepted,
                     sourcePage < payload.optInt("total_pages", sourcePage))
             }
+            android.util.Log.i("AnyTVGenreQA",
+                "stage=page genre=$id media=$media page=$page sort=$sort " +
+                    "titles=${pageResult.titles.size} more=${pageResult.more}")
+            pageResult
         }
 
     /** Real TMDB seasons and episodes; cached locally so opening the same series costs nothing. */
@@ -2522,6 +2532,9 @@ internal fun TclStreamingScreens(
                         val result = StreamingCatalog.discoveryGenrePage(id, mediaKind, 1,
                             if (selectedHomeGenre != 0) genreSort else "popular")
                         genreShelves[key] = result.titles
+                        android.util.Log.i("AnyTVGenreQA",
+                            "stage=first genre=$id media=$mediaKind sort=$genreSort " +
+                                "titles=${result.titles.size} more=${result.more}")
                         genrePage[key] = 1
                         genreMore[key] = result.more
                         genreErrors.remove(key)
@@ -2710,6 +2723,10 @@ internal fun TclStreamingScreens(
             }
             if (pages.any { it.isFailure }) genreEditorialErrors[key] = true
             else genreEditorialErrors.remove(key)
+            android.util.Log.i("AnyTVGenreQA",
+                "stage=editorial genre=$id media=$kind success=${successfulPages.size} " +
+                    "failed=${pages.size - successfulPages.size} " +
+                    "titles=${genreEditorialPools[key].orEmpty().size}")
         }
     }
 
@@ -3656,6 +3673,40 @@ internal fun TclStreamingScreens(
                             preview.forEach { previewSeen.add("${it.media}:${it.id}") }
                             heading to preview
                         }
+                    }
+                    // Diagnostic summary is emitted only when counts change; it does
+                    // not log movie names, account state, tokens, or provider offers.
+                    val genreQaSnapshot = if (!homeLibrary && selected == null &&
+                        selectedHomeGenre != 0 &&
+                        selectedHomeGenre != ANYTV_CINEMA_FILTER) {
+                        val kinds = listOf("movie", "tv").filter {
+                            homeContentType == "all" || it == homeContentType
+                        }
+                        val firstCount = kinds.sumOf { kind ->
+                            val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                    selectedHomeGenre, kind, allMovieGenres, tvGenres)
+                            genreShelves["$kind:$id:$genreSort"].orEmpty().size
+                        }
+                        val editorialCount = kinds.sumOf { kind ->
+                            val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                    selectedHomeGenre, kind, allMovieGenres, tvGenres)
+                            genreEditorialPools["$kind:$id"].orEmpty().size
+                        }
+                        "genre=$selectedHomeGenre type=$homeContentType sort=$genreSort " +
+                            "first=$firstCount editorial=$editorialCount " +
+                            "scoped=${visibleShelves.values.sumOf { it.size }} " +
+                            "filtered=${filteredShelves.values.sumOf { it.size }} " +
+                            "curated=${curatedShelves.values.sumOf { it.size }} " +
+                            "visible=${uniqueShelves.sumOf { it.second.size }} " +
+                            "sections=${uniqueShelves.joinToString("|") {
+                                "${it.first}:${it.second.size}"
+                            }}"
+                    } else ""
+                    LaunchedEffect(genreQaSnapshot) {
+                        if (genreQaSnapshot.isNotBlank()) android.util.Log.i(
+                            "AnyTVGenreQA", "stage=render $genreQaSnapshot")
                     }
                     // A single LazyListScope renderer for both provider and genre lists.
                     fun androidx.compose.foundation.lazy.LazyListScope.renderCatalogueCards(
