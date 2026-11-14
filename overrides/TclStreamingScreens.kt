@@ -1992,7 +1992,7 @@ internal fun TclStreamingScreens(
     }
 
     var discoveryShelves by remember {
-        mutableStateOf<Map<String, List<StreamingTitle>>>(emptyMap())
+        mutableStateOf<Map<String, List<StreamingTitle>>>(StreamingDiskCache.homeEditorial())
     }
     var confirmedMiniseries by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     LaunchedEffect(discoveryShelves) {
@@ -2025,6 +2025,11 @@ internal fun TclStreamingScreens(
     var cinemaIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var cinemaIndexReady by remember { mutableStateOf(false) }
     LaunchedEffect(token) {
+        StreamingDiskCache.cinemaIndex()?.let { cached ->
+            cinemaIds = cached
+            cinemaIndexReady = true
+            return@LaunchedEffect
+        }
         cinemaIndexReady = false
         val verified = mutableSetOf<Int>()
         // A partial now-playing index must never authorize non-cinema home rails.
@@ -2036,6 +2041,7 @@ internal fun TclStreamingScreens(
             cinemaIds = cinemaIds + verified
             if (!response.more || page == 42) {
                 cinemaIndexReady = true
+                StreamingDiskCache.saveCinemaIndex(verified)
                 break
             }
         }
@@ -2603,6 +2609,7 @@ internal fun TclStreamingScreens(
     }
 
     LaunchedEffect(token) {
+        if (discoveryShelves.isNotEmpty()) return@LaunchedEffect
         discoveryLoading = true
         discoveryError = null
         // The full Brazilian cinema index is loaded separately and gates home movies.
@@ -2684,6 +2691,7 @@ internal fun TclStreamingScreens(
                     shelves[heading] = titles
             }
         discoveryShelves = shelves
+        StreamingDiskCache.saveHomeEditorial(shelves)
         discoveryLoading = false
     }
 
