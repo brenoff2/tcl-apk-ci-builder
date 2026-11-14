@@ -80,6 +80,8 @@ jobs:
           assert '"stage=tmdb genre=$id media=$media sourcePage=$sourcePage "' in screen
           assert '"stage=editorial genre=$id media=$kind success=' in screen
           assert '"stage=render $genreQaSnapshot"' in screen
+          assert 'val parsed = mapTitles(raw, media, 0)' in screen
+          assert 'LaunchedEffect(genreQaSnapshot)' in screen
           assert 'val homePool = (discoveryShelves.values.flatten() +' in screen
           assert 'confirmedMiniseries).distinctBy' in screen
           assert 'putAll(scopedEditorial(homePool))' in screen
