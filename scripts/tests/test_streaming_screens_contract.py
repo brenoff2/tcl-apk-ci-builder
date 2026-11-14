@@ -260,6 +260,15 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('selected == null && selectedHomeGenre == ANYTV_ANIME_FILTER -> true', home)
         self.assertIn('if (search) genre else 0', home)
 
+    def test_genuine_title_without_artwork_remains_visible(self):
+        home = self.screen
+        card = home.split('private fun AnyTvPosterCard(', 1)[1].split(
+            '/** One horizontal strip', 1)[0]
+        self.assertIn('if (title.poster.startsWith("/"))', card)
+        self.assertIn('Text(title.name, color = Color.White, fontSize = 12.sp,', card)
+        self.assertIn('contentDescription = "Cartaz: " + title.name', card)
+        self.assertIn('AnyTvRatingOverlay(title,', card)
+
     def test_editorial_genre_pages_keep_partial_successes(self):
         home = self.screen
         effect = home.split('// Populate editorial genre shelves independently', 1)[1].split(
