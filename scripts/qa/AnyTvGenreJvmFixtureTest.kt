@@ -106,6 +106,48 @@ class AnyTvGenreJvmFixtureTest {
         println("ANYTV_REAL_PARSER_DRAMA_ACTION_2_OF_2")
     }
 
+    @Test fun actualAndroidDiskCacheRetainsAndExpiresSyntheticDiscoveryPayload() {
+        // Unit-test only: install an isolated local cache root via reflection.
+        // No remote endpoint, production account, or Android app data is touched.
+        val cacheClass = Class.forName("com.hari.androidtvremote.ui.app.StreamingDiskCache")
+        val cache = cacheClass.getDeclaredField("INSTANCE").apply { isAccessible = true }
+            .get(null)
+        val rootField = cacheClass.getDeclaredField("root")
+            .apply { isAccessible = true }
+        val previousRoot = rootField.get(null)
+        val temporary = java.nio.file.Files.createTempDirectory("anytv-genre-cache-jvm-").toFile()
+        try {
+            rootField.set(null, temporary)
+            val write = cacheClass.getDeclaredMethod("write", String::class.java,
+                org.json.JSONObject::class.java, Long::class.javaPrimitiveType)
+                .apply { isAccessible = true }
+            val read = cacheClass.getDeclaredMethod("read", String::class.java)
+                .apply { isAccessible = true }
+            val stale = cacheClass.getDeclaredMethod("stale", String::class.java)
+                .apply { isAccessible = true }
+
+            val route = "discover/movie?with_genres=18&page=1"
+            val reduced = org.json.JSONObject().put("results",
+                org.json.JSONArray().put(org.json.JSONObject()
+                    .put("id", 901).put("title", "Drama fixture")))
+            write.invoke(cache, route, reduced, 48L * 3600000L)
+            val cached = read.invoke(cache, route) as org.json.JSONObject
+            assertEquals(1, cached.getJSONArray("results").length())
+            val otherRoute = "discover/movie?with_genres=28&page=1"
+            assertEquals(null, read.invoke(cache, otherRoute))
+
+            val expiredRoute = "discover/movie?with_genres=18&page=2"
+            write.invoke(cache, expiredRoute, reduced, -1L)
+            assertEquals(null, read.invoke(cache, expiredRoute))
+            val lastGood = stale.invoke(cache, expiredRoute) as org.json.JSONObject
+            assertEquals(1, lastGood.getJSONArray("results").length())
+            println("ANYTV_REAL_DISK_CACHE_FRESH_PARTIAL_AND_STALE_READ_VERIFIED")
+        } finally {
+            rootField.set(null, previousRoot)
+            temporary.deleteRecursively()
+        }
+    }
+
     @Test fun dramaAndActionGenreMappingIsMediaAware() {
         val films = listOf(StreamingGenre(18, "Drama"),
             StreamingGenre(28, "Ação"), StreamingGenre(16, "Animação"))
