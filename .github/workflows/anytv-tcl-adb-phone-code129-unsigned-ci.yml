@@ -91,7 +91,7 @@ jobs:
           assert 'StreamingDiskCache.homeEditorial()' in screen
           assert 'StreamingDiskCache.cinemaIndex()' in screen
           assert 'discoveryShelf("trending/tv/week", "tv")' in screen
-          assert 'confirmedMiniseries.size >= 4' in screen
+          assert 'confirmedMiniseries.isNotEmpty()' in screen
           assert '"Destaques da semana · Filmes" to weekly.filter' in screen
           assert '"Destaques da semana · Séries" to weekly.filter' in screen
           assert 'val savedFilms = films' in screen
