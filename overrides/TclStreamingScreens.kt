@@ -3305,15 +3305,13 @@ internal fun TclStreamingScreens(
                             }
                         } else {
                             if (selectedHomeGenre == 0) {
-                                val primary = setOf(
+                                val primary = listOf(
                                     "Destaques da semana · Filmes", "Destaques da semana · Séries",
-                                    "Em alta agora", "Indicados para você",
-                                    "Lançamentos · Filmes", "Lançamentos · Séries",
-                                    "No cinema")
-                                val promotedSecondary = listOf(
-                                    "Mais bem avaliados", "Populares no TMDB",
-                                    "Vale a pena assistir", "Novas temporadas",
-                                    "Você pode gostar")
+                                    "Em alta agora", "Indicados para você", "Populares no TMDB",
+                                    "Lançamentos · Filmes", "Lançamentos · Séries")
+                                val afterCinema = listOf(
+                                    "No cinema", "Novas temporadas", "Mais bem avaliados")
+                                val hiddenHome = setOf("Você pode gostar", "Vale a pena assistir")
                                 fun addEditorialHeading(heading: String, titles: List<StreamingTitle>) {
                                     val selectedTitles = titles.filter {
                                         (homeContentType == "all" ||
@@ -3321,22 +3319,15 @@ internal fun TclStreamingScreens(
                                     }
                                     if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
                                 }
-                                fun addEditorial(onlyPrimary: Boolean) {
-                                    discoveryShelves.forEach { (heading, titles) ->
-                                        if ((heading != ANYTV_CINEMA_SHELF || heading == "No cinema") &&
-                                            (heading in primary) == onlyPrimary &&
-                                            (onlyPrimary || heading !in promotedSecondary)) {
-                                            addEditorialHeading(heading, titles)
-                                        }
-                                    }
+                                primary.forEach { heading ->
+                                    discoveryShelves[heading]?.let { addEditorialHeading(heading, it) }
                                 }
-                                addEditorial(true)
                                 val future = upcomingStreaming.filter {
                                     homeContentType == "all" || it.media == homeContentType
                                 }
                                 if (future.isNotEmpty() || upcomingStreamingMore)
                                     put("Em breve · Filmes e séries", future)
-                                promotedSecondary.forEach { heading ->
+                                afterCinema.forEach { heading ->
                                     discoveryShelves[heading]?.let { addEditorialHeading(heading, it) }
                                 }
                                 // Two recurring titles are not an editorial shelf.
@@ -3363,7 +3354,12 @@ internal fun TclStreamingScreens(
                                     }.distinctBy { "${it.media}:${it.id}" }
                                     if (titles.isNotEmpty()) put("Por gênero: $label", titles)
                                 }
-                                addEditorial(false)
+                                discoveryShelves.forEach { (heading, titles) ->
+                                    if (heading !in primary && heading !in afterCinema &&
+                                        heading !in hiddenHome && heading != ANYTV_CINEMA_SHELF) {
+                                        addEditorialHeading(heading, titles)
+                                    }
+                                }
 
                             } else {
                                 if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
