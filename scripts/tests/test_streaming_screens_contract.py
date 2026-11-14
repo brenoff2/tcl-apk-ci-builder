@@ -269,6 +269,17 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('contentDescription = "Cartaz: " + title.name', card)
         self.assertIn('AnyTvRatingOverlay(title,', card)
 
+    def test_catalogue_page_preserves_good_titles_when_later_tmdb_page_fails(self):
+        home = self.screen
+        paginator = home.split('private suspend fun catalogPage24(', 1)[1].split(
+            '/** Global editorial shelves independent', 1)[0]
+        self.assertIn('var interrupted = false', paginator)
+        self.assertIn('if (collected.isEmpty()) throw error', paginator)
+        self.assertIn('interrupted = true', paginator)
+        self.assertIn('interrupted || collected.size > through', paginator)
+        self.assertIn('catch (error: java.util.concurrent.CancellationException)', paginator)
+        self.assertIn('collected.drop(through - ANYTV_LIST_BATCH).take(ANYTV_LIST_BATCH)', paginator)
+
     def test_editorial_genre_pages_keep_partial_successes(self):
         home = self.screen
         effect = home.split('// Populate editorial genre shelves independently', 1)[1].split(
