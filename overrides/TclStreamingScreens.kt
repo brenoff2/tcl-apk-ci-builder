@@ -3278,18 +3278,8 @@ internal fun TclStreamingScreens(
                                     (kind == "tv" && key !in providerMiniseries)
                             }
                         }
-                        selected == null && selectedHomeGenre != 0 &&
-                            selectedHomeGenre != ANYTV_CINEMA_FILTER &&
-                            genreSectionsMode -> {
-                            listOf("movie", "tv").filter {
-                                homeContentType == "all" || homeContentType == it
-                            }.any { kind ->
-                                val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                    ANYTV_ANIME_FILTER else anyTvResolvedGenre(
-                                        selectedHomeGenre, kind, allMovieGenres, tvGenres)
-                                id > 0 && "$kind:$id" !in genreEditorialPools
-                            }
-                        }
+                        // Deeper genre pages load progressively, never gate the page.
+                        selected == null && selectedHomeGenre != 0 -> false
                         else -> false
                     }
                     if (filteredPageLoading || (selected == null &&
@@ -3428,7 +3418,7 @@ internal fun TclStreamingScreens(
                                 afterCinema.forEach { heading ->
                                     discoveryShelves[heading]?.let { addEditorialHeading(heading, it) }
                                 }
-                                if (homeContentType != "movie" && confirmedMiniseries.size >= 4) {
+                                if (homeContentType != "movie" && confirmedMiniseries.isNotEmpty()) {
                                     val week = (System.currentTimeMillis() / 604800000L).toInt()
                                     val start = week % confirmedMiniseries.size
                                     put("Minisséries imperdíveis",
@@ -3488,13 +3478,9 @@ internal fun TclStreamingScreens(
                                         else heading
                                     return discoveryShelves[source].orEmpty().filter(::matchesGenre)
                                 }
-                                val genrePool = sources.filter { title ->
-                                    activeServiceNames.isEmpty() ||
-                                        offerCache["${title.media}:${title.id}"].orEmpty().any {
-                                            StreamingCatalog.matchesSelectedSubscription(
-                                                it, activeServiceNames)
-                                        }
-                                }
+                                // Genres show the full TMDB catalogue, not just
+                                // subscriptions the user has configured.
+                                val genrePool = sources.filter(::matchesGenre)
                                 ANYTV_EDITORIAL_SECTIONS.forEach { heading ->
                                     val titles = when (heading) {
                                         "Indicados para você" ->
@@ -3514,13 +3500,9 @@ internal fun TclStreamingScreens(
                                             confirmedMiniseries.filter(::matchesGenre)
                                         else -> genreEditorial(heading)
                                     }.filter { title ->
-                                        (homeContentType == "all" ||
-                                            title.media == homeContentType) &&
-                                            (activeServiceNames.isEmpty() ||
-                                                offerCache["${title.media}:${title.id}"].orEmpty().any {
-                                                    StreamingCatalog.matchesSelectedSubscription(
-                                                        it, activeServiceNames)
-                                                })
+                                        matchesGenre(title) &&
+                                            (homeContentType == "all" ||
+                                                title.media == homeContentType)
                                     }.distinctBy { "${it.media}:${it.id}" }
                                     put(heading, anyTvBackfillEditorial(heading, titles, genrePool))
                                 }
@@ -3541,7 +3523,7 @@ internal fun TclStreamingScreens(
                         }
                     }
                     val filteredShelves = if (activeServiceNames.isEmpty() || homeLibrary ||
-                        selected != null) animeSeparatedShelves else
+                        selected != null || selectedHomeGenre != 0) animeSeparatedShelves else
                         linkedMapOf<String, List<StreamingTitle>>().apply {
                             animeSeparatedShelves.forEach { (heading, candidates) ->
                                 val confirmed = candidates.filter { item ->
@@ -3593,7 +3575,8 @@ internal fun TclStreamingScreens(
                                 homeContentType == "all" && activeServiceNames.isEmpty())
                                 anyTvReleased(it) // Weekly hero includes films AND series.
                             else anyTvReleased(it) &&
-                                (it.media != "movie" || (cinemaIndexReady && it.id !in cinemaIds))
+                                (selectedHomeGenre != 0 || it.media != "movie" ||
+                                    !cinemaIndexReady || it.id !in cinemaIds)
                         }.filterNot {
                             it.media == "movie" && it.id.toString() in watchedFilms
                         }.take(10)
@@ -3614,8 +3597,8 @@ internal fun TclStreamingScreens(
                                         (cinemaIndexReady && title.id !in cinemaIds))
                                 heading.startsWith("Novas temporadas") -> title.media == "tv"
                                 else -> anyTvReleased(title) &&
-                                    (title.media != "movie" ||
-                                        (cinemaIndexReady && title.id !in cinemaIds))
+                                    (selectedHomeGenre != 0 || title.media != "movie" ||
+                                        (!cinemaIndexReady || title.id !in cinemaIds))
                             }
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty() &&
@@ -4265,13 +4248,7 @@ internal fun TclStreamingScreens(
                             val genreTitles = genreCandidates
                                 .filter { title -> if (selectedHomeGenre == ANYTV_ANIME_FILTER)
                                     anyTvIsAnime(title) else !anyTvIsAnime(title) }
-                                .distinctBy { "${it.media}:${it.id}" }.filter { title ->
-                                    activeServiceNames.isEmpty() ||
-                                        offerCache["${title.media}:${title.id}"].orEmpty().any { offer ->
-                                            StreamingCatalog.matchesSelectedSubscription(
-                                                offer, activeServiceNames)
-                                        }
-                                }
+                                .distinctBy { "${it.media}:${it.id}" }
                             if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                             item {
                                 Row(modifier = Modifier.fillMaxWidth()
