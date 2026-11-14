@@ -83,6 +83,30 @@ class StreamingScreens(unittest.TestCase):
         self.assertLess(home.index('put("Minisséries imperdíveis",'),
                         home.index('put("Por gênero: $label", titles)'))
 
+    def test_home_secondary_rails_follow_cinema_before_genres(self):
+        home = self.screen
+        start = home.index('val promotedSecondary = listOf(')
+        end = home.index('addEditorial(false)', start)
+        section = home[start:end]
+        ordered = [
+            'addEditorial(true)',
+            'put("Em breve · Filmes e séries", future)',
+            'promotedSecondary.forEach { heading ->',
+            'put("Minisséries imperdíveis",',
+            'put("Por gênero: $label", titles)',
+        ]
+        for before, after in zip(ordered, ordered[1:]):
+            self.assertLess(section.index(before), section.index(after))
+        promoted = section.split('val promotedSecondary = listOf(', 1)[1].split(')', 1)[0]
+        headings = [
+            '"Mais bem avaliados"', '"Populares no TMDB"',
+            '"Vale a pena assistir"', '"Novas temporadas"', '"Você pode gostar"',
+        ]
+        for before, after in zip(headings, headings[1:]):
+            self.assertLess(promoted.index(before), promoted.index(after))
+        self.assertIn('(onlyPrimary || heading !in promotedSecondary)', section)
+        self.assertEqual(home.count('put("Em breve · Filmes e séries", future)'), 1)
+
     def test_home_cache_persists_and_reuses_real_catalogue(self):
         home = self.screen
         for value in (
