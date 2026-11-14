@@ -56,6 +56,56 @@ class AnyTvGenreJvmFixtureTest {
             as List<StreamingTitle>
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun parseTmdb(payload: String, media: String): List<StreamingTitle> {
+        // Execute original StreamingCatalog.mapTitles, not a duplicate JSON parser.
+        val source = Class.forName("com.hari.androidtvremote.ui.app.StreamingCatalog")
+        val instance = source.getDeclaredField("INSTANCE").apply { isAccessible = true }
+            .get(null)
+        val method = source.getDeclaredMethod("mapTitles",
+            org.json.JSONArray::class.java, String::class.java,
+            Int::class.javaPrimitiveType)
+        method.isAccessible = true
+        return method.invoke(instance, org.json.JSONArray(payload), media, 0)
+            as List<StreamingTitle>
+    }
+
+    @Test fun realJsonParserCarriesMissingGenreIdsIntoAnimeFilter() {
+        // The HTTP Worker already applied with_genres=16; source metadata
+        // intentionally omits genre_ids for two otherwise valid Japanese IDs.
+        val payload = """[
+            {"id":301,"name":"Anime completo","original_language":"ja",
+             "genre_ids":[16],"first_air_date":"2020-02-01"},
+            {"id":302,"name":"Anime sem genre_ids","original_language":"ja"},
+            {"id":303,"name":"Anime ids vazios","original_language":"ja","genre_ids":[]}
+        ]"""
+        val parsed = parseTmdb(payload, "tv")
+        assertEquals(3, parsed.size)
+        assertEquals(listOf(301, 302, 303), parsed.map { it.id })
+        assertEquals(emptyList<Int>(), parsed[1].genreIds)
+        assertEquals("", parsed[1].poster)
+        assertEquals("", parsed[1].date)
+        val afterPredicate = parsed.filter(::anime)
+        assertEquals(listOf(301), afterPredicate.map { it.id })
+        assertEquals(3, curate(backfill(parsed)).size)
+        assertEquals(1, curate(backfill(afterPredicate)).size)
+        println("ANYTV_REAL_PARSER_3_ANIME_ACCEPTED_1")
+    }
+
+    @Test fun realJsonParserKeepsDramaAndActionWithoutOptionalArtworkOrGenreIds() {
+        val moviePayload = """[
+            {"id":401,"title":"Drama sem poster"},
+            {"id":402,"title":"Ação com genero","genre_ids":[28],"poster_path":"/p.jpg"},
+            {"id":0,"title":"Invalido"},
+            {"id":403,"title":""}
+        ]"""
+        val parsed = parseTmdb(moviePayload, "movie")
+        assertEquals(listOf(401, 402), parsed.map { it.id })
+        assertEquals(listOf(401, 402), curate(backfill(parsed)).map { it.id })
+        assertEquals(emptyList<Int>(), parsed.first().genreIds)
+        println("ANYTV_REAL_PARSER_DRAMA_ACTION_2_OF_2")
+    }
+
     @Test fun dramaAndActionGenreMappingIsMediaAware() {
         val films = listOf(StreamingGenre(18, "Drama"),
             StreamingGenre(28, "Ação"), StreamingGenre(16, "Animação"))
