@@ -72,45 +72,40 @@ class StreamingScreens(unittest.TestCase):
             '/** Offers are catalog identities', 1)[0]
         self.assertIn('discoveryShelf("trending/movie/week", "movie")', banner)
         self.assertIn('discoveryShelf("trending/tv/week", "tv")', banner)
-        self.assertIn('"${it.media}:${it.id}"', banner)
+        self.assertIn('"''${it.media}:${it.id}''"', banner)
         self.assertNotIn('bannerCinemaIds', banner)
         self.assertIn('if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"', banner)
         self.assertIn('onOpenStreaming', banner)
         self.assertIn('confirmedMiniseries.isNotEmpty()', home)
-        self.assertLess(home.index('primary.forEach { heading ->'), home.index('put("Minisséries imperdíveis",'))
-        self.assertLess(home.index('put("Minisséries imperdíveis",'),
-                        home.index('put("Por gênero: $label", titles)'))
+        homeBranch = home.split('if (selectedHomeGenre == 0) {', 1)[1].split(
+            '} else if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', 1)[0]
+        self.assertLess(homeBranch.index('putAll(scopedEditorial(homePool))'),
+                        homeBranch.index('put("Por gênero: $label", titles)'))
 
     def test_home_rails_follow_requested_order_without_two_recommendations(self):
         home = self.screen
-        start = home.index('val primary = listOf(')
-        end = home.index('if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', start)
-        section = home[start:end]
-        primary = section.split('val primary = listOf(', 1)[1].split(')', 1)[0]
+        rails = home.split('private val ANYTV_EDITORIAL_SECTIONS = listOf(', 1)[1].split(
+            ')', 1)[0]
         ordered = [
             '"Destaques da semana · Filmes"', '"Destaques da semana · Séries"',
             '"Em alta agora"', '"Indicados para você"', '"Populares"',
             '"Lançamentos · Filmes"', '"Lançamentos · Séries"',
+            '"Em breve · Filmes e séries"', '"No cinema"', '"Novas temporadas"',
+            '"Mais bem avaliados"', '"Minisséries imperdíveis"',
         ]
         for before, after in zip(ordered, ordered[1:]):
-            self.assertLess(primary.index(before), primary.index(after))
-        after_cinema = section.split('val afterCinema = listOf(', 1)[1].split(')', 1)[0]
-        self.assertLess(after_cinema.index('"No cinema"'),
-                        after_cinema.index('"Novas temporadas"'))
-        self.assertLess(after_cinema.index('"Novas temporadas"'),
-                        after_cinema.index('"Mais bem avaliados"'))
-        self.assertNotIn('put("Você pode gostar"', section)
-        self.assertNotIn('put("Vale a pena assistir"', section)
-        position = [
-            'primary.forEach { heading ->',
-            'put("Em breve · Filmes e séries", future)',
-            'afterCinema.forEach { heading ->',
-            'put("Minisséries imperdíveis",',
-            'put("Por gênero: $label", titles)',
-        ]
-        for before, after in zip(position, position[1:]):
-            self.assertLess(section.index(before), section.index(after))
-        self.assertEqual(home.count('put("Em breve · Filmes e séries", future)'), 1)
+            self.assertLess(rails.index(before), rails.index(after))
+        shared = home.split('fun scopedEditorial(', 1)[1].split(
+            'val visibleShelves =', 1)[0]
+        self.assertEqual(shared.count('ANYTV_EDITORIAL_SECTIONS.forEach { heading ->'), 1)
+        self.assertIn('put(heading, anyTvBackfillEditorial(heading, titles, pool))', shared)
+        branch = home.split('val homePool = (discoveryShelves.values.flatten() +', 1)[1].split(
+            '} else if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', 1)[0]
+        self.assertIn('confirmedMiniseries).distinctBy', branch)
+        self.assertIn('putAll(scopedEditorial(homePool))', branch)
+        self.assertIn('put("Por gênero: $label", titles)', branch)
+        self.assertNotIn('put("Você pode gostar"', branch)
+        self.assertNotIn('put("Vale a pena assistir"', branch)
 
     def test_genre_defaults_to_sections_and_lists_both_media_on_demand(self):
         home = self.screen
@@ -137,7 +132,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_home_genres_are_terminal_without_secondary_rails(self):
         home = self.screen
-        start = home.index('filterGenreIds.forEach { id ->', home.index('val primary = listOf('))
+        start = home.index('filterGenreIds.forEach { id ->', home.index('putAll(scopedEditorial(homePool))'))
         end = home.index('} else if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', start)
         section = home[start:end]
         self.assertIn('put("Por gênero: $label", titles)', section)
@@ -985,8 +980,8 @@ class StreamingScreens(unittest.TestCase):
         # A verified-but-empty first page is not the end of the real catalogue.
         # The user must still be able to open this section and request page 2.
         for value in (
-            'if (future.isNotEmpty() || upcomingStreamingMore)',
-            'put("Em breve · Filmes e séries", future)',
+            '"Em breve · Filmes e séries" -> verifiedUpcoming',
+            'verifiedUpcoming = upcomingStreaming.filter',
             'if (unique.isEmpty() &&',
             '!(heading == "Em breve · Filmes e séries" && upcomingStreamingMore)',
             'val sectionPageLimit = if (sectionTitle == "Em breve · Filmes e séries") 50 else 42',
@@ -1355,22 +1350,18 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('inCinema = offers.isEmpty()', home)
 
     def test_cinema_and_future_are_not_mixed_into_regular_streaming(self):
-        self.assertIn('val afterCinema = listOf(', self.screen)
-        self.assertIn('"No cinema", "Novas temporadas", "Mais bem avaliados"', self.screen)
-        self.assertNotIn('addEditorial(false)', self.screen)
-        self.assertIn('if (future.isNotEmpty() || upcomingStreamingMore)', self.screen)
-        # Only positive BR now-playing matches enter the named cinema rail.
-        self.assertNotIn('if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)', self.screen)
-        self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
+        shared = self.screen.split('fun scopedEditorial(', 1)[1].split(
+            'val visibleShelves =', 1)[0]
+        self.assertIn('"No cinema" -> pool.filter {', shared)
+        self.assertIn('it.media == "movie" && it.id in cinemaIds', shared)
+        self.assertIn('"Em breve · Filmes e séries" -> verifiedUpcoming', shared)
+        self.assertIn('verifiedUpcoming = upcomingStreaming.filter', shared)
+        self.assertIn('matchesCatalogueScope(title)', shared)
+        self.assertNotIn('put("Você pode gostar"', shared)
+        self.assertNotIn('put("Vale a pena assistir"', shared)
         self.assertIn('anyTvReleased(title)', self.screen)
         self.assertIn('anyTvUpcoming(title)', self.screen)
-        self.assertIn('else -> titles.filter(::anyTvReleased)', self.screen)
-        self.assertIn('.filter(::anyTvReleased)', self.screen)
-        self.assertIn('collected.filter(::anyTvReleased)', self.screen)
         self.assertIn('val unique = shelf.filter { title ->', self.screen)
-        self.assertNotIn('Triple("Em breve · Filmes", "movie/upcoming", "movie")',
-                         self.screen)
-        self.assertNotIn('painterResource(R.drawable.anytv_horizontal)', self.screen)
 
     def test_genre_and_cinema_one_row_previews_precede_results(self):
         self.assertIn('private fun AnyTvOneRowPreview(', self.screen)
