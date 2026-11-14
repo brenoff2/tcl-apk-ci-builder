@@ -374,6 +374,62 @@ private object StreamingDiskCache {
             JSONObject(target.readText(Charsets.UTF_8)).getJSONObject("value")
         }.getOrNull()
     }
+    // Reuse a whole genuine editorial snapshot for six hours. Individual source
+    // routes retain their existing TTL and last-good offline response.
+    // This avoids rebuilding hundreds of source pages on every opening.
+    fun homeEditorial(): Map<String, List<StreamingTitle>> {
+        val snapshot = read("anytv:home-editorial:v4") ?: return emptyMap()
+        val result = linkedMapOf<String, List<StreamingTitle>>()
+        val sections = snapshot.optJSONArray("sections") ?: return emptyMap()
+        for (i in 0 until sections.length()) {
+            val section = sections.optJSONObject(i) ?: continue
+            val heading = section.optString("heading")
+            val entries = section.optJSONArray("titles") ?: continue
+            val titles = (0 until entries.length()).mapNotNull { index ->
+                val item = entries.optJSONObject(index) ?: return@mapNotNull null
+                val id = item.optInt("id")
+                val media = item.optString("media")
+                if (id <= 0 || media !in setOf("movie", "tv")) return@mapNotNull null
+                val genres = item.optJSONArray("genres")
+                StreamingTitle(id, item.optString("name"), item.optString("overview"),
+                    item.optString("poster"), media, rating = item.optDouble("rating"),
+                    votes = item.optInt("votes"), backdrop = item.optString("backdrop"),
+                    date = item.optString("date"),
+                    genreIds = (0 until (genres?.length() ?: 0))
+                        .map { genres!!.optInt(it) }.filter { it > 0 },
+                    originalLanguage = item.optString("language"))
+            }
+            if (heading.isNotBlank() && titles.isNotEmpty()) result[heading] = titles
+        }
+        return result
+    }
+    fun saveHomeEditorial(sections: Map<String, List<StreamingTitle>>) {
+        if (sections.isEmpty()) return
+        val result = JSONArray()
+        sections.forEach { (heading, titles) ->
+            val records = JSONArray()
+            titles.forEach { title ->
+                records.put(JSONObject().put("id", title.id).put("media", title.media)
+                    .put("name", title.name).put("overview", title.overview)
+                    .put("poster", title.poster).put("backdrop", title.backdrop)
+                    .put("date", title.date).put("rating", title.rating)
+                    .put("votes", title.votes).put("genres", JSONArray(title.genreIds))
+                    .put("language", title.originalLanguage))
+            }
+            result.put(JSONObject().put("heading", heading).put("titles", records))
+        }
+        write("anytv:home-editorial:v4", JSONObject().put("sections", result), 6L * 3600000L)
+    }
+    fun cinemaIndex(): Set<Int>? {
+        val entries = read("anytv:cinema-index:v2")?.optJSONArray("ids") ?: return null
+        return (0 until entries.length()).map { entries.optInt(it) }
+            .filter { it > 0 }.toSet()
+    }
+    fun saveCinemaIndex(ids: Set<Int>) {
+        if (ids.isNotEmpty())
+            write("anytv:cinema-index:v2", JSONObject().put("ids", JSONArray(ids.toList())),
+                12L * 3600000L)
+    }
     @Synchronized fun write(route: String, value: JSONObject, ttlMillis: Long) {
         val target = file(route) ?: return
         runCatching {
