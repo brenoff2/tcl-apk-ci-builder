@@ -57,10 +57,53 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('includeFontPadding = false', self.screen)
         self.assertIn('(1..25).map { sourcePage ->', self.screen)
 
+    def test_home_editorial_order_and_mixed_banner_are_real(self):
+        home = self.screen
+        headings = [
+            '"Destaques da semana · Filmes" to weekly.filter',
+            '"Destaques da semana · Séries" to weekly.filter',
+            '"Em alta agora" to daily',
+            '"Indicados para você" to cataloguePool',
+            '"Lançamentos · Filmes" to recentMovies',
+            '"Lançamentos · Séries" to newSeries',
+        ]
+        for before, after in zip(headings, headings[1:]):
+            self.assertLess(home.index(before), home.index(after))
+        banner = home.split('internal fun AnyTvHomeFilmBanner(', 1)[1].split(
+            '/** Offers are catalog identities', 1)[0]
+        self.assertIn('discoveryShelf("trending/movie/week", "movie")', banner)
+        self.assertIn('discoveryShelf("trending/tv/week", "tv")', banner)
+        self.assertIn('"${it.media}:${it.id}"', banner)
+        self.assertNotIn('bannerCinemaIds', banner)
+        self.assertIn('if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"', banner)
+        self.assertIn('onOpenStreaming', banner)
+        self.assertIn('confirmedMiniseries.size >= 4', home)
+        self.assertLess(home.index('addEditorial(true)'), home.index('put("Minisséries imperdíveis",'))
+        self.assertLess(home.index('put("Minisséries imperdíveis",'),
+                        home.index('put("Por gênero: $label", titles)'))
+
+    def test_home_cache_persists_and_reuses_real_catalogue(self):
+        home = self.screen
+        for value in (
+            'fun homeEditorial(): Map<String, List<StreamingTitle>>',
+            'fun saveHomeEditorial(sections: Map<String, List<StreamingTitle>>)',
+            'read("anytv:home-editorial:v4")',
+            '6L * 3600000L',
+            'fun cinemaIndex(): Set<Int>?',
+            '12L * 3600000L',
+            'mutableStateOf<Map<String, List<StreamingTitle>>>(StreamingDiskCache.homeEditorial())',
+            'if (discoveryShelves.isNotEmpty()) return@LaunchedEffect',
+            'StreamingDiskCache.saveHomeEditorial(shelves)',
+            'StreamingDiskCache.cinemaIndex()?.let { cached ->',
+            'StreamingDiskCache.saveCinemaIndex(verified)',
+        ):
+            self.assertIn(value, home)
+        self.assertNotIn('bannerCinemaIds', home)
+
     def test_miniseries_require_explicit_tmdb_classification(self):
         self.assertIn('suspend fun confirmedMiniseries(candidates:', self.screen)
         self.assertIn('?.equals("Miniseries", ignoreCase = true) == true', self.screen)
-        self.assertIn('put("Minisséries imperdíveis", confirmedMiniseries)', self.screen)
+        self.assertIn('put("Minisséries imperdíveis",', self.screen)
         self.assertIn('"Minisséries imperdíveis$service"', self.screen)
 
     def test_personalized_editorial_and_service_feeds(self):
@@ -115,8 +158,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('&$dateField.gte=', self.screen)
         self.assertNotIn('&$dateField.lte=', self.screen)
         self.assertIn('suspend fun recentlyStartedSeasons()', self.screen)
-        self.assertIn('"Filmes recém-lançados" to recentMovies', self.screen)
-        self.assertIn('"Séries novas" to newSeries', self.screen)
+        self.assertIn('"Lançamentos · Filmes" to recentMovies', self.screen)
+        self.assertIn('"Lançamentos · Séries" to newSeries', self.screen)
         self.assertIn('"Novas temporadas" to newSeasons', self.screen)
         self.assertIn('listOf("popularity.desc", "$dateField.desc").flatMap { sorting ->', self.screen)
         self.assertIn('recent.filterNot { it.id in theatrical }', self.screen)
@@ -586,8 +629,8 @@ class StreamingScreens(unittest.TestCase):
             'items(genreTitles.chunked(3))',
             'StreamingCatalog.discoveryGenrePage(',
             '"Mostrar mais"', 'genreShelves[genreKey] =',
-            'val films = discoveryShelves["Destaques da semana"]',
-            'val shows = discoveryShelves["Destaques da semana"].orEmpty()',
+            'val films = discoveryShelves["Destaques da semana · Filmes"]',
+            'val shows = discoveryShelves["Destaques da semana · Séries"].orEmpty()',
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
             'Text(if (item.media == "tv") "S" else "F"',
             'class AnyTvReleaseReminderReceiver',
@@ -1095,7 +1138,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('StreamingCatalog.discoveryCinemaInternational()', self.screen)
         self.assertIn('StreamingCatalog.discoveryShelf("movie/upcoming", "movie")',
                       self.screen)
-        self.assertIn('if (movie.id in bannerCinemaIds) "F · CINEMA"', self.screen)
+        self.assertIn('Text(if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"', self.screen)
         self.assertLess(self.screen.index('if (previews.isNotEmpty()) {'),
                         self.screen.index('// Genre page: ten-image hero above'))
 
