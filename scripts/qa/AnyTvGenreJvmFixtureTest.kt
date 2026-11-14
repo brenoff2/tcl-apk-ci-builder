@@ -81,6 +81,29 @@ class AnyTvGenreJvmFixtureTest {
         println("ANYTV_JVM_ANIME_METADATA_REJECTION_CONFIRMED")
     }
 
+    @Test fun animeCandidateLossOccursBeforeAndAfterEditorialCurating() {
+        // Both groups come from a hypothetical TMDB with_genres=16 response.
+        // Only the first group also has genre_ids locally; this measures how
+        // much the real anyTvIsAnime function would discard after source filtering.
+        val source = (1..24).map { id ->
+            StreamingTitle(id, "Anime fixture $id", "", "", "tv",
+                rating = 7.2, votes = 100, genreIds =
+                    if (id <= 12) listOf(16) else emptyList(),
+                originalLanguage = "ja")
+        }
+        assertEquals(24, source.size)
+        val firstFilter = source.filter(::anime)
+        assertEquals(12, firstFilter.size)
+        val editorial = backfill(firstFilter)
+        val curated = curate(editorial)
+        assertEquals(12, editorial.size)
+        assertEquals(12, curated.size)
+        // The same valid synthetic source objects are not removed by the
+        // editorial helpers alone; the difference is the Anime predicate.
+        assertEquals(24, curate(backfill(source)).size)
+        println("ANYTV_JVM_ANIME_SOURCE_24_FILTERED_12_EDITORIAL_12")
+    }
+
     @Test fun genreEditorialKeepsFortyUndatedPosterlessFixtures() {
         val source = (1..40).map { id ->
             StreamingTitle(id, "Drama fixture $id", "", "", "movie",
