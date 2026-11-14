@@ -44,7 +44,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val matchGenre = genre == 0 || genre == ANYTV_ANIME_FILTER', self.screen)
         self.assertIn('if (id == 0) emptyList()', self.screen)
         self.assertIn('private fun anyTvIsAnime(title: StreamingTitle)', self.screen)
-        self.assertIn('.filter { id != ANYTV_ANIME_FILTER || anyTvIsAnime(it) }', self.screen)
+        self.assertIn('val accepted = parsed.filter {', self.screen)
+        self.assertIn('id != ANYTV_ANIME_FILTER || anyTvIsAnime(it)', self.screen)
         self.assertIn('title.originalLanguage == "ja" && 16 in title.genreIds', self.screen)
         self.assertIn('var genreViewMode by remember { mutableStateOf("grade") }', self.screen)
         self.assertIn('var genreSectionsMode by remember { mutableStateOf(true) }', self.screen)
@@ -255,7 +256,8 @@ class StreamingScreens(unittest.TestCase):
         source = home.split('suspend fun discoveryGenrePage(id: Int, media: String, page: Int,', 1)[1].split(
             '/** Real TMDB seasons and episodes', 1)[0]
         self.assertIn('with_genres=', source)
-        self.assertIn('mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)', source)
+        self.assertIn('val raw = payload.optJSONArray("results") ?: JSONArray()', source)
+        self.assertIn('val parsed = mapTitles(raw, media, 0)', source)
         self.assertNotIn('.filter(::anyTvReleased)', source)
         self.assertNotIn('mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id)', source)
         scope = home.split('fun matchesCatalogueScope(title: StreamingTitle)', 1)[1].split(
