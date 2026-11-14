@@ -26,13 +26,12 @@ class GenreFlowDiagnostic(unittest.TestCase):
     def test_R01_removed_section_navigation_is_not_an_active_feature(self):
         """Prior decision removed per-section CTA; old section branch is dormant."""
         assignments = [
-            line.split("openedSection =", 1)[1].strip()
-            for line in self.screen.splitlines()
+            line for line in self.screen.splitlines()
             if "openedSection =" in line and "openedSection ==" not in line
         ]
         self.assertTrue(assignments, "Expected state resets in source")
-        self.assertFalse(
-            any(value.strip() != "null" for value in assignments),
+        self.assertTrue(
+            all("openedSection = null" in line for line in assignments),
             "Unexpected non-null section open after CTA removal",
         )
 
