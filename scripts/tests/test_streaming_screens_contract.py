@@ -219,7 +219,7 @@ class StreamingScreens(unittest.TestCase):
     def test_one_catalogue_scope_applies_media_and_genre_to_all_entries(self):
         home = self.screen
         scope = home.split('fun matchesCatalogueScope(title: StreamingTitle)', 1)[1].split(
-            '// One catalogue readiness gate', 1)[0]
+            'fun matchesUpcomingGenreScope', 1)[0]
         self.assertIn('homeContentType != "all" && title.media != homeContentType', scope)
         self.assertIn('selectedHomeGenre == ANYTV_ANIME_FILTER', scope)
         self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', scope)
