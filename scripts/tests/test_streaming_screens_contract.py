@@ -24,7 +24,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_anime_separate_from_general_catalog_and_genres_default_list(self):
         self.assertIn('val matchGenre = genre == 0 || genre == ANYTV_ANIME_FILTER', self.screen)
-        self.assertIn('if (id <= 0) emptyList()', self.screen)
+        self.assertIn('if (id == 0) emptyList()', self.screen)
         self.assertIn('private fun anyTvIsAnime(title: StreamingTitle)', self.screen)
         self.assertIn('.filter { id != ANYTV_ANIME_FILTER || anyTvIsAnime(it) }', self.screen)
         self.assertIn('title.originalLanguage == "ja" && 16 in title.genreIds', self.screen)
@@ -234,6 +234,15 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val genreTitles = genreCandidates\n                                .filter(::matchesCatalogueScope)', home)
         self.assertNotIn('activeServiceNames', scope)
 
+    def test_anime_negative_id_is_not_discarded_by_shared_genre_scope(self):
+        home = self.screen
+        self.assertIn('private const val ANYTV_ANIME_FILTER = -2', home)
+        self.assertIn('else if (selectedHomeGenre == ANYTV_ANIME_FILTER) listOf(ANYTV_ANIME_FILTER)', home)
+        self.assertIn('id != 0 && ((pageKey !in genreShelves', home)
+        self.assertIn('if (id == 0) continue', home)
+        self.assertIn('if (id == 0) emptyList() else (', home)
+        self.assertNotIn('if (id <= 0) emptyList()', home)
+
     def test_provider_genre_waits_for_metadata_and_reloads_filtered_pools(self):
         home = self.screen
         self.assertIn(
@@ -282,7 +291,7 @@ class StreamingScreens(unittest.TestCase):
     def test_genre_is_not_hidden_behind_deeper_pool_and_header_is_named(self):
         home = self.screen
         self.assertIn('val catalogueInitialLoading =', home)
-        self.assertIn('id > 0 && ((pageKey !in genreShelves', home)
+        self.assertIn('id != 0 && ((pageKey !in genreShelves', home)
         self.assertIn('editorialKey !in genreEditorialPools', home)
         self.assertNotIn('id > 0 && "$kind:$id" !in genreEditorialPools', home)
         self.assertIn('if (!homeLibrary && (selected != null || selectedHomeGenre != 0)) {',
