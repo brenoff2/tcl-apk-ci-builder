@@ -3310,19 +3310,35 @@ internal fun TclStreamingScreens(
                                     "Em alta agora", "Indicados para você",
                                     "Lançamentos · Filmes", "Lançamentos · Séries",
                                     "No cinema")
+                                val promotedSecondary = listOf(
+                                    "Mais bem avaliados", "Populares no TMDB",
+                                    "Vale a pena assistir", "Novas temporadas",
+                                    "Você pode gostar")
+                                fun addEditorialHeading(heading: String, titles: List<StreamingTitle>) {
+                                    val selectedTitles = titles.filter {
+                                        (homeContentType == "all" ||
+                                            it.media == homeContentType) && anyTvReleased(it)
+                                    }
+                                    if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
+                                }
                                 fun addEditorial(onlyPrimary: Boolean) {
                                     discoveryShelves.forEach { (heading, titles) ->
                                         if ((heading != ANYTV_CINEMA_SHELF || heading == "No cinema") &&
-                                            (heading in primary) == onlyPrimary) {
-                                            val selectedTitles = titles.filter {
-                                                (homeContentType == "all" ||
-                                                    it.media == homeContentType) && anyTvReleased(it)
-                                            }
-                                            if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
+                                            (heading in primary) == onlyPrimary &&
+                                            (onlyPrimary || heading !in promotedSecondary)) {
+                                            addEditorialHeading(heading, titles)
                                         }
                                     }
                                 }
                                 addEditorial(true)
+                                val future = upcomingStreaming.filter {
+                                    homeContentType == "all" || it.media == homeContentType
+                                }
+                                if (future.isNotEmpty() || upcomingStreamingMore)
+                                    put("Em breve · Filmes e séries", future)
+                                promotedSecondary.forEach { heading ->
+                                    discoveryShelves[heading]?.let { addEditorialHeading(heading, it) }
+                                }
                                 // Two recurring titles are not an editorial shelf.
                                 // Keep miniseries below fresh discoveries and rotate genuine matches.
                                 if (homeContentType != "movie" && confirmedMiniseries.size >= 4) {
@@ -3376,15 +3392,7 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         }
-                        if (!homeLibrary && selected == null && selectedHomeGenre == 0) {
-                            val future = upcomingStreaming.filter {
-                                homeContentType == "all" || it.media == homeContentType
-                            }
-                            // Even if page one has no BR offers, later source pages can.
-                            if (future.isNotEmpty() || upcomingStreamingMore)
-                                put("Em breve · Filmes e séries", future)
-                                // Genre rows are ordered above secondary editorial rows.
-                        }
+
                         if (!homeLibrary && selected == null) {
                             activeServiceNames.forEach { name ->
                                 val kinds = listOf("movie", "tv").filter {
