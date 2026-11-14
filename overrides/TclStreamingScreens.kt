@@ -110,6 +110,39 @@ private val ANYTV_EDITORIAL_SECTIONS = listOf(
     "Em breve · Filmes e séries", "No cinema", "Novas temporadas",
     "Mais bem avaliados", "Minisséries imperdíveis"
 )
+/**
+ * Three evidence-preserving editorial levels: preferred titles first, then
+ * other qualified titles in the same verified catalogue, then the remaining
+ * same-type catalogue. No movie is turned into a series, and factual rails
+ * (cinema, premieres, seasons, miniseries) cannot be filled with unrelated titles.
+ */
+private fun anyTvBackfillEditorial(
+    heading: String, preferred: List<StreamingTitle>,
+    catalogue: List<StreamingTitle>, target: Int = 40
+): List<StreamingTitle> {
+    val kind = when {
+        heading.endsWith("· Filmes") -> "movie"
+        heading.endsWith("· Séries") || heading == "Novas temporadas" ||
+            heading == "Minisséries imperdíveis" -> "tv"
+        heading == "No cinema" -> "movie"
+        else -> null
+    }
+    fun qualified(item: StreamingTitle) =
+        (kind == null || item.media == kind) && item.id > 0 && item.name.isNotBlank() &&
+            item.poster.isNotBlank() &&
+            (heading == "Em breve · Filmes e séries" || anyTvReleased(item))
+    val first = preferred.filter(::qualified).distinctBy { "${it.media}:${it.id}" }
+    // These labels are factual, not taste ranking: never relax their evidence.
+    if (heading == "No cinema" || heading == "Em breve · Filmes e séries" ||
+        heading == "Novas temporadas" || heading == "Minisséries imperdíveis" ||
+        heading.startsWith("Lançamentos ·")) return first.take(target)
+    val eligible = catalogue.filter(::qualified)
+    val backed = (first + eligible.filter {
+        it.votes >= 50 && it.rating >= 6.0
+    } + eligible.filter { it.votes >= 10 } + eligible)
+        .distinctBy { "${it.media}:${it.id}" }
+    return backed.take(target)
+}
 private const val ANYTV_LIST_BATCH = 24
 private const val ANYTV_EDITORIAL_LIMIT = 50
 /**
@@ -1859,6 +1892,8 @@ internal fun TclStreamingScreens(
     var editingMyServices by remember { mutableStateOf(storedMyServices) }
     val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val providerEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val genreEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val providerMiniseries = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var providerListMode by remember { mutableStateOf(false) }
     var showCatalogEditor by remember { mutableStateOf(false) }
     val catalogPrefs = remember(context) { context.getSharedPreferences("tcl_tv_installed_apps", Context.MODE_PRIVATE) }
@@ -2596,6 +2631,39 @@ internal fun TclStreamingScreens(
                     anyTvReleased(title) && if (selectedHomeGenre == ANYTV_ANIME_FILTER)
                         anyTvIsAnime(title) else !anyTvIsAnime(title)
                 }.distinctBy { "${it.media}:${it.id}" }
+            if (kind == "tv" && poolKey !in providerMiniseries) {
+                providerMiniseries[poolKey] = runCatching {
+                    StreamingCatalog.confirmedMiniseries(providerEditorialPools[poolKey].orEmpty())
+                }.getOrDefault(emptyList())
+            }
+        }
+    }
+
+    // Populate editorial genre shelves independently of user-controlled list pages.
+    // Three genuine TMDB pages per movie/TV type provide the fallback candidate set.
+    LaunchedEffect(selectedHomeGenre, homeContentType, token) {
+        if (selected != null || selectedHomeGenre == 0 ||
+            selectedHomeGenre == ANYTV_CINEMA_FILTER) return@LaunchedEffect
+        for (kind in listOf("movie", "tv").filter {
+            homeContentType == "all" || it == homeContentType
+        }) {
+            val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER) ANYTV_ANIME_FILTER
+                else anyTvResolvedGenre(selectedHomeGenre, kind, allMovieGenres, tvGenres)
+            if (id <= 0) continue
+            val key = "$kind:$id"
+            if (key in genreEditorialPools) continue
+            val pages = coroutineScope {
+                (1..3).map { page ->
+                    async {
+                        runCatching {
+                            StreamingCatalog.discoveryGenrePage(id, kind, page, "popular").titles
+                        }.getOrDefault(emptyList())
+                    }
+                }.awaitAll()
+            }
+            genreEditorialPools[key] = pages.flatten()
+                .filter { it.media == kind && anyTvReleased(it) }
+                .distinctBy { it.id }
         }
     }
 
@@ -3263,11 +3331,15 @@ internal fun TclStreamingScreens(
                                         .sortedByDescending { it.rating }
                                     "Minisséries imperdíveis" -> pool.filter {
                                         it.media == "tv" &&
-                                            confirmedMiniseries.any { series -> series.id == it.id }
+                                            (providerMiniseries["${app.name}:tv:" +
+                                                anyTvProviderGenre("tv", selectedHomeGenre,
+                                                    allMovieGenres, tvGenres)]
+                                                .orEmpty().any { series -> series.id == it.id } ||
+                                                confirmedMiniseries.any { series -> series.id == it.id })
                                     }
                                     else -> emptyList()
                                 }
-                                put(heading, titles.distinctBy { "${it.media}:${it.id}" })
+                                put(heading, anyTvBackfillEditorial(heading, titles, pool))
                             }
                         } else if (homeLibrary) {
                             val films = favorites.filter { it.title.media == "movie" }
@@ -3362,7 +3434,17 @@ internal fun TclStreamingScreens(
                                             selectedHomeGenre, kind, allMovieGenres, tvGenres)
                                     if (id == 0) emptyList()
                                     else genreShelves["$kind:$id:$genreSort"].orEmpty()
-                                }.distinctBy { "${it.media}:${it.id}" }
+                                }.let { initial ->
+                                    val deeper = listOf("movie", "tv").filter {
+                                        homeContentType == "all" || it == homeContentType
+                                    }.flatMap { kind ->
+                                        val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                            ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                                selectedHomeGenre, kind, allMovieGenres, tvGenres)
+                                        genreEditorialPools["$kind:$id"].orEmpty()
+                                    }
+                                    (initial + deeper).distinctBy { "${it.media}:${it.id}" }
+                                }
                                 fun matchesGenre(title: StreamingTitle): Boolean {
                                     if (selectedHomeGenre == ANYTV_ANIME_FILTER)
                                         return anyTvIsAnime(title)
@@ -3410,7 +3492,7 @@ internal fun TclStreamingScreens(
                                                         it, activeServiceNames)
                                                 })
                                     }.distinctBy { "${it.media}:${it.id}" }
-                                    put(heading, titles)
+                                    put(heading, anyTvBackfillEditorial(heading, titles, genrePool))
                                 }
                             }
                         }
