@@ -79,32 +79,40 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"', banner)
         self.assertIn('onOpenStreaming', banner)
         self.assertIn('confirmedMiniseries.size >= 4', home)
-        self.assertLess(home.index('addEditorial(true)'), home.index('put("Minisséries imperdíveis",'))
+        self.assertLess(home.index('primary.forEach { heading ->'), home.index('put("Minisséries imperdíveis",'))
         self.assertLess(home.index('put("Minisséries imperdíveis",'),
                         home.index('put("Por gênero: $label", titles)'))
 
-    def test_home_secondary_rails_follow_cinema_before_genres(self):
+    def test_home_rails_follow_requested_order_without_two_recommendations(self):
         home = self.screen
-        start = home.index('val promotedSecondary = listOf(')
-        end = home.index('addEditorial(false)', start)
+        start = home.index('val primary = listOf(')
+        end = home.index('if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', start)
         section = home[start:end]
+        primary = section.split('val primary = listOf(', 1)[1].split(')', 1)[0]
         ordered = [
-            'addEditorial(true)',
-            'put("Em breve · Filmes e séries", future)',
-            'promotedSecondary.forEach { heading ->',
-            'put("Minisséries imperdíveis",',
-            'put("Por gênero: $label", titles)',
+            '"Destaques da semana · Filmes"', '"Destaques da semana · Séries"',
+            '"Em alta agora"', '"Indicados para você"', '"Populares no TMDB"',
+            '"Lançamentos · Filmes"', '"Lançamentos · Séries"',
         ]
         for before, after in zip(ordered, ordered[1:]):
-            self.assertLess(section.index(before), section.index(after))
-        promoted = section.split('val promotedSecondary = listOf(', 1)[1].split(')', 1)[0]
-        headings = [
-            '"Mais bem avaliados"', '"Populares no TMDB"',
-            '"Vale a pena assistir"', '"Novas temporadas"', '"Você pode gostar"',
+            self.assertLess(primary.index(before), primary.index(after))
+        after_cinema = section.split('val afterCinema = listOf(', 1)[1].split(')', 1)[0]
+        self.assertLess(after_cinema.index('"No cinema"'),
+                        after_cinema.index('"Novas temporadas"'))
+        self.assertLess(after_cinema.index('"Novas temporadas"'),
+                        after_cinema.index('"Mais bem avaliados"'))
+        self.assertIn('val hiddenHome = setOf("Você pode gostar", "Vale a pena assistir")',
+                      section)
+        position = [
+            'primary.forEach { heading ->',
+            'put("Em breve · Filmes e séries", future)',
+            'afterCinema.forEach { heading ->',
+            'put("Minisséries imperdíveis",',
+            'put("Por gênero: $label", titles)',
+            'heading !in hiddenHome',
         ]
-        for before, after in zip(headings, headings[1:]):
-            self.assertLess(promoted.index(before), promoted.index(after))
-        self.assertIn('(onlyPrimary || heading !in promotedSecondary)', section)
+        for before, after in zip(position, position[1:]):
+            self.assertLess(section.index(before), section.index(after))
         self.assertEqual(home.count('put("Em breve · Filmes e séries", future)'), 1)
 
     def test_home_cache_persists_and_reuses_real_catalogue(self):
