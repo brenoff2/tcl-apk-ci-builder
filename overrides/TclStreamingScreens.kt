@@ -4248,7 +4248,9 @@ internal fun TclStreamingScreens(
                                 )
                                 genreSections.forEach { (heading, sectionTitles) ->
                                     if (sectionTitles.isNotEmpty()) item {
-                                        AnyTvOneRowPreview(heading, sectionTitles, posterCard)
+                                        AnyTvOneRowPreview(heading, sectionTitles) { title, modifier, _ ->
+                                            posterCard(title, modifier, heading == "No cinema")
+                                        }
                                     }
                                 }
                             } else if (genreViewMode == "detalhado" &&
@@ -4267,6 +4269,7 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                             }
+                            if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                             item {
                                 if (genreSources.any { (key, _) -> genreMore[key] == true }) {
                                     AnyTvStreamOutlinedButton(enabled = genreSources.none { (key, _) ->
@@ -4320,16 +4323,20 @@ internal fun TclStreamingScreens(
                                             fontSize = 13.sp)
                                     }
                                 }
-                                genreErrors[genreKey]?.let { error ->
-                                    Text(error, color = MaterialTheme.colorScheme.error,
-                                        fontSize = 12.sp)
-                                    if (genreShelves[genreKey] == null &&
-                                        genreLoading[genreKey] != true) {
-                                        AnyTvStreamTextButton(onClick = { genreFirstPageRetry++ }) {
-                                            Text("Tentar novamente")
+                                genreSources.forEach { (sourceKey, _) ->
+                                    genreErrors[sourceKey]?.let { error ->
+                                        Text("${sourceKey.substringBefore(":")}: $error",
+                                            color = MaterialTheme.colorScheme.error,
+                                            fontSize = 12.sp)
+                                        if (genreShelves[sourceKey] == null &&
+                                            genreLoading[sourceKey] != true) {
+                                            AnyTvStreamTextButton(onClick = { genreFirstPageRetry++ }) {
+                                                Text("Tentar novamente")
+                                            }
                                         }
                                     }
                                 }
+                            }
                             }
                         } else if (homeLibrary && librarySection == "watching") {
                             val inProgress = uniqueShelves.flatMap { it.second }
