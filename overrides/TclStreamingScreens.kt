@@ -1464,7 +1464,7 @@ private fun AnyTvPosterCard(
                     modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             } else {
                 // A genuine catalogue title without artwork is not an empty card.
-                Text(title.name, color = Color.White, fontSize = 12.sp,
+                Text(text = title.name, color = Color.White, fontSize = 12.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.align(Alignment.Center).padding(9.dp),
                     maxLines = 4, overflow = TextOverflow.Ellipsis)
