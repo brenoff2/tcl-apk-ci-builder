@@ -239,6 +239,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val genreTitles = genreCandidates', home)
         self.assertIn('val genrePool = sources.filter(::matchesGenre)', home)
         self.assertIn('anyTvBackfillEditorial(heading, titles, genrePool)', home)
+        self.assertIn('LaunchedEffect(selectedHomeGenre, homeContentType, token, allMovieGenres, tvGenres)', home)
         self.assertIn('listOf("movie", "tv").filter {', home)
         self.assertIn('selectedHomeGenre = kind.id; homeContentType = "all"', home)
 
