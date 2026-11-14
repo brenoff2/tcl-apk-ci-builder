@@ -31,7 +31,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('var genreViewMode by remember { mutableStateOf("grade") }', self.screen)
         self.assertIn('var genreSectionsMode by remember { mutableStateOf(true) }', self.screen)
         self.assertIn('else { genreSectionsMode = !genreSectionsMode; genreViewMode = "grade" }', self.screen)
-        self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('renderCatalogueCards(genreTitles,', self.screen)
         self.assertIn('"Lançamentos · Filmes", "Lançamentos · Séries"', self.screen)
         self.assertIn('"Mais bem avaliados" -> pool.filter { it.votes > 0 }', self.screen)
         self.assertIn('previewShelves.filterNot { (heading, shelf) ->', self.screen)
@@ -42,7 +42,7 @@ class StreamingScreens(unittest.TestCase):
     def test_genre_sections_toggle_and_hero_single_badge(self):
         self.assertIn('else { genreSectionsMode = !genreSectionsMode; genreViewMode = "grade" }', self.screen)
         self.assertIn('else !genreSectionsMode)\n                                                "Ver em seções"', self.screen)
-        self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
+        self.assertIn('renderCatalogueCards(genreTitles,', self.screen)
         self.assertNotIn('Text(if (current.media == "movie") "F" else "S"', self.screen)
         self.assertIn('showRating = false, showYear = true,', self.screen)
         self.assertIn('heightIn(min = 16.dp)', self.screen)
@@ -119,7 +119,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('selectedHomeGenre = ANYTV_ANIME_FILTER; homeContentType = "all"', home)
         self.assertIn('else !genreSectionsMode)', home)
         self.assertIn('if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER)', home)
-        self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', home)
+        self.assertIn('renderCatalogueCards(genreTitles,', home)
         self.assertIn('genreSources.forEach { (_, titles) ->', home)
         self.assertIn('genreSources.any { (key, _) -> genreMore[key] == true }', home)
         rails = home.split('private val ANYTV_EDITORIAL_SECTIONS = listOf(', 1)[1].split(
@@ -233,6 +233,23 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('.filter(::matchesCatalogueScope).let { results ->', home)
         self.assertIn('val genreTitles = genreCandidates\n                                .filter(::matchesCatalogueScope)', home)
         self.assertNotIn('activeServiceNames', scope)
+
+    def test_genre_failure_and_retry_are_visible_in_default_sections(self):
+        home = self.screen
+        self.assertIn('var genreMetadataRetry by remember { mutableIntStateOf(0) }', home)
+        self.assertIn('var genreMetadataError by remember { mutableStateOf(false) }', home)
+        self.assertIn('val genreEditorialErrors = remember', home)
+        self.assertIn('LaunchedEffect(token, genreMetadataRetry)', home)
+        self.assertIn('genreEditorialErrors[key] = true', home)
+        self.assertIn('editorialKey !in genreEditorialErrors', home)
+        status = home.split('// Report initial catalogue failures in the default Seções', 1)[1].split(
+            'if (homeLibrary) {', 1)[0]
+        self.assertIn('genreSectionsMode', status)
+        self.assertIn('pageKey in genreErrors || editorialKey in genreEditorialErrors', status)
+        self.assertIn('visibleShelves.values.all { it.isEmpty() }', status)
+        self.assertIn('if (genreMetadataError) genreMetadataRetry++', status)
+        self.assertIn('genreFirstPageRetry++', status)
+        self.assertIn('Text("Tentar novamente")', status)
 
     def test_genre_action_uses_all_media_and_real_catalogue_without_subscriptions(self):
         home = self.screen
