@@ -3837,7 +3837,9 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         } else {
-                        if (!homeLibrary) {
+                        // The Home has no generic "Principal" heading. Filtered
+                        // pages retain their actual genre or provider name.
+                        if (!homeLibrary && (selected != null || selectedHomeGenre != 0)) {
                             item {
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .padding(top = 16.dp, bottom = 14.dp),
