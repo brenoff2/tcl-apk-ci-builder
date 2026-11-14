@@ -150,6 +150,48 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('discoveryShelves.forEach { (heading, titles) ->', section)
         self.assertIn('if (!homeLibrary && selected == null && selectedHomeGenre != 0)', home)
 
+    def test_filtered_pages_use_one_canonical_renderer_without_extra_rails(self):
+        home = self.screen
+        names = home.split('private val ANYTV_EDITORIAL_SECTIONS = listOf(', 1)[1].split(
+            ')', 1)[0]
+        headings = [
+            'Destaques da semana · Filmes', 'Destaques da semana · Séries',
+            'Em alta agora', 'Indicados para você', 'Populares',
+            'Lançamentos · Filmes', 'Lançamentos · Séries',
+            'Em breve · Filmes e séries', 'No cinema', 'Novas temporadas',
+            'Mais bem avaliados', 'Minisséries imperdíveis',
+        ]
+        import re
+        self.assertEqual(re.findall(r'"([^"]+)"', names), headings)
+        catalogue = home.split('val visibleShelves = linkedMapOf<', 1)[1].split(
+            'val animeSeparatedShelves =', 1)[0]
+        provider = catalogue.split('if (selected != null && !homeLibrary) {', 1)[1].split(
+            '} else if (homeLibrary)', 1)[0]
+        genre = catalogue.split('} else if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', 1)[1]
+        self.assertIn('ANYTV_EDITORIAL_SECTIONS.forEach { heading ->', provider)
+        self.assertIn('ANYTV_EDITORIAL_SECTIONS.forEach { heading ->', genre)
+        self.assertNotIn('Filmes recém-lançados$service', provider)
+        self.assertNotIn('Recomendados para você$service', provider)
+        self.assertNotIn('Vale a pena assistir$service', provider)
+        self.assertNotIn('Filmes e séries · ', genre)
+        render = home.split('previewShelves.filterNot { (heading, _) ->', 1)[1]
+        self.assertIn('(!genreSectionsMode ||', render)
+        self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER)', render)
+        self.assertIn('selected != null && providerListMode', render)
+        self.assertIn('}.forEach { (heading, shelf) ->', render)
+        self.assertIn('Text(heading, fontWeight = FontWeight.SemiBold)', render)
+        self.assertIn('items(shelf.take(ANYTV_EDITORIAL_LIMIT)', render)
+        cinema_previews = home.split('// Two single-row preview rails follow the main hero', 1)[1].split(
+            '// Genre page: ten-image hero', 1)[0]
+        self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER) {', cinema_previews)
+        self.assertNotIn('genreSectionsMode ||', cinema_previews)
+        self.assertNotIn('AnyTvOneRowPreview(heading, sectionTitles)', home)
+        self.assertIn('if (!homeLibrary && selected != null && providerListMode)', home)
+        self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)',
+                      home)
+        self.assertIn('if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER)',
+                      home)
+
     def test_home_cache_persists_and_reuses_real_catalogue(self):
         home = self.screen
         for value in (
