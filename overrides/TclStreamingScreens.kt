@@ -118,7 +118,8 @@ private val ANYTV_EDITORIAL_SECTIONS = listOf(
  */
 private fun anyTvBackfillEditorial(
     heading: String, preferred: List<StreamingTitle>,
-    catalogue: List<StreamingTitle>, target: Int = 40
+    catalogue: List<StreamingTitle>, target: Int = 40,
+    genreCatalogue: Boolean = false
 ): List<StreamingTitle> {
     val kind = when {
         heading.endsWith("· Filmes") -> "movie"
@@ -129,8 +130,8 @@ private fun anyTvBackfillEditorial(
     }
     fun qualified(item: StreamingTitle) =
         (kind == null || item.media == kind) && item.id > 0 && item.name.isNotBlank() &&
-            item.poster.isNotBlank() &&
-            (heading == "Em breve · Filmes e séries" || anyTvReleased(item))
+            (genreCatalogue || item.poster.isNotBlank()) &&
+            (genreCatalogue || heading == "Em breve · Filmes e séries" || anyTvReleased(item))
     val first = preferred.filter(::qualified).distinctBy { "${it.media}:${it.id}" }
     // These labels are factual, not taste ranking: never relax their evidence.
     if (heading == "No cinema" || heading == "Em breve · Filmes e séries" ||
@@ -194,10 +195,10 @@ private fun anyTvEditorialScore(
 private fun anyTvCurate(
     candidates: List<StreamingTitle>, heading: String, interests: Set<Int>,
     watched: Set<String> = emptySet(), limit: Int = ANYTV_EDITORIAL_LIMIT,
-    trakt: Map<String, Int> = emptyMap()
+    trakt: Map<String, Int> = emptyMap(), genreCatalogue: Boolean = false
 ): List<StreamingTitle> {
     val base = candidates.filter { it.id > 0 && it.name.isNotBlank() &&
-        it.poster.isNotBlank() }.distinctBy { "${it.media}:${it.id}" }
+        (genreCatalogue || it.poster.isNotBlank()) }.distinctBy { "${it.media}:${it.id}" }
     // Keep a poster visible after its watched marker changes. Prioritize
     // unwatched films instead of removing a card during user interaction.
     val unwatched = base
@@ -1063,8 +1064,9 @@ private object StreamingCatalog {
                     "&page=$sourcePage"
                 val payload = get("backend", route)
                 StreamingResults(
-                    mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id)
-                        .filter(::anyTvReleased)
+                    // The discover endpoint has already applied with_genres. Do not
+                    // remove genuine titles a second time for missing genre_ids/date.
+                    mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)
                         .filter { id != ANYTV_ANIME_FILTER || anyTvIsAnime(it) },
                     sourcePage < payload.optInt("total_pages", sourcePage))
             }
@@ -1226,7 +1228,8 @@ private object StreamingCatalog {
                  else if (genre > 0) "&with_genres=$genre" else "") +
                 "&include_adult=false&sort_by=$sort&page=$sourcePage"
             val result = get(token, url)
-            val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media, genre)
+            val candidates = mapTitles(result.optJSONArray("results") ?: JSONArray(), media,
+                if (search) genre else 0)
                 .filter(::anyTvReleased)
                 .filter { genre != ANYTV_ANIME_FILTER || anyTvIsAnime(it) }
             // Search endpoints have no provider filter: verify BR subscription offers.
@@ -2665,24 +2668,29 @@ internal fun TclStreamingScreens(
                 else anyTvResolvedGenre(selectedHomeGenre, kind, allMovieGenres, tvGenres)
             if (id == 0) continue
             val key = "$kind:$id"
-            if (key in genreEditorialPools) continue
-            try {
-                val pages = coroutineScope {
-                    (1..3).map { page ->
-                        async {
-                            StreamingCatalog.discoveryGenrePage(id, kind, page, "popular").titles
+            if (key in genreEditorialPools && key !in genreEditorialErrors) continue
+            val pages = coroutineScope {
+                (1..3).map { page ->
+                    async {
+                        try {
+                            Result.success(StreamingCatalog.discoveryGenrePage(
+                                id, kind, page, "popular").titles)
+                        } catch (error: java.util.concurrent.CancellationException) {
+                            throw error
+                        } catch (error: Exception) {
+                            Result.failure<List<StreamingTitle>>(error)
                         }
-                    }.awaitAll()
-                }
-                genreEditorialPools[key] = pages.flatten()
-                    .filter { it.media == kind && anyTvReleased(it) }
-                    .distinctBy { it.id }
-                genreEditorialErrors.remove(key)
-            } catch (error: java.util.concurrent.CancellationException) {
-                throw error
-            } catch (error: Exception) {
-                genreEditorialErrors[key] = true
+                    }
+                }.awaitAll()
             }
+            val successfulPages = pages.mapNotNull { it.getOrNull() }
+            if (successfulPages.isNotEmpty()) {
+                genreEditorialPools[key] = (genreEditorialPools[key].orEmpty() +
+                    successfulPages.flatten()).filter { it.media == kind }
+                    .distinctBy { it.id }
+            }
+            if (pages.any { it.isFailure }) genreEditorialErrors[key] = true
+            else genreEditorialErrors.remove(key)
         }
     }
 
@@ -3148,9 +3156,21 @@ internal fun TclStreamingScreens(
         if (selectedHomeGenre > 0) {
             val id = anyTvResolvedGenre(selectedHomeGenre, title.media,
                 allMovieGenres, tvGenres)
-            return id > 0 && id in title.genreIds && !anyTvIsAnime(title)
+            // The selected TMDB discovery feed has already filtered by genre.
+            // Older code checked genre_ids twice, dropping titles with partial metadata.
+            return id > 0 && !anyTvIsAnime(title)
         }
         return !anyTvIsAnime(title)
+    }
+
+    // Only global upcoming feeds need a local genre_ids check: unlike the
+    // selected discovery feed, upcomingStreaming itself is not genre-scoped.
+    fun matchesUpcomingGenreScope(title: StreamingTitle): Boolean {
+        if (!matchesCatalogueScope(title)) return false
+        if (selectedHomeGenre <= 0) return true
+        val id = anyTvResolvedGenre(selectedHomeGenre, title.media,
+            allMovieGenres, tvGenres)
+        return id > 0 && id in title.genreIds
     }
 
     // One catalogue readiness gate for Home, provider and genre. Only the
@@ -3343,6 +3363,8 @@ internal fun TclStreamingScreens(
                     // candidate pool changes with the chosen navigation filters.
                     fun scopedEditorial(poolInput: List<StreamingTitle>,
                         providerName: String? = null): LinkedHashMap<String, List<StreamingTitle>> {
+                        val genreCatalogue = selected == null && selectedHomeGenre != 0 &&
+                            selectedHomeGenre != ANYTV_CINEMA_FILTER
                         val pool = poolInput.filter(::matchesCatalogueScope)
                             .distinctBy { "${it.media}:${it.id}" }
                         val weeklyFilms = discoveryShelves["Destaques da semana · Filmes"]
@@ -3362,7 +3384,7 @@ internal fun TclStreamingScreens(
                                 confirmedMiniseries
                         } else confirmedMiniseries
                         val verifiedUpcoming = upcomingStreaming.filter { title ->
-                            matchesCatalogueScope(title) && (providerName == null ||
+                            matchesUpcomingGenreScope(title) && (providerName == null ||
                                 offerCache["${title.media}:${title.id}"].orEmpty().any {
                                     StreamingCatalog.matchesSelectedSubscription(
                                         it, listOf(providerName))
@@ -3404,7 +3426,8 @@ internal fun TclStreamingScreens(
                                     }
                                     else -> emptyList()
                                 }
-                                put(heading, anyTvBackfillEditorial(heading, titles, pool))
+                                put(heading, anyTvBackfillEditorial(heading, titles, pool,
+                                    genreCatalogue = genreCatalogue))
                             }
                         }
                     }
@@ -3526,7 +3549,8 @@ internal fun TclStreamingScreens(
                     filteredShelves.forEach { (heading, candidates) ->
                         val ranked = if (homeLibrary) candidates else
                             anyTvCurate(candidates, heading, editorialInterests, watchedFilms,
-                                ANYTV_EDITORIAL_LIMIT, traktSignals)
+                                ANYTV_EDITORIAL_LIMIT, traktSignals,
+                                genreCatalogue = selected == null && selectedHomeGenre != 0)
                         // Reserve the first posters of each editorial rail for new discoveries.
                         val fresh = ranked.filterNot { "${it.media}:${it.id}" in seenPreview }
                         val arranged = (fresh + ranked).distinctBy { "${it.media}:${it.id}" }
@@ -3576,6 +3600,9 @@ internal fun TclStreamingScreens(
                                     anyTvRecentPremiere(title) && (title.media != "movie" ||
                                         (cinemaIndexReady && title.id !in cinemaIds))
                                 heading.startsWith("Novas temporadas") -> title.media == "tv"
+                                // Ordinary genre results are already scoped upstream.
+                                selected == null && selectedHomeGenre > 0 -> true
+                                selected == null && selectedHomeGenre == ANYTV_ANIME_FILTER -> true
                                 else -> anyTvReleased(title) &&
                                     (selectedHomeGenre != 0 || title.media != "movie" ||
                                         (!cinemaIndexReady || title.id !in cinemaIds))
