@@ -2663,7 +2663,7 @@ internal fun TclStreamingScreens(
         }) {
             val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER) ANYTV_ANIME_FILTER
                 else anyTvResolvedGenre(selectedHomeGenre, kind, allMovieGenres, tvGenres)
-            if (id <= 0) continue
+            if (id == 0) continue
             val key = "$kind:$id"
             if (key in genreEditorialPools) continue
             try {
@@ -3183,7 +3183,7 @@ internal fun TclStreamingScreens(
                         allMovieGenres, tvGenres)
                 val pageKey = "$kind:$id:$genreSort"
                 val editorialKey = "$kind:$id"
-                id > 0 && ((pageKey !in genreShelves && pageKey !in genreErrors) ||
+                id != 0 && ((pageKey !in genreShelves && pageKey !in genreErrors) ||
                     (editorialKey !in genreEditorialPools &&
                         editorialKey !in genreEditorialErrors))
             }
@@ -3511,7 +3511,7 @@ internal fun TclStreamingScreens(
                                     val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
                                         ANYTV_ANIME_FILTER else anyTvResolvedGenre(
                                             selectedHomeGenre, kind, allMovieGenres, tvGenres)
-                                    if (id <= 0) emptyList() else (
+                                    if (id == 0) emptyList() else (
                                         genreShelves["$kind:$id:$genreSort"].orEmpty() +
                                             genreEditorialPools["$kind:$id"].orEmpty())
                                 }
