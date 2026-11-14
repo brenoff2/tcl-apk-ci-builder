@@ -106,6 +106,53 @@ class AnyTvGenreJvmFixtureTest {
         println("ANYTV_REAL_PARSER_DRAMA_ACTION_2_OF_2")
     }
 
+    @Test fun actualAndroidCachedResponsePassesRealJsonParserAndEditorial() {
+        // Reproduce real local cache -> StreamingCatalog.get -> mapTitles ->
+        // Anime predicate -> editorial. Compose state and network are not tested.
+        val cacheType = Class.forName("com.hari.androidtvremote.ui.app.StreamingDiskCache")
+        val cache = cacheType.getDeclaredField("INSTANCE").apply { isAccessible = true }
+            .get(null)
+        val root = cacheType.getDeclaredField("root").apply { isAccessible = true }
+        val original = root.get(null)
+        val scratch = java.nio.file.Files.createTempDirectory("anytv-cached-parser-jvm-").toFile()
+        try {
+            root.set(null, scratch)
+            val write = cacheType.getDeclaredMethod("write", String::class.java,
+                org.json.JSONObject::class.java, Long::class.javaPrimitiveType)
+                .apply { isAccessible = true }
+            val catalogType = Class.forName("com.hari.androidtvremote.ui.app.StreamingCatalog")
+            val catalog = catalogType.getDeclaredField("INSTANCE").apply { isAccessible = true }
+                .get(null)
+            val get = catalogType.getDeclaredMethod("get", String::class.java,
+                String::class.java).apply { isAccessible = true }
+            val parse = catalogType.getDeclaredMethod("mapTitles",
+                org.json.JSONArray::class.java, String::class.java,
+                Int::class.javaPrimitiveType).apply { isAccessible = true }
+
+            val route = "discover/tv?language=pt-BR&with_genres=16&page=1"
+            val source = org.json.JSONArray().put(org.json.JSONObject()
+                .put("id", 911).put("name", "Anime com genero")
+                .put("original_language", "ja")
+                .put("genre_ids", org.json.JSONArray().put(16)))
+                .put(org.json.JSONObject().put("id", 912)
+                    .put("name", "Anime sem genero secundario")
+                    .put("original_language", "ja"))
+            val payload = org.json.JSONObject().put("results", source)
+            write.invoke(cache, route, payload, 48L * 3600000L)
+            val fromCache = get.invoke(catalog, "backend", route) as org.json.JSONObject
+            val parsed = parse.invoke(catalog,
+                fromCache.getJSONArray("results"), "tv", 0) as List<*>
+            val titles = parsed.map { it as StreamingTitle }
+            assertEquals(listOf(911, 912), titles.map { it.id })
+            assertEquals(2, curate(backfill(titles)).size)
+            assertEquals(listOf(911), titles.filter(::anime).map { it.id })
+            println("ANYTV_ACTUAL_CACHE_GET_PARSE_2_EDITORIAL_2_ANIME_1")
+        } finally {
+            root.set(null, original)
+            scratch.deleteRecursively()
+        }
+    }
+
     @Test fun actualAndroidDiskCacheRetainsAndExpiresSyntheticDiscoveryPayload() {
         // Unit-test only: install an isolated local cache root via reflection.
         // No remote endpoint, production account, or Android app data is touched.
