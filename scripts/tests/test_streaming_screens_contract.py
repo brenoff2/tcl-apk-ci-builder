@@ -809,7 +809,7 @@ class StreamingScreens(unittest.TestCase):
             'genreMore[key] = result.more',
             'items(shelf.take(ANYTV_EDITORIAL_LIMIT),',
             'items(shelf.chunked(3))',
-            'items(genreTitles.chunked(3))',
+            'renderCatalogueCards(genreTitles,',
             'StreamingCatalog.discoveryGenrePage(',
             '"Mostrar mais"', 'genreShelves[key] =',
             'val films = discoveryShelves["Destaques da semana · Filmes"]',
@@ -1404,7 +1404,7 @@ class StreamingScreens(unittest.TestCase):
             'modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)',
             'contentScale = ContentScale.Fit)',
             'val cardWidth = (maxWidth - 18.dp) / 3f',
-            'items(genreTitles.chunked(3))',
+            'renderCatalogueCards(genreTitles,',
             'items(sectionTitles.chunked(3))',
             'items(shelf.chunked(3))',
             'items(inProgress.chunked(3))',
@@ -1564,8 +1564,10 @@ class StreamingScreens(unittest.TestCase):
     def test_streaming_list_controls_and_detailed_card_consistency(self):
         # Both provider and genre pages use one detailed-card implementation.
         self.assertIn('val detailedListCard: @Composable (StreamingTitle) -> Unit', self.screen)
-        self.assertIn('items(combined) { title -> detailedListCard(title) }', self.screen)
-        self.assertIn('items(genreTitles) { title -> detailedListCard(title) }', self.screen)
+        self.assertIn('fun androidx.compose.foundation.lazy.LazyListScope.renderCatalogueCards(', self.screen)
+        self.assertIn('items(titles) { title -> detailedListCard(title) }', self.screen)
+        self.assertIn('renderCatalogueCards(combined, false)', self.screen)
+        self.assertIn('renderCatalogueCards(genreTitles,', self.screen)
         self.assertIn('posterOnly = true', self.screen)
         self.assertIn('if (!posterOnly) {', self.screen)
         self.assertIn('Text("▶ Trailer"', self.screen)
@@ -1594,7 +1596,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_streaming_subtitle_controls_are_separate_rows(self):
         section = self.screen.split('val combined = buildList', 1)[1].split(
-            'if (genreViewMode == "detalhado")', 1)[0]
+            'renderCatalogueCards(combined, false)', 1)[0]
         self.assertIn('Box(modifier = Modifier.width(3.dp).height(22.dp)', section.split(
             'Row(modifier = Modifier.fillMaxWidth()\n                                    .horizontalScroll', 1)[0])
         self.assertIn('AnyTvGenreViewIcon(Icons.Filled.GridView', section)
@@ -1614,7 +1616,7 @@ class StreamingScreens(unittest.TestCase):
             'providerListPages[key] = next',
             'StreamingCatalog.discover(',
             'genreViewMode == "detalhado"',
-            'if (genreViewMode == "detalhado")',
+            'if (genreViewMode == "detalhado" && !cinemaSection)',
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, self.screen)
