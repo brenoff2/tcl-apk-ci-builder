@@ -1207,24 +1207,27 @@ internal fun AnyTvHomeFilmBanner(
     val context = LocalContext.current
     var previews by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
     val previewProviders = remember { mutableStateMapOf<Int, StreamingOffer?>() }
-    var bannerCinemaIds by remember { mutableStateOf<Set<Int>>(emptySet()) }
     LaunchedEffect(Unit) {
         StreamingCatalog.configure(context)
-        bannerCinemaIds = runCatching {
-            val ids = mutableSetOf<Int>()
-            for (page in 1..5) {
-                val response = StreamingCatalog.discoveryCinemaPage(page)
-                ids.addAll(response.titles.map { it.id })
-                if (!response.more) break
+        // Use authentic weekly trends for BOTH media types. Cinema is a separate
+        // editorial category and must never determine what the Home banner shows.
+        val (films, series) = coroutineScope {
+            val movies = async { runCatching {
+                StreamingCatalog.discoveryShelf("trending/movie/week", "movie")
+            }.getOrDefault(emptyList()) }
+            val shows = async { runCatching {
+                StreamingCatalog.discoveryShelf("trending/tv/week", "tv")
+            }.getOrDefault(emptyList()) }
+            movies.await() to shows.await()
+        }
+        previews = buildList {
+            for (i in 0 until maxOf(films.size, series.size)) {
+                films.getOrNull(i)?.let { add(it) }
+                series.getOrNull(i)?.let { add(it) }
             }
-            ids.toSet()
-        }.getOrDefault(emptySet())
-        // discoveryShelf appends language itself: never pass a duplicate query.
-        previews = runCatching {
-            StreamingCatalog.discoveryShelf("trending/movie/week", "movie")
-        }.getOrDefault(emptyList())
-            .filter { (anyTvReleased(it) || it.id in bannerCinemaIds) &&
-                (it.backdrop.isNotBlank() || it.poster.isNotBlank()) }.take(10)
+        }.filter { anyTvReleased(it) &&
+            (it.backdrop.isNotBlank() || it.poster.isNotBlank()) }
+            .distinctBy { "${it.media}:${it.id}" }.take(10)
     }
     Surface(
         modifier = Modifier.fillMaxWidth().height(92.dp)
@@ -1279,10 +1282,9 @@ internal fun AnyTvHomeFilmBanner(
                     Column(modifier = Modifier.fillMaxHeight().fillMaxWidth(0.7f)
                         .padding(start = 15.dp, end = 8.dp, top = 11.dp, bottom = 10.dp),
                         verticalArrangement = Arrangement.SpaceBetween) {
-                        Text(if (movie.id in bannerCinemaIds) "F · CINEMA"
-                             else "EM DESTAQUE", fontSize = 10.sp,
-                            color = if (movie.id in bannerCinemaIds) Color(0xFF74ADFF)
-                                    else Color(0xFFB7BCC5),
+                        Text(if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"
+                             else "DESTAQUE DA SEMANA · FILME", fontSize = 10.sp,
+                            color = Color(0xFFB7BCC5),
                             fontWeight = FontWeight.Medium)
                         Text(movie.name, fontSize = 15.sp, lineHeight = 18.sp,
                             color = Color.White, maxLines = 2,
