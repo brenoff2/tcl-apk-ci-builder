@@ -2636,6 +2636,7 @@ internal fun TclStreamingScreens(
                     series.getOrNull(index)?.let { add(it) }
                 }
             }
+        val cinemaNow = shelves.remove(ANYTV_CINEMA_SHELF).orEmpty()
         val weekly = interleave(shelves.remove("Em alta nesta semana").orEmpty(),
             shelves.remove("Séries em destaque").orEmpty())
         val daily = coroutineScope {
@@ -2677,6 +2678,7 @@ internal fun TclStreamingScreens(
             "Indicados para você" to cataloguePool,
             "Lançamentos · Filmes" to recentMovies,
             "Lançamentos · Séries" to newSeries,
+            "No cinema" to cinemaNow,
             "Novas temporadas" to newSeasons,
             "Você pode gostar" to cataloguePool.filter { it.votes >= 25 },
             "Surpresas do catálogo" to cataloguePool.filter {
@@ -3306,10 +3308,11 @@ internal fun TclStreamingScreens(
                                 val primary = setOf(
                                     "Destaques da semana · Filmes", "Destaques da semana · Séries",
                                     "Em alta agora", "Indicados para você",
-                                    "Lançamentos · Filmes", "Lançamentos · Séries")
+                                    "Lançamentos · Filmes", "Lançamentos · Séries",
+                                    "No cinema")
                                 fun addEditorial(onlyPrimary: Boolean) {
                                     discoveryShelves.forEach { (heading, titles) ->
-                                        if (heading != ANYTV_CINEMA_SHELF &&
+                                        if ((heading != ANYTV_CINEMA_SHELF || heading == "No cinema") &&
                                             (heading in primary) == onlyPrimary) {
                                             val selectedTitles = titles.filter {
                                                 (homeContentType == "all" ||
@@ -3476,7 +3479,7 @@ internal fun TclStreamingScreens(
                         val unique = shelf.filter { title ->
                             when {
                                 homeLibrary -> true // Saved/watched records survive missing TMDB dates.
-                                heading == ANYTV_CINEMA_SHELF ->
+                                heading == ANYTV_CINEMA_SHELF || heading == "No cinema" ->
                                     title.media == "movie" // Source is now_playing BR
                                 heading.startsWith("Em breve") -> anyTvUpcoming(title)
                                 (heading.startsWith("Filmes recém-lançados") ||
@@ -3538,6 +3541,7 @@ internal fun TclStreamingScreens(
                                 "Destaques da semana" -> "trending/movie/week" to "movie"
                                 "Destaques da semana · Filmes" -> "trending/movie/week" to "movie"
                                 "Destaques da semana · Séries" -> "trending/tv/week" to "tv"
+                                "No cinema" -> "movie/now_playing" to "movie"
                                 "Em alta agora" -> "trending/movie/day" to "movie"
                                 "Mais bem avaliados" -> "movie/top_rated" to "movie"
                                 "Séries em destaque" -> "trending/tv/week" to "tv"
@@ -3584,7 +3588,7 @@ internal fun TclStreamingScreens(
                                     verticalAlignment = Alignment.Top) {
                                     group.forEach { title ->
                                         posterCard(title, Modifier.weight(1f),
-                                            sectionTitle == ANYTV_CINEMA_SHELF)
+                                            sectionTitle == ANYTV_CINEMA_SHELF || sectionTitle == "No cinema")
                                     }
                                     repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
                                 }
@@ -4441,7 +4445,7 @@ internal fun TclStreamingScreens(
                                             items(shelf.take(ANYTV_EDITORIAL_LIMIT),
                                                 key = { "${it.media}:${it.id}" }) { title ->
                                                 posterCard(title, Modifier.width(cardWidth),
-                                                    heading == ANYTV_CINEMA_SHELF)
+                                                    heading == ANYTV_CINEMA_SHELF || heading == "No cinema")
                                             }
                                         }
                                     }
