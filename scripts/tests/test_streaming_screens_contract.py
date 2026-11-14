@@ -221,6 +221,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('key !in providerEditorialPools', gate)
         self.assertIn('kind == "tv" && key !in providerMiniseries', gate)
         self.assertIn('genreMetadataLoading', gate)
+        self.assertIn('pageKey !in genreShelves && pageKey !in genreErrors', gate)
+        self.assertIn('editorialKey !in genreEditorialPools', gate)
         self.assertIn('key !in genreShelves && key !in genreErrors', gate)
         self.assertIn('discoveryShelves.isEmpty() && discoveryError == null', gate)
         self.assertIn('openedSection == null', gate)
@@ -268,7 +270,8 @@ class StreamingScreens(unittest.TestCase):
     def test_genre_is_not_hidden_behind_deeper_pool_and_header_is_named(self):
         home = self.screen
         self.assertIn('val catalogueInitialLoading =', home)
-        self.assertIn('id > 0 && "$kind:$id:$genreSort" !in genreShelves', home)
+        self.assertIn('id > 0 && ((pageKey !in genreShelves', home)
+        self.assertIn('editorialKey !in genreEditorialPools', home)
         self.assertNotIn('id > 0 && "$kind:$id" !in genreEditorialPools', home)
         self.assertIn('if (!homeLibrary && (selected != null || selectedHomeGenre != 0)) {',
                       home)
