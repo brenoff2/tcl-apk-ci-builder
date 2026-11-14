@@ -99,7 +99,7 @@ class StreamingScreens(unittest.TestCase):
         shared = home.split('fun scopedEditorial(', 1)[1].split(
             'val visibleShelves =', 1)[0]
         self.assertEqual(shared.count('ANYTV_EDITORIAL_SECTIONS.forEach { heading ->'), 1)
-        self.assertIn('put(heading, anyTvBackfillEditorial(heading, titles, pool))', shared)
+        self.assertIn('put(heading, anyTvBackfillEditorial(heading, titles, pool,', shared)
         branch = home.split('val homePool = (discoveryShelves.values.flatten() +', 1)[1].split(
             '} else if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', 1)[0]
         self.assertIn('confirmedMiniseries).distinctBy', branch)
@@ -157,7 +157,7 @@ class StreamingScreens(unittest.TestCase):
             'val visibleShelves = linkedMapOf<', 1)[0]
         self.assertEqual(shared.count('ANYTV_EDITORIAL_SECTIONS.forEach { heading ->'), 1)
         self.assertIn('val pool = poolInput.filter(::matchesCatalogueScope)', shared)
-        self.assertIn('put(heading, anyTvBackfillEditorial(heading, titles, pool))', shared)
+        self.assertIn('put(heading, anyTvBackfillEditorial(heading, titles, pool,', shared)
         scoped = home.split('val visibleShelves = linkedMapOf<', 1)[1].split(
             'val animeSeparatedShelves =', 1)[0]
         provider = scoped.split('if (selected != null && !homeLibrary) {', 1)[1].split(
@@ -188,7 +188,7 @@ class StreamingScreens(unittest.TestCase):
                         'heading.startsWith("Lançamentos ·")']:
             self.assertIn(factual, helper)
         self.assertIn('kind == null || item.media == kind', helper)
-        self.assertEqual(home.count('put(heading, anyTvBackfillEditorial(heading, titles, pool))'), 1)
+        self.assertEqual(home.count('put(heading, anyTvBackfillEditorial(heading, titles, pool,'), 1)
         self.assertIn('StreamingCatalog.confirmedMiniseries(providerEditorialPools[poolKey]', home)
         self.assertIn('genreEditorialPools["$kind:$id"].orEmpty()', home)
         self.assertIn('(1..3).map { page ->', home)
@@ -224,11 +224,52 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('selectedHomeGenre == ANYTV_ANIME_FILTER', scope)
         self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', scope)
         self.assertIn('anyTvResolvedGenre(selectedHomeGenre, title.media', scope)
-        self.assertIn('id > 0 && id in title.genreIds', scope)
+        self.assertIn('return id > 0 && !anyTvIsAnime(title)', scope)
+        self.assertNotIn('return id > 0 && id in title.genreIds', scope)
+        self.assertIn('matchesUpcomingGenreScope(title)', home)
         self.assertIn('titles.filter(::matchesCatalogueScope)', home)
         self.assertIn('.filter(::matchesCatalogueScope).let { results ->', home)
         self.assertIn('val genreTitles = genreCandidates\n                                .filter(::matchesCatalogueScope)', home)
         self.assertNotIn('activeServiceNames', scope)
+
+    def test_genre_catalogue_does_not_require_repeated_genre_ids_release_or_poster(self):
+        home = self.screen
+        source = home.split('suspend fun discoveryGenrePage(id: Int, media: String, page: Int,', 1)[1].split(
+            '/** Real TMDB seasons and episodes', 1)[0]
+        self.assertIn('with_genres=', source)
+        self.assertIn('mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, 0)', source)
+        self.assertNotIn('.filter(::anyTvReleased)', source)
+        self.assertNotIn('mapTitles(payload.optJSONArray("results") ?: JSONArray(), media, id)', source)
+        scope = home.split('fun matchesCatalogueScope(title: StreamingTitle)', 1)[1].split(
+            'fun matchesUpcomingGenreScope', 1)[0]
+        self.assertNotIn('id in title.genreIds', scope)
+        upcoming = home.split('fun matchesUpcomingGenreScope(title: StreamingTitle)', 1)[1].split(
+            '// One catalogue readiness gate', 1)[0]
+        self.assertIn('id > 0 && id in title.genreIds', upcoming)
+        self.assertIn('selectedHomeGenre == ANYTV_ANIME_FILTER', scope)
+        helper = home.split('private fun anyTvBackfillEditorial(', 1)[1].split(
+            'private const val ANYTV_LIST_BATCH', 1)[0]
+        self.assertIn('genreCatalogue: Boolean = false', helper)
+        self.assertIn('(genreCatalogue || item.poster.isNotBlank())', helper)
+        self.assertIn('(genreCatalogue || heading == "Em breve · Filmes e séries" || anyTvReleased(item))', helper)
+        curate = home.split('private fun anyTvCurate(', 1)[1].split(
+            'private fun anyTvResolvedGenre(', 1)[0]
+        self.assertIn('(genreCatalogue || it.poster.isNotBlank())', curate)
+        self.assertIn('genreCatalogue = selected == null && selectedHomeGenre != 0', home)
+        self.assertIn('selected == null && selectedHomeGenre > 0 -> true', home)
+        self.assertIn('selected == null && selectedHomeGenre == ANYTV_ANIME_FILTER -> true', home)
+        self.assertIn('if (search) genre else 0', home)
+
+    def test_editorial_genre_pages_keep_partial_successes(self):
+        home = self.screen
+        effect = home.split('// Populate editorial genre shelves independently', 1)[1].split(
+            '// Provider pages reuse the home carousel', 1)[0]
+        self.assertIn('Result.success(StreamingCatalog.discoveryGenrePage(', effect)
+        self.assertIn('Result.failure<List<StreamingTitle>>(error)', effect)
+        self.assertIn('pages.mapNotNull { it.getOrNull() }', effect)
+        self.assertIn('genreEditorialPools[key].orEmpty() +', effect)
+        self.assertIn('if (pages.any { it.isFailure }) genreEditorialErrors[key] = true', effect)
+        self.assertNotIn('genreEditorialPools[key] = pages.flatten()', effect)
 
     def test_anime_negative_id_is_not_discarded_by_shared_genre_scope(self):
         home = self.screen
@@ -1359,7 +1400,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('it.media == "movie" && it.id in cinemaIds', shared)
         self.assertIn('"Em breve · Filmes e séries" -> verifiedUpcoming', shared)
         self.assertIn('verifiedUpcoming = upcomingStreaming.filter', shared)
-        self.assertIn('matchesCatalogueScope(title)', shared)
+        self.assertIn('matchesUpcomingGenreScope(title)', shared)
         self.assertNotIn('put("Você pode gostar"', shared)
         self.assertNotIn('put("Vale a pena assistir"', shared)
         self.assertIn('anyTvReleased(title)', self.screen)
