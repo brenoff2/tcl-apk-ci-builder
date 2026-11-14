@@ -3459,7 +3459,10 @@ internal fun TclStreamingScreens(
                             else !anyTvIsAnime(it)
                         }.filter {
                             if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                                it.media == "movie" // Genre source is now_playing BR
+                                it.media == "movie" // Dedicated Cinema route only.
+                            else if (selected == null && selectedHomeGenre == 0 &&
+                                homeContentType == "all" && activeServiceNames.isEmpty())
+                                anyTvReleased(it) // Weekly hero includes films AND series.
                             else anyTvReleased(it) &&
                                 (it.media != "movie" || (cinemaIndexReady && it.id !in cinemaIds))
                         }.filterNot {
