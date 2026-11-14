@@ -66,6 +66,7 @@ class StreamingScreens(unittest.TestCase):
             '"Indicados para você" to cataloguePool',
             '"Lançamentos · Filmes" to recentMovies',
             '"Lançamentos · Séries" to newSeries',
+            '"No cinema" to cinemaNow',
         ]
         for before, after in zip(headings, headings[1:]):
             self.assertLess(home.index(before), home.index(after))
@@ -1115,10 +1116,25 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Box(modifier = Modifier.size(14.dp)', self.screen)
         self.assertNotIn('painterResource(R.drawable.anytv_horizontal)', self.screen)
 
+    def test_home_cinema_section_preserves_verified_now_playing_and_badge(self):
+        home = self.screen
+        self.assertIn('val cinemaNow = shelves.remove(ANYTV_CINEMA_SHELF).orEmpty()', home)
+        self.assertIn('"No cinema" to cinemaNow', home)
+        self.assertIn('"No cinema" -> "movie/now_playing" to "movie"', home)
+        self.assertIn('heading == ANYTV_CINEMA_SHELF || heading == "No cinema"', home)
+        self.assertIn('sectionTitle == ANYTV_CINEMA_SHELF || sectionTitle == "No cinema"', home)
+        self.assertIn('inCinema = cinemaSection || title.id in cinemaIds', home)
+        self.assertIn('movie/now_playing?language=pt-BR&region=BR&page=$sourcePage', home)
+        self.assertNotIn('if (cinemaNow.isEmpty()) put("No cinema"', home)
+        self.assertLess(home.index('"Lançamentos · Séries" to newSeries'),
+                        home.index('"No cinema" to cinemaNow'))
+        self.assertNotIn('inCinema = title.date.isNotBlank()', home)
+        self.assertNotIn('inCinema = offers.isEmpty()', home)
+
     def test_cinema_and_future_are_not_mixed_into_regular_streaming(self):
-        self.assertIn('if (heading != ANYTV_CINEMA_SHELF &&', self.screen)
+        self.assertIn('(heading != ANYTV_CINEMA_SHELF || heading == "No cinema")', self.screen)
         self.assertIn('if (future.isNotEmpty() || upcomingStreamingMore)', self.screen)
-        # Cinema remains on its own destination, never on Principal.
+        # Only positive BR now-playing matches enter the named cinema rail.
         self.assertNotIn('if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)', self.screen)
         self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
         self.assertIn('anyTvReleased(title)', self.screen)
