@@ -2605,12 +2605,14 @@ internal fun TclStreamingScreens(
         val cataloguePool = (daily + weekly + recentMovies + newSeries +
             newSeasons + popular + best).distinctBy { "${it.media}:${it.id}" }
         linkedMapOf(
-            "Destaques da semana" to weekly,
-            "Filmes recém-lançados" to recentMovies,
-            "Séries novas" to newSeries,
-            "Novas temporadas" to newSeasons,
+            // The two first rows are distinct, while the large hero is mixed.
+            "Destaques da semana · Filmes" to weekly.filter { it.media == "movie" },
+            "Destaques da semana · Séries" to weekly.filter { it.media == "tv" },
             "Em alta agora" to daily,
-            "Recomendados para você" to cataloguePool,
+            "Indicados para você" to cataloguePool,
+            "Lançamentos · Filmes" to recentMovies,
+            "Lançamentos · Séries" to newSeries,
+            "Novas temporadas" to newSeasons,
             "Você pode gostar" to cataloguePool.filter { it.votes >= 25 },
             "Surpresas do catálogo" to cataloguePool.filter {
                 it.votes in 30..3000 && it.rating >= 7.0
@@ -3139,7 +3141,9 @@ internal fun TclStreamingScreens(
                             }
                             if (selectedPools.isNotEmpty()) {
                                 val service = " · " + app.name
-                                val weeklyIds = discoveryShelves["Destaques da semana"].orEmpty()
+                                val weeklyIds = (
+                                    discoveryShelves["Destaques da semana · Filmes"].orEmpty() +
+                                    discoveryShelves["Destaques da semana · Séries"].orEmpty())
                                     .map { "${it.media}:${it.id}" }.toSet()
                                 val dailyIds = discoveryShelves["Em alta agora"].orEmpty()
                                     .map { "${it.media}:${it.id}" }.toSet()
@@ -3233,17 +3237,48 @@ internal fun TclStreamingScreens(
                             }
                         } else {
                             if (selectedHomeGenre == 0) {
-                                if (confirmedMiniseries.isNotEmpty())
-                                    put("Minisséries imperdíveis", confirmedMiniseries)
-                                discoveryShelves.forEach { (heading, titles) ->
-                                    if (heading != ANYTV_CINEMA_SHELF) {
-                                        val selectedTitles = titles.filter {
-                                            (homeContentType == "all" || it.media == homeContentType) &&
-                                            anyTvReleased(it)
+                                val primary = setOf(
+                                    "Destaques da semana · Filmes", "Destaques da semana · Séries",
+                                    "Em alta agora", "Indicados para você",
+                                    "Lançamentos · Filmes", "Lançamentos · Séries")
+                                fun addEditorial(onlyPrimary: Boolean) {
+                                    discoveryShelves.forEach { (heading, titles) ->
+                                        if (heading != ANYTV_CINEMA_SHELF &&
+                                            (heading in primary) == onlyPrimary) {
+                                            val selectedTitles = titles.filter {
+                                                (homeContentType == "all" ||
+                                                    it.media == homeContentType) && anyTvReleased(it)
+                                            }
+                                            if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
                                         }
-                                        if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
                                     }
                                 }
+                                addEditorial(true)
+                                // Two recurring titles are not an editorial shelf.
+                                // Keep miniseries below fresh discoveries and rotate genuine matches.
+                                if (homeContentType != "movie" && confirmedMiniseries.size >= 4) {
+                                    val week = (System.currentTimeMillis() / 604800000L).toInt()
+                                    val start = week % confirmedMiniseries.size
+                                    put("Minisséries imperdíveis",
+                                        confirmedMiniseries.drop(start) + confirmedMiniseries.take(start))
+                                }
+                                // Genres follow the main curated rows, before secondary rails.
+                                filterGenreIds.forEach { id ->
+                                    val label = (allMovieGenres + tvGenres).firstOrNull {
+                                        it.id == id
+                                    }?.name ?: return@forEach
+                                    val kinds = listOf("movie", "tv").filter {
+                                        homeContentType == "all" || homeContentType == it
+                                    }
+                                    val titles = kinds.flatMap { kind ->
+                                        val resolved = anyTvResolvedGenre(
+                                            id, kind, allMovieGenres, tvGenres)
+                                        if (resolved > 0) genreShelves["$kind:$resolved"].orEmpty()
+                                        else emptyList()
+                                    }.distinctBy { "${it.media}:${it.id}" }
+                                    if (titles.isNotEmpty()) put("Por gênero: $label", titles)
+                                }
+                                addEditorial(false)
 
                             } else {
                                 if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
@@ -3279,21 +3314,7 @@ internal fun TclStreamingScreens(
                             // Even if page one has no BR offers, later source pages can.
                             if (future.isNotEmpty() || upcomingStreamingMore)
                                 put("Em breve · Filmes e séries", future)
-                                filterGenreIds.forEach { id ->
-                                    val label = (allMovieGenres + tvGenres).firstOrNull {
-                                        it.id == id
-                                    }?.name ?: return@forEach
-                                    val mediaKinds = listOf("movie", "tv").filter {
-                                        homeContentType == "all" || homeContentType == it
-                                    }
-                                    val mixedGenre = mediaKinds.flatMap { mediaKind ->
-                                        val resolved = anyTvResolvedGenre(
-                                            id, mediaKind, allMovieGenres, tvGenres)
-                                        if (resolved > 0) genreShelves["$mediaKind:$resolved"].orEmpty()
-                                        else emptyList()
-                                    }.distinctBy { "${it.media}:${it.id}" }
-                                    if (mixedGenre.isNotEmpty()) put("Por gênero: $label", mixedGenre)
-                                }
+                                // Genre rows are ordered above secondary editorial rows.
                         }
                         if (!homeLibrary && selected == null) {
                             activeServiceNames.forEach { name ->
@@ -3359,10 +3380,8 @@ internal fun TclStreamingScreens(
                     val heroTitles = if (homeLibrary) emptyList() else {
                         val mixed = if (selected == null && selectedHomeGenre == 0 &&
                             homeContentType == "all" && activeServiceNames.isEmpty()) {
-                            val films = discoveryShelves["Destaques da semana"].orEmpty()
-                                .filter { it.media == "movie" }
-                            val shows = discoveryShelves["Destaques da semana"].orEmpty()
-                                .filter { it.media == "tv" }
+                            val films = discoveryShelves["Destaques da semana · Filmes"].orEmpty()
+                            val shows = discoveryShelves["Destaques da semana · Séries"].orEmpty()
                             buildList {
                                 for (i in 0 until 10) {
                                     films.getOrNull(i)?.let { add(it) }
