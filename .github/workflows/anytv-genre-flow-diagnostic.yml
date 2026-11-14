@@ -6,6 +6,7 @@ on:
     paths:
       - '.github/workflows/anytv-genre-flow-diagnostic.yml'
       - 'scripts/tests/test_anytv_genre_flow_diagnostic.py'
+      - 'anytv-resolver/src/genre-flow.test.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -18,6 +19,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - name: Verify original AnyTV genre source unchanged
         run: |
           test -s overrides/TclStreamingScreens.kt
@@ -25,6 +29,9 @@ jobs:
       - name: Run source-backed genre state-flow diagnostics (known defects expected)
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_anytv_genre_flow_diagnostic.py' -v
+      - name: Execute actual Worker catalogue handler against synthetic genre fixtures
+        run: |
+          node --test anytv-resolver/src/genre-flow.test.mjs
       - name: Declare isolated diagnostic scope
         run: |
           echo "ANYTV_GENRE_SOURCE_FLOW_DIAGNOSTIC_ONLY: no Android runtime, no APK, no signer, no OTA, no Worker/D1 deploy"
