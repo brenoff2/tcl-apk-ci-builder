@@ -265,7 +265,7 @@ class StreamingScreens(unittest.TestCase):
         card = home.split('private fun AnyTvPosterCard(', 1)[1].split(
             '/** One horizontal strip', 1)[0]
         self.assertIn('if (title.poster.startsWith("/"))', card)
-        self.assertIn('Text(title.name, color = Color.White, fontSize = 12.sp,', card)
+        self.assertIn('Text(text = title.name, color = Color.White, fontSize = 12.sp,', card)
         self.assertIn('contentDescription = "Cartaz: " + title.name', card)
         self.assertIn('AnyTvRatingOverlay(title,', card)
 
