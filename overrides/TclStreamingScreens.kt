@@ -3413,6 +3413,7 @@ internal fun TclStreamingScreens(
                                     put(heading, titles)
                                 }
                             }
+                        }
                     }
                     if (selectedHomeGenre != 0 &&
                         "$selectedGenreKind:$selectedHomeGenre:$genreSort" in genreShelves &&
