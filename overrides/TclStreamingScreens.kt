@@ -1457,10 +1457,18 @@ private fun AnyTvPosterCard(
         verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(modifier = Modifier.fillMaxWidth().aspectRatio(2f / 3f)
             .clip(RoundedCornerShape(5.dp)).background(Color.Black)) {
-            AnyTvPinnedImage(
-                model = "https://image.tmdb.org/t/p/w342" + title.poster,
-                contentDescription = "Cartaz: " + title.name,
-                modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            if (title.poster.startsWith("/")) {
+                AnyTvPinnedImage(
+                    model = "https://image.tmdb.org/t/p/w342" + title.poster,
+                    contentDescription = "Cartaz: " + title.name,
+                    modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            } else {
+                // A genuine catalogue title without artwork is not an empty card.
+                Text(title.name, color = Color.White, fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.align(Alignment.Center).padding(9.dp),
+                    maxLines = 4, overflow = TextOverflow.Ellipsis)
+            }
             AnyTvRatingOverlay(title, Modifier.align(Alignment.TopStart)
                 .padding(start = 5.dp, top = 5.dp))
             Row(modifier = Modifier.align(Alignment.TopEnd)
