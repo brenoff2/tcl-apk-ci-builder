@@ -3324,32 +3324,36 @@ internal fun TclStreamingScreens(
                     if (discoveryError != null && selectedHomeGenre == 0) {
                         Text(discoveryError.orEmpty(), fontSize = 11.sp)
                     }
-                    val visibleShelves = linkedMapOf<String, List<StreamingTitle>>().apply {
-                        if (selected != null && !homeLibrary) {
-                            val app = selected!!
-                            val kinds = listOf("movie", "tv").filter {
-                                homeContentType == "all" || it == homeContentType
-                            }
-                            // Only the selected Brazilian streaming provider's real catalogue.
-                            val pool = kinds.flatMap { kind ->
-                                val genreId = anyTvProviderGenre(kind, selectedHomeGenre,
-                                    allMovieGenres, tvGenres)
-                                providerEditorialPools["${app.name}:$kind:$genreId"].orEmpty()
-                            }.distinctBy { "${it.media}:${it.id}" }
-                            val weeklyFilms = discoveryShelves["Destaques da semana · Filmes"]
-                                .orEmpty().map { "movie:${it.id}" }.toSet()
-                            val weeklyShows = discoveryShelves["Destaques da semana · Séries"]
-                                .orEmpty().map { "tv:${it.id}" }.toSet()
-                            val dailyIds = discoveryShelves["Em alta agora"]
-                                .orEmpty().map { "${it.media}:${it.id}" }.toSet()
-                            val seasonIds = discoveryShelves["Novas temporadas"]
-                                .orEmpty().map { "${it.media}:${it.id}" }.toSet()
-                            val suggestedIds = discoveryShelves["Indicados para você"]
-                                .orEmpty().map { "${it.media}:${it.id}" }.toSet()
-                            fun providerHasVerifiedOffer(title: StreamingTitle): Boolean =
+                    // Home, service and genre use one editorial policy; only the
+                    // candidate pool changes with the chosen navigation filters.
+                    fun scopedEditorial(poolInput: List<StreamingTitle>,
+                        providerName: String? = null): LinkedHashMap<String, List<StreamingTitle>> {
+                        val pool = poolInput.filter(::matchesCatalogueScope)
+                            .distinctBy { "${it.media}:${it.id}" }
+                        val weeklyFilms = discoveryShelves["Destaques da semana · Filmes"]
+                            .orEmpty().map { "movie:${it.id}" }.toSet()
+                        val weeklyShows = discoveryShelves["Destaques da semana · Séries"]
+                            .orEmpty().map { "tv:${it.id}" }.toSet()
+                        val dailyIds = discoveryShelves["Em alta agora"]
+                            .orEmpty().map { "${it.media}:${it.id}" }.toSet()
+                        val seasonIds = discoveryShelves["Novas temporadas"]
+                            .orEmpty().map { "${it.media}:${it.id}" }.toSet()
+                        val suggestedIds = discoveryShelves["Indicados para você"]
+                            .orEmpty().map { "${it.media}:${it.id}" }.toSet()
+                        val minis = if (providerName != null) {
+                            val tvId = anyTvProviderGenre("tv", selectedHomeGenre,
+                                allMovieGenres, tvGenres)
+                            providerMiniseries["$providerName:tv:$tvId"].orEmpty() +
+                                confirmedMiniseries
+                        } else confirmedMiniseries
+                        val verifiedUpcoming = upcomingStreaming.filter { title ->
+                            matchesCatalogueScope(title) && (providerName == null ||
                                 offerCache["${title.media}:${title.id}"].orEmpty().any {
-                                    StreamingCatalog.matchesSelectedSubscription(it, listOf(app.name))
-                                }
+                                    StreamingCatalog.matchesSelectedSubscription(
+                                        it, listOf(providerName))
+                                })
+                        }
+                        return linkedMapOf<String, List<StreamingTitle>>().apply {
                             ANYTV_EDITORIAL_SECTIONS.forEach { heading ->
                                 val titles = when (heading) {
                                     "Destaques da semana · Filmes" -> pool.filter {
@@ -3371,10 +3375,7 @@ internal fun TclStreamingScreens(
                                     "Lançamentos · Séries" -> pool.filter {
                                         it.media == "tv" && anyTvRecentPremiere(it)
                                     }
-                                    "Em breve · Filmes e séries" -> upcomingStreaming.filter {
-                                        (homeContentType == "all" || it.media == homeContentType) &&
-                                            providerHasVerifiedOffer(it)
-                                    }
+                                    "Em breve · Filmes e séries" -> verifiedUpcoming
                                     "No cinema" -> pool.filter {
                                         it.media == "movie" && it.id in cinemaIds
                                     }
@@ -3384,17 +3385,25 @@ internal fun TclStreamingScreens(
                                     "Mais bem avaliados" -> pool.filter { it.votes > 0 }
                                         .sortedByDescending { it.rating }
                                     "Minisséries imperdíveis" -> pool.filter {
-                                        it.media == "tv" &&
-                                            (providerMiniseries["${app.name}:tv:" +
-                                                anyTvProviderGenre("tv", selectedHomeGenre,
-                                                    allMovieGenres, tvGenres)]
-                                                .orEmpty().any { series -> series.id == it.id } ||
-                                                confirmedMiniseries.any { series -> series.id == it.id })
+                                        it.media == "tv" && minis.any { series -> series.id == it.id }
                                     }
                                     else -> emptyList()
                                 }
                                 put(heading, anyTvBackfillEditorial(heading, titles, pool))
                             }
+                        }
+                    }
+                    val visibleShelves = linkedMapOf<String, List<StreamingTitle>>().apply {
+                        if (selected != null && !homeLibrary) {
+                            val app = selected!!
+                            val pool = listOf("movie", "tv").filter {
+                                homeContentType == "all" || it == homeContentType
+                            }.flatMap { kind ->
+                                val id = anyTvProviderGenre(kind, selectedHomeGenre,
+                                    allMovieGenres, tvGenres)
+                                providerEditorialPools["${app.name}:$kind:$id"].orEmpty()
+                            }
+                            putAll(scopedEditorial(pool, app.name))
                         } else if (homeLibrary) {
                             val films = favorites.filter { it.title.media == "movie" }
                                 .map { it.title }.distinctBy { it.id }
@@ -3480,66 +3489,18 @@ internal fun TclStreamingScreens(
                                         put("Cinema · Em cartaz no Brasil", it)
                                     }
                             } else {
-                                val sources = listOf("movie", "tv").filter {
+                                // The genre is only a scope filter on the shared editor.
+                                val pool = listOf("movie", "tv").filter {
                                     homeContentType == "all" || it == homeContentType
                                 }.flatMap { kind ->
                                     val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
                                         ANYTV_ANIME_FILTER else anyTvResolvedGenre(
                                             selectedHomeGenre, kind, allMovieGenres, tvGenres)
-                                    if (id == 0) emptyList()
-                                    else genreShelves["$kind:$id:$genreSort"].orEmpty()
-                                }.let { initial ->
-                                    val deeper = listOf("movie", "tv").filter {
-                                        homeContentType == "all" || it == homeContentType
-                                    }.flatMap { kind ->
-                                        val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                            ANYTV_ANIME_FILTER else anyTvResolvedGenre(
-                                                selectedHomeGenre, kind, allMovieGenres, tvGenres)
-                                        genreEditorialPools["$kind:$id"].orEmpty()
-                                    }
-                                    (initial + deeper).distinctBy { "${it.media}:${it.id}" }
+                                    if (id <= 0) emptyList() else (
+                                        genreShelves["$kind:$id:$genreSort"].orEmpty() +
+                                            genreEditorialPools["$kind:$id"].orEmpty())
                                 }
-                                fun matchesGenre(title: StreamingTitle): Boolean {
-                                    if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                        return anyTvIsAnime(title)
-                                    val resolved = anyTvResolvedGenre(selectedHomeGenre, title.media,
-                                        allMovieGenres, tvGenres)
-                                    return resolved > 0 && resolved in title.genreIds &&
-                                        !anyTvIsAnime(title)
-                                }
-                                fun genreEditorial(heading: String): List<StreamingTitle> {
-                                    val source = if (heading == "Populares") "Populares no TMDB"
-                                        else heading
-                                    return discoveryShelves[source].orEmpty().filter(::matchesGenre)
-                                }
-                                // Genres show the full TMDB catalogue, not just
-                                // subscriptions the user has configured.
-                                val genrePool = sources.filter(::matchesGenre)
-                                ANYTV_EDITORIAL_SECTIONS.forEach { heading ->
-                                    val titles = when (heading) {
-                                        "Indicados para você" ->
-                                            genreEditorial(heading).ifEmpty { genrePool }
-                                        "Populares" ->
-                                            genreEditorial(heading).ifEmpty {
-                                                genrePool.sortedByDescending { it.votes }
-                                            }
-                                        "Em breve · Filmes e séries" ->
-                                            upcomingStreaming.filter(::matchesGenre)
-                                        "Mais bem avaliados" ->
-                                            genreEditorial(heading).ifEmpty {
-                                                genrePool.filter { it.votes > 0 }
-                                                    .sortedByDescending { it.rating }
-                                            }
-                                        "Minisséries imperdíveis" ->
-                                            confirmedMiniseries.filter(::matchesGenre)
-                                        else -> genreEditorial(heading)
-                                    }.filter { title ->
-                                        matchesGenre(title) &&
-                                            (homeContentType == "all" ||
-                                                title.media == homeContentType)
-                                    }.distinctBy { "${it.media}:${it.id}" }
-                                    put(heading, anyTvBackfillEditorial(heading, titles, genrePool))
-                                }
+                                putAll(scopedEditorial(pool))
                             }
                         }
                     }
