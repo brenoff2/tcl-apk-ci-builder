@@ -1,0 +1,136 @@
+name: AnyTV TCL ADB phone code126 signed update candidate (one-shot, NO OTA)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-tcl-adb-phone-code126-signed-qa.yml']
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: anytv-tcl-adb-code126-signed-candidate
+  cancel-in-progress: false
+jobs:
+  sign-candidate-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 09cd8d7b1475e5b0a45803d82a445f2c0f19aa77
+          persist-credentials: false
+      - name: Verify original unsigned CI provenance (fail closed)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request
+          url='https://api.github.com/repos/brenoff2/tcl-apk-ci-builder/actions/runs/43575928894'
+          request=urllib.request.Request(url,headers={'Authorization':'Bearer '+os.environ['GH_TOKEN'],'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'})
+          import time
+          for attempt in range(60):
+              with urllib.request.urlopen(request,timeout=20) as response:
+                  run=json.load(response)
+              if run['status']=='completed': break
+              time.sleep(10)
+          assert run['id']==43575928894
+          assert run['status']=='completed' and run['conclusion']=='success'
+          assert run['head_sha']=='09cd8d7b1475e5b0a45803d82a445f2c0f19aa77'
+          assert run['head_branch']=='feat/anytv-p0-device-proof-verifier-20261020'
+          assert run['event']=='push'
+          assert run['path'].split('@')[0]=='.github/workflows/anytv-tcl-adb-phone-code126-unsigned-ci.yml'
+          print('TCL_ADB_CODE126_UNSIGNED_RUN_PROVENANCE_VERIFIED')
+          PY
+      - name: Download previously audited code126 unsigned candidate (no rebuild)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 43575928894
+          name: anytv-tcl-adb-phone-code126-unsigned-audit
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: unsigned-proof
+      - name: Install Android signature verification tools
+        uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Verify immutable artifact identity and its APK SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(find unsigned-proof -type f -name '*.apk' | wc -l)" -eq 1
+          APK=unsigned-proof/source/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$APK"
+          test -s unsigned-proof/candidate-sha256.txt
+          EXPECTED_SHA="$(awk 'NF {print $1; exit}' unsigned-proof/candidate-sha256.txt)"
+          test "$(sha256sum "$APK" | cut -d' ' -f1)" = "$EXPECTED_SHA"
+          grep -q "name='com.tclremote.livre.v2' versionCode='126'" unsigned-proof/candidate-identity.txt
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/aapt" dump badging "$APK" > unsigned-proof/qa-verified-badging.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='126'" unsigned-proof/qa-verified-badging.txt
+          grep -q "versionName='2.9.98-AnyTV'" unsigned-proof/qa-verified-badging.txt
+          mkdir -p signed-candidate
+          "$BT/zipalign" -f 4 "$APK" signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_candidate_aligned.apk
+          "$BT/zipalign" -c 4 signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_candidate_aligned.apk
+          echo 'TCL_ADB_CODE126_ORIGINAL_UNSIGNED_SHA_VERIFIED'
+      - name: Sign only the QA artifact with pre-existing V2 key
+        shell: bash
+        env:
+          V2_RECOVERY_HEX: ${{ secrets.ANYTV_SIGNER_V2_RECOVERY_HEX }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check -q 'cryptography==46.0.3'
+          umask 077
+          mkdir -m 700 -p signing-candidate-private
+          trap 'rm -rf signing-candidate-private' EXIT
+          python3 - <<'PY'
+          import base64,hashlib,hmac,json,os,pathlib
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.serialization import pkcs12
+          k=os.environ.get('V2_RECOVERY_HEX','')
+          if len(k)!=64 or any(c not in '0123456789abcdefABCDEF' for c in k):
+              raise RuntimeError('V2 signer secret unavailable: fail closed')
+          key=bytes.fromhex(k)
+          root=pathlib.Path('signing-recovery/v2')
+          ciphertext=(root/'phone-signer.aesgcm').read_bytes()
+          meta=json.loads((root/'identity.json').read_text())
+          assert ciphertext[:9]==b'ANYTVV2G1'
+          assert hashlib.sha256(ciphertext).hexdigest()==meta['ciphertext_sha256']
+          p12=AESGCM(key).decrypt(ciphertext[9:21],ciphertext[21:],None)
+          pw=base64.urlsafe_b64encode(hmac.new(key,b'AnyTV-Phone-V2-PKCS12-Pass-v1',hashlib.sha256).digest())
+          signer,cert,_=pkcs12.load_key_and_certificates(p12,pw)
+          assert signer is not None and cert is not None
+          assert cert.fingerprint(hashes.SHA256()).hex()==meta['certificate_sha256']
+          assert meta['certificate_sha256']=='fe8c59e4f656af52f89e4430f7ba552aded37beb808a7e9953f534c5ebfe56d9'
+          (pathlib.Path('signing-candidate-private')/'phone.p12').write_bytes(p12)
+          (pathlib.Path('signing-candidate-private')/'password').write_bytes(pw)
+          print('TCL_ADB_CODE126_V2_SIGNER_CERT_MATCH')
+          PY
+          P12_V2_PASSWORD="$(cat signing-candidate-private/password)"
+          echo "::add-mask::$P12_V2_PASSWORD"
+          export P12_V2_PASSWORD
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          "$BT/apksigner" sign --ks signing-candidate-private/phone.p12 --ks-type PKCS12 --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD --out signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_SIGNED_CANDIDATE.apk signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_candidate_aligned.apk
+          "$BT/apksigner" verify --verbose --print-certs signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_SIGNED_CANDIDATE.apk > signed-candidate/signature-audit.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-candidate/signature-audit.txt
+          EXPECTED_CERT="$(python3 -c 'import json;print(json.load(open("signing-recovery/v2/identity.json"))["certificate_sha256"])')"
+          grep -qi "$EXPECTED_CERT" signed-candidate/signature-audit.txt
+          "$BT/aapt" dump badging signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_SIGNED_CANDIDATE.apk > signed-candidate/badging.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='126'" signed-candidate/badging.txt
+          grep -q "versionName='2.9.98-AnyTV'" signed-candidate/badging.txt
+          "$BT/zipalign" -c 4 signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_SIGNED_CANDIDATE.apk
+          sha256sum signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_SIGNED_CANDIDATE.apk > signed-candidate/SHA256.txt
+          printf '%s\n' 'AnyTV V2 code126 signed candidate. No OTA publication, no auto-install. Device QA pending.' > signed-candidate/READ_ME.txt
+          rm -f signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_candidate_aligned.apk
+          echo 'TCL_ADB_CODE126_SIGNED_CANDIDATE_VERIFIED_NO_OTA'
+      - name: Upload signed candidate, no publication
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-tcl-adb-code126-signed-candidate
+          path: |
+            signed-candidate/AnyTV_TCL_ADB_2.9.98_code126_SIGNED_CANDIDATE.apk
+            signed-candidate/SHA256.txt
+            signed-candidate/badging.txt
+            signed-candidate/signature-audit.txt
+            signed-candidate/READ_ME.txt
+          retention-days: 7
+          if-no-files-found: error
