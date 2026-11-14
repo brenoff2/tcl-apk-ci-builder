@@ -275,7 +275,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('fun matchesGenre(title: StreamingTitle)', home)
         self.assertIn('selected != null || selectedHomeGenre != 0) animeSeparatedShelves else', home)
         self.assertIn('val genreTitles = genreCandidates', home)
-        self.assertIn('LaunchedEffect(selectedHomeGenre, homeContentType, token, allMovieGenres, tvGenres,\\n        genreFirstPageRetry)', home)
+        self.assertIn('LaunchedEffect(selectedHomeGenre, homeContentType, token, allMovieGenres, tvGenres,', home)
+        self.assertIn('genreFirstPageRetry) {', home)
         self.assertIn('selectedHomeGenre = kind.id; homeContentType = "all"', home)
 
     def test_genre_is_not_hidden_behind_deeper_pool_and_header_is_named(self):
