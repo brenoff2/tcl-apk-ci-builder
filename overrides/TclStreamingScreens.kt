@@ -1262,7 +1262,7 @@ internal fun AnyTvHomeFilmBanner(
 ) {
     val context = LocalContext.current
     var previews by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
-    val previewProviders = remember { mutableStateMapOf<Int, StreamingOffer?>() }
+    val previewProviders = remember { mutableStateMapOf<String, StreamingOffer?>() }
     LaunchedEffect(Unit) {
         StreamingCatalog.configure(context)
         // Use authentic weekly trends for BOTH media types. Cinema is a separate
@@ -1312,9 +1312,10 @@ internal fun AnyTvHomeFilmBanner(
             HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(),
                 userScrollEnabled = true) { index ->
                 val movie = previews[index]
-                LaunchedEffect(movie.id) {
-                    if (movie.id !in previewProviders) {
-                        previewProviders[movie.id] = runCatching {
+                val previewKey = "${movie.media}:${movie.id}"
+                LaunchedEffect(previewKey) {
+                    if (previewKey !in previewProviders) {
+                        previewProviders[previewKey] = runCatching {
                             StreamingCatalog.offersInBrazil(movie).firstOrNull()
                         }.getOrNull()
                     }
@@ -1353,7 +1354,7 @@ internal fun AnyTvHomeFilmBanner(
                             horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Text("Ver ›", fontSize = 12.sp,
                                 color = Color(0xFFCED0D6), maxLines = 1)
-                            previewProviders[movie.id]?.let { offer ->
+                            previewProviders[previewKey]?.let { offer ->
                                 if (offer.logo.isNotBlank()) {
                                     AnyTvPinnedImage(
                                         model = "https://image.tmdb.org/t/p/w92" + offer.logo,
