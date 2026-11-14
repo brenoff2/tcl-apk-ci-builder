@@ -72,12 +72,12 @@ class StreamingScreens(unittest.TestCase):
             '/** Offers are catalog identities', 1)[0]
         self.assertIn('discoveryShelf("trending/movie/week", "movie")', banner)
         self.assertIn('discoveryShelf("trending/tv/week", "tv")', banner)
-        self.assertIn('"''${it.media}:${it.id}''"', banner)
+        self.assertIn('"${it.media}:${it.id}"', banner)
         self.assertNotIn('bannerCinemaIds', banner)
         self.assertIn('if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"', banner)
         self.assertIn('onOpenStreaming', banner)
         self.assertIn('confirmedMiniseries.isNotEmpty()', home)
-        homeBranch = home.split('if (selectedHomeGenre == 0) {', 1)[1].split(
+        homeBranch = home.split('val homePool = (discoveryShelves.values.flatten() +', 1)[1].split(
             '} else if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', 1)[0]
         self.assertLess(homeBranch.index('putAll(scopedEditorial(homePool))'),
                         homeBranch.index('put("Por gênero: $label", titles)'))
