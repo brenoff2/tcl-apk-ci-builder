@@ -1,0 +1,30 @@
+name: AnyTV genres source-flow diagnostics (DEV ONLY)
+on:
+  push:
+    branches:
+      - feat/anytv-p0-device-proof-verifier-20261020
+    paths:
+      - '.github/workflows/anytv-genre-flow-diagnostic.yml'
+      - 'scripts/tests/test_anytv_genre_flow_diagnostic.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  genre-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify original AnyTV genre source unchanged
+        run: |
+          test -s overrides/TclStreamingScreens.kt
+          git diff --exit-code -- overrides/TclStreamingScreens.kt anytv-resolver/src/worker.mjs
+      - name: Run source-backed genre state-flow diagnostics (known defects expected)
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_anytv_genre_flow_diagnostic.py' -v
+      - name: Declare isolated diagnostic scope
+        run: |
+          echo "ANYTV_GENRE_SOURCE_FLOW_DIAGNOSTIC_ONLY: no Android runtime, no APK, no signer, no OTA, no Worker/D1 deploy"
