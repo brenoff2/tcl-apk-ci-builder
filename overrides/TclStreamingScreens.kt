@@ -802,8 +802,19 @@ private object StreamingCatalog {
         val through = page * ANYTV_LIST_BATCH
         val collected = ArrayList<StreamingTitle>(through + 1)
         val seen = HashSet<String>()
+        var interrupted = false
         for (sourcePage in 1..50) {
-            val source = fetch(sourcePage)
+            val source = try {
+                fetch(sourcePage)
+            } catch (error: java.util.concurrent.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                // One failed later TMDB page must not discard authentic earlier
+                // results. Keep pagination available so the user can retry.
+                if (collected.isEmpty()) throw error
+                interrupted = true
+                break
+            }
             for (title in source.titles) {
                 if (seen.add("${title.media}:${title.id}")) collected.add(title)
                 if (collected.size > through) break
@@ -812,7 +823,7 @@ private object StreamingCatalog {
         }
         return StreamingResults(
             collected.drop(through - ANYTV_LIST_BATCH).take(ANYTV_LIST_BATCH),
-            collected.size > through
+            interrupted || collected.size > through
         )
     }
 
