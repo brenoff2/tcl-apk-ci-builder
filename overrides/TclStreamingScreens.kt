@@ -1870,6 +1870,7 @@ internal fun TclStreamingScreens(
             ?.takeIf { it in setOf("popular", "rating", "recent", "title") } ?: "popular")
     }
     var genreSortMenu by remember { mutableStateOf(false) }
+    var genreMetadataLoading by remember { mutableStateOf(true) }
     var genreViewMode by remember { mutableStateOf("grade") }
     var genreSectionsMode by remember { mutableStateOf(true) }
     val catalogScrollState = rememberLazyListState()
@@ -2444,12 +2445,17 @@ internal fun TclStreamingScreens(
 
     // Genre identifiers and display names come from the real PT-BR TMDB catalogue.
     LaunchedEffect(token) {
-        allMovieGenres = runCatching { StreamingCatalog.genres(token, "movie") }
-            .getOrDefault(emptyList())
-        mainGenres = allMovieGenres.filter { it.id in mainGenreIds }
-            .sortedBy { mainGenreIds.indexOf(it.id) }
-        tvGenres = runCatching { StreamingCatalog.genres(token, "tv") }
-            .getOrDefault(emptyList())
+        genreMetadataLoading = true
+        try {
+            allMovieGenres = runCatching { StreamingCatalog.genres(token, "movie") }
+                .getOrDefault(emptyList())
+            mainGenres = allMovieGenres.filter { it.id in mainGenreIds }
+                .sortedBy { mainGenreIds.indexOf(it.id) }
+            tvGenres = runCatching { StreamingCatalog.genres(token, "tv") }
+                .getOrDefault(emptyList())
+        } finally {
+            genreMetadataLoading = false
+        }
     }
     // Fetch each genre shelf only once per screen, preserving user-selected order.
     LaunchedEffect(selectedHomeGenre, genreSort) {
@@ -3119,11 +3125,43 @@ internal fun TclStreamingScreens(
         }
     }
 
+    // One catalogue readiness gate for Home, provider and genre. Only the
+    // initial movie/TV set blocks rendering; deeper pagination remains async.
+    val catalogueInitialLoading = !homeLibrary && openedSection == null && when {
+        selected != null && !providerListMode -> {
+            val app = selected!!
+            listOf("movie", "tv").filter {
+                homeContentType == "all" || it == homeContentType
+            }.any { kind ->
+                val id = anyTvProviderGenre(kind, selectedHomeGenre,
+                    allMovieGenres, tvGenres)
+                val key = "${app.name}:$kind:$id"
+                key !in providerEditorialPools ||
+                    (kind == "tv" && key !in providerMiniseries)
+            }
+        }
+        selectedHomeGenre == ANYTV_CINEMA_FILTER -> {
+            val key = "movie:$ANYTV_CINEMA_FILTER:$genreSort"
+            key !in genreShelves && key !in genreErrors
+        }
+        selectedHomeGenre != 0 -> genreMetadataLoading || listOf("movie", "tv")
+            .filter { homeContentType == "all" || it == homeContentType }
+            .any { kind ->
+                val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                    ANYTV_ANIME_FILTER else anyTvResolvedGenre(selectedHomeGenre, kind,
+                        allMovieGenres, tvGenres)
+                id > 0 && "$kind:$id:$genreSort" !in genreShelves &&
+                    "$kind:$id:$genreSort" !in genreErrors
+            }
+        else -> discoveryLoading || (discoveryShelves.isEmpty() && discoveryError == null)
+    }
+
     Dialog(onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(modifier = Modifier.fillMaxSize(),
             shape = RoundedCornerShape(0.dp),
             color = MaterialTheme.colorScheme.background) {
+            Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 AnyTvStreamNavBar(
@@ -3262,31 +3300,8 @@ internal fun TclStreamingScreens(
                         }
                     }
                     val currentGenreKey = "$selectedGenreKind:$selectedHomeGenre:$genreSort"
-                    // A filtered page waits for both genuine movie/TV sources before
-                    // rendering. No premature empty shelves or empty-state flash.
-                    val filteredPageLoading = when {
-                        homeLibrary -> false
-                        selected != null && !providerListMode -> {
-                            val app = selected!!
-                            listOf("movie", "tv").filter {
-                                homeContentType == "all" || homeContentType == it
-                            }.any { kind ->
-                                val id = anyTvProviderGenre(kind, selectedHomeGenre,
-                                    allMovieGenres, tvGenres)
-                                val key = "${app.name}:$kind:$id"
-                                key !in providerEditorialPools ||
-                                    (kind == "tv" && key !in providerMiniseries)
-                            }
-                        }
-                        // Deeper genre pages load progressively, never gate the page.
-                        selected == null && selectedHomeGenre != 0 -> false
-                        else -> false
-                    }
-                    if (filteredPageLoading || (selected == null &&
-                            (discoveryLoading || (selectedHomeGenre != 0 &&
-                                genreLoading[currentGenreKey] == true)))) {
-                        CircularProgressIndicator(modifier = Modifier.size(22.dp))
-                    }
+                    // The opaque full-screen gate lives above this single renderer.
+                    // No spinner or partially populated section is inserted in the list.
                     if (discoveryError != null && selectedHomeGenre == 0) {
                         Text(discoveryError.orEmpty(), fontSize = 11.sp)
                     }
@@ -3514,12 +3529,25 @@ internal fun TclStreamingScreens(
                         visibleShelves.isEmpty()) {
                         Text("Não encontramos títulos neste gênero no momento.", fontSize = 12.sp)
                     }
+                    // Apply the same final scope to all three catalogue entries.
+                    // The source pools remain authoritative for BR offers and TMDB.
+                    fun matchesCatalogueScope(title: StreamingTitle): Boolean {
+                        if (homeContentType != "all" && title.media != homeContentType)
+                            return false
+                        if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
+                            return title.media == "movie" && title.id in cinemaIds
+                        if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                            return anyTvIsAnime(title)
+                        if (selectedHomeGenre > 0) {
+                            val id = anyTvResolvedGenre(selectedHomeGenre, title.media,
+                                allMovieGenres, tvGenres)
+                            return id > 0 && id in title.genreIds && !anyTvIsAnime(title)
+                        }
+                        return !anyTvIsAnime(title)
+                    }
                     val animeSeparatedShelves = linkedMapOf<String, List<StreamingTitle>>().apply {
                         visibleShelves.forEach { (heading, titles) ->
-                            put(heading, titles.filter { title ->
-                                if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(title)
-                                else !anyTvIsAnime(title)
-                            })
+                            put(heading, titles.filter(::matchesCatalogueScope))
                         }
                     }
                     val filteredShelves = if (activeServiceNames.isEmpty() || homeLibrary ||
@@ -4452,7 +4480,6 @@ internal fun TclStreamingScreens(
                             }
                         }
                         previewShelves.filterNot { (heading, shelf) ->
-                            filteredPageLoading ||
                             ((selected != null || (selectedHomeGenre != 0 &&
                                 selectedHomeGenre != ANYTV_CINEMA_FILTER)) && shelf.isEmpty()) ||
                             // Genre and Anime have their own dedicated list/sections below;
@@ -4558,6 +4585,20 @@ internal fun TclStreamingScreens(
                     fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1)
             }
+            if (catalogueInitialLoading) {
+                Box(modifier = Modifier.fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                    contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CircularProgressIndicator()
+                        Text("Preparando catálogo de filmes e séries…",
+                            color = MaterialTheme.colorScheme.onBackground,
+                            fontSize = 13.sp)
+                    }
+                }
+            }
+            } // catalogue surface and opaque initial-load layer
         }
     }
     // A full-screen opaque search page overlays the catalogue instead of
