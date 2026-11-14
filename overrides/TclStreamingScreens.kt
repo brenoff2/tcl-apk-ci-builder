@@ -1871,6 +1871,8 @@ internal fun TclStreamingScreens(
     }
     var genreSortMenu by remember { mutableStateOf(false) }
     var genreMetadataLoading by remember { mutableStateOf(true) }
+    var genreMetadataRetry by remember { mutableIntStateOf(0) }
+    var genreMetadataError by remember { mutableStateOf(false) }
     var genreViewMode by remember { mutableStateOf("grade") }
     var genreSectionsMode by remember { mutableStateOf(true) }
     val catalogScrollState = rememberLazyListState()
@@ -1894,6 +1896,7 @@ internal fun TclStreamingScreens(
     val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val providerEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val genreEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val genreEditorialErrors = remember { mutableStateMapOf<String, Boolean>() }
     val providerMiniseries = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var providerListMode by remember { mutableStateOf(false) }
     var showCatalogEditor by remember { mutableStateOf(false) }
@@ -2444,8 +2447,9 @@ internal fun TclStreamingScreens(
     }
 
     // Genre identifiers and display names come from the real PT-BR TMDB catalogue.
-    LaunchedEffect(token) {
+    LaunchedEffect(token, genreMetadataRetry) {
         genreMetadataLoading = true
+        genreMetadataError = false
         try {
             allMovieGenres = runCatching { StreamingCatalog.genres(token, "movie") }
                 .getOrDefault(emptyList())
@@ -2453,6 +2457,7 @@ internal fun TclStreamingScreens(
                 .sortedBy { mainGenreIds.indexOf(it.id) }
             tvGenres = runCatching { StreamingCatalog.genres(token, "tv") }
                 .getOrDefault(emptyList())
+            genreMetadataError = allMovieGenres.isEmpty() || tvGenres.isEmpty()
         } finally {
             genreMetadataLoading = false
         }
@@ -2647,7 +2652,8 @@ internal fun TclStreamingScreens(
 
     // Populate editorial genre shelves independently of user-controlled list pages.
     // Three genuine TMDB pages per movie/TV type provide the fallback candidate set.
-    LaunchedEffect(selectedHomeGenre, homeContentType, token, allMovieGenres, tvGenres) {
+    LaunchedEffect(selectedHomeGenre, homeContentType, token, allMovieGenres, tvGenres,
+        genreFirstPageRetry) {
         if (selected != null || selectedHomeGenre == 0 ||
             selectedHomeGenre == ANYTV_CINEMA_FILTER) return@LaunchedEffect
         for (kind in listOf("movie", "tv").filter {
@@ -2658,18 +2664,23 @@ internal fun TclStreamingScreens(
             if (id <= 0) continue
             val key = "$kind:$id"
             if (key in genreEditorialPools) continue
-            val pages = coroutineScope {
-                (1..3).map { page ->
-                    async {
-                        runCatching {
+            try {
+                val pages = coroutineScope {
+                    (1..3).map { page ->
+                        async {
                             StreamingCatalog.discoveryGenrePage(id, kind, page, "popular").titles
-                        }.getOrDefault(emptyList())
-                    }
-                }.awaitAll()
+                        }
+                    }.awaitAll()
+                }
+                genreEditorialPools[key] = pages.flatten()
+                    .filter { it.media == kind && anyTvReleased(it) }
+                    .distinctBy { it.id }
+                genreEditorialErrors.remove(key)
+            } catch (error: java.util.concurrent.CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                genreEditorialErrors[key] = true
             }
-            genreEditorialPools[key] = pages.flatten()
-                .filter { it.media == kind && anyTvReleased(it) }
-                .distinctBy { it.id }
         }
     }
 
@@ -3170,7 +3181,8 @@ internal fun TclStreamingScreens(
                 val pageKey = "$kind:$id:$genreSort"
                 val editorialKey = "$kind:$id"
                 id > 0 && ((pageKey !in genreShelves && pageKey !in genreErrors) ||
-                    editorialKey !in genreEditorialPools)
+                    (editorialKey !in genreEditorialPools &&
+                        editorialKey !in genreEditorialErrors))
             }
         else -> discoveryLoading || (discoveryShelves.isEmpty() && discoveryError == null)
     }
@@ -3885,6 +3897,36 @@ internal fun TclStreamingScreens(
                                     }
                                 }
 
+                            }
+                        }
+                        // Report initial catalogue failures in the default Seções
+                        // route too; retries are not hidden behind "Ver em lista".
+                        if (!homeLibrary && selected == null && selectedHomeGenre != 0 &&
+                            selectedHomeGenre != ANYTV_CINEMA_FILTER && genreSectionsMode) {
+                            val kinds = listOf("movie", "tv").filter {
+                                homeContentType == "all" || it == homeContentType
+                            }
+                            val failures = kinds.any { kind ->
+                                val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                    ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                        selectedHomeGenre, kind, allMovieGenres, tvGenres)
+                                val pageKey = "$kind:$id:$genreSort"
+                                val editorialKey = "$kind:$id"
+                                pageKey in genreErrors || editorialKey in genreEditorialErrors
+                            }
+                            val empty = visibleShelves.values.all { it.isEmpty() }
+                            if (genreMetadataError || failures || empty) {
+                                item {
+                                    Text(if (genreMetadataError || failures)
+                                        "Não foi possível consultar este gênero."
+                                        else "Nenhum título encontrado para este gênero.",
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 12.sp)
+                                    AnyTvStreamTextButton(onClick = {
+                                        if (genreMetadataError) genreMetadataRetry++
+                                        genreFirstPageRetry++
+                                    }) { Text("Tentar novamente") }
+                                }
                             }
                         }
                         if (homeLibrary) {
