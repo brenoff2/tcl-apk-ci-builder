@@ -110,7 +110,6 @@ class StreamingScreens(unittest.TestCase):
             'afterCinema.forEach { heading ->',
             'put("Minisséries imperdíveis",',
             'put("Por gênero: $label", titles)',
-            'heading !in hiddenHome',
         ]
         for before, after in zip(position, position[1:]):
             self.assertLess(section.index(before), section.index(after))
@@ -695,7 +694,7 @@ class StreamingScreens(unittest.TestCase):
             'items(shelf.chunked(3))',
             'items(genreTitles.chunked(3))',
             'StreamingCatalog.discoveryGenrePage(',
-            '"Mostrar mais"', 'genreShelves[genreKey] =',
+            '"Mostrar mais"', 'genreShelves[key] =',
             'val films = discoveryShelves["Destaques da semana · Filmes"]',
             'val shows = discoveryShelves["Destaques da semana · Séries"].orEmpty()',
             'StreamingCatalog.discoveryUpcomingStreamingPage(1)',
@@ -1146,8 +1145,8 @@ class StreamingScreens(unittest.TestCase):
             'genreErrors.remove(key)',
             'genreLoading[key] = false',
             'genreLoading[currentGenreKey] == true',
-            'genreShelves[genreKey] == null',
-            'TextButton(onClick = { genreFirstPageRetry++ })',
+            'genreShelves[sourceKey] == null',
+            'AnyTvStreamTextButton(onClick = { genreFirstPageRetry++ })',
             'Text("Tentar novamente")',
         ):
             with self.subTest(fragment=fragment):
@@ -1198,7 +1197,9 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('inCinema = offers.isEmpty()', home)
 
     def test_cinema_and_future_are_not_mixed_into_regular_streaming(self):
-        self.assertIn('(heading != ANYTV_CINEMA_SHELF || heading == "No cinema")', self.screen)
+        self.assertIn('val afterCinema = listOf(', self.screen)
+        self.assertIn('"No cinema", "Novas temporadas", "Mais bem avaliados"', self.screen)
+        self.assertNotIn('addEditorial(false)', self.screen)
         self.assertIn('if (future.isNotEmpty() || upcomingStreamingMore)', self.screen)
         # Only positive BR now-playing matches enter the named cinema rail.
         self.assertNotIn('if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)', self.screen)
