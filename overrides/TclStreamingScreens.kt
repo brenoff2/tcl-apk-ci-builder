@@ -3101,6 +3101,7 @@ internal fun TclStreamingScreens(
                             val selectedHere = selected?.packageName == app.packageName
                             Column(modifier = Modifier.width(62.dp).clickable {
                                 selected = app; providerListMode = false
+                                selectedHomeGenre = 0; homeContentType = "all"
                                 media = "movie"; genre = 0; page = 1
                                 homeLibrary = false; showGlobalSearch = false
                                 searchDraft = ""; searchTerm = ""; showSaved = false; message = null
@@ -4085,8 +4086,8 @@ internal fun TclStreamingScreens(
                         }
                         // Two single-row preview rails follow the main hero, while
                         // the paginated list below contains only the selected genre.
-                        if (!homeLibrary && selected == null && selectedHomeGenre != 0 &&
-                            (genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER)) {
+                        if (!homeLibrary && selected == null &&
+                            selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                             val previews = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                 cinemaComingSoon.filterNot(::anyTvIsAnime) else upcomingStreaming.filter { candidate ->
                                     if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(candidate)
@@ -4159,25 +4160,8 @@ internal fun TclStreamingScreens(
                                                 offer, activeServiceNames)
                                         }
                                 }
+                            if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                             item {
-                                Row(modifier = Modifier.fillMaxWidth()
-                                    .padding(top = 24.dp, bottom = 12.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically) {
-                                    Box(modifier = Modifier.width(3.dp).height(22.dp)
-                                        .background(Color(0xFFE3383F), RoundedCornerShape(3.dp)))
-                                    Text(if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                                        "Em cartaz no Brasil"
-                                    else (when (homeContentType) {
-                                        "movie" -> "Filmes"
-                                        "tv" -> "Séries"
-                                        else -> "Filmes e séries"
-                                    }) + " · " + ((allMovieGenres + tvGenres).firstOrNull {
-                                        it.id == selectedHomeGenre }?.name ?:
-                                        if (selectedHomeGenre == ANYTV_ANIME_FILTER) "Anime" else "Gênero"),
-                                        fontWeight = FontWeight.SemiBold)
-                                }
-                                if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                                 Row(modifier = Modifier.fillMaxWidth()
                                     .horizontalScroll(rememberScrollState()),
                                     verticalAlignment = Alignment.CenterVertically,
@@ -4221,55 +4205,10 @@ internal fun TclStreamingScreens(
                                 }
                                 }
                             }
+
+                            }
                             if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER) {
-                                // Same editorial order and rail component as Home, filtered
-                                // independently by each title's TMDB movie/TV genre mapping.
-                                fun matchesGenre(title: StreamingTitle): Boolean {
-                                    if (selectedHomeGenre == ANYTV_ANIME_FILTER)
-                                        return anyTvIsAnime(title)
-                                    val resolved = anyTvResolvedGenre(selectedHomeGenre, title.media,
-                                        allMovieGenres, tvGenres)
-                                    return resolved > 0 && resolved in title.genreIds &&
-                                        !anyTvIsAnime(title)
-                                }
-                                fun genreEditorial(heading: String): List<StreamingTitle> =
-                                    discoveryShelves[heading].orEmpty().filter(::matchesGenre)
-                                        .filter { title ->
-                                            (homeContentType == "all" ||
-                                                title.media == homeContentType) &&
-                                            (activeServiceNames.isEmpty() ||
-                                                offerCache["${title.media}:${title.id}"].orEmpty().any { offer ->
-                                                    StreamingCatalog.matchesSelectedSubscription(
-                                                        offer, activeServiceNames)
-                                                })
-                                        }
-                                val genreSections = linkedMapOf(
-                                    "Destaques da semana · Filmes" to
-                                        genreEditorial("Destaques da semana · Filmes"),
-                                    "Destaques da semana · Séries" to
-                                        genreEditorial("Destaques da semana · Séries"),
-                                    "Em alta agora" to genreEditorial("Em alta agora"),
-                                    "Indicados para você" to genreTitles,
-                                    "Populares no TMDB" to genreTitles,
-                                    "Lançamentos · Filmes" to
-                                        genreEditorial("Lançamentos · Filmes"),
-                                    "Lançamentos · Séries" to
-                                        genreEditorial("Lançamentos · Séries"),
-                                    "Em breve · Filmes e séries" to upcomingStreaming.filter(::matchesGenre)
-                                        .filter { homeContentType == "all" || it.media == homeContentType },
-                                    "No cinema" to genreEditorial("No cinema"),
-                                    "Novas temporadas" to genreEditorial("Novas temporadas"),
-                                    "Mais bem avaliados" to genreTitles.sortedByDescending { it.rating },
-                                    "Minisséries imperdíveis" to confirmedMiniseries
-                                        .filter(::matchesGenre).takeIf { it.size >= 4 }.orEmpty()
-                                )
-                                genreSections.forEach { (heading, sectionTitles) ->
-                                    if (sectionTitles.isNotEmpty()) item {
-                                        AnyTvOneRowPreview(heading, sectionTitles) { title, modifier, _ ->
-                                            posterCard(title, modifier, heading == "No cinema")
-                                        }
-                                    }
-                                }
+                                // All twelve canonical rails render once through previewShelves.
                             } else if (genreViewMode == "detalhado" &&
                                 selectedHomeGenre != ANYTV_CINEMA_FILTER) {
                                 items(genreTitles) { title -> detailedListCard(title) }
