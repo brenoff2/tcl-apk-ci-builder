@@ -136,6 +136,7 @@ private fun anyTvEditorialScore(
         (kotlin.math.ln(1.0 + recentViewers) / kotlin.math.ln(1001.0))
             .coerceIn(0.0, 1.0) * 12.0 else 0.0
     val newSection = heading.contains("lançad", true) ||
+        heading.contains("lançamento", true) ||
         heading.contains("novas", true) || heading.contains("temporadas", true)
     val highlights = heading.contains("destaque", true) ||
         heading.contains("alta", true) || heading.contains("agora", true)
@@ -3479,7 +3480,8 @@ internal fun TclStreamingScreens(
                                     title.media == "movie" // Source is now_playing BR
                                 heading.startsWith("Em breve") -> anyTvUpcoming(title)
                                 (heading.startsWith("Filmes recém-lançados") ||
-                                    heading.startsWith("Séries novas")) ->
+                                    heading.startsWith("Séries novas") ||
+                                    heading.startsWith("Lançamentos ·")) ->
                                     anyTvRecentPremiere(title) && (title.media != "movie" ||
                                         (cinemaIndexReady && title.id !in cinemaIds))
                                 heading.startsWith("Novas temporadas") -> title.media == "tv"
@@ -3490,6 +3492,7 @@ internal fun TclStreamingScreens(
                         }.distinctBy { "${it.media}:${it.id}" }
                         if (unique.isEmpty() &&
                             heading !in setOf("Filmes recém-lançados", "Séries novas",
+                                "Lançamentos · Filmes", "Lançamentos · Séries",
                                 "Novas temporadas") &&
                             !(heading == "Em breve · Filmes e séries" && upcomingStreamingMore) &&
                             !(activeServiceNames.isNotEmpty() && selected == null &&
@@ -3533,6 +3536,8 @@ internal fun TclStreamingScreens(
                             val sectionPageLimit = if (sectionTitle == "Em breve · Filmes e séries") 50 else 42
                             val editorialRoute = when (sectionTitle) {
                                 "Destaques da semana" -> "trending/movie/week" to "movie"
+                                "Destaques da semana · Filmes" -> "trending/movie/week" to "movie"
+                                "Destaques da semana · Séries" -> "trending/tv/week" to "tv"
                                 "Em alta agora" -> "trending/movie/day" to "movie"
                                 "Mais bem avaliados" -> "movie/top_rated" to "movie"
                                 "Séries em destaque" -> "trending/tv/week" to "tv"
@@ -3684,7 +3689,8 @@ internal fun TclStreamingScreens(
                                                                 anyTvUpcoming(it) &&
                                                                     (homeContentType == "all" ||
                                                                         it.media == homeContentType)
-                                                            else (if (sectionTitle in setOf("Filmes recém-lançados", "Séries novas"))
+                                                            else (if (sectionTitle in setOf("Filmes recém-lançados", "Séries novas",
+                                                                "Lançamentos · Filmes", "Lançamentos · Séries"))
                                                                 anyTvRecentPremiere(it) else anyTvReleased(it)) &&
                                                                 (it.media != "movie" ||
                                                                     it.id !in cinemaIds)
