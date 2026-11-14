@@ -2641,7 +2641,7 @@ internal fun TclStreamingScreens(
 
     // Populate editorial genre shelves independently of user-controlled list pages.
     // Three genuine TMDB pages per movie/TV type provide the fallback candidate set.
-    LaunchedEffect(selectedHomeGenre, homeContentType, token) {
+    LaunchedEffect(selectedHomeGenre, homeContentType, token, allMovieGenres, tvGenres) {
         if (selected != null || selectedHomeGenre == 0 ||
             selectedHomeGenre == ANYTV_CINEMA_FILTER) return@LaunchedEffect
         for (kind in listOf("movie", "tv").filter {
