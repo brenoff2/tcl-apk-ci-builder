@@ -216,7 +216,8 @@ class StreamingScreens(unittest.TestCase):
         home = self.screen
         gate = home.split('val catalogueInitialLoading =', 1)[1].split(
             'Dialog(onDismissRequest = onDismiss', 1)[0]
-        self.assertIn('selected != null && !providerListMode', gate)
+        self.assertIn('selected != null ->', gate)
+        self.assertIn('key !in providerListTitles && key !in providerListErrors', gate)
         self.assertIn('key !in providerEditorialPools', gate)
         self.assertIn('kind == "tv" && key !in providerMiniseries', gate)
         self.assertIn('genreMetadataLoading', gate)
@@ -235,13 +236,15 @@ class StreamingScreens(unittest.TestCase):
     def test_one_catalogue_scope_applies_media_and_genre_to_all_entries(self):
         home = self.screen
         scope = home.split('fun matchesCatalogueScope(title: StreamingTitle)', 1)[1].split(
-            'val animeSeparatedShelves =', 1)[0]
+            '// One catalogue readiness gate', 1)[0]
         self.assertIn('homeContentType != "all" && title.media != homeContentType', scope)
         self.assertIn('selectedHomeGenre == ANYTV_ANIME_FILTER', scope)
         self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER', scope)
         self.assertIn('anyTvResolvedGenre(selectedHomeGenre, title.media', scope)
         self.assertIn('id > 0 && id in title.genreIds', scope)
         self.assertIn('titles.filter(::matchesCatalogueScope)', home)
+        self.assertIn('.filter(::matchesCatalogueScope).let { results ->', home)
+        self.assertIn('val genreTitles = genreCandidates\n                                .filter(::matchesCatalogueScope)', home)
         self.assertNotIn('activeServiceNames', scope)
 
     def test_genre_action_uses_all_media_and_real_catalogue_without_subscriptions(self):
