@@ -2582,7 +2582,8 @@ internal fun TclStreamingScreens(
         }
     }
 
-    LaunchedEffect(selected?.packageName, selectedHomeGenre, homeContentType, providerListMode) {
+    LaunchedEffect(selected?.packageName, selectedHomeGenre, homeContentType,
+        providerListMode, allMovieGenres, tvGenres) {
         val app = selected ?: return@LaunchedEffect
         if (!providerListMode) return@LaunchedEffect
         val kinds = listOf("movie", "tv").filter {
@@ -2614,7 +2615,8 @@ internal fun TclStreamingScreens(
     // The provider's real BR flatrate catalogue must be the candidate source.
     // Three pages of both popularity and premiere-date sorted discovery are
     // merged before editorial scoring; no global title can be misattributed.
-    LaunchedEffect(selected?.packageName, selectedHomeGenre, homeContentType, token) {
+    LaunchedEffect(selected?.packageName, selectedHomeGenre, homeContentType, token,
+        allMovieGenres, tvGenres) {
         val app = selected ?: return@LaunchedEffect
         for (kind in listOf("movie", "tv").filter {
             homeContentType == "all" || it == homeContentType
@@ -3156,13 +3158,14 @@ internal fun TclStreamingScreens(
     val catalogueInitialLoading = !homeLibrary && openedSection == null && when {
         selected != null -> {
             val app = selected!!
-            listOf("movie", "tv").filter {
+            (selectedHomeGenre > 0 && genreMetadataLoading) || listOf("movie", "tv").filter {
                 homeContentType == "all" || it == homeContentType
             }.any { kind ->
                 val id = anyTvProviderGenre(kind, selectedHomeGenre,
                     allMovieGenres, tvGenres)
                 val key = "${app.name}:$kind:$id"
-                if (providerListMode)
+                if (selectedHomeGenre > 0 && id == 0) false
+                else if (providerListMode)
                     key !in providerListTitles && key !in providerListErrors
                 else key !in providerEditorialPools ||
                     (kind == "tv" && key !in providerMiniseries)
