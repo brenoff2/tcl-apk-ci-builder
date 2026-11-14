@@ -23,21 +23,19 @@ class GenreFlowDiagnostic(unittest.TestCase):
             "LaunchedEffect(selectedHomeGenre, homeContentType, genreSort, genreFirstPageRetry)", 1
         )[0]
 
-    @unittest.expectedFailure
-    def test_R01_section_has_a_non_null_navigation_transition(self):
-        """Observed: only null assignments to openedSection, so full section not entered."""
+    def test_R01_removed_section_navigation_is_not_an_active_feature(self):
+        """Prior decision removed per-section CTA; old section branch is dormant."""
         assignments = re.findall(
-            r"\bopenedSection\s*=\s*(?![=])([^;\n}]+)", self.screen
+            r"\\bopenedSection\\s*=\\s*(?![=])([^;\\n}]+)", self.screen
         )
-        self.assertTrue(assignments, "No section assignments found")
-        self.assertTrue(
+        self.assertTrue(assignments, "Expected state resets in source")
+        self.assertFalse(
             any(value.strip() != "null" for value in assignments),
-            "Only null assignments: section pagination is unreachable",
+            "Unexpected non-null section open after CTA removal",
         )
 
-    @unittest.expectedFailure
-    def test_R02_default_genre_sections_exposes_deep_pagination(self):
-        """Observed: default Seções is true, but genre Mostrar mais is list-only."""
+    def test_R02_default_sections_and_list_paging_match_approved_design(self):
+        """Seções are editorials; pagination is explicitly exclusive to Lista."""
         self.assertIn(
             'var genreSectionsMode by remember { mutableStateOf(true) }', self.screen
         )
@@ -48,9 +46,9 @@ class GenreFlowDiagnostic(unittest.TestCase):
         sections_mode = True
         is_cinema = False
         can_page_from_genre_list = (not sections_mode) or is_cinema
-        self.assertTrue(
+        self.assertFalse(
             can_page_from_genre_list,
-            "No load-more CTA in default Seções for a regular genre",
+            "UI gate changed: Seções unexpectedly exposes Lista pagination",
         )
 
     @unittest.expectedFailure
