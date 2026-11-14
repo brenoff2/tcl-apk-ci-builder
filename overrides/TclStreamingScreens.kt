@@ -3450,38 +3450,11 @@ internal fun TclStreamingScreens(
                             }
                         } else {
                             if (selectedHomeGenre == 0) {
-                                val primary = listOf(
-                                    "Destaques da semana · Filmes", "Destaques da semana · Séries",
-                                    "Em alta agora", "Indicados para você", "Populares",
-                                    "Lançamentos · Filmes", "Lançamentos · Séries")
-                                val afterCinema = listOf(
-                                    "No cinema", "Novas temporadas", "Mais bem avaliados")
-                                fun addEditorialHeading(heading: String, titles: List<StreamingTitle>) {
-                                    val selectedTitles = titles.filter {
-                                        (homeContentType == "all" ||
-                                            it.media == homeContentType) && anyTvReleased(it)
-                                    }
-                                    if (selectedTitles.isNotEmpty()) put(heading, selectedTitles)
-                                }
-                                primary.forEach { heading ->
-                                    val source = if (heading == "Populares") "Populares no TMDB"
-                                        else heading
-                                    discoveryShelves[source]?.let { addEditorialHeading(heading, it) }
-                                }
-                                val future = upcomingStreaming.filter {
-                                    homeContentType == "all" || it.media == homeContentType
-                                }
-                                if (future.isNotEmpty() || upcomingStreamingMore)
-                                    put("Em breve · Filmes e séries", future)
-                                afterCinema.forEach { heading ->
-                                    discoveryShelves[heading]?.let { addEditorialHeading(heading, it) }
-                                }
-                                if (homeContentType != "movie" && confirmedMiniseries.isNotEmpty()) {
-                                    val week = (System.currentTimeMillis() / 604800000L).toInt()
-                                    val start = week % confirmedMiniseries.size
-                                    put("Minisséries imperdíveis",
-                                        confirmedMiniseries.drop(start) + confirmedMiniseries.take(start))
-                                }
+                                // The unfiltered Home now uses the same twelve-rail
+                                // editorial composer as Streaming and Genres.
+                                val homePool = (discoveryShelves.values.flatten() +
+                                    confirmedMiniseries).distinctBy { "${it.media}:${it.id}" }
+                                putAll(scopedEditorial(homePool))
                                 // Genre shortcuts are at the end of the Home, never on genre/provider pages.
                                 filterGenreIds.forEach { id ->
                                     val label = (allMovieGenres + tvGenres).firstOrNull {
