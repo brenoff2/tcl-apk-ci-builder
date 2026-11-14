@@ -1,0 +1,61 @@
+name: AnyTV cinema source read-only diagnostic
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths:
+      - '.github/workflows/anytv-cinema-source-diagnostic.yml'
+permissions:
+  contents: read
+jobs:
+  source-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Audit Ponto Sem Retorno from production catalog without writes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, urllib.request, urllib.parse, datetime
+          base='https://anytv-link-resolver-pilot.brenoff.workers.dev/v1/catalog/'
+          movie_id=1384216
+          def get(route):
+              request=urllib.request.Request(base+route,headers={
+                  'Accept':'application/json','User-Agent':'AnyTV-QA-ReadOnly/1.0'})
+              try:
+                  with urllib.request.urlopen(request,timeout=12) as response:
+                      data=json.loads(response.read(460000))
+                      print('ROUTE',route,'HTTP',response.status,'CACHE',response.headers.get('x-anytv-cache','none'))
+                      return data
+              except Exception as e:
+                  print('ROUTE',route,'ERROR',type(e).__name__,str(e)[:180])
+                  return None
+          meta=get('movie/'+str(movie_id)+'?language=pt-BR')
+          if isinstance(meta,dict):
+              print('MOVIE_ID',meta.get('id'),'TITLE',meta.get('title'),
+                    'ORIGINAL',meta.get('original_title'),'RELEASE',meta.get('release_date'),
+                    'STATUS',meta.get('status'))
+          offers=get('movie/'+str(movie_id)+'/watch/providers?language=pt-BR')
+          if isinstance(offers,dict):
+              br=(offers.get('results') or {}).get('BR') or {}
+              print('BR_PROVIDER_CATEGORIES',sorted(k for k in br if k in ('flatrate','rent','buy','ads','free')))
+              for kind in ('flatrate','rent','buy','ads','free'):
+                  print('BR_OFFERS',kind,[str(x.get('provider_name')) for x in br.get(kind,[])])
+          found=False
+          checked=0
+          max_page=1
+          for page in range(1,43):
+              payload=get('movie/now_playing?language=pt-BR&region=BR&page='+str(page))
+              if not isinstance(payload,dict):
+                  print('CINEMA_INDEX_INCOMPLETE_AT_PAGE',page)
+                  break
+              checked=page
+              max_page=min(42,int(payload.get('total_pages') or 1))
+              if any(int(x.get('id') or 0)==movie_id for x in payload.get('results',[])):
+                  found=True
+                  print('MOVIE_PRESENT_IN_BR_NOW_PLAYING_PAGE',page)
+              if page>=max_page: break
+          print('CINEMA_INDEX_CHECKED_PAGES',checked,'EXPECTED_PAGES',max_page,
+                'MOVIE_PRESENT',found,'COMPLETE',checked>=max_page)
+          print('NOTICE: now_playing is an editorial release window, not verified live cinema sessions.')
+          PY
