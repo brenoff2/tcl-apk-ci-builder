@@ -3623,6 +3623,25 @@ internal fun TclStreamingScreens(
                             heading to preview
                         }
                     }
+                    // A single LazyListScope renderer for both provider and genre lists.
+                    fun androidx.compose.foundation.lazy.LazyListScope.renderCatalogueCards(
+                        titles: List<StreamingTitle>, cinemaSection: Boolean
+                    ) {
+                        if (genreViewMode == "detalhado" && !cinemaSection) {
+                            items(titles) { title -> detailedListCard(title) }
+                        } else {
+                            items(titles.chunked(3)) { group ->
+                                Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                    verticalAlignment = Alignment.Top) {
+                                    group.forEach { title ->
+                                        posterCard(title, Modifier.weight(1f), cinemaSection)
+                                    }
+                                    repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                        }
+                    }
                     LazyColumn(state = catalogScrollState,
                         modifier = Modifier.weight(1f)) {
                         if (openedSection != null) {
@@ -4109,20 +4128,7 @@ internal fun TclStreamingScreens(
                                     }
                                 }
                             }
-                            if (genreViewMode == "detalhado") {
-                                items(combined) { title -> detailedListCard(title) }
-                            } else {
-                                items(combined.chunked(3)) { group ->
-                                    Row(modifier = Modifier.fillMaxWidth()
-                                        .padding(vertical = 7.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                        group.forEach { title ->
-                                            posterCard(title, Modifier.weight(1f), false)
-                                        }
-                                        repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
-                                    }
-                                }
-                            }
+                            renderCatalogueCards(combined, false)
                             item {
                                 if (sources.any { providerListLoading[it.first] == true })
                                     Text("Carregando filmes e séries…", fontSize = 12.sp)
@@ -4285,23 +4291,10 @@ internal fun TclStreamingScreens(
                                 }
                             }
                             }
-                            if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER) {
-                                // All twelve canonical rails render once through previewShelves.
-                            } else if (genreViewMode == "detalhado" &&
-                                selectedHomeGenre != ANYTV_CINEMA_FILTER) {
-                                items(genreTitles) { title -> detailedListCard(title) }
-                            } else {
-                                items(genreTitles.chunked(3)) { group ->
-                                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                                        horizontalArrangement = Arrangement.spacedBy(9.dp),
-                                        verticalAlignment = Alignment.Top) {
-                                        group.forEach { title ->
-                                            posterCard(title, Modifier.weight(1f),
-                                                selectedHomeGenre == ANYTV_CINEMA_FILTER)
-                                        }
-                                        repeat(3 - group.size) { Spacer(Modifier.weight(1f)) }
-                                    }
-                                }
+                            if (!genreSectionsMode ||
+                                selectedHomeGenre == ANYTV_CINEMA_FILTER) {
+                                renderCatalogueCards(genreTitles,
+                                    selectedHomeGenre == ANYTV_CINEMA_FILTER)
                             }
                             if (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER) {
                             item {
