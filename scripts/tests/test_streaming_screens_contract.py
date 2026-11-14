@@ -76,7 +76,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('bannerCinemaIds', banner)
         self.assertIn('if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"', banner)
         self.assertIn('onOpenStreaming', banner)
-        self.assertIn('confirmedMiniseries.isNotEmpty()', home)
+        self.assertIn('confirmedMiniseries).distinctBy', home)
+        self.assertIn('putAll(scopedEditorial(homePool))', home)
         homeBranch = home.split('val homePool = (discoveryShelves.values.flatten() +', 1)[1].split(
             '} else if (selectedHomeGenre == ANYTV_CINEMA_FILTER)', 1)[0]
         self.assertLess(homeBranch.index('putAll(scopedEditorial(homePool))'),
@@ -295,7 +296,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('?.name ?: "Gênero"', home)
         self.assertIn('selectedHomeGenre != 0 || title.media != "movie"', home)
         self.assertIn('!cinemaIndexReady || it.id !in cinemaIds', home)
-        self.assertIn('confirmedMiniseries.isNotEmpty()', home)
+        self.assertIn('confirmedMiniseries).distinctBy', home)
+        self.assertIn('putAll(scopedEditorial(homePool))', home)
         self.assertNotIn('confirmedMiniseries.size >= 4', home)
 
     def test_home_cache_persists_and_reuses_real_catalogue(self):
