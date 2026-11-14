@@ -321,7 +321,8 @@ class StreamingScreens(unittest.TestCase):
     def test_miniseries_require_explicit_tmdb_classification(self):
         self.assertIn('suspend fun confirmedMiniseries(candidates:', self.screen)
         self.assertIn('?.equals("Miniseries", ignoreCase = true) == true', self.screen)
-        self.assertIn('put("Minisséries imperdíveis",', self.screen)
+        self.assertIn('confirmedMiniseries).distinctBy', self.screen)
+        self.assertIn('putAll(scopedEditorial(homePool))', self.screen)
         self.assertIn('"Minisséries imperdíveis" -> pool.filter {', self.screen)
 
     def test_personalized_editorial_and_service_feeds(self):
