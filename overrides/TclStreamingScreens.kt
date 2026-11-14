@@ -3167,8 +3167,10 @@ internal fun TclStreamingScreens(
                 val id = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
                     ANYTV_ANIME_FILTER else anyTvResolvedGenre(selectedHomeGenre, kind,
                         allMovieGenres, tvGenres)
-                id > 0 && "$kind:$id:$genreSort" !in genreShelves &&
-                    "$kind:$id:$genreSort" !in genreErrors
+                val pageKey = "$kind:$id:$genreSort"
+                val editorialKey = "$kind:$id"
+                id > 0 && ((pageKey !in genreShelves && pageKey !in genreErrors) ||
+                    editorialKey !in genreEditorialPools)
             }
         else -> discoveryLoading || (discoveryShelves.isEmpty() && discoveryError == null)
     }
