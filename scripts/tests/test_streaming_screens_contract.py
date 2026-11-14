@@ -36,7 +36,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('if (genreSectionsMode && selectedHomeGenre != ANYTV_CINEMA_FILTER)', self.screen)
         self.assertIn('"Lançamentos · Filmes", "Lançamentos · Séries"', self.screen)
         self.assertIn('genrePool.filter { it.votes > 0 }', self.screen)
-        self.assertIn('previewShelves.filterNot { (heading, _) ->', self.screen)
+        self.assertIn('previewShelves.filterNot { (heading, shelf) ->', self.screen)
 
     def test_detailed_card_has_compact_metadata_spacing(self):
         self.assertIn('verticalArrangement = Arrangement.spacedBy(1.dp)) {', self.screen)
@@ -283,7 +283,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn("shelf.asSequence().filter { title ->", self.screen)
         self.assertIn("}.take(ANYTV_EDITORIAL_LIMIT).toList()", self.screen)
         self.assertIn('preview.forEach { previewSeen.add("${it.media}:${it.id}") }', self.screen)
-        self.assertIn("previewShelves.filterNot { (heading, _) ->", self.screen)
+        self.assertIn("previewShelves.filterNot { (heading, shelf) ->", self.screen)
         self.assertIn("if (homeLibrary || selected != null || selectedHomeGenre != 0)", self.screen)
 
     def test_returning_seasons_include_trending_and_on_air_candidates(self):
