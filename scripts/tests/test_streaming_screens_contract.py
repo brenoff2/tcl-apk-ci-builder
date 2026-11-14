@@ -1116,7 +1116,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('painterResource(R.drawable.anytv_horizontal)', self.screen)
 
     def test_cinema_and_future_are_not_mixed_into_regular_streaming(self):
-        self.assertIn('if (heading != ANYTV_CINEMA_SHELF)', self.screen)
+        self.assertIn('if (heading != ANYTV_CINEMA_SHELF &&', self.screen)
         self.assertIn('if (future.isNotEmpty() || upcomingStreamingMore)', self.screen)
         # Cinema remains on its own destination, never on Principal.
         self.assertNotIn('if (cinema.isNotEmpty()) put(ANYTV_CINEMA_SHELF, cinema)', self.screen)
