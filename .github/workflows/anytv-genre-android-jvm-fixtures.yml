@@ -7,6 +7,7 @@ on:
       - '.github/workflows/anytv-genre-android-jvm-fixtures.yml'
       - 'scripts/qa/AnyTvGenreJvmFixtureTest.kt'
       - 'scripts/qa/AnyTvComposeHostSmokeTest.kt'
+      - 'scripts/qa/AnyTvOriginalGenreComposeFixtureTest.kt'
   workflow_dispatch:
 permissions:
   contents: read
@@ -54,6 +55,7 @@ jobs:
           mkdir -p "$target"
           cp scripts/qa/AnyTvGenreJvmFixtureTest.kt "$target/"
           cp scripts/qa/AnyTvComposeHostSmokeTest.kt "$target/"
+          cp scripts/qa/AnyTvOriginalGenreComposeFixtureTest.kt "$target/"
           # Use real JSONObject/JSONArray in JVM unit tests; ephemeral runner only.
           sed -i '/testImplementation(libs.junit)/a\    testImplementation("org.json:json:20240303")\n    testImplementation("org.robolectric:robolectric:4.17")\n    testImplementation(platform(libs.androidx.compose.bom))\n    testImplementation(libs.androidx.compose.ui.test.junit4)\n    testImplementation(libs.androidx.junit)' source/app/build.gradle.kts
           sed -i '/    lint {/i\    testOptions { unitTests.isIncludeAndroidResources = true }' source/app/build.gradle.kts
@@ -67,6 +69,8 @@ jobs:
           cd source
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --tests '*AnyTvGenreJvmFixtureTest*' --tests '*AnyTvComposeHostSmokeTest*'
+          # Isolated JVM process: URLStreamHandlerFactory cannot be reset.
+          ./gradlew :app:testDebugUnitTest --no-daemon --rerun-tasks --stacktrace --tests '*AnyTvOriginalGenreComposeFixtureTest*'
           echo ANYTV_COMPILED_KOTLIN_GENRE_AND_COMPOSE_HOST_SMOKE_PASS
       - name: QA isolation receipt
         if: always()
