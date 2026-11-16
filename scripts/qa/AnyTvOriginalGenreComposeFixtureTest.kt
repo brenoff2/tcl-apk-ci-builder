@@ -132,7 +132,29 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 seen.count { it.contains("with_genres=18") }
             }
             assertEquals("Direct catalogue request must be observable", after + 1, controlled)
-            println("ANYTV_ORIGINAL_COMPOSE_R03_RETRY_REFETCH_VERIFIED")
+            // Regression R03: an HTTP-200 empty refresh must not overwrite an
+            // older verified response in the disk cache across screen restarts.
+            val write = cacheClass.getDeclaredMethod("write", String::class.java,
+                JSONObject::class.java, Long::class.javaPrimitiveType)
+                .apply { isAccessible = true }
+            val refresh = catalogType.getDeclaredMethod("get", String::class.java,
+                String::class.java, Boolean::class.javaPrimitiveType)
+                .apply { isAccessible = true }
+            val lastGoodRoute = "discover/movie?language=pt-BR&with_genres=18&page=77"
+            val lastGood = JSONObject().put("results",
+                org.json.JSONArray().put(JSONObject().put("id", 999)
+                    .put("title", "Drama verificado")))
+            write.invoke(cacheClass.getDeclaredField("INSTANCE").apply {
+                isAccessible = true
+            }.get(null), lastGoodRoute, lastGood, 3600000L)
+            val retained = refresh.invoke(catalog, "backend", lastGoodRoute, true)
+                as JSONObject
+            assertEquals(999, retained.getJSONArray("results")
+                .getJSONObject(0).getInt("id"))
+            val readback = get.invoke(catalog, "backend", lastGoodRoute) as JSONObject
+            assertEquals(999, readback.getJSONArray("results")
+                .getJSONObject(0).getInt("id"))
+            println("ANYTV_ORIGINAL_COMPOSE_R03_RETRY_REFETCH_AND_LAST_GOOD_PASS")
         } finally {
             root.set(null, prior)
             scratch.deleteRecursively()
