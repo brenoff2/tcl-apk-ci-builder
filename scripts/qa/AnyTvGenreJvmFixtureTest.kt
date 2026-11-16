@@ -21,6 +21,29 @@ class AnyTvGenreJvmFixtureTest {
         return method.invoke(null, title) as Boolean
     }
 
+    private fun discoverAnime(title: StreamingTitle): Boolean {
+        val method = owner.getDeclaredMethod(
+            "anyTvIsAnimeDiscovery", StreamingTitle::class.java)
+        method.isAccessible = true
+        return method.invoke(null, title) as Boolean
+    }
+
+    @Test fun authoritativeAnimeDiscoveryPreservesJapaneseMissingGenreIds() {
+        val data = """[
+            {"id":711,"name":"Anime completo","original_language":"ja","genre_ids":[16]},
+            {"id":712,"name":"Anime sem generos","original_language":"ja"},
+            {"id":713,"name":"Anime sem ids","original_language":"ja","genre_ids":[]},
+            {"id":714,"name":"Animacao estrangeira","original_language":"en","genre_ids":[16]}
+        ]"""
+        val parsed = parseTmdb(data, "tv")
+        assertEquals(listOf(711, 712, 713), parsed.filter(::discoverAnime).map { it.id })
+        assertEquals(3, curate(backfill(parsed.filter(::discoverAnime))).size)
+        assertFalse(discoverAnime(parsed.last()))
+        // Do not weaken global genre/Anime classification for unrelated feeds.
+        assertFalse(anime(parsed[1]))
+        println("ANYTV_AUTHORITATIVE_DISCOVER_ANIME_3_OF_4_RETAINED")
+    }
+
     private fun genre(id: Int, media: String, movies: List<StreamingGenre>,
                       series: List<StreamingGenre>): Int {
         val method = owner.getDeclaredMethod(
