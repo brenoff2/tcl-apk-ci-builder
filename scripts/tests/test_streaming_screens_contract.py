@@ -45,7 +45,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('if (id == 0) emptyList()', self.screen)
         self.assertIn('private fun anyTvIsAnime(title: StreamingTitle)', self.screen)
         self.assertIn('val accepted = parsed.filter {', self.screen)
-        self.assertIn('id != ANYTV_ANIME_FILTER || anyTvIsAnime(it)', self.screen)
+        self.assertIn('id != ANYTV_ANIME_FILTER || anyTvIsAnimeDiscovery(it)', self.screen)
         self.assertIn('title.originalLanguage == "ja" && 16 in title.genreIds', self.screen)
         self.assertIn('var genreViewMode by remember { mutableStateOf("grade") }', self.screen)
         self.assertIn('var genreSectionsMode by remember { mutableStateOf(true) }', self.screen)
