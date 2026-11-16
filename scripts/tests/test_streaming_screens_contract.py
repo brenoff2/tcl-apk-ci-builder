@@ -1383,7 +1383,8 @@ class StreamingScreens(unittest.TestCase):
             'val catalogueInitialLoading = !homeLibrary && openedSection == null && when {',
             'key !in genreShelves && key !in genreErrors',
             'genreShelves[sourceKey] == null',
-            'AnyTvStreamTextButton(onClick = { genreFirstPageRetry++ })',
+            'genreRetryTarget = selectedHomeGenre',
+            'genreFirstPageRetry++',
             'Text("Tentar novamente")',
         ):
             with self.subTest(fragment=fragment):
