@@ -18,7 +18,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -43,7 +42,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
     private val additionalDramaRequest = CountDownLatch(1)
     @Volatile private var monitorRetry = false
 
-    @Test fun actualScreenRetryDoesNotRefetchAlreadyCachedEmptyGenre() {
+    @Test fun actualScreenRetryRefetchesSelectedGenreAfterCacheIsCleared() {
         URL.setURLStreamHandlerFactory(URLStreamHandlerFactory { protocol ->
             if (protocol != "https" && protocol != "http") return@URLStreamHandlerFactory null
             object : URLStreamHandler() {
@@ -112,15 +111,14 @@ class AnyTvOriginalGenreComposeFixtureTest {
             compose.waitForIdle()
             // Catch delayed IO launched after the click, rather than relying
             // solely on the Compose frame clock being idle.
-            assertFalse("Retry unexpectedly started a Drama request",
-                additionalDramaRequest.await(2, TimeUnit.SECONDS))
+            assertTrue("Retry must start a new Drama request",
+                additionalDramaRequest.await(10, TimeUnit.SECONDS))
             monitorRetry = false
             val after = synchronized(seen) {
                 seen.count { it.contains("with_genres=18") }
             }
-            // Known R03: retry effect fires, but populated genreShelves and
-            // genreEditorialPools guards prevent reaching StreamingCatalog again.
-            assertEquals("The existing Composable skips refetch on retry", initial, after)
+            // R03 regression: the original Composable must refetch on explicit retry.
+            assertTrue("Retry did not refetch Drama after cache invalidation", after > initial)
             // Positive control: after deleting the cache a direct call through
             // the original catalogue GET must hit our intercepted URL.
             val catalogType = Class.forName("com.hari.androidtvremote.ui.app.StreamingCatalog")
@@ -134,7 +132,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 seen.count { it.contains("with_genres=18") }
             }
             assertEquals("Direct catalogue request must be observable", after + 1, controlled)
-            println("ANYTV_ORIGINAL_COMPOSE_R03_RETRY_NO_REFETCH_PROVED")
+            println("ANYTV_ORIGINAL_COMPOSE_R03_RETRY_REFETCH_VERIFIED")
         } finally {
             root.set(null, prior)
             scratch.deleteRecursively()
