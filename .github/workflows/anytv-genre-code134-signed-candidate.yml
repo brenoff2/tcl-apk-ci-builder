@@ -4,12 +4,15 @@ on:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
     paths:
       - '.github/workflows/anytv-genre-code134-signed-candidate.yml'
+      - 'overrides/TclStreamingScreens.kt'
+      - 'scripts/qa/AnyTvGenreJvmFixtureTest.kt'
+      - 'scripts/qa/AnyTvOriginalGenreComposeFixtureTest.kt'
   workflow_dispatch:
 permissions:
   contents: read
 concurrency:
   group: anytv-code134-genre-candidate-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   phone-compile:
     runs-on: ubuntu-latest
