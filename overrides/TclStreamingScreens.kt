@@ -579,7 +579,8 @@ private object StreamingCatalog {
                 // after the screen is closed and its in-memory shelves disappear.
                 if (forceRefresh && payload.optJSONArray("results")?.length() == 0) {
                     val previous = StreamingDiskCache.stale(route)
-                    if ((previous?.optJSONArray("results")?.length() ?: 0) > 0)
+                    if (previous != null &&
+                        (previous.optJSONArray("results")?.length() ?: 0) > 0)
                         return previous
                 }
                 if (!remoteRating) StreamingDiskCache.write(route, payload, ttl(route))
