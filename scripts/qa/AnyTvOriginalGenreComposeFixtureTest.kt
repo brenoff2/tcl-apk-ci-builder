@@ -14,8 +14,11 @@ import java.net.URLStreamHandlerFactory
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.Collections
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -37,18 +40,23 @@ class AnyTvOriginalGenreComposeFixtureTest {
 
     private val seen = Collections.synchronizedList(mutableListOf<String>())
     private val host = "anytv-link-resolver-pilot.brenoff.workers.dev"
+    private val additionalDramaRequest = CountDownLatch(1)
+    @Volatile private var monitorRetry = false
 
     @Test fun actualScreenRetryDoesNotRefetchAlreadyCachedEmptyGenre() {
         URL.setURLStreamHandlerFactory(URLStreamHandlerFactory { protocol ->
-            if (protocol != "https") return@URLStreamHandlerFactory null
+            if (protocol != "https" && protocol != "http") return@URLStreamHandlerFactory null
             object : URLStreamHandler() {
                 override fun openConnection(url: URL): URLConnection {
                     // Fail CLOSED on anything outside the canonical catalogue host.
-                    if (url.host != host) throw SecurityException("QA blocks external HTTPS")
+                    if (protocol != "https" || url.host != host)
+                        throw SecurityException("QA blocks non-catalogue URLs")
                     if (!url.path.startsWith("/v1/catalog/"))
                         throw SecurityException("QA blocks non-catalogue HTTPS")
                     val route = url.toString().substringAfter("/v1/catalog/")
                     seen.add(route)
+                    if (monitorRetry && route.contains("with_genres=18"))
+                        additionalDramaRequest.countDown()
                     val body = when {
                         route.startsWith("genre/movie/list") ->
                             """{"genres":[{"id":18,"name":"Drama"},{"id":28,"name":"Ação"}]}"""
@@ -99,14 +107,33 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // Expire/remove source caches to detect any request even when initial
             // response was successful, rather than masking retry by the 48h TTL.
             scratch.listFiles()?.forEach { it.delete() }
+            monitorRetry = true
             compose.onAllNodesWithText("Tentar novamente").onFirst().performClick()
             compose.waitForIdle()
+            // Catch delayed IO launched after the click, rather than relying
+            // solely on the Compose frame clock being idle.
+            assertFalse("Retry unexpectedly started a Drama request",
+                additionalDramaRequest.await(2, TimeUnit.SECONDS))
+            monitorRetry = false
             val after = synchronized(seen) {
                 seen.count { it.contains("with_genres=18") }
             }
             // Known R03: retry effect fires, but populated genreShelves and
             // genreEditorialPools guards prevent reaching StreamingCatalog again.
             assertEquals("The existing Composable skips refetch on retry", initial, after)
+            // Positive control: after deleting the cache a direct call through
+            // the original catalogue GET must hit our intercepted URL.
+            val catalogType = Class.forName("com.hari.androidtvremote.ui.app.StreamingCatalog")
+            val catalog = catalogType.getDeclaredField("INSTANCE").apply { isAccessible = true }
+                .get(null)
+            val get = catalogType.getDeclaredMethod("get", String::class.java,
+                String::class.java).apply { isAccessible = true }
+            val probe = "discover/movie?language=pt-BR&with_genres=18&page=99"
+            get.invoke(catalog, "backend", probe)
+            val controlled = synchronized(seen) {
+                seen.count { it.contains("with_genres=18") }
+            }
+            assertEquals("Direct catalogue request must be observable", after + 1, controlled)
             println("ANYTV_ORIGINAL_COMPOSE_R03_RETRY_NO_REFETCH_PROVED")
         } finally {
             root.set(null, prior)
