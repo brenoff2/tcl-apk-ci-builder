@@ -1,0 +1,196 @@
+name: AnyTV 2.9.106 code134 signed genre candidate (NO OTA)
+on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths:
+      - '.github/workflows/anytv-genre-code134-signed-candidate.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: anytv-code134-genre-candidate-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  phone-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fail closed unless approved AnyTV brand PNGs are committed
+        run: python3 -m unittest discover -s scripts/tests -p 'test_anytv_brand_assets.py' -v
+      - name: Pin safe signed candidate identity without touching release metadata
+        run: |
+          echo 'ANYTV_VERSION_CODE=134' >> "$GITHUB_ENV"
+          echo 'ANYTV_VERSION_NAME=2.9.106-AnyTV' >> "$GITHUB_ENV"
+      - uses: actions/setup-java@v4
+        with: {distribution: temurin, java-version: '17'}
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: python -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Prepare pinned upstream and AnyTV extensions
+        run: |
+          set -euo pipefail
+          git clone --depth 1 https://github.com/harimoradiya/androidtvremote.git source
+          test "$(git -C source rev-parse HEAD)" = "16c68f0bb9d23f929ee8240f105fdb9000262d85"
+          TCL_RESCUE_STABLE=1 TCL_APPROVED_UI=1 TCL_RELEASE_SINGLE_APP=1 python3 scripts/prepare_tcl.py
+          python3 scripts/apply_tcl_v21.py
+          python3 scripts/apply_tcl_v22.py
+          python3 scripts/apply_tcl_ptbr_cleanup.py
+          python3 scripts/apply_tcl_i18n.py
+          python3 scripts/apply_tcl_sticky_controls.py
+          python3 scripts/apply_anytv_brand.py
+          python3 scripts/apply_anytv_graphite_settings.py
+          python3 scripts/apply_anytv_tv_tls_alias_isolation.py
+          python3 scripts/apply_anytv_restore_connection.py
+          python3 scripts/apply_anytv_premiere_reminder_manifest.py
+          python3 scripts/apply_anytv_lg_webos.py
+          python3 scripts/apply_anytv_lg_pointer_fix.py
+          python3 scripts/apply_anytv_lg_apps.py
+          python3 scripts/apply_anytv_lg_reconnect.py
+          python3 scripts/apply_anytv_tcl_adb.py
+      - name: Inject isolated JVM test against compiled AnyTV implementation
+        run: |
+          set -euo pipefail
+          target=source/app/src/test/java/com/hari/androidtvremote/ui/app
+          mkdir -p "$target"
+          cp scripts/qa/AnyTvGenreJvmFixtureTest.kt "$target/"
+          cp scripts/qa/AnyTvComposeHostSmokeTest.kt "$target/"
+          cp scripts/qa/AnyTvOriginalGenreComposeFixtureTest.kt "$target/"
+          # Use real JSONObject/JSONArray in JVM unit tests; ephemeral runner only.
+          sed -i '/testImplementation(libs.junit)/a\    testImplementation("org.json:json:20240303")\n    testImplementation("org.robolectric:robolectric:4.17")\n    testImplementation(platform(libs.androidx.compose.bom))\n    testImplementation(libs.androidx.compose.ui.test.junit4)\n    testImplementation(libs.androidx.junit)' source/app/build.gradle.kts
+          sed -i '/    lint {/i\    testOptions { unitTests.isIncludeAndroidResources = true }' source/app/build.gradle.kts
+          grep -Fq 'private fun anyTvIsAnime(' overrides/TclStreamingScreens.kt
+          grep -Fq 'private fun anyTvBackfillEditorial(' overrides/TclStreamingScreens.kt
+          grep -Fq 'private fun anyTvCurate(' overrides/TclStreamingScreens.kt
+          grep -Fq 'private fun anyTvResolvedGenre(' overrides/TclStreamingScreens.kt
+      - name: Execute compiled Android app Kotlin unit tests (no emulator or APK)
+        run: |
+          set -euo pipefail
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --tests '*AnyTvGenreJvmFixtureTest*' --tests '*AnyTvComposeHostSmokeTest*'
+          # Isolated JVM process: URLStreamHandlerFactory cannot be reset.
+          ./gradlew :app:testDebugUnitTest --no-daemon --rerun-tasks --stacktrace --tests '*AnyTvOriginalGenreComposeFixtureTest*'
+          echo ANYTV_COMPILED_KOTLIN_GENRE_AND_COMPOSE_HOST_SMOKE_PASS
+      - name: Prepare current V2 version without signing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('source/app/build.gradle.kts')
+          source=p.read_text()
+          assert source.count('versionCode = 34') == 1
+          assert source.count('versionName = "2.9.5-AnyTV"') == 1
+          p.write_text(source.replace('versionCode = 34','versionCode = 39')
+                      .replace('versionName = "2.9.5-AnyTV"','versionName = "2.9.10-AnyTV"'))
+          PY
+      - name: Existing UI, link and safety contract tests
+        env:
+          TCL_V39: '1'
+          TCL_V37: '1'
+          TCL_V36: '1'
+          TCL_V35: '1'
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_streaming_screens_contract.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_streaming_no_manual_credentials.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_approved_visual_contract.py' -v
+      - name: Apply V2 package identity and compile current candidate
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import json
+          meta={'versionCode': 134, 'versionName': '2.9.106-AnyTV'}
+          p=Path('source/app/build.gradle.kts')
+          s=p.read_text()
+          assert s.count('versionCode = 39') == 1
+          assert s.count('versionName = "2.9.10-AnyTV"') == 1
+          p.write_text(s.replace('versionCode = 39','versionCode = '+str(meta['versionCode']))
+                      .replace('versionName = "2.9.10-AnyTV"','versionName = "'+meta['versionName']+'"'))
+          PY
+          python3 scripts/apply_anytv_phone_v2_identity.py
+          cd source
+          chmod +x gradlew
+          ./gradlew :app:assembleRelease --no-daemon --stacktrace
+      - name: Verify unsigned intermediate identity before signing
+        run: |
+          set -euo pipefail
+          APK=source/app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s "$APK"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$APK" > candidate-identity.txt
+          grep -q "name='com.tclremote.livre.v2' versionCode='$ANYTV_VERSION_CODE'" candidate-identity.txt
+          grep -q "versionName='$ANYTV_VERSION_NAME'" candidate-identity.txt
+          sha256sum "$APK" > candidate-sha256.txt
+          printf '%s\n' 'APK SEM ASSINATURA: NAO INSTALAR. O artefato OTA utiliza a APK assinada.' > candidate-NOT-INSTALL.txt
+          echo 'V2_UNSIGNED_COMPILE_SUCCESS; signing and OTA gates follow.'
+      - name: Store unsigned candidate for audit
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-v2-unsigned-audit
+          path: |
+            source/app/build/outputs/apk/release/app-release-unsigned.apk
+            candidate-identity.txt
+            candidate-sha256.txt
+            candidate-NOT-INSTALL.txt
+          retention-days: 14
+          if-no-files-found: error
+      - name: Recover EXISTING V2 signer (same certificate) and sign candidate
+        shell: bash
+        env:
+          V2_RECOVERY_HEX: ${{ secrets.ANYTV_SIGNER_V2_RECOVERY_HEX }}
+        run: |
+          set -euo pipefail
+          python3 -m pip install -q 'cryptography==46.0.3'
+          umask 077
+          mkdir -m 700 -p signing-v2-private signed-v2
+          trap 'rm -rf signing-v2-private' EXIT
+          python3 - <<'PY'
+          import base64,hashlib,hmac,json,os,pathlib
+          from cryptography import x509
+          from cryptography.hazmat.primitives import hashes
+          from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+          from cryptography.hazmat.primitives.serialization import pkcs12
+          k=os.environ.get('V2_RECOVERY_HEX','')
+          if len(k)!=64 or any(c not in '0123456789abcdefABCDEF' for c in k):
+              raise RuntimeError('V2 recovery secret missing; signed candidate unavailable')
+          key=bytes.fromhex(k)
+          root=pathlib.Path('signing-recovery/v2')
+          ciphertext=(root/'phone-signer.aesgcm').read_bytes()
+          meta=json.loads((root/'identity.json').read_text())
+          assert ciphertext[:9]==b'ANYTVV2G1'
+          assert hashlib.sha256(ciphertext).hexdigest()==meta['ciphertext_sha256']
+          p12=AESGCM(key).decrypt(ciphertext[9:21],ciphertext[21:],None)
+          pw=base64.urlsafe_b64encode(hmac.new(key,b'AnyTV-Phone-V2-PKCS12-Pass-v1',hashlib.sha256).digest())
+          signer,cert,_=pkcs12.load_key_and_certificates(p12,pw)
+          assert signer is not None
+          assert cert.fingerprint(hashes.SHA256()).hex()==meta['certificate_sha256']
+          (pathlib.Path('signing-v2-private')/'phone.p12').write_bytes(p12)
+          (pathlib.Path('signing-v2-private')/'password').write_bytes(pw)
+          print('ANYTV_V2_ENCRYPTED_BACKUP_RECOVERED_WITH_GITHUB_ACTIONS_SECRET')
+          PY
+          export P12_V2_PASSWORD
+          P12_V2_PASSWORD="$(cat signing-v2-private/password)"
+          echo "::add-mask::$P12_V2_PASSWORD"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign \
+            --ks signing-v2-private/phone.p12 --ks-type PKCS12 \
+            --ks-pass env:P12_V2_PASSWORD --key-pass env:P12_V2_PASSWORD \
+            --out signed-v2/AnyTV_V2_SIGNED_CANDIDATE.apk source/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs signed-v2/AnyTV_V2_SIGNED_CANDIDATE.apk > signed-v2/audit.txt
+          EXPECTED_CERT="$(jq -r .certificate_sha256 signing-recovery/v2/identity.json)"
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' signed-v2/audit.txt
+          grep -qi "$EXPECTED_CERT" signed-v2/audit.txt
+          "$ANDROID_HOME/build-tools/36.0.0/zipalign" -c 4 signed-v2/AnyTV_V2_SIGNED_CANDIDATE.apk
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging signed-v2/AnyTV_V2_SIGNED_CANDIDATE.apk > signed-v2/badging.txt
+          grep -q "package: name='com.tclremote.livre.v2' versionCode='$ANYTV_VERSION_CODE'" signed-v2/badging.txt
+          echo "ANYTV_V2_SIGNER_VALIDATED_$(sha256sum signed-v2/AnyTV_V2_SIGNED_CANDIDATE.apk | cut -d ' ' -f1)"
+      - name: Archive verified signed candidate for manual installation ONLY
+        uses: actions/upload-artifact@v4
+        with:
+          name: anytv-v2-29106-code134-signed-manual-candidate
+          path: |
+            signed-v2/AnyTV_V2_SIGNED_CANDIDATE.apk
+            signed-v2/audit.txt
+            signed-v2/badging.txt
+          retention-days: 14
+          if-no-files-found: error
