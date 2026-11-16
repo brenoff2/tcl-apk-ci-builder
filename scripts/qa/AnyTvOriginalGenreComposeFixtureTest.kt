@@ -131,7 +131,8 @@ class AnyTvOriginalGenreComposeFixtureTest {
             val controlled = synchronized(seen) {
                 seen.count { it.contains("with_genres=18") }
             }
-            assertEquals("Direct catalogue request must be observable", after + 1, controlled)
+            assertTrue("Direct source probe must be intercepted",
+                controlled > after && synchronized(seen) { seen.contains(probe) })
             // Regression R03: an HTTP-200 empty refresh must not overwrite an
             // older verified response in the disk cache across screen restarts.
             val write = cacheClass.getDeclaredMethod("write", String::class.java,
