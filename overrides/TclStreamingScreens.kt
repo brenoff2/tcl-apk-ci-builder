@@ -102,6 +102,10 @@ private const val ANYTV_CINEMA_FILTER = -1
 private const val ANYTV_ANIME_FILTER = -2
 private fun anyTvIsAnime(title: StreamingTitle): Boolean =
     title.originalLanguage == "ja" && 16 in title.genreIds
+// Only the authoritative discover with_genres=16 feed can admit a Japanese
+// title whose optional genre_ids field was omitted by the source.
+private fun anyTvIsAnimeDiscovery(title: StreamingTitle): Boolean =
+    title.originalLanguage == "ja"
 private const val ANYTV_CINEMA_SHELF = "Cinema · Em cartaz no Brasil"
 private val ANYTV_EDITORIAL_SECTIONS = listOf(
     "Destaques da semana · Filmes", "Destaques da semana · Séries",
@@ -549,11 +553,13 @@ private object StreamingCatalog {
             listOf("youtube", "spotify", "plex", "twitch", "vimeo", "dazn")
                 .any { it in norm(app.name) || it in norm(app.packageName) }
 
-    private fun get(token: String, route: String): JSONObject {
+    private fun get(token: String, route: String): JSONObject = get(token, route, false)
+    private fun get(token: String, route: String, forceRefresh: Boolean): JSONObject {
         // Rating freshness is controlled by the Worker (900s), not the 48h
         // Android catalogue cache. An expired score is not an offline fallback.
         val remoteRating = route.startsWith("ratings/trakt/")
-        if (!remoteRating) StreamingDiskCache.read(route)?.let { return it }
+        if (!remoteRating && !forceRefresh)
+            StreamingDiskCache.read(route)?.let { return it }
         // The initial screen must not repeatedly fail empty when the backend
         // is temporarily unavailable; verified cached titles remain useful.
         return try {
@@ -1056,7 +1062,7 @@ private object StreamingCatalog {
         discoveryGenrePage(id, media, 1).titles
 
     suspend fun discoveryGenrePage(id: Int, media: String, page: Int,
-        sort: String = "popular"): StreamingResults =
+        sort: String = "popular", forceRefresh: Boolean = false): StreamingResults =
         withContext(Dispatchers.IO) {
             require(media == "movie" || media == "tv")
             require(page in 1..42)
@@ -1073,13 +1079,13 @@ private object StreamingCatalog {
                 val route = "discover/$media?language=pt-BR&include_adult=false" +
                     "&sort_by=$sorting&with_genres=${if (id == ANYTV_ANIME_FILTER) 16 else id}" +
                     "&page=$sourcePage"
-                val payload = get("backend", route)
+                val payload = get("backend", route, forceRefresh)
                 val raw = payload.optJSONArray("results") ?: JSONArray()
                 // The discover endpoint has already applied with_genres. Do not
                 // remove genuine titles a second time for missing genre_ids/date.
                 val parsed = mapTitles(raw, media, 0)
                 val accepted = parsed.filter {
-                    id != ANYTV_ANIME_FILTER || anyTvIsAnime(it)
+                    id != ANYTV_ANIME_FILTER || anyTvIsAnimeDiscovery(it)
                 }
                 android.util.Log.i("AnyTVGenreQA",
                     "stage=tmdb genre=$id media=$media sourcePage=$sourcePage " +
@@ -2043,6 +2049,9 @@ internal fun TclStreamingScreens(
     val genreLoading = remember { mutableStateMapOf<String, Boolean>() }
     val genreErrors = remember { mutableStateMapOf<String, String>() }
     var genreFirstPageRetry by remember { mutableIntStateOf(0) }
+    var genreRetryTarget by remember { mutableIntStateOf(0) }
+    val genreRetryMark = remember { mutableStateMapOf<String, Int>() }
+    val genreEditorialRetryMark = remember { mutableStateMapOf<String, Int>() }
     val premiereReminders = remember { mutableStateMapOf<String, Boolean>() }
     var globalSearchDraft by remember { mutableStateOf("") }
     var globalSearchTerm by remember { mutableStateOf("") }
@@ -2526,12 +2535,17 @@ internal fun TclStreamingScreens(
             for (id in requested) {
                 val key = "$mediaKind:$id" +
                     if (selectedHomeGenre != 0) ":$genreSort" else ""
-                if (key !in genreShelves) {
+                val refresh = genreRetryTarget == selectedHomeGenre &&
+                    genreFirstPageRetry > (genreRetryMark[key] ?: 0)
+                if (key !in genreShelves || refresh) {
                     genreLoading[key] = true
                     try {
                         val result = StreamingCatalog.discoveryGenrePage(id, mediaKind, 1,
-                            if (selectedHomeGenre != 0) genreSort else "popular")
-                        genreShelves[key] = result.titles
+                            if (selectedHomeGenre != 0) genreSort else "popular",
+                            forceRefresh = refresh)
+                        // Keep verified last-good titles when a retry returns empty.
+                        if (result.titles.isNotEmpty() || key !in genreShelves)
+                            genreShelves[key] = result.titles
                         android.util.Log.i("AnyTVGenreQA",
                             "stage=first genre=$id media=$mediaKind sort=$genreSort " +
                                 "titles=${result.titles.size} more=${result.more}")
@@ -2543,6 +2557,7 @@ internal fun TclStreamingScreens(
                     } catch (error: Exception) {
                         genreErrors[key] = "Não foi possível consultar este gênero."
                     } finally {
+                        genreRetryMark[key] = genreFirstPageRetry
                         genreLoading[key] = false
                     }
                 }
@@ -2700,13 +2715,15 @@ internal fun TclStreamingScreens(
                 else anyTvResolvedGenre(selectedHomeGenre, kind, allMovieGenres, tvGenres)
             if (id == 0) continue
             val key = "$kind:$id"
-            if (key in genreEditorialPools && key !in genreEditorialErrors) continue
+            val refresh = genreRetryTarget == selectedHomeGenre &&
+                genreFirstPageRetry > (genreEditorialRetryMark[key] ?: 0)
+            if (!refresh && key in genreEditorialPools && key !in genreEditorialErrors) continue
             val pages = coroutineScope {
                 (1..3).map { page ->
                     async {
                         try {
                             Result.success(StreamingCatalog.discoveryGenrePage(
-                                id, kind, page, "popular").titles)
+                                id, kind, page, "popular", forceRefresh = refresh).titles)
                         } catch (error: java.util.concurrent.CancellationException) {
                             throw error
                         } catch (error: Exception) {
@@ -2723,6 +2740,7 @@ internal fun TclStreamingScreens(
             }
             if (pages.any { it.isFailure }) genreEditorialErrors[key] = true
             else genreEditorialErrors.remove(key)
+            genreEditorialRetryMark[key] = genreFirstPageRetry
             android.util.Log.i("AnyTVGenreQA",
                 "stage=editorial genre=$id media=$kind success=${successfulPages.size} " +
                     "failed=${pages.size - successfulPages.size} " +
@@ -3188,7 +3206,8 @@ internal fun TclStreamingScreens(
         if (homeContentType != "all" && title.media != homeContentType) return false
         if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
             return title.media == "movie" && title.id in cinemaIds
-        if (selectedHomeGenre == ANYTV_ANIME_FILTER) return anyTvIsAnime(title)
+        if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+            return anyTvIsAnimeDiscovery(title)
         if (selectedHomeGenre > 0) {
             val id = anyTvResolvedGenre(selectedHomeGenre, title.media,
                 allMovieGenres, tvGenres)
@@ -3606,7 +3625,7 @@ internal fun TclStreamingScreens(
                             }
                         } else curatedShelves.values.flatMap { it }
                         mixed.distinctBy { "${it.media}:${it.id}" }.filter {
-                            if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnime(it)
+                            if (selectedHomeGenre == ANYTV_ANIME_FILTER) anyTvIsAnimeDiscovery(it)
                             else !anyTvIsAnime(it)
                         }.filter {
                             if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
@@ -3997,6 +4016,7 @@ internal fun TclStreamingScreens(
                                         fontSize = 12.sp)
                                     AnyTvStreamTextButton(onClick = {
                                         if (genreMetadataError) genreMetadataRetry++
+                                        genreRetryTarget = selectedHomeGenre
                                         genreFirstPageRetry++
                                     }) { Text("Tentar novamente") }
                                 }
@@ -4472,7 +4492,10 @@ internal fun TclStreamingScreens(
                                             fontSize = 12.sp)
                                         if (genreShelves[sourceKey] == null &&
                                             genreLoading[sourceKey] != true) {
-                                            AnyTvStreamTextButton(onClick = { genreFirstPageRetry++ }) {
+                                            AnyTvStreamTextButton(onClick = {
+                                                genreRetryTarget = selectedHomeGenre
+                                                genreFirstPageRetry++
+                                            }) {
                                                 Text("Tentar novamente")
                                             }
                                         }
