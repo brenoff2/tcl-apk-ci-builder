@@ -73,7 +73,16 @@ jobs:
           set -euo pipefail
           cd source
           chmod +x gradlew
-          ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --tests '*AnyTvGenreJvmFixtureTest*' --tests '*AnyTvComposeHostSmokeTest*'
+          if ! ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --tests '*AnyTvGenreJvmFixtureTest*' --tests '*AnyTvComposeHostSmokeTest*' 2>&1 | tee /tmp/anytv-gradle-first.log; then
+            # Retry only dependency-resolution infrastructure failures, never failed QA.
+            if grep -Fq "Plugin [id: 'org.gradle.toolchains.foojay-resolver-convention'" /tmp/anytv-gradle-first.log; then
+              echo "Gradle Plugin Portal transient failure; one controlled retry."
+              sleep 15
+              ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --tests '*AnyTvGenreJvmFixtureTest*' --tests '*AnyTvComposeHostSmokeTest*'
+            else
+              exit 1
+            fi
+          fi
           # Isolated JVM process: URLStreamHandlerFactory cannot be reset.
           ./gradlew :app:testDebugUnitTest --no-daemon --rerun-tasks --stacktrace --tests '*AnyTvOriginalGenreComposeFixtureTest*'
           echo ANYTV_COMPILED_KOTLIN_GENRE_AND_COMPOSE_HOST_SMOKE_PASS
