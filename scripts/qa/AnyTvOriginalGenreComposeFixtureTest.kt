@@ -498,6 +498,9 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // button, not by bypassing the Composable or resetting its state.
             failDocumentaryAllSources = false
             compose.onAllNodesWithText("Tentar novamente").onFirst().performClick()
+            // Drive the recomposition after the click, as the earlier Drama
+            // retry test does, before polling asynchronous catalogue work.
+            compose.waitForIdle()
             try {
                 compose.waitUntil(30_000) {
                     org.robolectric.shadows.ShadowLog.getLogs().any {
