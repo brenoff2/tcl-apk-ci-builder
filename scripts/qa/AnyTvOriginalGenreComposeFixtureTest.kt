@@ -231,6 +231,42 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         it.msg.contains("stage=render genre=$selectedId ") &&
                         it.msg.contains("Populares:") }
                     .msg
+                // Verify the original composable builds the entire approved
+                // editorial contract, in order, without extra genre rails.
+                // Factual sections may legitimately contain zero results.
+                val sectionPayload = snapshot.substringAfter("sections=")
+                val expectedOrder = listOf(
+                    "Destaques da semana · Filmes",
+                    "Destaques da semana · Séries",
+                    "Em alta agora",
+                    "Indicados para você",
+                    "Populares",
+                    "Lançamentos · Filmes",
+                    "Lançamentos · Séries",
+                    "Em breve · Filmes e séries",
+                    "No cinema",
+                    "Novas temporadas",
+                    "Mais bem avaliados",
+                    "Minisséries imperdíveis"
+                )
+                val actualSections = sectionPayload.split("|").map { entry ->
+                    entry.substringBeforeLast(":") to
+                        (entry.substringAfterLast(":").toIntOrNull() ?: -1)
+                }
+                assertEquals("$label: 12 sections and editorial order", expectedOrder,
+                    actualSections.map { it.first })
+                val sectionCount = actualSections.toMap()
+                assertTrue("$label: recent movies must survive Cinema outage",
+                    (sectionCount["Lançamentos · Filmes"] ?: 0) > 0)
+                assertTrue("$label: recent TV must be represented",
+                    (sectionCount["Lançamentos · Séries"] ?: 0) > 0)
+                assertTrue("$label: Populares must retain the source catalogue",
+                    (sectionCount["Populares"] ?: 0) > 0)
+                assertEquals("$label: cannot invent theatrical screenings", 0,
+                    sectionCount["No cinema"])
+                assertEquals("$label: cannot invent future premieres", 0,
+                    sectionCount["Em breve · Filmes e séries"])
+                println("ANYTV_ORIGINAL_GENRE_12_SECTION_CONTRACT label=$label sections=$sectionPayload")
                 // Verify every boundary in the actual source-to-render flow.
                 // Source page 1 is a synthetic TMDB-shaped 20-title payload.
                 val sourceStages = org.robolectric.shadows.ShadowLog.getLogs().map { it.msg }
