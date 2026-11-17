@@ -56,7 +56,9 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     .put("id", (if (movie) 100000 else 200000) + genre * 100 +
                         (sourcePage - 1) * 20 + index)
                     .put(if (movie) "title" else "name", "QA $genre ${if (movie) "filme" else "serie"} $index")
-                    .put(if (movie) "release_date" else "first_air_date", date)
+                    .put(if (movie) "release_date" else "first_air_date",
+                        if (!movie && sourcePage == 1 && index == 1)
+                            java.time.LocalDate.now().minusYears(2).toString() else date)
                     .put("genre_ids", org.json.JSONArray().put(genre))
                     .put("original_language", if (genre == 16) "ja" else "pt")
                     .put("poster_path", "/qa-$index.jpg")
@@ -95,9 +97,25 @@ class AnyTvOriginalGenreComposeFixtureTest {
                             val isMiniseries = id != null && fixtureGenres.any { genre ->
                                 id == 200000 + genre * 100
                             }
-                            JSONObject().put("id", id ?: 0)
+                            val isReturning = id != null && fixtureGenres.any { genre ->
+                                id == 200000 + genre * 100 + 1
+                            }
+                            val details = JSONObject().put("id", id ?: 0)
                                 .put("type", if (isMiniseries) "Miniseries" else "Scripted")
-                                .toString()
+                            if (isReturning) {
+                                details.put("seasons", org.json.JSONArray()
+                                    .put(JSONObject().put("season_number", 1)
+                                        .put("name", "Temporada 1")
+                                        .put("episode_count", 8)
+                                        .put("air_date",
+                                            java.time.LocalDate.now().minusYears(2).toString()))
+                                    .put(JSONObject().put("season_number", 2)
+                                        .put("name", "Temporada 2")
+                                        .put("episode_count", 8)
+                                        .put("air_date",
+                                            java.time.LocalDate.now().minusDays(10).toString())))
+                            }
+                            details.toString()
                         }
                         else -> """{"results":[],"total_pages":1,"genres":[]}"""
                     }
@@ -321,6 +339,18 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     sectionCount["No cinema"])
                 assertEquals("$label: cannot invent future premieres", 0,
                     sectionCount["Em breve · Filmes e séries"])
+                // The genre's second TV candidate has a documented second
+                // season premiered 10 days ago, but never enters global feeds.
+                // RED in code134: genre-only returning season is discarded.
+                val returningId = 200000 + (if (label == "Anime") 16 else tvId) * 100 + 1
+                assertTrue("$label: returning series must be in selected genre source",
+                    synchronized(seen) {
+                        seen.any { it.contains("with_genres=$sourceId") }
+                    })
+                println("ANYTV_GENRE_SEASON_TRACE label=$label id=$returningId " +
+                    "newSeasons=${sectionCount["Novas temporadas"] ?: -1}")
+                assertEquals("$label: TMDB-confirmed season 2 from the genre must appear", 1,
+                    sectionCount["Novas temporadas"])
                 // First TV result has explicit TMDB type=Miniseries; it is absent
                 // from every Home/global discovery fixture by construction.
                 // RED on code134: genre-only verified miniseries are ignored.
