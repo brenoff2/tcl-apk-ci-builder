@@ -420,17 +420,31 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // clear after partial errors and not invent a "zero titles" result.
             failComedyEditorialPageThree = true
             compose.onAllNodesWithText("Comédia").onFirst().performClick()
-            compose.waitUntil(30_000) {
-                val logs = org.robolectric.shadows.ShadowLog.getLogs()
-                    .filter { it.tag == "AnyTVGenreQA" }.map { it.msg }
-                logs.any { it.contains("stage=editorial genre=35 media=movie") &&
-                    it.contains("success=2 failed=1") &&
-                    it.contains("titles=40") } &&
-                    logs.any { it.contains("stage=editorial genre=35 media=tv") &&
+            try {
+                compose.waitUntil(30_000) {
+                    val logs = org.robolectric.shadows.ShadowLog.getLogs()
+                        .filter { it.tag == "AnyTVGenreQA" }.map { it.msg }
+                    logs.any { it.contains("stage=editorial genre=35 media=movie") &&
                         it.contains("success=2 failed=1") &&
                         it.contains("titles=40") } &&
-                    logs.any { it.contains("stage=render genre=35 ") &&
-                        it.contains("Populares:40") }
+                        logs.any { it.contains("stage=editorial genre=35 media=tv") &&
+                            it.contains("success=2 failed=1") &&
+                            it.contains("titles=40") } &&
+                        logs.any { it.contains("stage=render genre=35 ") &&
+                            it.contains("Populares:40") }
+                }
+            } catch (error: Throwable) {
+                val recentLogs = org.robolectric.shadows.ShadowLog.getLogs()
+                    .filter { it.tag == "AnyTVGenreQA" &&
+                        it.msg.contains("genre=35") }
+                    .map { it.msg }.takeLast(35)
+                val requests = synchronized(seen) {
+                    seen.filter { it.contains("with_genres=35") }.takeLast(35)
+                }
+                val overlay = compose.onAllNodesWithText(
+                    "Preparando catálogo de filmes e séries…").fetchSemanticsNodes().size
+                throw AssertionError("Partial editorial QA stages=$recentLogs " +
+                    "requests=$requests overlayNodes=$overlay", error)
             }
             val comedySnapshot = org.robolectric.shadows.ShadowLog.getLogs()
                 .last { it.tag == "AnyTVGenreQA" &&
