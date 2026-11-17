@@ -241,12 +241,17 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         it.contains("stage=editorial genre=$tvId media=tv") &&
                             it.contains("titles=20")
                     } && logs.any {
+                        it.contains("stage=miniseries genre=$selectedId media=tv") &&
+                            it.contains("candidates=20") &&
+                            it.contains("confirmed=1")
+                    } && logs.any {
                         it.contains("stage=render genre=$selectedId ") &&
                             it.contains("sections=") &&
                             it.contains("Populares:") &&
                             !it.contains("Populares:0") &&
                             Regex("Lançamentos · Filmes:([1-9][0-9]*)").containsMatchIn(it) &&
-                            Regex("Lançamentos · Séries:([1-9][0-9]*)").containsMatchIn(it)
+                            Regex("Lançamentos · Séries:([1-9][0-9]*)").containsMatchIn(it) &&
+                            Regex("Minisséries imperdíveis:([1-9][0-9]*)").containsMatchIn(it)
                     }
                 }
                 val snapshot = org.robolectric.shadows.ShadowLog.getLogs()
@@ -299,6 +304,8 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 println("ANYTV_GENRE_MINISERIES_TRACE label=$label genre=$tvId " +
                     "source=20 metadataCalls=$metadataCalls " +
                     "rendered=${sectionCount["Minisséries imperdíveis"] ?: -1}")
+                assertTrue("$label: genre-only classification must call TMDB metadata: $miniId",
+                    metadataCalls > 0)
                 assertTrue("$label: verified genre-only TMDB Miniseries $miniId " +
                     "must appear without depending on Home (metadataCalls=$metadataCalls): $snapshot",
                     (sectionCount["Minisséries imperdíveis"] ?: 0) > 0)
