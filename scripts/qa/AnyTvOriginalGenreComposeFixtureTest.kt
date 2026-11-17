@@ -265,13 +265,18 @@ class AnyTvOriginalGenreComposeFixtureTest {
                             it.contains("candidates=60") &&
                             it.contains("confirmed=1")
                     } && logs.any {
+                        it.contains("stage=seasons genre=$tvId media=tv") &&
+                            it.contains("candidates=60") &&
+                            it.contains("confirmed=1")
+                    } && logs.any {
                         it.contains("stage=render genre=$selectedId ") &&
                             it.contains("sections=") &&
                             it.contains("Populares:") &&
                             !it.contains("Populares:0") &&
                             Regex("Lançamentos · Filmes:([1-9][0-9]*)").containsMatchIn(it) &&
                             Regex("Lançamentos · Séries:([1-9][0-9]*)").containsMatchIn(it) &&
-                            Regex("Minisséries imperdíveis:([1-9][0-9]*)").containsMatchIn(it)
+                            Regex("Minisséries imperdíveis:([1-9][0-9]*)").containsMatchIn(it) &&
+                            Regex("Novas temporadas:([1-9][0-9]*)").containsMatchIn(it)
                     }
                 }
                 } catch (error: Throwable) {
