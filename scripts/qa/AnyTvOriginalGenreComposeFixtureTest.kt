@@ -219,6 +219,20 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         it.msg.contains("stage=render genre=$selectedId ") &&
                         it.msg.contains("Populares:") }
                     .msg
+                // Verify every boundary in the actual source-to-render flow.
+                // Source page 1 is a synthetic TMDB-shaped 20-title payload.
+                val sourceStages = org.robolectric.shadows.ShadowLog.getLogs().map { it.msg }
+                assertTrue("$label: TMDB movie payload lost before parsing",
+                    sourceStages.any { it.contains(
+                        "stage=tmdb genre=$selectedId media=movie sourcePage=1 raw=20 parsed=20 accepted=20") })
+                assertTrue("$label: first genre movie page lost its candidates",
+                    sourceStages.any { it.contains(
+                        "stage=first genre=$selectedId media=movie") &&
+                        it.contains("titles=20") })
+                assertTrue("$label: editorial genre pool lost its candidates",
+                    sourceStages.any { it.contains(
+                        "stage=editorial genre=$selectedId media=movie") &&
+                        it.contains("titles=20") })
                 val recentFilms = Regex("Lançamentos · Filmes:([0-9]+)")
                     .find(snapshot)?.groupValues?.get(1)?.toIntOrNull() ?: 0
                 val population = Regex("Populares:([0-9]+)")
