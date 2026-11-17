@@ -196,6 +196,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 Triple("Anime", -2, 16)
             )
             for ((label, selectedId, sourceId) in scenarios) {
+                val tvId = if (label == "Ação") 10759 else selectedId
                 if (label != "Drama") {
                     compose.onAllNodesWithText(label).onFirst().performClick()
                 } else {
@@ -219,11 +220,20 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         it.contains("stage=editorial genre=$selectedId media=movie") &&
                             it.contains("titles=20")
                     } && logs.any {
+                        it.contains("stage=tmdb genre=$tvId media=tv sourcePage=1 raw=20 parsed=20 accepted=20")
+                    } && logs.any {
+                        it.contains("stage=first genre=$tvId media=tv") &&
+                            it.contains("titles=20")
+                    } && logs.any {
+                        it.contains("stage=editorial genre=$tvId media=tv") &&
+                            it.contains("titles=20")
+                    } && logs.any {
                         it.contains("stage=render genre=$selectedId ") &&
                             it.contains("sections=") &&
                             it.contains("Populares:") &&
                             !it.contains("Populares:0") &&
-                            Regex("Lançamentos · Filmes:([1-9][0-9]*)").containsMatchIn(it)
+                            Regex("Lançamentos · Filmes:([1-9][0-9]*)").containsMatchIn(it) &&
+                            Regex("Lançamentos · Séries:([1-9][0-9]*)").containsMatchIn(it)
                     }
                 }
                 val snapshot = org.robolectric.shadows.ShadowLog.getLogs()
@@ -280,6 +290,17 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 assertTrue("$label: editorial genre pool lost its candidates",
                     sourceStages.any { it.contains(
                         "stage=editorial genre=$selectedId media=movie") &&
+                        it.contains("titles=20") })
+                assertTrue("$label: TV source payload lost before parsing",
+                    sourceStages.any { it.contains(
+                        "stage=tmdb genre=$tvId media=tv sourcePage=1 raw=20 parsed=20 accepted=20") })
+                assertTrue("$label: first TV genre page lost its candidates",
+                    sourceStages.any { it.contains(
+                        "stage=first genre=$tvId media=tv") &&
+                        it.contains("titles=20") })
+                assertTrue("$label: TV editorial genre pool lost its candidates",
+                    sourceStages.any { it.contains(
+                        "stage=editorial genre=$tvId media=tv") &&
                         it.contains("titles=20") })
                 val recentFilms = Regex("Lançamentos · Filmes:([0-9]+)")
                     .find(snapshot)?.groupValues?.get(1)?.toIntOrNull() ?: 0
