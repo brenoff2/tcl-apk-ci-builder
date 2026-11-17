@@ -15,7 +15,9 @@ class StreamingScreens(unittest.TestCase):
 
     def test_genre_device_qa_count_stages_have_no_user_data(self):
         s = self.screen
-        self.assertEqual(s.count('"AnyTVGenreQA"'), 6)
+        self.assertEqual(s.count('"AnyTVGenreQA"'), 7)
+        self.assertIn('"stage=seasons genre=$id media=tv "', s)
+        self.assertIn('"confirmed=${genreNewSeasons[key].orEmpty().size}"', s)
         self.assertIn('"stage=miniseries genre=$id media=tv "', s)
         self.assertIn('"candidates=${genreEditorialPools[key].orEmpty().size} "', s)
         self.assertIn('"confirmed=${genreMiniseries[key].orEmpty().size}"', s)
