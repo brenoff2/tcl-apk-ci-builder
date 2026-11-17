@@ -230,7 +230,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         it.contains("stage=tmdb genre=$selectedId media=movie sourcePage=1 raw=20 parsed=20 accepted=20")
                     } && logs.any {
                         it.contains("stage=first genre=$selectedId media=movie") &&
-                            it.contains("titles=20")
+                            it.contains("titles=24")
                     } && logs.any {
                         it.contains("stage=editorial genre=$selectedId media=movie") &&
                             it.contains("titles=60")
@@ -238,7 +238,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         it.contains("stage=tmdb genre=$tvId media=tv sourcePage=1 raw=20 parsed=20 accepted=20")
                     } && logs.any {
                         it.contains("stage=first genre=$tvId media=tv") &&
-                            it.contains("titles=20")
+                            it.contains("titles=24")
                     } && logs.any {
                         it.contains("stage=editorial genre=$tvId media=tv") &&
                             it.contains("titles=60")
@@ -346,7 +346,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 assertTrue("$label: first genre movie page lost its candidates",
                     sourceStages.any { it.contains(
                         "stage=first genre=$selectedId media=movie") &&
-                        it.contains("titles=20") })
+                        it.contains("titles=24") })
                 assertTrue("$label: editorial genre pool lost its candidates",
                     sourceStages.any { it.contains(
                         "stage=editorial genre=$selectedId media=movie") &&
@@ -357,7 +357,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 assertTrue("$label: first TV genre page lost its candidates",
                     sourceStages.any { it.contains(
                         "stage=first genre=$tvId media=tv") &&
-                        it.contains("titles=20") })
+                        it.contains("titles=24") })
                 assertTrue("$label: TV editorial genre pool lost its candidates",
                     sourceStages.any { it.contains(
                         "stage=editorial genre=$tvId media=tv") &&
