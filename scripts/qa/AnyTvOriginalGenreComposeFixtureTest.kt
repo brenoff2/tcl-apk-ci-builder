@@ -41,6 +41,29 @@ class AnyTvOriginalGenreComposeFixtureTest {
     private val host = "anytv-link-resolver-pilot.brenoff.workers.dev"
     private val additionalDramaRequest = CountDownLatch(1)
     @Volatile private var monitorRetry = false
+    @Volatile private var serveRecentGenreTitles = false
+
+    private fun fixtureRecentTitles(route: String): String {
+        val movie = route.startsWith("discover/movie")
+        val genre = Regex("with_genres=([0-9]+)").find(route)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        val sourcePage = Regex("[?&]page=([0-9]+)").find(route)?.groupValues?.get(1)?.toIntOrNull() ?: 1
+        val entries = org.json.JSONArray()
+        if (sourcePage == 1 && genre in setOf(18, 28, 10759, 16)) {
+            val date = java.time.LocalDate.now().minusDays(10).toString()
+            repeat(20) { index ->
+                val row = JSONObject()
+                    .put("id", (if (movie) 100000 else 200000) + genre * 100 + index)
+                    .put(if (movie) "title" else "name", "QA $genre ${if (movie) "filme" else "serie"} $index")
+                    .put(if (movie) "release_date" else "first_air_date", date)
+                    .put("genre_ids", org.json.JSONArray().put(genre))
+                    .put("original_language", if (genre == 16) "ja" else "pt")
+                    .put("poster_path", "/qa-$index.jpg")
+                    .put("vote_count", 200).put("vote_average", 7.8)
+                entries.put(row)
+            }
+        }
+        return JSONObject().put("results", entries).put("total_pages", 1).toString()
+    }
 
     @Test fun actualScreenRetryRefetchesSelectedGenreAfterCacheIsCleared() {
         URL.setURLStreamHandlerFactory(URLStreamHandlerFactory { protocol ->
@@ -61,13 +84,16 @@ class AnyTvOriginalGenreComposeFixtureTest {
                             """{"genres":[{"id":18,"name":"Drama"},{"id":28,"name":"Ação"}]}"""
                         route.startsWith("genre/tv/list") ->
                             """{"genres":[{"id":18,"name":"Drama"},{"id":10759,"name":"Ação"}]}"""
+                        serveRecentGenreTitles && route.startsWith("discover/") &&
+                            route.contains("with_genres=") -> fixtureRecentTitles(route)
                         else -> """{"results":[],"total_pages":1,"genres":[]}"""
                     }
                     return object : HttpURLConnection(url) {
                         override fun connect() { connected = true }
                         override fun disconnect() { connected = false }
                         override fun usingProxy(): Boolean = false
-                        override fun getResponseCode(): Int = HTTP_OK
+                        override fun getResponseCode(): Int =
+                            if (route.startsWith("movie/now_playing")) HTTP_UNAVAILABLE else HTTP_OK
                         override fun getInputStream(): InputStream =
                             ByteArrayInputStream(body.toByteArray(StandardCharsets.UTF_8))
                     }
@@ -156,6 +182,57 @@ class AnyTvOriginalGenreComposeFixtureTest {
             assertEquals(999, readback.getJSONArray("results")
                 .getJSONObject(0).getInt("id"))
             println("ANYTV_ORIGINAL_COMPOSE_R03_RETRY_REFETCH_AND_LAST_GOOD_PASS")
+            // Behavioral regression against the ORIGINAL Composable. A valid
+            // recent genre movie must not disappear just because the separate
+            // Cinema index failed to load. The previous empty fixture has
+            // established the retry button; now return 20 valid real-shaped
+            // TMDB movie + TV entries per selected genre.
+            serveRecentGenreTitles = true
+            scratch.listFiles()?.forEach { it.delete() }
+            val failedGenres = mutableListOf<String>()
+            val scenarios = listOf(
+                Triple("Drama", 18, 18),
+                Triple("Ação", 28, 28),
+                Triple("Anime", -2, 16)
+            )
+            for ((label, selectedId, sourceId) in scenarios) {
+                if (label != "Drama") {
+                    compose.onAllNodesWithText(label).onFirst().performClick()
+                } else {
+                    compose.onAllNodesWithText("Tentar novamente").onFirst().performClick()
+                }
+                // The screen must query a real source and emit its own final
+                // per-section snapshot, not a copied editorial implementation.
+                compose.waitUntil(30_000) {
+                    synchronized(seen) {
+                        seen.any { it.contains("with_genres=$sourceId") }
+                    } && org.robolectric.shadows.ShadowLog.getLogs().any {
+                        it.tag == "AnyTVGenreQA" &&
+                            it.msg.contains("stage=render genre=$selectedId ") &&
+                            it.msg.contains("sections=") &&
+                            it.msg.contains("Populares:") &&
+                            !it.msg.contains("Populares:0")
+                    }
+                }
+                val snapshot = org.robolectric.shadows.ShadowLog.getLogs()
+                    .last { it.tag == "AnyTVGenreQA" &&
+                        it.msg.contains("stage=render genre=$selectedId ") &&
+                        it.msg.contains("Populares:") }
+                    .msg
+                val recentFilms = Regex("Lançamentos · Filmes:([0-9]+)")
+                    .find(snapshot)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                val population = Regex("Populares:([0-9]+)")
+                    .find(snapshot)?.groupValues?.get(1)?.toIntOrNull() ?: 0
+                assertTrue("$label: source must populate Populares first: $snapshot",
+                    population > 0)
+                println("ANYTV_ORIGINAL_GENRE_CINEMA_GUARD_REPRO label=$label popular=$population recentFilms=$recentFilms")
+                if (recentFilms == 0) failedGenres.add(label)
+            }
+            // RED EXPECTATION on code134: a source-authoritative recent movie
+            // should remain in Lançamentos even if now_playing is unavailable.
+            // Deliberately fails until production code genuinely fixes the bug.
+            assertTrue("Genre recent film titles dropped by cinema readiness: $failedGenres",
+                failedGenres.isEmpty())
         } finally {
             root.set(null, prior)
             scratch.deleteRecursively()
