@@ -425,10 +425,10 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     val logs = org.robolectric.shadows.ShadowLog.getLogs()
                         .filter { it.tag == "AnyTVGenreQA" }.map { it.msg }
                     logs.any { it.contains("stage=editorial genre=35 media=movie") &&
-                        it.contains("success=2 failed=1") &&
+                        it.contains("success=3 failed=0") &&
                         it.contains("titles=40") } &&
                         logs.any { it.contains("stage=editorial genre=35 media=tv") &&
-                            it.contains("success=2 failed=1") &&
+                            it.contains("success=3 failed=0") &&
                             it.contains("titles=40") } &&
                         logs.any { it.contains("stage=render genre=35 ") &&
                             it.contains("Populares:40") }
