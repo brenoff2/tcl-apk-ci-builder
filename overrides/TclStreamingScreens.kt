@@ -2548,6 +2548,8 @@ internal fun TclStreamingScreens(
     }
     LaunchedEffect(mainGenres, tvGenres, filterGenreIds, selectedHomeGenre,
         homeContentType, genreSort, genreFirstPageRetry) {
+        android.util.Log.i("AnyTVGenreRetryQA",
+            "stage=first-effect genre=$selectedHomeGenre retry=$genreFirstPageRetry")
         val kinds = if (homeContentType == "all") listOf("movie", "tv")
             else listOf(homeContentType)
         for (mediaKind in kinds) {
@@ -2736,6 +2738,8 @@ internal fun TclStreamingScreens(
     // Three genuine TMDB pages per movie/TV type provide the fallback candidate set.
     LaunchedEffect(selectedHomeGenre, homeContentType, token, allMovieGenres, tvGenres,
         genreFirstPageRetry) {
+        android.util.Log.i("AnyTVGenreRetryQA",
+            "stage=editorial-effect genre=$selectedHomeGenre retry=$genreFirstPageRetry")
         if (selected != null || selectedHomeGenre == 0 ||
             selectedHomeGenre == ANYTV_CINEMA_FILTER) return@LaunchedEffect
         for (kind in listOf("movie", "tv").filter {
@@ -4092,6 +4096,8 @@ internal fun TclStreamingScreens(
                                         if (genreMetadataError) genreMetadataRetry++
                                         genreRetryTarget = selectedHomeGenre
                                         genreFirstPageRetry++
+                                        android.util.Log.i("AnyTVGenreRetryQA",
+                                            "stage=click genre=$selectedHomeGenre retry=$genreFirstPageRetry")
                                     }) { Text("Tentar novamente") }
                                 }
                             }
