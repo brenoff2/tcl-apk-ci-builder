@@ -510,8 +510,9 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 }
             } catch (error: Throwable) {
                 val logs = org.robolectric.shadows.ShadowLog.getLogs()
-                    .filter { it.tag == "AnyTVGenreQA" && it.msg.contains("genre=99") }
-                    .map { it.msg }.takeLast(35)
+                    .filter { (it.tag == "AnyTVGenreQA" ||
+                        it.tag == "AnyTVGenreRetryQA") && it.msg.contains("genre=99") }
+                    .map { "${it.tag}: ${it.msg}" }.takeLast(45)
                 val requests = synchronized(seen) {
                     seen.filter { it.contains("with_genres=99") }.takeLast(35)
                 }
