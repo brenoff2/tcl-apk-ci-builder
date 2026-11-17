@@ -495,32 +495,6 @@ class AnyTvOriginalGenreComposeFixtureTest {
             println("ANYTV_GENRE_TOTAL_OUTAGE_COLD_PASS " +
                 "requests=$coldOutageRequests retry=1 overlay=0 falseEmpty=0")
 
-            // The same original GET implementation must retain a verified
-            // previous response on a network EXCEPTION during force-refresh.
-            // This differs from the earlier HTTP-200-empty last-good test.
-            val documentaryRoute =
-                "discover/movie?language=pt-BR&include_adult=false&sort_by=popularity.desc&with_genres=99&page=1"
-            val documentaryCached = JSONObject().put("results",
-                org.json.JSONArray().put(JSONObject()
-                    .put("id", 909900).put("title", "Documento verificado")
-                    .put("release_date",
-                        java.time.LocalDate.now().minusDays(10).toString())
-                    .put("genre_ids", org.json.JSONArray().put(99))))
-                .put("total_pages", 1)
-            write.invoke(cacheClass.getDeclaredField("INSTANCE").apply {
-                isAccessible = true
-            }.get(null), documentaryRoute, documentaryCached, 3600000L)
-            val cachedOnNetworkFailure =
-                refresh.invoke(catalog, "backend", documentaryRoute, true) as JSONObject
-            assertEquals("Network outage cannot wipe verified source cache",
-                909900, cachedOnNetworkFailure.getJSONArray("results")
-                    .getJSONObject(0).getInt("id"))
-            val diskReadback = get.invoke(catalog, "backend", documentaryRoute) as JSONObject
-            assertEquals("Last-good must survive readback after failed network refresh",
-                909900, diskReadback.getJSONArray("results")
-                    .getJSONObject(0).getInt("id"))
-            println("ANYTV_GENRE_TOTAL_OUTAGE_LAST_GOOD_PASS cachedId=909900")
-
             // Recover the fully failed first-page path through the real retry
             // button, not by bypassing the Composable or resetting its state.
             failDocumentaryAllSources = false
@@ -556,6 +530,32 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 documentarySnapshot.contains("Populares:40"))
             println("ANYTV_GENRE_TOTAL_OUTAGE_RECOVERED_PASS " +
                 "snapshot=$documentarySnapshot")
+            // The same original GET implementation must retain a verified
+            // previous response on a network EXCEPTION during force-refresh.
+            // This differs from the earlier HTTP-200-empty last-good test.
+            val documentaryRoute =
+                "discover/movie?language=pt-BR&include_adult=false&sort_by=popularity.desc&with_genres=99&page=1"
+            val documentaryCached = JSONObject().put("results",
+                org.json.JSONArray().put(JSONObject()
+                    .put("id", 909900).put("title", "Documento verificado")
+                    .put("release_date",
+                        java.time.LocalDate.now().minusDays(10).toString())
+                    .put("genre_ids", org.json.JSONArray().put(99))))
+                .put("total_pages", 1)
+            write.invoke(cacheClass.getDeclaredField("INSTANCE").apply {
+                isAccessible = true
+            }.get(null), documentaryRoute, documentaryCached, 3600000L)
+            val cachedOnNetworkFailure =
+                refresh.invoke(catalog, "backend", documentaryRoute, true) as JSONObject
+            assertEquals("Network outage cannot wipe verified source cache",
+                909900, cachedOnNetworkFailure.getJSONArray("results")
+                    .getJSONObject(0).getInt("id"))
+            val diskReadback = get.invoke(catalog, "backend", documentaryRoute) as JSONObject
+            assertEquals("Last-good must survive readback after failed network refresh",
+                909900, diskReadback.getJSONArray("results")
+                    .getJSONObject(0).getInt("id"))
+            println("ANYTV_GENRE_TOTAL_OUTAGE_LAST_GOOD_PASS cachedId=909900")
+
             // RED EXPECTATION on code134: a source-authoritative recent movie
             // should remain in Lançamentos even if now_playing is unavailable.
             // Deliberately fails until production code genuinely fixes the bug.
