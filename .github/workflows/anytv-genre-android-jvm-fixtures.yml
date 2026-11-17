@@ -70,7 +70,21 @@ jobs:
           chmod +x gradlew
           ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace --tests '*AnyTvGenreJvmFixtureTest*' --tests '*AnyTvComposeHostSmokeTest*'
           # Isolated JVM process: URLStreamHandlerFactory cannot be reset.
-          ./gradlew :app:testDebugUnitTest --no-daemon --rerun-tasks --stacktrace --tests '*AnyTvOriginalGenreComposeFixtureTest*'
+          if ! ./gradlew :app:testDebugUnitTest --no-daemon --rerun-tasks --stacktrace --tests '*AnyTvOriginalGenreComposeFixtureTest*'; then
+            python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          for path in Path("app/build/test-results/testDebugUnitTest").glob("TEST-*.xml"):
+              root = ET.parse(path).getroot()
+              for case in root.findall(".//testcase"):
+                  failure = case.find("failure")
+                  if failure is not None:
+                      print("ANYTV_QA_FAILURE_CASE", case.attrib.get("name", ""))
+                      print("ANYTV_QA_FAILURE_MESSAGE", (failure.attrib.get("message") or "")[:6000])
+                      print("ANYTV_QA_FAILURE_TRACE", (failure.text or "")[:4000])
+          PY
+            exit 1
+          fi
           echo ANYTV_COMPILED_KOTLIN_GENRE_AND_COMPOSE_HOST_SMOKE_PASS
       - name: QA isolation receipt
         if: always()
