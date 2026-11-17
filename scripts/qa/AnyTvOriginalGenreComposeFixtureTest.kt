@@ -204,14 +204,26 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 // The screen must query a real source and emit its own final
                 // per-section snapshot, not a copied editorial implementation.
                 compose.waitUntil(30_000) {
+                    // First-page results may render before async editorial pages
+                    // finish. Synchronize on ALL observed stages, not Populares.
+                    val logs = org.robolectric.shadows.ShadowLog.getLogs()
+                        .filter { it.tag == "AnyTVGenreQA" }.map { it.msg }
                     synchronized(seen) {
                         seen.any { it.contains("with_genres=$sourceId") }
-                    } && org.robolectric.shadows.ShadowLog.getLogs().any {
-                        it.tag == "AnyTVGenreQA" &&
-                            it.msg.contains("stage=render genre=$selectedId ") &&
-                            it.msg.contains("sections=") &&
-                            it.msg.contains("Populares:") &&
-                            !it.msg.contains("Populares:0")
+                    } && logs.any {
+                        it.contains("stage=tmdb genre=$selectedId media=movie sourcePage=1 raw=20 parsed=20 accepted=20")
+                    } && logs.any {
+                        it.contains("stage=first genre=$selectedId media=movie") &&
+                            it.contains("titles=20")
+                    } && logs.any {
+                        it.contains("stage=editorial genre=$selectedId media=movie") &&
+                            it.contains("titles=20")
+                    } && logs.any {
+                        it.contains("stage=render genre=$selectedId ") &&
+                            it.contains("sections=") &&
+                            it.contains("Populares:") &&
+                            !it.contains("Populares:0") &&
+                            Regex("Lançamentos · Filmes:([1-9][0-9]*)").containsMatchIn(it)
                     }
                 }
                 val snapshot = org.robolectric.shadows.ShadowLog.getLogs()
