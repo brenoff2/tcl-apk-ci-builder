@@ -548,6 +548,9 @@ class AnyTvOriginalGenreComposeFixtureTest {
             write.invoke(cacheClass.getDeclaredField("INSTANCE").apply {
                 isAccessible = true
             }.get(null), documentaryRoute, documentaryCached, 3600000L)
+            // The retry above restored HTTP. Force the outage again here so
+            // the assertion exercises stale cache on an actual exception.
+            failDocumentaryAllSources = true
             val cachedOnNetworkFailure =
                 refresh.invoke(catalog, "backend", documentaryRoute, true) as JSONObject
             assertEquals("Network outage cannot wipe verified source cache",
