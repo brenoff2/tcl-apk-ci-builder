@@ -42,6 +42,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
     private val additionalDramaRequest = CountDownLatch(1)
     @Volatile private var monitorRetry = false
     @Volatile private var serveRecentGenreTitles = false
+    @Volatile private var serveGenreMiniseries = false
 
     private fun fixtureRecentTitles(route: String): String {
         val movie = route.startsWith("discover/movie")
@@ -86,6 +87,17 @@ class AnyTvOriginalGenreComposeFixtureTest {
                             """{"genres":[{"id":18,"name":"Drama"},{"id":10759,"name":"Ação"}]}"""
                         serveRecentGenreTitles && route.startsWith("discover/") &&
                             route.contains("with_genres=") -> fixtureRecentTitles(route)
+                        serveGenreMiniseries && route.startsWith("tv/") &&
+                            route.contains("?language=") -> {
+                            val id = route.substringAfter("tv/").substringBefore("?").toIntOrNull()
+                            val fixtureGenres = setOf(18, 10759, 16)
+                            val isMiniseries = id != null && fixtureGenres.any { genre ->
+                                id == 200000 + genre * 100
+                            }
+                            JSONObject().put("id", id ?: 0)
+                                .put("type", if (isMiniseries) "Miniseries" else "Scripted")
+                                .toString()
+                        }
                         else -> """{"results":[],"total_pages":1,"genres":[]}"""
                     }
                     return object : HttpURLConnection(url) {
@@ -188,6 +200,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // established the retry button; now return 20 valid real-shaped
             // TMDB movie + TV entries per selected genre.
             serveRecentGenreTitles = true
+            serveGenreMiniseries = true
             scratch.listFiles()?.forEach { it.delete() }
             val failedGenres = mutableListOf<String>()
             val scenarios = listOf(
@@ -276,6 +289,19 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     sectionCount["No cinema"])
                 assertEquals("$label: cannot invent future premieres", 0,
                     sectionCount["Em breve · Filmes e séries"])
+                // First TV result has explicit TMDB type=Miniseries; it is absent
+                // from every Home/global discovery fixture by construction.
+                // RED on code134: genre-only verified miniseries are ignored.
+                val miniId = 200000 + tvId * 100
+                val metadataCalls = synchronized(seen) {
+                    seen.count { it.startsWith("tv/$miniId?language=") }
+                }
+                println("ANYTV_GENRE_MINISERIES_TRACE label=$label genre=$tvId " +
+                    "source=20 metadataCalls=$metadataCalls " +
+                    "rendered=${sectionCount["Minisséries imperdíveis"] ?: -1}")
+                assertTrue("$label: verified genre-only TMDB Miniseries $miniId " +
+                    "must appear without depending on Home (metadataCalls=$metadataCalls): $snapshot",
+                    (sectionCount["Minisséries imperdíveis"] ?: 0) > 0)
                 println("ANYTV_ORIGINAL_GENRE_12_SECTION_CONTRACT label=$label sections=$sectionPayload")
                 // Verify every boundary in the actual source-to-render flow.
                 // Source page 1 is a synthetic TMDB-shaped 20-title payload.
