@@ -49,11 +49,12 @@ class AnyTvOriginalGenreComposeFixtureTest {
         val genre = Regex("with_genres=([0-9]+)").find(route)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val sourcePage = Regex("[?&]page=([0-9]+)").find(route)?.groupValues?.get(1)?.toIntOrNull() ?: 1
         val entries = org.json.JSONArray()
-        if (sourcePage == 1 && genre in setOf(18, 28, 10759, 16)) {
+        if (sourcePage in 1..3 && genre in setOf(18, 28, 10759, 16)) {
             val date = java.time.LocalDate.now().minusDays(10).toString()
             repeat(20) { index ->
                 val row = JSONObject()
-                    .put("id", (if (movie) 100000 else 200000) + genre * 100 + index)
+                    .put("id", (if (movie) 100000 else 200000) + genre * 100 +
+                        (sourcePage - 1) * 20 + index)
                     .put(if (movie) "title" else "name", "QA $genre ${if (movie) "filme" else "serie"} $index")
                     .put(if (movie) "release_date" else "first_air_date", date)
                     .put("genre_ids", org.json.JSONArray().put(genre))
@@ -63,7 +64,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 entries.put(row)
             }
         }
-        return JSONObject().put("results", entries).put("total_pages", 1).toString()
+        return JSONObject().put("results", entries).put("total_pages", 3).toString()
     }
 
     @Test fun actualScreenRetryRefetchesSelectedGenreAfterCacheIsCleared() {
@@ -198,7 +199,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // recent genre movie must not disappear just because the separate
             // Cinema index failed to load. The previous empty fixture has
             // established the retry button; now return 20 valid real-shaped
-            // TMDB movie + TV entries per selected genre.
+            // TMDB movie + TV entries per page across three distinct source pages.
             serveRecentGenreTitles = true
             serveGenreMiniseries = true
             scratch.listFiles()?.forEach { it.delete() }
@@ -232,7 +233,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                             it.contains("titles=20")
                     } && logs.any {
                         it.contains("stage=editorial genre=$selectedId media=movie") &&
-                            it.contains("titles=20")
+                            it.contains("titles=60")
                     } && logs.any {
                         it.contains("stage=tmdb genre=$tvId media=tv sourcePage=1 raw=20 parsed=20 accepted=20")
                     } && logs.any {
@@ -240,10 +241,10 @@ class AnyTvOriginalGenreComposeFixtureTest {
                             it.contains("titles=20")
                     } && logs.any {
                         it.contains("stage=editorial genre=$tvId media=tv") &&
-                            it.contains("titles=20")
+                            it.contains("titles=60")
                     } && logs.any {
                         it.contains("stage=miniseries genre=$tvId media=tv") &&
-                            it.contains("candidates=20") &&
+                            it.contains("candidates=60") &&
                             it.contains("confirmed=1")
                     } && logs.any {
                         it.contains("stage=render genre=$selectedId ") &&
@@ -302,6 +303,20 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     (sectionCount["Lançamentos · Séries"] ?: 0) > 0)
                 assertTrue("$label: Populares must retain the source catalogue",
                     (sectionCount["Populares"] ?: 0) > 0)
+                // Three 20-title TMDB pages per medium provide 60 unique
+                // verified candidates. Non-factual rails should backfill 40.
+                for (heading in listOf("Destaques da semana · Filmes",
+                    "Destaques da semana · Séries", "Em alta agora",
+                    "Indicados para você", "Populares", "Mais bem avaliados")) {
+                    assertEquals("$label: approved 40 genuine genre items in $heading",
+                        40, sectionCount[heading] ?: -1)
+                }
+                assertEquals("$label: 40 real recent genre films", 40,
+                    sectionCount["Lançamentos · Filmes"])
+                assertEquals("$label: 40 real recent genre TV series", 40,
+                    sectionCount["Lançamentos · Séries"])
+                println("ANYTV_GENRE_EDITORIAL_DEPTH label=$label " +
+                    "movie=60 tv=60 maxPerSection=40 sections=$sectionPayload")
                 assertEquals("$label: cannot invent theatrical screenings", 0,
                     sectionCount["No cinema"])
                 assertEquals("$label: cannot invent future premieres", 0,
@@ -314,7 +329,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     seen.count { it.startsWith("tv/$miniId?language=") }
                 }
                 println("ANYTV_GENRE_MINISERIES_TRACE label=$label genre=$tvId " +
-                    "source=20 metadataCalls=$metadataCalls " +
+                    "source=60 metadataCalls=$metadataCalls " +
                     "rendered=${sectionCount["Minisséries imperdíveis"] ?: -1}")
                 assertTrue("$label: genre-only classification must call TMDB metadata: $miniId",
                     metadataCalls > 0)
@@ -335,7 +350,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 assertTrue("$label: editorial genre pool lost its candidates",
                     sourceStages.any { it.contains(
                         "stage=editorial genre=$selectedId media=movie") &&
-                        it.contains("titles=20") })
+                        it.contains("titles=60") })
                 assertTrue("$label: TV source payload lost before parsing",
                     sourceStages.any { it.contains(
                         "stage=tmdb genre=$tvId media=tv sourcePage=1 raw=20 parsed=20 accepted=20") })
@@ -346,7 +361,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 assertTrue("$label: TV editorial genre pool lost its candidates",
                     sourceStages.any { it.contains(
                         "stage=editorial genre=$tvId media=tv") &&
-                        it.contains("titles=20") })
+                        it.contains("titles=60") })
                 val recentFilms = Regex("Lançamentos · Filmes:([0-9]+)")
                     .find(snapshot)?.groupValues?.get(1)?.toIntOrNull() ?: 0
                 val population = Regex("Populares:([0-9]+)")
