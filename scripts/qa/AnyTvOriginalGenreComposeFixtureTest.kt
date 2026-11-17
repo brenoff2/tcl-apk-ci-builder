@@ -217,6 +217,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 }
                 // The screen must query a real source and emit its own final
                 // per-section snapshot, not a copied editorial implementation.
+                try {
                 compose.waitUntil(30_000) {
                     // First-page results may render before async editorial pages
                     // finish. Synchronize on ALL observed stages, not Populares.
@@ -253,6 +254,17 @@ class AnyTvOriginalGenreComposeFixtureTest {
                             Regex("Lançamentos · Séries:([1-9][0-9]*)").containsMatchIn(it) &&
                             Regex("Minisséries imperdíveis:([1-9][0-9]*)").containsMatchIn(it)
                     }
+                }
+                } catch (error: Throwable) {
+                    val stageLogs = org.robolectric.shadows.ShadowLog.getLogs()
+                        .filter { it.tag == "AnyTVGenreQA" }
+                        .map { it.msg }.filter { it.contains("genre=$selectedId") ||
+                            it.contains("genre=$tvId") }.takeLast(28)
+                    val metadataRoutes = synchronized(seen) {
+                        seen.filter { it.startsWith("tv/") }.takeLast(30)
+                    }
+                    throw AssertionError("$label: source/miniseries stage failure; " +
+                        "stages=$stageLogs metadataRoutes=$metadataRoutes", error)
                 }
                 val snapshot = org.robolectric.shadows.ShadowLog.getLogs()
                     .last { it.tag == "AnyTVGenreQA" &&
