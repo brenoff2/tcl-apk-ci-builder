@@ -180,6 +180,10 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // Expire/remove source caches to detect any request even when initial
             // response was successful, rather than masking retry by the 48h TTL.
             scratch.listFiles()?.forEach { it.delete() }
+            // Switch fixture data BEFORE retry starts; switching while async
+            // editorial jobs are still active produces cross-epoch cache races.
+            serveRecentGenreTitles = true
+            serveGenreMiniseries = true
             monitorRetry = true
             compose.onAllNodesWithText("Tentar novamente").onFirst().performClick()
             compose.waitForIdle()
@@ -235,9 +239,6 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // Cinema index failed to load. The previous empty fixture has
             // established the retry button; now return 20 valid real-shaped
             // TMDB movie + TV entries per page across three distinct source pages.
-            serveRecentGenreTitles = true
-            serveGenreMiniseries = true
-            scratch.listFiles()?.forEach { it.delete() }
             val failedGenres = mutableListOf<String>()
             val scenarios = listOf(
                 Triple("Drama", 18, 18),
@@ -248,8 +249,6 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 val tvId = if (label == "Ação") 10759 else selectedId
                 if (label != "Drama") {
                     compose.onAllNodesWithText(label).onFirst().performClick()
-                } else {
-                    compose.onAllNodesWithText("Tentar novamente").onFirst().performClick()
                 }
                 // The screen must query a real source and emit its own final
                 // per-section snapshot, not a copied editorial implementation.
