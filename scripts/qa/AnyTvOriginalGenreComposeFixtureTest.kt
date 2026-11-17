@@ -44,13 +44,14 @@ class AnyTvOriginalGenreComposeFixtureTest {
     @Volatile private var serveRecentGenreTitles = false
     @Volatile private var serveGenreMiniseries = false
     @Volatile private var failComedyEditorialPageThree = false
+    @Volatile private var failDocumentaryAllSources = false
 
     private fun fixtureRecentTitles(route: String): String {
         val movie = route.startsWith("discover/movie")
         val genre = Regex("with_genres=([0-9]+)").find(route)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val sourcePage = Regex("[?&]page=([0-9]+)").find(route)?.groupValues?.get(1)?.toIntOrNull() ?: 1
         val entries = org.json.JSONArray()
-        if (sourcePage in 1..3 && genre in setOf(18, 28, 10759, 16, 35)) {
+        if (sourcePage in 1..3 && genre in setOf(18, 28, 10759, 16, 35, 99)) {
             val date = java.time.LocalDate.now().minusDays(10).toString()
             repeat(20) { index ->
                 val row = JSONObject()
@@ -82,6 +83,13 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         throw SecurityException("QA blocks non-catalogue HTTPS")
                     val route = url.toString().substringAfter("/v1/catalog/")
                     seen.add(route)
+                    // Force every movie/TV catalogue page to fail for Documentary.
+                    // This is a full outage on a cold cache, not HTTP-200 empty.
+                    if (failDocumentaryAllSources &&
+                        route.startsWith("discover/") &&
+                        route.contains("with_genres=99")) {
+                        throw java.io.IOException("QA all Documentary sources unavailable")
+                    }
                     // Simulate a genuine partial editorial outage on a new genre:
                     // page 3 fails, pages 1+2 remain verified. No production HTTP.
                     if (failComedyEditorialPageThree &&
@@ -94,9 +102,9 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         additionalDramaRequest.countDown()
                     val body = when {
                         route.startsWith("genre/movie/list") ->
-                            """{"genres":[{"id":18,"name":"Drama"},{"id":28,"name":"Ação"},{"id":35,"name":"Comédia"}]}"""
+                            """{"genres":[{"id":18,"name":"Drama"},{"id":28,"name":"Ação"},{"id":35,"name":"Comédia"},{"id":99,"name":"Documentário"}]}"""
                         route.startsWith("genre/tv/list") ->
-                            """{"genres":[{"id":18,"name":"Drama"},{"id":10759,"name":"Ação"},{"id":35,"name":"Comédia"}]}"""
+                            """{"genres":[{"id":18,"name":"Drama"},{"id":10759,"name":"Ação"},{"id":35,"name":"Comédia"},{"id":99,"name":"Documentário"}]}"""
                         serveRecentGenreTitles && route.startsWith("discover/") &&
                             route.contains("with_genres=") -> fixtureRecentTitles(route)
                         serveGenreMiniseries && route.startsWith("tv/") &&
@@ -465,6 +473,74 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 "genre=35 pagesOk=2 pagesFailed=1 " +
                 "sourceMovie=40 sourceTV=40 snapshot=$comedySnapshot")
             failComedyEditorialPageThree = false
+
+            // Total source outage on a NEW genre with an empty disk cache.
+            // An error is not evidence of zero eligible catalogue entries.
+            failDocumentaryAllSources = true
+            compose.onAllNodesWithText("Documentário").onFirst().performClick()
+            compose.waitUntil(30_000) {
+                compose.onAllNodesWithText("Tentar novamente")
+                    .fetchSemanticsNodes().isNotEmpty() &&
+                    compose.onAllNodesWithText("Preparando catálogo de filmes e séries…")
+                        .fetchSemanticsNodes().isEmpty()
+            }
+            assertTrue("Total outage cannot claim Documentary has no titles",
+                compose.onAllNodesWithText("Não encontramos títulos neste gênero no momento.")
+                    .fetchSemanticsNodes().isEmpty())
+            val coldOutageRequests = synchronized(seen) {
+                seen.count { it.contains("with_genres=99") }
+            }
+            assertTrue("Both Documentary media sources must be attempted on outage",
+                coldOutageRequests >= 2)
+            println("ANYTV_GENRE_TOTAL_OUTAGE_COLD_PASS " +
+                "requests=$coldOutageRequests retry=1 overlay=0 falseEmpty=0")
+
+            // The same original GET implementation must retain a verified
+            // previous response on a network EXCEPTION during force-refresh.
+            // This differs from the earlier HTTP-200-empty last-good test.
+            val documentaryRoute =
+                "discover/movie?language=pt-BR&include_adult=false&sort_by=popularity.desc&with_genres=99&page=1"
+            val documentaryCached = JSONObject().put("results",
+                org.json.JSONArray().put(JSONObject()
+                    .put("id", 909900).put("title", "Documento verificado")
+                    .put("release_date",
+                        java.time.LocalDate.now().minusDays(10).toString())
+                    .put("genre_ids", org.json.JSONArray().put(99)))
+                .put("total_pages", 1)
+            write.invoke(cacheClass.getDeclaredField("INSTANCE").apply {
+                isAccessible = true
+            }.get(null), documentaryRoute, documentaryCached, 3600000L)
+            val cachedOnNetworkFailure =
+                refresh.invoke(catalog, "backend", documentaryRoute, true) as JSONObject
+            assertEquals("Network outage cannot wipe verified source cache",
+                909900, cachedOnNetworkFailure.getJSONArray("results")
+                    .getJSONObject(0).getInt("id"))
+            val diskReadback = get.invoke(catalog, "backend", documentaryRoute) as JSONObject
+            assertEquals("Last-good must survive readback after failed network refresh",
+                909900, diskReadback.getJSONArray("results")
+                    .getJSONObject(0).getInt("id"))
+            println("ANYTV_GENRE_TOTAL_OUTAGE_LAST_GOOD_PASS cachedId=909900")
+
+            // Recover the fully failed first-page path through the real retry
+            // button, not by bypassing the Composable or resetting its state.
+            failDocumentaryAllSources = false
+            compose.onAllNodesWithText("Tentar novamente").onFirst().performClick()
+            compose.waitUntil(30_000) {
+                org.robolectric.shadows.ShadowLog.getLogs().any {
+                    it.tag == "AnyTVGenreQA" &&
+                        it.msg.contains("stage=render genre=99 ") &&
+                        it.msg.contains("Populares:40")
+                } && compose.onAllNodesWithText("Preparando catálogo de filmes e séries…")
+                    .fetchSemanticsNodes().isEmpty()
+            }
+            val documentarySnapshot = org.robolectric.shadows.ShadowLog.getLogs()
+                .last { it.tag == "AnyTVGenreQA" &&
+                    it.msg.contains("stage=render genre=99 ") &&
+                    it.msg.contains("Populares:40") }.msg
+            assertTrue("Retry must display real Documentary candidates",
+                documentarySnapshot.contains("Populares:40"))
+            println("ANYTV_GENRE_TOTAL_OUTAGE_RECOVERED_PASS " +
+                "snapshot=$documentarySnapshot")
             // RED EXPECTATION on code134: a source-authoritative recent movie
             // should remain in Lançamentos even if now_playing is unavailable.
             // Deliberately fails until production code genuinely fixes the bug.
