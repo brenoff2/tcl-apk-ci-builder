@@ -978,6 +978,26 @@ private object StreamingCatalog {
             }
         }
 
+    /** Verify returning seasons from the selected, already-scoped catalogue. */
+    suspend fun confirmedRecentSeasons(candidates: List<StreamingTitle>): List<StreamingTitle> =
+        withContext(Dispatchers.IO) {
+            val returning = candidates.filter { it.media == "tv" && it.id > 0 &&
+                anyTvReleased(it) && !anyTvRecentPremiere(it) }
+                .distinctBy { it.id }.take(60)
+            val gate = Semaphore(4)
+            coroutineScope {
+                returning.map { title -> async {
+                    gate.withPermit {
+                        val items = runCatching { seasons(title.id) }.getOrDefault(emptyList())
+                        title.takeIf { items.any { season ->
+                            season.number > 1 && season.airDate.isNotBlank() &&
+                                anyTvRecentPremiere(title.copy(date = season.airDate))
+                        }}
+                    }
+                }}.awaitAll().filterNotNull()
+            }
+        }
+
     /** Only TMDB's explicit Miniseries classification qualifies, no guesswork. */
     suspend fun confirmedMiniseries(candidates: List<StreamingTitle>): List<StreamingTitle> =
         withContext(Dispatchers.IO) {
@@ -1943,6 +1963,7 @@ internal fun TclStreamingScreens(
     val providerEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val genreEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val genreMiniseries = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val genreNewSeasons = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val genreEditorialErrors = remember { mutableStateMapOf<String, Boolean>() }
     val providerMiniseries = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var providerListMode by remember { mutableStateOf(false) }
@@ -2760,6 +2781,19 @@ internal fun TclStreamingScreens(
                         "candidates=${genreEditorialPools[key].orEmpty().size} " +
                         "confirmed=${genreMiniseries[key].orEmpty().size}")
             }
+            if (kind == "tv" && successfulPages.isNotEmpty() &&
+                (refresh || key !in genreNewSeasons)) {
+                // The global returning-season feed is not authoritative for a
+                // selected genre. Check its older series' actual season dates.
+                genreNewSeasons[key] = runCatching {
+                    StreamingCatalog.confirmedRecentSeasons(
+                        genreEditorialPools[key].orEmpty())
+                }.getOrDefault(emptyList())
+                android.util.Log.i("AnyTVGenreQA",
+                    "stage=seasons genre=$id media=tv " +
+                        "candidates=${genreEditorialPools[key].orEmpty().size} " +
+                        "confirmed=${genreNewSeasons[key].orEmpty().size}")
+            }
             if (pages.any { it.isFailure }) genreEditorialErrors[key] = true
             else genreEditorialErrors.remove(key)
             genreEditorialRetryMark[key] = genreFirstPageRetry
@@ -3451,7 +3485,15 @@ internal fun TclStreamingScreens(
                         val dailyIds = discoveryShelves["Em alta agora"]
                             .orEmpty().map { "${it.media}:${it.id}" }.toSet()
                         val seasonIds = discoveryShelves["Novas temporadas"]
-                            .orEmpty().map { "${it.media}:${it.id}" }.toSet()
+                            .orEmpty().map { "${it.media}:${it.id}" }.toSet() +
+                            (if (selected == null && selectedHomeGenre != 0 &&
+                                selectedHomeGenre != ANYTV_CINEMA_FILTER) {
+                                val tvId = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                    ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                        selectedHomeGenre, "tv", allMovieGenres, tvGenres)
+                                genreNewSeasons["tv:$tvId"].orEmpty()
+                                    .map { "tv:${it.id}" }
+                            } else emptyList())
                         val suggestedIds = discoveryShelves["Indicados para você"]
                             .orEmpty().map { "${it.media}:${it.id}" }.toSet()
                         val minis = if (providerName != null) {
