@@ -505,7 +505,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     .put("id", 909900).put("title", "Documento verificado")
                     .put("release_date",
                         java.time.LocalDate.now().minusDays(10).toString())
-                    .put("genre_ids", org.json.JSONArray().put(99)))
+                    .put("genre_ids", org.json.JSONArray().put(99))))
                 .put("total_pages", 1)
             write.invoke(cacheClass.getDeclaredField("INSTANCE").apply {
                 isAccessible = true
