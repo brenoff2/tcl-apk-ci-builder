@@ -242,7 +242,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         it.contains("stage=editorial genre=$tvId media=tv") &&
                             it.contains("titles=20")
                     } && logs.any {
-                        it.contains("stage=miniseries genre=$selectedId media=tv") &&
+                        it.contains("stage=miniseries genre=$tvId media=tv") &&
                             it.contains("candidates=20") &&
                             it.contains("confirmed=1")
                     } && logs.any {
