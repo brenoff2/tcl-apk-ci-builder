@@ -525,13 +525,28 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // button, not by bypassing the Composable or resetting its state.
             failDocumentaryAllSources = false
             compose.onAllNodesWithText("Tentar novamente").onFirst().performClick()
-            compose.waitUntil(30_000) {
-                org.robolectric.shadows.ShadowLog.getLogs().any {
-                    it.tag == "AnyTVGenreQA" &&
-                        it.msg.contains("stage=render genre=99 ") &&
-                        it.msg.contains("Populares:40")
-                } && compose.onAllNodesWithText("Preparando catálogo de filmes e séries…")
-                    .fetchSemanticsNodes().isEmpty()
+            try {
+                compose.waitUntil(30_000) {
+                    org.robolectric.shadows.ShadowLog.getLogs().any {
+                        it.tag == "AnyTVGenreQA" &&
+                            it.msg.contains("stage=render genre=99 ") &&
+                            it.msg.contains("Populares:40")
+                    } && compose.onAllNodesWithText("Preparando catálogo de filmes e séries…")
+                        .fetchSemanticsNodes().isEmpty()
+                }
+            } catch (error: Throwable) {
+                val logs = org.robolectric.shadows.ShadowLog.getLogs()
+                    .filter { it.tag == "AnyTVGenreQA" && it.msg.contains("genre=99") }
+                    .map { it.msg }.takeLast(35)
+                val requests = synchronized(seen) {
+                    seen.filter { it.contains("with_genres=99") }.takeLast(35)
+                }
+                val overlay = compose.onAllNodesWithText(
+                    "Preparando catálogo de filmes e séries…").fetchSemanticsNodes().size
+                val retry = compose.onAllNodesWithText(
+                    "Tentar novamente").fetchSemanticsNodes().size
+                throw AssertionError("Documentary retry state logs=$logs requests=$requests " +
+                    "overlay=$overlay retry=$retry", error)
             }
             val documentarySnapshot = org.robolectric.shadows.ShadowLog.getLogs()
                 .last { it.tag == "AnyTVGenreQA" &&
