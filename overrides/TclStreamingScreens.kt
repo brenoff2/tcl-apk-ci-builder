@@ -1942,6 +1942,7 @@ internal fun TclStreamingScreens(
     val myServiceShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val providerEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val genreEditorialPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val genreMiniseries = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val genreEditorialErrors = remember { mutableStateMapOf<String, Boolean>() }
     val providerMiniseries = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     var providerListMode by remember { mutableStateOf(false) }
@@ -2746,6 +2747,19 @@ internal fun TclStreamingScreens(
                     successfulPages.flatten()).filter { it.media == kind }
                     .distinctBy { it.id }
             }
+            if (kind == "tv" && successfulPages.isNotEmpty() &&
+                (refresh || key !in genreMiniseries)) {
+                // Genre-only series never reached the Home's limited miniseries
+                // classification pool. Confirm their type with TMDB, not guesses.
+                genreMiniseries[key] = runCatching {
+                    StreamingCatalog.confirmedMiniseries(
+                        genreEditorialPools[key].orEmpty())
+                }.getOrDefault(emptyList())
+                android.util.Log.i("AnyTVGenreQA",
+                    "stage=miniseries genre=$id media=tv " +
+                        "candidates=${genreEditorialPools[key].orEmpty().size} " +
+                        "confirmed=${genreMiniseries[key].orEmpty().size}")
+            }
             if (pages.any { it.isFailure }) genreEditorialErrors[key] = true
             else genreEditorialErrors.remove(key)
             genreEditorialRetryMark[key] = genreFirstPageRetry
@@ -3445,6 +3459,12 @@ internal fun TclStreamingScreens(
                                 allMovieGenres, tvGenres)
                             providerMiniseries["$providerName:tv:$tvId"].orEmpty() +
                                 confirmedMiniseries
+                        } else if (genreCatalogue) {
+                            val tvId = if (selectedHomeGenre == ANYTV_ANIME_FILTER)
+                                ANYTV_ANIME_FILTER else anyTvResolvedGenre(
+                                    selectedHomeGenre, "tv", allMovieGenres, tvGenres)
+                            (genreMiniseries["tv:$tvId"].orEmpty() + confirmedMiniseries)
+                                .distinctBy { it.id }
                         } else confirmedMiniseries
                         val verifiedUpcoming = upcomingStreaming.filter { title ->
                             matchesUpcomingGenreScope(title) && (providerName == null ||
