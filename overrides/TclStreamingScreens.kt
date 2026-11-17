@@ -3661,6 +3661,10 @@ internal fun TclStreamingScreens(
                                     heading.startsWith("Séries novas") ||
                                     heading.startsWith("Lançamentos ·")) ->
                                     anyTvRecentPremiere(title) && (title.media != "movie" ||
+                                        // Genre discovery is authoritative: a missing Cinema
+                                        // index must not discard real genre premieres.
+                                        (selected == null && selectedHomeGenre != 0 &&
+                                            selectedHomeGenre != ANYTV_CINEMA_FILTER) ||
                                         (cinemaIndexReady && title.id !in cinemaIds))
                                 heading.startsWith("Novas temporadas") -> title.media == "tv"
                                 // Ordinary genre results are already scoped upstream.
