@@ -43,13 +43,14 @@ class AnyTvOriginalGenreComposeFixtureTest {
     @Volatile private var monitorRetry = false
     @Volatile private var serveRecentGenreTitles = false
     @Volatile private var serveGenreMiniseries = false
+    @Volatile private var failComedyEditorialPageThree = false
 
     private fun fixtureRecentTitles(route: String): String {
         val movie = route.startsWith("discover/movie")
         val genre = Regex("with_genres=([0-9]+)").find(route)?.groupValues?.get(1)?.toIntOrNull() ?: 0
         val sourcePage = Regex("[?&]page=([0-9]+)").find(route)?.groupValues?.get(1)?.toIntOrNull() ?: 1
         val entries = org.json.JSONArray()
-        if (sourcePage in 1..3 && genre in setOf(18, 28, 10759, 16)) {
+        if (sourcePage in 1..3 && genre in setOf(18, 28, 10759, 16, 35)) {
             val date = java.time.LocalDate.now().minusDays(10).toString()
             repeat(20) { index ->
                 val row = JSONObject()
@@ -81,13 +82,21 @@ class AnyTvOriginalGenreComposeFixtureTest {
                         throw SecurityException("QA blocks non-catalogue HTTPS")
                     val route = url.toString().substringAfter("/v1/catalog/")
                     seen.add(route)
+                    // Simulate a genuine partial editorial outage on a new genre:
+                    // page 3 fails, pages 1+2 remain verified. No production HTTP.
+                    if (failComedyEditorialPageThree &&
+                        route.startsWith("discover/") &&
+                        route.contains("with_genres=35") &&
+                        Regex("[?&]page=3(?:&|$)").containsMatchIn(route)) {
+                        throw java.io.IOException("QA partial editorial page 3 unavailable")
+                    }
                     if (monitorRetry && route.contains("with_genres=18"))
                         additionalDramaRequest.countDown()
                     val body = when {
                         route.startsWith("genre/movie/list") ->
-                            """{"genres":[{"id":18,"name":"Drama"},{"id":28,"name":"Ação"}]}"""
+                            """{"genres":[{"id":18,"name":"Drama"},{"id":28,"name":"Ação"},{"id":35,"name":"Comédia"}]}"""
                         route.startsWith("genre/tv/list") ->
-                            """{"genres":[{"id":18,"name":"Drama"},{"id":10759,"name":"Ação"}]}"""
+                            """{"genres":[{"id":18,"name":"Drama"},{"id":10759,"name":"Ação"},{"id":35,"name":"Comédia"}]}"""
                         serveRecentGenreTitles && route.startsWith("discover/") &&
                             route.contains("with_genres=") -> fixtureRecentTitles(route)
                         serveGenreMiniseries && route.startsWith("tv/") &&
@@ -406,6 +415,42 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 println("ANYTV_ORIGINAL_GENRE_CINEMA_GUARD_REPRO label=$label popular=$population recentFilms=$recentFilms")
                 if (recentFilms == 0) failedGenres.add(label)
             }
+            // New genre, cold cache: each medium has 40 valid titles from
+            // pages 1+2, but page 3 is unavailable. The opaque loader must
+            // clear after partial errors and not invent a "zero titles" result.
+            failComedyEditorialPageThree = true
+            compose.onAllNodesWithText("Comédia").onFirst().performClick()
+            compose.waitUntil(30_000) {
+                val logs = org.robolectric.shadows.ShadowLog.getLogs()
+                    .filter { it.tag == "AnyTVGenreQA" }.map { it.msg }
+                logs.any { it.contains("stage=editorial genre=35 media=movie") &&
+                    it.contains("success=2 failed=1") &&
+                    it.contains("titles=40") } &&
+                    logs.any { it.contains("stage=editorial genre=35 media=tv") &&
+                        it.contains("success=2 failed=1") &&
+                        it.contains("titles=40") } &&
+                    logs.any { it.contains("stage=render genre=35 ") &&
+                        it.contains("Populares:40") }
+            }
+            val comedySnapshot = org.robolectric.shadows.ShadowLog.getLogs()
+                .last { it.tag == "AnyTVGenreQA" &&
+                    it.msg.contains("stage=render genre=35 ") &&
+                    it.msg.contains("Populares:40") }.msg
+            assertTrue("Partial editorial errors must not erase verified titles",
+                comedySnapshot.contains("Populares:40"))
+            assertTrue("Partial editorial errors must clear opaque loading layer",
+                compose.onAllNodesWithText("Preparando catálogo de filmes e séries…")
+                    .fetchSemanticsNodes().isEmpty())
+            assertTrue("Verified film premieres must survive partial errors",
+                Regex("Lançamentos · Filmes:([1-9][0-9]*)")
+                    .containsMatchIn(comedySnapshot))
+            assertTrue("Verified TV premieres must survive partial errors",
+                Regex("Lançamentos · Séries:([1-9][0-9]*)")
+                    .containsMatchIn(comedySnapshot))
+            println("ANYTV_GENRE_PARTIAL_EDITORIAL_LAST_GOOD_PASS " +
+                "genre=35 pagesOk=2 pagesFailed=1 " +
+                "sourceMovie=40 sourceTV=40 snapshot=$comedySnapshot")
+            failComedyEditorialPageThree = false
             // RED EXPECTATION on code134: a source-authoritative recent movie
             // should remain in Lançamentos even if now_playing is unavailable.
             // Deliberately fails until production code genuinely fixes the bug.
