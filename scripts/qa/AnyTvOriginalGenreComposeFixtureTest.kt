@@ -309,7 +309,7 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 // First TV result has explicit TMDB type=Miniseries; it is absent
                 // from every Home/global discovery fixture by construction.
                 // RED on code134: genre-only verified miniseries are ignored.
-                val miniId = 200000 + tvId * 100
+                val miniId = 200000 + (if (label == "Anime") 16 else tvId) * 100
                 val metadataCalls = synchronized(seen) {
                     seen.count { it.startsWith("tv/$miniId?language=") }
                 }
