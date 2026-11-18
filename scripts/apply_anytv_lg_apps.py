@@ -255,6 +255,9 @@ patch(home,
                             onLgTitleChange = onLgTitleChange,
                             lgLaunchStatus = sessionState.lgLaunchStatus,''')
 destination = root / "ui/app/LgWebOsAppsBar.kt"
-assert not destination.exists(), "LG_APP_FILE_ALREADY_EXISTS"
-destination.write_text(Path("overrides/LgWebOsAppsBar.kt").read_text(encoding="utf-8"), encoding="utf-8")
+canonical_lg_ui = Path("overrides/LgWebOsAppsBar.kt").read_text(encoding="utf-8")
+if destination.exists():
+    assert destination.read_text(encoding="utf-8") == canonical_lg_ui, "LG_APP_FILE_CONTENT_DRIFT"
+else:
+    destination.write_text(canonical_lg_ui, encoding="utf-8")
 print("LG_WEBOS_APP_LIST_AND_LAUNCH_APPLIED_NO_TCL")
