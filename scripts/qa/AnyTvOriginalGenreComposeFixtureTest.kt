@@ -381,6 +381,8 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     compose.onAllNodes(hasScrollToIndexAction()).onFirst()
                         .performScrollToNode(hasText("Por gênero: Ação"))
                     compose.waitForIdle()
+                    // GREEN gate after source fix: verify a real poster in the
+                    // original Home UI, not only the genre pool's internal count.
                     assertTrue("Home Por gênero lost verified TMDB Action titles to subscription filtering",
                         compose.onAllNodesWithText("QA 28 filme 0")
                             .fetchSemanticsNodes().isNotEmpty())
