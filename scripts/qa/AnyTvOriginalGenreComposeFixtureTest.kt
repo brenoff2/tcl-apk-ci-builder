@@ -2,6 +2,9 @@ package com.hari.androidtvremote.ui.app
 
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.hasScrollToIndexAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
 import java.io.ByteArrayInputStream
@@ -336,10 +339,13 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 assertEquals("$label: 12 sections and editorial order", expectedOrder,
                     actualSections.map { it.first })
                 // Physical code135 regression: populated snapshots do not prove
-                // the real Composable renders sections. Assert the first actual
-                // on-screen rail heading (later rails may be lazy/off-viewport).
+                // that any section is actually rendered. LazyColumn on Robolectric
+                // can start with headings outside the tiny test viewport, so
+                // first scroll the REAL composed list to the target header.
                 compose.waitForIdle()
-                assertTrue("$label: first editorial rail has data but is not visible",
+                compose.onAllNodes(hasScrollToIndexAction()).onFirst()
+                    .performScrollToNode(hasText("Destaques da semana · Filmes"))
+                assertTrue("$label: populated editorial rail was not rendered",
                     compose.onAllNodesWithText("Destaques da semana · Filmes")
                         .fetchSemanticsNodes().isNotEmpty())
                 val sectionCount = actualSections.toMap()
