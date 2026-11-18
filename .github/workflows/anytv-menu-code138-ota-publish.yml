@@ -1,0 +1,103 @@
+name: AnyTV V2 | Publish verified code138 unified-menu OTA (manual owner authorization)
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: read
+concurrency:
+  group: anytv-phone-v2-new-package-release
+  cancel-in-progress: false
+jobs:
+  publish-verified-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 85
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - uses: android-actions/setup-android@v4
+      - run: sdkmanager 'build-tools;36.0.0'
+      - name: Require exact code138 CI provenance and successful signed candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 390); do
+            gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/44415755442 > /tmp/code138-run.json
+            if jq -e '.status == "completed"' /tmp/code138-run.json >/dev/null; then break; fi
+            sleep 10
+          done
+          jq -e '.id == 44415755442 and .status == "completed" and .conclusion == "success" and .head_sha == "c56847be81c24e6b3b910c368ab534c297b3b1e0" and .head_branch == "feat/anytv-p0-device-proof-verifier-20261020" and .event == "workflow_dispatch"' /tmp/code138-run.json >/dev/null
+          gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/44415755442/artifacts > /tmp/code138-artifacts.json
+          jq -e '[.artifacts[] | select(.name == "anytv-v2-29110-code138-signed-manual-candidate" and .expired == false and .workflow_run.id == 44415755442)] | length == 1' /tmp/code138-artifacts.json >/dev/null
+          echo ANYTV_CODE138_SIGNED_SOURCE_RUN_PASS
+      - name: Download signed APK from exact CI run (no rebuild / resign)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 44415755442
+          name: anytv-v2-29110-code138-signed-manual-candidate
+          github-token: ${{ github.token }}
+          path: signed-proof
+      - name: Verify V2 signature, package, code and archive identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=signed-proof/AnyTV_V2_SIGNED_CANDIDATE.apk
+          BT="$ANDROID_HOME/build-tools/36.0.0"
+          test -s "$APK"
+          test "$(find signed-proof -type f -name '*.apk' | wc -l)" -eq 1
+          "$BT/aapt" dump badging "$APK" > /tmp/code138-badging.txt
+          grep -q "package: name='com.tclremote.livre.v2' versionCode='138' versionName='2.9.110-AnyTV'" /tmp/code138-badging.txt
+          "$BT/apksigner" verify --verbose --print-certs "$APK" > /tmp/code138-signature.txt
+          grep -q 'Verified using v2 scheme (APK Signature Scheme v2): true' /tmp/code138-signature.txt
+          EXPECTED_CERT="$(jq -r .certificate_sha256 signing-recovery/v2/identity.json)"
+          test "${#EXPECTED_CERT}" -eq 64
+          grep -qi "$EXPECTED_CERT" /tmp/code138-signature.txt
+          "$BT/zipalign" -c 4 "$APK"
+          echo "SIGNED_SHA=$(sha256sum "$APK" | cut -d ' ' -f1)" >> "$GITHUB_ENV"
+          echo ANYTV_CODE138_SIGNED_IDENTITY_VALID
+      - name: Publish current.apk ONLY to the existing OTA V2 branch
+        id: publish
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH=feat/tcl-v22-updates-back-bluetooth
+          EXPECTED_OLD_HEAD=6bc297fc5b19b02a19ec5401165bf69e4b0a5f13
+          APK=signed-proof/AnyTV_V2_SIGNED_CANDIDATE.apk
+          git fetch origin "+refs/heads/$BRANCH:refs/remotes/origin/$BRANCH"
+          test "$(git rev-parse "refs/remotes/origin/$BRANCH")" = "$EXPECTED_OLD_HEAD"
+          git worktree add --detach ota-v2 "refs/remotes/origin/$BRANCH"
+          OLD=ota-v2/updates/android/v2/current.apk
+          test -s "$OLD"
+          test -s ota-v2/updates/android/cert2026/current.apk
+          OLD_CODE="$("$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$OLD" | sed -nE "s/.*versionCode='([0-9]+)'.*/\1/p" | head -1)"
+          test "$OLD_CODE" = "137"
+          LEGACY_BEFORE="$(git -C ota-v2 rev-parse HEAD:updates/android/cert2026/current.apk)"
+          cp "$APK" "$OLD"
+          git -C ota-v2 config user.name "github-actions[bot]"
+          git -C ota-v2 config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C ota-v2 add -f updates/android/v2/current.apk
+          test "$(git -C ota-v2 diff --cached --name-only)" = "updates/android/v2/current.apk"
+          git -C ota-v2 diff --cached --check
+          git -C ota-v2 commit -m "release(anytv-v2): code138 signed owner-requested code138 update for phone QA"
+          RELEASE_COMMIT="$(git -C ota-v2 rev-parse HEAD)"
+          test "$(git -C ota-v2 rev-parse HEAD:updates/android/cert2026/current.apk)" = "$LEGACY_BEFORE"
+          git -C ota-v2 push origin "HEAD:refs/heads/$BRANCH"
+          test "$(git ls-remote origin "refs/heads/$BRANCH" | cut -f1)" = "$RELEASE_COMMIT"
+          echo "release_commit=$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
+          echo "ANYTV_CODE138_OTA_PUSH_PASS $RELEASE_COMMIT"
+      - name: Independently read back identical remote APK bytes and signer
+        shell: bash
+        run: |
+          set -euo pipefail
+          COMMIT="${{ steps.publish.outputs.release_commit }}"
+          URL="https://raw.githubusercontent.com/brenoff2/tcl-apk-ci-builder/$COMMIT/updates/android/v2/current.apk"
+          curl --fail --location --silent --show-error --retry 3 "$URL" -o /tmp/anytv-code138-readback.apk
+          test "$(sha256sum /tmp/anytv-code138-readback.apk | cut -d ' ' -f1)" = "$SIGNED_SHA"
+          cmp /tmp/anytv-code138-readback.apk signed-proof/AnyTV_V2_SIGNED_CANDIDATE.apk
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs /tmp/anytv-code138-readback.apk > /tmp/readback-signature.txt
+          EXPECTED_CERT="$(jq -r .certificate_sha256 signing-recovery/v2/identity.json)"
+          grep -qi "$EXPECTED_CERT" /tmp/readback-signature.txt
+          echo ANYTV_CODE138_REMOTE_BYTE_AND_SIGNER_READBACK_PASS
