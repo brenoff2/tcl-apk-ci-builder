@@ -1770,7 +1770,8 @@ private fun AnyTvCardMetaRow(
 @Composable
 private fun AnyTvStreamNavBar(
     title: String, filtersActive: Boolean,
-    onMenu: () -> Unit, onSearch: () -> Unit, onFilters: () -> Unit
+    onMenu: () -> Unit, onSearch: () -> Unit, onFilters: () -> Unit,
+    showActions: Boolean = true
 ) {
     val fg = MaterialTheme.colorScheme.onSurface
     Row(modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -1781,12 +1782,14 @@ private fun AnyTvStreamNavBar(
         Text(title, modifier = Modifier.weight(1f), fontSize = 17.sp,
             fontWeight = FontWeight.SemiBold, color = fg,
             maxLines = 1, overflow = TextOverflow.Ellipsis)
-        IconButton(onClick = onSearch, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries", tint = fg)
-        }
-        IconButton(onClick = onFilters, modifier = Modifier.size(40.dp)) {
-            Icon(Icons.Filled.FilterList, contentDescription = "Filtrar streamings e gêneros",
-                tint = if (filtersActive) Color(0xFFAD6B73) else fg)
+        if (showActions) {
+            IconButton(onClick = onSearch, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries", tint = fg)
+            }
+            IconButton(onClick = onFilters, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Filled.FilterList, contentDescription = "Filtrar streamings e gêneros",
+                    tint = if (filtersActive) Color(0xFFAD6B73) else fg)
+            }
         }
     }
 }
@@ -1845,24 +1848,23 @@ private fun AnyTvUnifiedDrawer(onClose: () -> Unit, onRoute: (String) -> Unit) {
 /** Account controls must never impersonate an unaudited server deletion API. */
 @Composable
 private fun AnyTvAccountPage(
-    route: String, onClose: () -> Unit,
+    route: String, onClose: () -> Unit, onMenu: () -> Unit,
     onClear: (String) -> Unit, onSettings: (String) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize()
         .background(MaterialTheme.colorScheme.background)
         .padding(18.dp).verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(when (route) {
+        AnyTvStreamNavBar(
+            title = when (route) {
                 "account" -> "Minha conta"
                 "help" -> "Ajuda"
                 else -> "Configurações"
-            }, fontSize = 23.sp, fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f))
-            IconButton(onClick = onClose) {
-                Icon(Icons.Filled.Close, contentDescription = "Voltar ao catálogo")
-            }
-        }
+            },
+            filtersActive = false, onMenu = onMenu,
+            onSearch = {}, onFilters = {}, showActions = false
+        )
+        TextButton(onClick = onClose) { Text("Voltar ao catálogo") }
         HorizontalDivider()
         when (route) {
             "account" -> {
@@ -4953,6 +4955,7 @@ internal fun TclStreamingScreens(
             if (accountArea.isNotEmpty()) {
                 AnyTvAccountPage(route = accountArea,
                     onClose = { accountArea = "" },
+                    onMenu = { menuOpen = true },
                     onClear = { clearAccountSection = it },
                     onSettings = { which ->
                         accountArea = ""
