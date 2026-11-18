@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Menu
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -1765,58 +1766,28 @@ private fun AnyTvCardMetaRow(
     }
 }
 
-/** Same one-row navigation across catalogue and individual provider views. */
+/** A single compact header for every AnyTV catalogue route. */
 @Composable
 private fun AnyTvStreamNavBar(
-    library: Boolean,
-    section: String,
-    contentType: String,
-    filtersActive: Boolean,
-    onHome: () -> Unit,
-    onList: () -> Unit,
-    onWatching: () -> Unit,
-    onWatched: () -> Unit,
-    onFilters: () -> Unit,
-    onContentType: (String) -> Unit,
-    onDismiss: () -> Unit
+    title: String, filtersActive: Boolean,
+    onMenu: () -> Unit, onSearch: () -> Unit, onFilters: () -> Unit
 ) {
-    val primary = Color(0xFFAD6B73) // Streaming-only muted selected state
-    val neutral = MaterialTheme.colorScheme.onSurfaceVariant
-    val actionScroll = rememberScrollState()
-    val chips: @Composable () -> Unit = {
-        Row(horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            AnyTvCompactChip("Filmes", !library && contentType != "tv") {
-                onContentType(if (contentType == "all") "tv" else "all")
-            }
-            AnyTvCompactChip("Séries", !library && contentType != "movie") {
-                onContentType(if (contentType == "all") "movie" else "all")
-            }
+    val fg = MaterialTheme.colorScheme.onSurface
+    Row(modifier = Modifier.fillMaxWidth().height(50.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onMenu, modifier = Modifier.size(42.dp)) {
+            Icon(Icons.Filled.Menu, contentDescription = "Abrir menu do AnyTV", tint = fg)
         }
-    }
-    val actions: @Composable () -> Unit = {
-        Row(modifier = Modifier.horizontalScroll(actionScroll),
-            horizontalArrangement = Arrangement.spacedBy(5.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            // Reuse the approved home-screen icons, tint and click handlers.
-            TclHeaderAction(Icons.Filled.Home, "Início: filmes e séries",
-                if (!library && contentType == "all") primary else neutral, onHome)
-            TclHeaderAction(Icons.Filled.Favorite, "Minha lista",
-                if (library && section == "saved") primary else neutral, onList)
-            TclHeaderAction(Icons.Filled.PlayCircleFilled, "Séries acompanhadas",
-                if (library && section == "watching") primary else neutral, onWatching)
-            TclHeaderAction(Icons.Filled.CheckCircle, "Assistidos",
-                if (library && section == "watched") primary else neutral, onWatched)
-            TclHeaderAction(Icons.Filled.FilterList, "Filtrar streamings e gêneros",
-                if (filtersActive) primary else neutral, onFilters)
-            TclHeaderAction(Icons.Filled.Close, "Fechar streaming", neutral, onDismiss)
+        Text(title, modifier = Modifier.weight(1f), fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold, color = fg,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        IconButton(onClick = onSearch, modifier = Modifier.size(40.dp)) {
+            Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries", tint = fg)
         }
-    }
-    Row(modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        chips()
-        Box(modifier = Modifier.weight(1f)) { actions() }
+        IconButton(onClick = onFilters, modifier = Modifier.size(40.dp)) {
+            Icon(Icons.Filled.FilterList, contentDescription = "Filtrar streamings e gêneros",
+                tint = if (filtersActive) Color(0xFFAD6B73) else fg)
+        }
     }
 }
 
@@ -1940,6 +1911,9 @@ internal fun TclStreamingScreens(
     // The client never requires user-supplied API credentials.
     val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var accountArea by remember { mutableStateOf("") }
+    var clearAccountSection by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     val mainGenreIds = remember { listOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14) }
     var mainGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
@@ -3376,30 +3350,31 @@ internal fun TclStreamingScreens(
             Box(modifier = Modifier.fillMaxSize()) {
             Column(modifier = Modifier.fillMaxSize().padding(10.dp),
                 verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                val currentTitle = when {
+                    accountArea == "account" -> "Minha conta"
+                    accountArea == "help" -> "Ajuda"
+                    accountArea == "settings" -> "Configurações"
+                    homeLibrary && librarySection == "saved" -> "Favoritos"
+                    homeLibrary && librarySection == "watched" -> "Assistidos"
+                    homeLibrary && librarySection == "watching" -> "Minhas séries"
+                    selected != null -> selected?.name.orEmpty()
+                    selectedHomeGenre == ANYTV_ANIME_FILTER -> "Anime"
+                    selectedHomeGenre != 0 ->
+                        mainGenres.firstOrNull { it.id == selectedHomeGenre }?.name
+                            ?: "Filmes e séries"
+                    else -> "Filmes e séries"
+                }
                 AnyTvStreamNavBar(
-                    library = homeLibrary && selected == null,
-                    section = librarySection,
-                    contentType = homeContentType,
-                    filtersActive = onlyMyStreaming || filterGenreIds.isNotEmpty() || selectedHomeGenre != 0,
-                    onHome = { selected = null; homeLibrary = false
-                        homeContentType = "all"; selectedHomeGenre = 0 },
-                    onList = { selected = null; homeLibrary = true; librarySection = "saved" },
-                    onWatching = { selected = null; homeLibrary = true; librarySection = "watching" },
-                    onWatched = { selected = null; homeLibrary = true; librarySection = "watched" },
-                    onFilters = { editingMyServices = myServices
+                    title = currentTitle,
+                    filtersActive = onlyMyStreaming || filterGenreIds.isNotEmpty() ||
+                        selectedHomeGenre != 0,
+                    onMenu = { menuOpen = true },
+                    onSearch = { accountArea = ""; showGlobalSearch = true },
+                    onFilters = {
+                        accountArea = ""; editingMyServices = myServices
                         editingFilterGenres = filterGenreIds
-                        showMyStreamingSettings = true },
-                    onContentType = { kind ->
-                        homeContentType = kind
-                        if (kind == "tv" && selectedHomeGenre == ANYTV_CINEMA_FILTER) {
-                            selectedHomeGenre = 0 // Cinema is movie-only, not a genre.
-                        }
-                        if (kind != "all") {
-                            media = kind; genre = 0; page = 1; showSaved = false
-                        } else media = "movie"
-                        homeLibrary = false
-                    },
-                    onDismiss = onDismiss
+                        showMyStreamingSettings = true
+                    }
                 )
                 // Home and individual provider use ONE identical catalogue layout.
                     // The same real TV platform shortcuts, compact rather than a large list.
@@ -3486,7 +3461,18 @@ internal fun TclStreamingScreens(
                             Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries",
                                 modifier = Modifier.size(20.dp))
                         }
-                        AnyTvCompactChip("Todos", selectedHomeGenre == 0) {
+                        AnyTvCompactChip("Filmes", homeContentType == "movie") {
+                            homeContentType = "movie"; homeLibrary = false; accountArea = ""
+                            if (selectedHomeGenre == ANYTV_ANIME_FILTER) selectedHomeGenre = 0
+                        }
+                        AnyTvCompactChip("Séries", homeContentType == "tv") {
+                            homeContentType = "tv"; homeLibrary = false; accountArea = ""
+                            if (selectedHomeGenre == ANYTV_CINEMA_FILTER) selectedHomeGenre = 0
+                        }
+                        AnyTvCompactChip("Todos", selectedHomeGenre == 0 &&
+                            homeContentType == "all") {
+                            homeContentType = "all";
+
                             selectedHomeGenre = 0; homeLibrary = false
                         }
                         AnyTvCompactChip("Anime", selectedHomeGenre == ANYTV_ANIME_FILTER) {
