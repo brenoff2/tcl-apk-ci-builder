@@ -31,11 +31,12 @@ class AnyTvUxRegressions(unittest.TestCase):
         self.assertIn("credits", self.worker)
 
     def test_rating_is_not_cached_as_48h_catalogue_or_stale_offline_value(self):
-        start = self.catalog.index('    private fun get(token: String, route: String): JSONObject {')
+        start = self.catalog.index('    private fun get(token: String, route: String, forceRefresh: Boolean): JSONObject {')
         end = self.catalog.index('    suspend fun traktRating(', start)
         getter = self.catalog[start:end]
         self.assertIn('val remoteRating = route.startsWith("ratings/trakt/")', getter)
-        self.assertIn('if (!remoteRating) StreamingDiskCache.read(route)', getter)
+        self.assertIn('if (!remoteRating && !forceRefresh)', getter)
+        self.assertIn('StreamingDiskCache.read(route)?.let { return it }', getter)
         self.assertIn('if (!remoteRating) StreamingDiskCache.write(route, payload, ttl(route))', getter)
         self.assertIn('if (remoteRating) throw failure', getter)
         self.assertIn('StreamingDiskCache.stale(route) ?: throw failure', getter)
