@@ -493,8 +493,8 @@ class StreamingScreens(unittest.TestCase):
 
     def test_real_installed_apps_are_the_source(self):
         self.assertIn('request(host, code, "/apps")', self.apps)
-        self.assertIn("TclStreamingScreens(apps = if (inventoryVerified) allApps else emptyList()", self.apps)
-        self.assertIn("val verifiedApps = if (inventoryVerified", self.apps)
+        self.assertIn("TclStreamingScreens(apps = allApps, host = host", self.apps)
+        self.assertIn("val byPackage = remember(allApps)", self.apps)
         self.assertIn("OfficialTvIcon(app, 52.dp)", self.screen)
         self.assertNotIn("listOf(TvOfficialApp(", self.screen)
         self.assertIn('"favorites:$deviceKey"', self.apps)
@@ -1155,7 +1155,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('StreamingCatalog.matchesSelectedSubscription(', self.screen)
 
     def test_provider_media_buttons_share_home_filter_state(self):
-        self.assertIn('contentType = homeContentType,', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", homeContentType != "tv")', self.screen)
         self.assertNotIn('contentType = if (selected == null) homeContentType else media,', self.screen)
         self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) continue', self.screen)
 
@@ -1169,7 +1169,7 @@ class StreamingScreens(unittest.TestCase):
             'val visibleShelves =', 1)[0]
         self.assertIn('StreamingCatalog.matchesSelectedSubscription(', shared)
         self.assertIn('providerName', shared)
-        self.assertIn('homeContentType = kind', self.screen)
+        self.assertIn('homeContentType = if (homeContentType == "all") "tv" else "all"', self.screen)
         self.assertIn('if (selectedHomeGenre > 0 && chosenGenre == 0) continue', self.screen)
         self.assertNotIn('homeContentType = kind; selectedHomeGenre = 0', self.screen)
         provider_entry = self.screen.split('selected = app; providerListMode = false', 1)[1].split(
@@ -1186,7 +1186,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('genreSources.forEach { (_, titles) ->', self.screen)
         self.assertIn('titles.getOrNull(index)?.let { add(it) }', self.screen)
         self.assertIn('val genreTitles = genreCandidates', self.screen)
-        self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) selectedHomeGenre = 0', self.screen)
+        self.assertIn('if (homeContentType == "tv" &&', self.screen)
+        self.assertIn('selectedHomeGenre == ANYTV_CINEMA_FILTER) selectedHomeGenre = 0', self.screen)
         self.assertIn('put("Cinema · Em cartaz no Brasil", it)', self.screen)
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
         self.assertIn('val selectedKindId = anyTvResolvedGenre(selectedHomeGenre,', self.screen)
@@ -1704,7 +1705,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('.padding(top = 24.dp, bottom = 12.dp)', self.screen)
 
     def test_new_compact_streaming_contract(self):
-        self.assertIn('Box(modifier = Modifier.weight(1f)) { actions() }', self.screen)
+        self.assertIn('Row(modifier = Modifier.fillMaxWidth().height(50.dp)', self.screen)
         self.assertIn('AnyTvRatingOverlay(title, Modifier.align(Alignment.TopStart)', self.screen)
         self.assertIn('Color(0xFFFFD54F)', self.screen)
         self.assertIn('showYear = true', self.screen)
