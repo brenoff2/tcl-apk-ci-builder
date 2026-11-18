@@ -33,6 +33,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.Home
@@ -50,6 +51,9 @@ import androidx.compose.material.icons.filled.KeyboardBackspace
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Surface
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Switch
@@ -61,6 +65,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.remember
@@ -178,6 +183,9 @@ fun TclApprovedHomeScreen(
     val view = LocalView.current
     val isConnected = sessionState.connectedDevice != null
     var showKeyboard by rememberSaveable { mutableStateOf(false) }
+    var remoteMenuOpen by remember { mutableStateOf(false) }
+    var globalNavRequest by remember { mutableIntStateOf(0) }
+    var globalNavRoute by remember { mutableStateOf("catalogue") }
     var headsetStatus by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
     val headsetPrefs = remember(context) {
@@ -257,7 +265,8 @@ fun TclApprovedHomeScreen(
                         onPower = { if (isConnected) onPower() else onOpenDiscovery() },
                         onAccount = { openAccount?.invoke() },
                         onCast = { onTabSelected(HomeTab.Cast) },
-                        onSettings = onOpenSettings
+                        onSettings = onOpenSettings,
+                        onMenu = { remoteMenuOpen = true }
                     )
 
                     TclInstalledAppsBar(
@@ -274,7 +283,9 @@ fun TclApprovedHomeScreen(
                         },
                         onKeyboardText = { if (isConnected) onKeyboardText(it) else onOpenDiscovery() },
                         onKeyboardEnter = { if (isConnected) onKeyboardEnter() else onOpenDiscovery() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        globalNavRequest = globalNavRequest,
+                        globalNavRoute = globalNavRoute
                     )
 
                     Column(
@@ -425,6 +436,23 @@ fun TclApprovedHomeScreen(
         }
     }
 
+    // The remote and catalogue share one navigation drawer and route contract.
+    if (remoteMenuOpen) {
+        Dialog(onDismissRequest = { remoteMenuOpen = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            Surface(modifier = Modifier.fillMaxSize(), color = Color.Transparent) {
+                AnyTvUnifiedDrawer(onClose = { remoteMenuOpen = false },
+                    onRoute = { route ->
+                        remoteMenuOpen = false
+                        if (route != "remote") {
+                            globalNavRoute = route
+                            globalNavRequest += 1
+                        }
+                    })
+            }
+        }
+    }
+
     if (headsetStatus != null) {
         AlertDialog(
             onDismissRequest = { headsetStatus = null },
@@ -475,11 +503,13 @@ private fun TclApprovedHeader(
     onPower: () -> Unit,
     onAccount: () -> Unit,
     onCast: () -> Unit,
-    onSettings: () -> Unit
+    onSettings: () -> Unit,
+    onMenu: () -> Unit
 ) {
     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+        TclHeaderAction(Icons.Filled.Menu, "Abrir menu do AnyTV", TclText, onMenu)
         Box(Modifier.size(9.dp).clip(CircleShape)
             .background(if (isConnected) Color(0xFF00E979) else Color(0xFFFFB043)))
         Column(modifier = Modifier.weight(1f).clickable(onClick = onChooseTv),
@@ -488,9 +518,7 @@ private fun TclApprovedHeader(
                 fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         TclHeaderAction(Icons.Filled.PowerSettingsNew, "Ligar ou desligar", TclBlue, onPower)
-        TclHeaderAction(Icons.Filled.AccountCircle, "Minha Conta", TclText, onAccount)
         TclHeaderAction(Icons.Filled.Cast, "Transmitir", TclBlue, onCast)
-        TclHeaderAction(Icons.Filled.Settings, "Configurações", TclText, onSettings)
     }
 }
 
