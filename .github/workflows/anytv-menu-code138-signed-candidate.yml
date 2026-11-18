@@ -5,6 +5,9 @@ on:
     paths:
       - '.github/workflows/anytv-menu-code138-signed-candidate.yml'
       - 'overrides/TclStreamingScreens.kt'
+      - 'overrides/TclApprovedHomeScreen.kt'
+      - 'overrides/TclInstalledApps.kt'
+      - 'scripts/tests/test_anytv_ux_regression.py'
       - 'scripts/qa/AnyTvGenreJvmFixtureTest.kt'
       - 'scripts/qa/AnyTvOriginalGenreComposeFixtureTest.kt'
       - 'scripts/tests/test_streaming_screens_contract.py'
