@@ -315,7 +315,9 @@ fun TclInstalledAppsBar(
     onRemoteHoldStart: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
     onRemoteHoldEnd: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
     onKeyboardText: (String) -> Unit = {},
-    onKeyboardEnter: () -> Unit = {}
+    onKeyboardEnter: () -> Unit = {},
+    globalNavRequest: Int = 0,
+    globalNavRoute: String = "catalogue"
 ) {
     val context = LocalContext.current
     val prefs = remember(context) {
@@ -353,6 +355,10 @@ fun TclInstalledAppsBar(
     var showManager by remember(deviceKey, host) { mutableStateOf(false) }
     var catalogFavorites by remember { mutableStateOf(prefs.getString("anytv_catalog_visible_services", "")?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()) }
     var showStreaming by remember(deviceKey, host) { mutableStateOf(false) }
+    // The remote header opens the same catalogue dialog at the requested route.
+    LaunchedEffect(globalNavRequest) {
+        if (globalNavRequest > 0) showStreaming = true
+    }
     var busy by remember(deviceKey, host) { mutableStateOf(false) }
     var errorText by remember(deviceKey, host) { mutableStateOf<String?>(null) }
     var refresh by remember(deviceKey, host) { mutableStateOf(0) }
@@ -509,6 +515,7 @@ fun TclInstalledAppsBar(
     if (showStreaming) {
         TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
             tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },
+            initialRoute = if (globalNavRequest > 0) globalNavRoute else "catalogue",
             onRemoteKey = onRemoteKey,
             onRemoteHoldStart = onRemoteHoldStart,
             onRemoteHoldEnd = onRemoteHoldEnd,
