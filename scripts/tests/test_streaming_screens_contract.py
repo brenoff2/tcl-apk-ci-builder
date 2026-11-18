@@ -547,7 +547,7 @@ class StreamingScreens(unittest.TestCase):
 
     def test_compact_catalog_layout_regression(self):
         self.assertIn('AnyTvStreamNavBar(', self.screen)
-        self.assertIn('Text(pageTitle, modifier = Modifier.weight(1f)', self.screen)
+        self.assertIn('Text(title, modifier = Modifier.weight(1f)', self.screen)
         self.assertIn('val app = selected!!', self.screen)
         self.assertIn('// Home and individual provider use ONE identical catalogue layout.', self.screen)
         self.assertNotIn('} else {\n                    val app = selected!!', self.screen)
@@ -589,8 +589,8 @@ class StreamingScreens(unittest.TestCase):
 
     def test_compact_home_search_platforms_and_customizable_genre_lists(self):
         for piece in (
-            'TclHeaderAction(Icons.Filled.Home, "Início: filmes e séries"',
-            'showGlobalSearch = !showGlobalSearch',
+            'Icon(Icons.Filled.Menu, contentDescription = "Abrir menu do AnyTV"',
+            'accountArea = ""; showGlobalSearch = true',
             'if (showGlobalSearch)',
             'OfficialTvIcon(app, 52.dp)',
             'suspend fun discoveryGenre(id: Int)',
@@ -643,14 +643,14 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('displayed.filter { it.packageName in myServices', self.screen)
 
     def test_navigation_is_connected_not_just_declared(self):
-        self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
+        self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 3)
         self.assertIn('@Composable\ninternal fun TclStreamingScreens(', self.screen)
         self.assertNotIn('@Composable\n/** Same one-row navigation', self.screen)
-        self.assertIn('onFilters = { editingMyServices = myServices', self.screen)
-        self.assertIn('AnyTvCompactChip("Filmes", !library && contentType != "tv")', self.screen)
-        self.assertIn('onHome = { selected = null; homeLibrary = false', self.screen)
-        self.assertIn('onWatching = { selected = null; homeLibrary = true', self.screen)
-        self.assertIn('onWatched = { selected = null; homeLibrary = true', self.screen)
+        self.assertIn('onMenu = { menuOpen = true }', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", homeContentType == "movie")', self.screen)
+        self.assertIn('"catalogue" -> {', self.screen)
+        self.assertIn('"favorites", "watched", "watching" -> {', self.screen)
+        self.assertIn('librarySection = when (route)', self.screen)
         self.assertNotIn('listOf("all" to "Tudo"', self.screen)
         self.assertNotIn('label = { Text("Início", fontSize = 11.sp) }', self.screen)
         self.assertNotIn('FilterChip(selected = media == "movie" && !showSaved', self.screen)
@@ -711,12 +711,13 @@ class StreamingScreens(unittest.TestCase):
 
     def test_navigation_is_compact_and_library_recoverable(self):
         for fragment in (
-            'TclHeaderAction(Icons.Filled.Home', 'TclHeaderAction(Icons.Filled.Favorite',
-            'TclHeaderAction(Icons.Filled.PlayCircleFilled', 'TclHeaderAction(Icons.Filled.CheckCircle',
-            'TclHeaderAction(Icons.Filled.FilterList', 'Icon(Icons.Filled.Search',
-            'TclHeaderAction(Icons.Filled.Close', '"Filmes"', '"Séries"',
-            'librarySection = "watching"', 'librarySection = "watched"',
-            'AnyTvCompactChip("Filmes", !library', 'onContentType = { kind ->',
+            'Icon(Icons.Filled.Menu', 'contentDescription = "Abrir menu do AnyTV"',
+            'Icon(Icons.Filled.FilterList', 'Icon(Icons.Filled.Search',
+            '"Minha conta"', '"Controle remoto"', '"Filmes e séries"',
+            '"Favoritos"', '"Assistidos"', '"Minhas séries"',
+            '"Ajuda"', '"Configurações"',
+            '"favorites", "watched", "watching" -> {',
+            'AnyTvCompactChip("Filmes", homeContentType == "movie")',
         ):
             self.assertIn(fragment, self.screen)
         self.assertIn('OfficialTvIcon(app, 52.dp)', self.screen)
@@ -854,13 +855,13 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('horizontalArrangement = Arrangement.spacedBy(7.dp)', self.screen)
         self.assertNotIn('Icons.Outlined.FavoriteBorder', self.screen)
         self.assertIn('Icon(Icons.Filled.Favorite,', self.screen)
-        self.assertIn('TclHeaderAction(Icons.Filled.FilterList', self.screen)
+        self.assertIn('Icon(Icons.Filled.FilterList', self.screen)
         for text in ('Sua lista está vazia.', 'Você ainda não acompanha nenhuma série.',
                      'Nenhum filme marcado como assistido.'):
             self.assertIn(text, self.screen)
-        self.assertIn('AnyTvCompactChip("Filmes", !library', self.screen)
-        self.assertIn('AnyTvCompactChip("Séries", !library', self.screen)
-        self.assertIn('showGlobalSearch = !showGlobalSearch', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", homeContentType == "movie"', self.screen)
+        self.assertIn('AnyTvCompactChip("Séries", homeContentType == "tv"', self.screen)
+        self.assertIn('accountArea = ""; showGlobalSearch = true', self.screen)
 
     def test_verified_disney_show_id_with_fallback(self):
         self.assertIn('title.id == 224505', self.screen)
@@ -909,7 +910,7 @@ class StreamingScreens(unittest.TestCase):
         home = Path("overrides/TclApprovedHomeScreen.kt").read_text(encoding="utf-8")
         self.assertIn('internal fun TclHeaderAction(', home)
         self.assertIn('modifier = Modifier.size(38.dp)', home)
-        self.assertIn('TclHeaderAction(Icons.Filled.FilterList', self.screen)
+        self.assertIn('Icon(Icons.Filled.FilterList', self.screen)
         self.assertNotIn('Text(deviceBrand', home)
         self.assertIn('Text(tvName, color = TclText', home)
         self.assertIn('windowInsetsPadding(WindowInsets.safeDrawing)', home)
@@ -933,8 +934,8 @@ class StreamingScreens(unittest.TestCase):
         self.assertNotIn('}.getOrDefault(emptyList())\\n            globalSearchBusy = false', self.screen)
 
     def test_provider_and_main_share_actual_slider_and_sections(self):
-        self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 2)
-        self.assertIn('Text(pageTitle, modifier = Modifier.weight(1f)', self.screen)
+        self.assertEqual(self.screen.count('AnyTvStreamNavBar('), 3)
+        self.assertIn('Text(title, modifier = Modifier.weight(1f)', self.screen)
         self.assertIn('if (selected != null && !homeLibrary)', self.screen)
         self.assertIn('LaunchedEffect(selected?.packageName, homeContentType, selectedHomeGenre)', self.screen)
         self.assertIn('myServiceShelves[key] = it.titles', self.screen)
@@ -995,13 +996,34 @@ class StreamingScreens(unittest.TestCase):
             self.assertIn(value, hero)
         self.assertNotIn('Text(if (pagerState.currentPage == dot)', hero)
 
+    def test_unified_drawer_routes_and_account_clear_scopes(self):
+        nav = self.screen
+        for fragment in (
+            'private fun AnyTvUnifiedDrawer(', 'private fun AnyTvAccountPage(',
+            '"account" to "Minha conta"', '"remote" to "Controle remoto"',
+            '"catalogue" to "Filmes e séries"', '"favorites" to "Favoritos"',
+            '"watched" to "Assistidos"', '"watching" to "Minhas séries"',
+            '"help" to "Ajuda"', '"settings" to "Configurações"',
+            'Text("AnyTV · v$version"', 'onDismiss()', 'menuOpen = false',
+            'clearAccountSection = it', 'Text("Cancelar")',
+            'Text("Apagar")', 'prefs.edit().remove("streaming_favorites")',
+            '.remove("anytv_watching_titles_v1")',
+            'prefs.edit().remove("anytv_watched_episodes")',
+            '.remove("anytv_watched_movie_titles_v1")',
+            'Não é executada por esta versão.'
+        ):
+            with self.subTest(fragment=fragment):
+                self.assertIn(fragment, nav)
+
     def test_streaming_navigation_stays_one_line_on_mobile(self):
         nav = self.screen.split('private fun AnyTvStreamNavBar(', 1)[1].split(
             'private fun AnyTvCompactChip(', 1)[0]
-        self.assertIn('Box(modifier = Modifier.weight(1f)) { actions() }', nav)
-        self.assertNotIn('if (maxWidth < 390.dp)', nav)
-        self.assertIn('Modifier.horizontalScroll(actionScroll)', nav)
-        self.assertEqual(nav.count('TclHeaderAction(Icons.Filled.'), 6)
+        self.assertIn('Row(modifier = Modifier.fillMaxWidth().height(50.dp)', nav)
+        self.assertIn('Text(title, modifier = Modifier.weight(1f)', nav)
+        self.assertIn('Icon(Icons.Filled.Menu', nav)
+        self.assertIn('Icon(Icons.Filled.Search', nav)
+        self.assertIn('Icon(Icons.Filled.FilterList', nav)
+        self.assertNotIn('Modifier.horizontalScroll(actionScroll)', nav)
 
     def test_provider_genre_persists_for_both_media_types(self):
         helper = self.screen.split('private fun anyTvResolvedGenre(', 1)[1].split(
