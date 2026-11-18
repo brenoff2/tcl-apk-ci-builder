@@ -495,7 +495,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('request(host, code, "/apps")', self.apps)
         # ADB-enabled builds enforce onboarding inventory gating; the
         # normal companion build uses its authenticated installed-app feed.
-        if "val inventoryVerified" in self.apps:
+        if "val inventoryVerified" in self.apps or "var inventoryVerified" in self.apps:
             self.assertIn("TclStreamingScreens(apps = if (inventoryVerified) allApps else emptyList()", self.apps)
             self.assertIn("val verifiedApps = if (inventoryVerified", self.apps)
         else:
