@@ -2027,12 +2027,12 @@ internal fun TclStreamingScreens(
     onRemoteHoldEnd: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
     onKeyboardText: (String) -> Unit = {},
     onKeyboardEnter: () -> Unit = {},
-    initialRoute: String = "catalogue",
     isLgWebOs: Boolean = false,
     onLaunchLgApp: (String) -> Unit = {},
     onLaunchLgNetflixTitle: (String) -> Unit = {},
     onLgTitleChange: () -> Unit = {},
-    lgLaunchStatus: String? = null
+    lgLaunchStatus: String? = null,
+    initialRoute: String = "catalogue"
 ) {
     val context = LocalContext.current
     val openAccountSession = LocalAnyTvOpenAccount.current
