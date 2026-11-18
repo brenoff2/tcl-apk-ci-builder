@@ -440,11 +440,28 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn("val ranked = unwatched.sortedWith", curate)
         self.assertNotIn("it.id.toString() !in watched", curate)
 
+
+    def test_home_genre_weekly_40_mix_does_not_rewrite_genre_pages(self):
+        home = self.screen
+        self.assertIn('private fun anyTvHomeGenreHighlights(', home)
+        self.assertIn('films.take(20) + shows.take(20)', home)
+        self.assertIn('films.drop(20) + shows.drop(20)', home)
+        self.assertIn('.take(ANYTV_HOME_GENRE_TARGET)', home)
+        self.assertIn('homeGenreHighlightPools["movie:$movieId"]', home)
+        self.assertIn('homeGenreHighlightPools["tv:$tvId"]', home)
+        self.assertIn('discoveryShelves["Destaques da semana · Filmes"]', home)
+        self.assertIn('discoveryShelves["Destaques da semana · Séries"]', home)
+        self.assertIn('if (titles.isNotEmpty()) put("Por gênero: $label", titles)', home)
+        self.assertIn('val preview = if (heading.startsWith("Por gênero: "))', home)
+
     def test_home_rails_do_not_repeat_visible_posters(self):
         self.assertIn("val previewSeen = mutableSetOf<String>()", self.screen)
         self.assertIn("val previewShelves = uniqueShelves.map", self.screen)
-        self.assertIn("shelf.asSequence().filter { title ->", self.screen)
-        self.assertIn("}.take(ANYTV_EDITORIAL_LIMIT).toList()", self.screen)
+        self.assertIn('val unseen = shelf.filter { title ->', self.screen)
+        self.assertIn('else unseen.take(ANYTV_EDITORIAL_LIMIT)', self.screen)
+        self.assertIn('if (heading.startsWith("Por gênero: "))', self.screen)
+        self.assertIn('ANYTV_HOME_GENRE_TARGET', self.screen)
+        self.assertIn('(unseen + shelf).distinctBy', self.screen)
         self.assertIn('preview.forEach { previewSeen.add("${it.media}:${it.id}") }', self.screen)
         self.assertIn("previewShelves.filterNot { (heading, shelf) ->", self.screen)
         self.assertIn("if (homeLibrary || selected != null || selectedHomeGenre != 0)", self.screen)
