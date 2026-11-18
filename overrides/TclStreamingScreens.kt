@@ -1796,7 +1796,7 @@ private fun AnyTvStreamNavBar(
 
 /** Shared drawer; only the existing catalogue routes are reused. */
 @Composable
-private fun AnyTvUnifiedDrawer(onClose: () -> Unit, onRoute: (String) -> Unit) {
+internal fun AnyTvUnifiedDrawer(onClose: () -> Unit, onRoute: (String) -> Unit) {
     val context = LocalContext.current
     Row(modifier = Modifier.fillMaxSize()
         .background(Color.Black.copy(alpha = .65f))) {
@@ -2027,6 +2027,7 @@ internal fun TclStreamingScreens(
     onRemoteHoldEnd: (com.hari.androidtvremote.androidLib.remote.Remotemessage.RemoteKeyCode) -> Unit = {},
     onKeyboardText: (String) -> Unit = {},
     onKeyboardEnter: () -> Unit = {},
+    initialRoute: String = "catalogue",
     isLgWebOs: Boolean = false,
     onLaunchLgApp: (String) -> Unit = {},
     onLaunchLgNetflixTitle: (String) -> Unit = {},
@@ -2044,7 +2045,11 @@ internal fun TclStreamingScreens(
     val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
-    var accountArea by remember { mutableStateOf("") }
+    var accountArea by remember(initialRoute) {
+        mutableStateOf(initialRoute.takeIf {
+            it == "account" || it == "help" || it == "settings"
+        }.orEmpty())
+    }
     var clearAccountSection by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<TvOfficialApp?>(null) }
     val mainGenreIds = remember { listOf(28, 18, 35, 53, 37, 878, 12, 16, 27, 10749, 99, 9648, 14) }
@@ -2052,7 +2057,13 @@ internal fun TclStreamingScreens(
     var allMovieGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
     var tvGenres by remember { mutableStateOf<List<StreamingGenre>>(emptyList()) }
     var homeContentType by remember { mutableStateOf("all") }
-    var librarySection by remember { mutableStateOf("saved") }
+    var librarySection by remember(initialRoute) {
+        mutableStateOf(when (initialRoute) {
+            "watched" -> "watched"
+            "watching" -> "watching"
+            else -> "saved"
+        })
+    }
     var selectedHomeGenre by remember { mutableIntStateOf(0) }
     var genreSort by remember(prefs) {
         mutableStateOf(prefs.getString("anytv_genre_sort", "popular")
@@ -2108,7 +2119,9 @@ internal fun TclStreamingScreens(
         myServices.map { name -> apps.firstOrNull { it.packageName == name }?.name ?: name }
             .filter { StreamingCatalog.supportsSubscription(it) }.distinct().take(12)
     }
-    var homeLibrary by remember { mutableStateOf(false) }
+    var homeLibrary by remember(initialRoute) {
+        mutableStateOf(initialRoute in setOf("favorites", "watched", "watching"))
+    }
     var openedSection by remember { mutableStateOf<String?>(null) }
     var sectionVisibleCount by remember { mutableIntStateOf(ANYTV_LIST_BATCH) }
     var sectionExtra by remember { mutableStateOf<List<StreamingTitle>>(emptyList()) }
