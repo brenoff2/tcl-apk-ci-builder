@@ -179,6 +179,22 @@ class AnyTvOriginalGenreComposeFixtureTest {
             compose.waitUntil(30_000) {
                 compose.onAllNodesWithText("Drama").fetchSemanticsNodes().isNotEmpty()
             }
+            // Navigate the ORIGINAL Compose drawer rather than inspecting
+            // strings only. Account cleanup must be explicitly cancellable.
+            compose.onAllNodesWithContentDescription("Abrir menu do AnyTV")
+                .onFirst().performClick()
+            compose.onAllNodesWithText("Minha conta").onFirst().performClick()
+            compose.onAllNodesWithText("Zerar favoritos").onFirst().performClick()
+            compose.onAllNodesWithText("Cancelar").onFirst().performClick()
+            assertTrue("Account cleanup must be cancellable without leaving profile",
+                compose.onAllNodesWithText("Zerar favoritos")
+                    .fetchSemanticsNodes().isNotEmpty())
+            compose.onAllNodesWithContentDescription("Abrir menu do AnyTV")
+                .onFirst().performClick()
+            compose.onAllNodesWithText("Filmes e séries").onLast().performClick()
+            assertTrue("Drawer must return to existing genre catalogue",
+                compose.onAllNodesWithText("Drama").fetchSemanticsNodes().isNotEmpty())
+            println("ANYTV_UNIFIED_DRAWER_ACCOUNT_SAFE_CONFIRM_COMPOSE_PASS")
             compose.onAllNodesWithText("Drama").onFirst().performClick()
             // Empty successful payload produces the actual screen's retry affordance.
             compose.waitUntil(30_000) {
