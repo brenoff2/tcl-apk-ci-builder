@@ -162,7 +162,8 @@ class StreamingScreens(unittest.TestCase):
         section = home[start:end]
         self.assertIn('put("Por gênero: $label", titles)', section)
         self.assertNotIn('discoveryShelves.forEach { (heading, titles) ->', section)
-        self.assertIn('if (!homeLibrary && selected == null && selectedHomeGenre != 0)', home)
+        self.assertIn('if (!homeLibrary && selected == null && selectedHomeGenre != 0 &&', home)
+        self.assertIn('(!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER))', home)
 
     def test_filtered_pages_use_one_canonical_renderer_without_extra_rails(self):
         import re
@@ -1462,7 +1463,7 @@ class StreamingScreens(unittest.TestCase):
                       self.screen)
         self.assertIn('Text(if (movie.media == "tv") "DESTAQUE DA SEMANA · SÉRIE"', self.screen)
         self.assertLess(self.screen.index('if (previews.isNotEmpty()) {'),
-                        self.screen.index('// Genre page: ten-image hero above'))
+                        self.screen.index('// Genre list/cinema branch only. In sections mode, fall through'))
 
     def test_future_releases_do_not_claim_unverified_streaming_offers(self):
         self.assertIn('suspend fun discoveryUpcomingStreamingPage(page: Int)', self.screen)
