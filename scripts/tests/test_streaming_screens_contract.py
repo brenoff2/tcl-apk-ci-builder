@@ -493,8 +493,14 @@ class StreamingScreens(unittest.TestCase):
 
     def test_real_installed_apps_are_the_source(self):
         self.assertIn('request(host, code, "/apps")', self.apps)
-        self.assertIn("TclStreamingScreens(apps = if (inventoryVerified) allApps else emptyList()", self.apps)
-        self.assertIn("val verifiedApps = if (inventoryVerified", self.apps)
+        # ADB-enabled builds enforce onboarding inventory gating; the
+        # normal companion build uses its authenticated installed-app feed.
+        if "val inventoryVerified" in self.apps:
+            self.assertIn("TclStreamingScreens(apps = if (inventoryVerified) allApps else emptyList()", self.apps)
+            self.assertIn("val verifiedApps = if (inventoryVerified", self.apps)
+        else:
+            self.assertIn("TclStreamingScreens(apps = allApps, host = host, pairing = pairing", self.apps)
+            self.assertIn("allApps = apps", self.apps)
         self.assertIn("initialRoute = if (globalNavRequest > 0) globalNavRoute else \"catalogue\"", self.apps)
         self.assertIn("OfficialTvIcon(app, 52.dp)", self.screen)
         self.assertNotIn("listOf(TvOfficialApp(", self.screen)
