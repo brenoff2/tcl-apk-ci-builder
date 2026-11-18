@@ -1010,7 +1010,9 @@ class StreamingScreens(unittest.TestCase):
             '.remove("anytv_watching_titles_v1")',
             'prefs.edit().remove("anytv_watched_episodes")',
             '.remove("anytv_watched_movie_titles_v1")',
-            'Não é executada por esta versão.'
+            'Não é executada por esta versão.',
+            'LocalAnyTvOpenAccount.current',
+            'onAuth = openAccountSession'
         ):
             with self.subTest(fragment=fragment):
                 self.assertIn(fragment, nav)
@@ -1237,7 +1239,11 @@ class StreamingScreens(unittest.TestCase):
                          self.screen)
 
     def test_favorite_movies_remain_visible_when_marked_watched(self):
-        library = self.screen.split('} else if (homeLibrary) {', 1)[1].split(
+        # Only the renderer is read-only; the separate account page may
+        # explicitly clear data after a confirmed user action.
+        composer = self.screen.split('val visibleShelves = linkedMapOf<', 1)[1].split(
+            'val animeSeparatedShelves =', 1)[0]
+        library = composer.split('} else if (homeLibrary) {', 1)[1].split(
             '} else {\\n                            if (selectedHomeGenre == 0)', 1
         )[0]
         self.assertIn('val savedFilms = films', library)
