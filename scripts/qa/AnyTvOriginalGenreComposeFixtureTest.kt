@@ -335,6 +335,12 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 }
                 assertEquals("$label: 12 sections and editorial order", expectedOrder,
                     actualSections.map { it.first })
+                // Physical code135 regression: a populated editorial snapshot is
+                // NOT proof the original Composable actually draws the rail.
+                // In sections mode, the heading must exist in rendered semantics.
+                compose.waitForIdle()
+                assertTrue("$label: Populares has data but is not displayed in section mode",
+                    compose.onAllNodesWithText("Populares").fetchSemanticsNodes().isNotEmpty())
                 val sectionCount = actualSections.toMap()
                 assertTrue("$label: recent movies must survive Cinema outage",
                     (sectionCount["Lançamentos · Filmes"] ?: 0) > 0)
