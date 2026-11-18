@@ -266,6 +266,42 @@ class AnyTvGenreJvmFixtureTest {
         println("ANYTV_JVM_ANIME_SOURCE_24_FILTERED_12_EDITORIAL_12")
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun homeGenreMixed(
+        weeklyMovies: List<StreamingTitle>, weeklyShows: List<StreamingTitle>,
+        movies: List<StreamingTitle>, shows: List<StreamingTitle>
+    ): List<StreamingTitle> {
+        val method = owner.getDeclaredMethod("anyTvHomeGenreHighlights",
+            List::class.java, List::class.java, List::class.java, List::class.java)
+        method.isAccessible = true
+        return method.invoke(null, weeklyMovies, weeklyShows, movies, shows)
+            as List<StreamingTitle>
+    }
+
+    @Test fun homeGenreUsesWeeklyFirstAndBalancesFortyWithoutDuplicates() {
+        fun title(id: Int, media: String) = StreamingTitle(
+            id, "QA $media $id", "", "", media, votes = 150, rating = 7.6)
+        val movies = (1..34).map { title(it, "movie") }
+        val shows = (1..35).map { title(it, "tv") }
+        val highlights = homeGenreMixed(
+            movies.take(3), shows.take(4), movies, shows)
+        assertEquals(40, highlights.size)
+        assertEquals(20, highlights.count { it.media == "movie" })
+        assertEquals(20, highlights.count { it.media == "tv" })
+        assertEquals(40, highlights.map { "${it.media}:${it.id}" }.distinct().size)
+        assertEquals(listOf(1, 2, 3), highlights.take(3).map { it.id })
+        val shortShows = homeGenreMixed(movies.take(2), shows.take(2),
+            movies, shows.take(8))
+        assertEquals(40, shortShows.size)
+        assertEquals(32, shortShows.count { it.media == "movie" })
+        assertEquals(8, shortShows.count { it.media == "tv" })
+        assertEquals(40, shortShows.map { "${it.media}:${it.id}" }.distinct().size)
+        val scarce = homeGenreMixed(emptyList(), emptyList(),
+            movies.take(5), shows.take(3))
+        assertEquals(8, scarce.size)
+        println("ANYTV_HOME_GENRE_MIXED_WEEKLY_40_NO_DUPLICATES_PASS")
+    }
+
     @Test fun genreEditorialKeepsFortyUndatedPosterlessFixtures() {
         val source = (1..40).map { id ->
             StreamingTitle(id, "Drama fixture $id", "", "", "movie",
