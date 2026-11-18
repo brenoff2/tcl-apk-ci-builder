@@ -1791,6 +1791,130 @@ private fun AnyTvStreamNavBar(
     }
 }
 
+/** Shared drawer; only the existing catalogue routes are reused. */
+@Composable
+private fun AnyTvUnifiedDrawer(onClose: () -> Unit, onRoute: (String) -> Unit) {
+    val context = LocalContext.current
+    Row(modifier = Modifier.fillMaxSize()
+        .background(Color.Black.copy(alpha = .65f))) {
+        Column(modifier = Modifier.fillMaxHeight().fillMaxWidth(.80f)
+            .widthIn(max = 300.dp).background(Color(0xFF202124))
+            .padding(15.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("AnyTV", modifier = Modifier.weight(1f),
+                    fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                IconButton(onClick = onClose) {
+                    Icon(Icons.Filled.Close, contentDescription = "Fechar menu",
+                        tint = Color.LightGray)
+                }
+            }
+            HorizontalDivider(color = Color.DarkGray)
+            val routes = listOf(
+                "account" to "Minha conta",
+                "remote" to "Controle remoto",
+                "catalogue" to "Filmes e séries",
+                "favorites" to "Favoritos",
+                "watched" to "Assistidos",
+                "watching" to "Minhas séries",
+                "help" to "Ajuda",
+                "settings" to "Configurações"
+            )
+            routes.forEachIndexed { index, item ->
+                if (index == 3 || index == 6) HorizontalDivider(color = Color.DarkGray)
+                Text(item.second, fontSize = 15.sp, color = Color(0xFFE6E6E9),
+                    modifier = Modifier.fillMaxWidth()
+                        .clip(RoundedCornerShape(9.dp))
+                        .clickable { onRoute(item.first) }
+                        .padding(horizontal = 14.dp, vertical = 12.dp))
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            HorizontalDivider(color = Color.DarkGray)
+            val version = remember(context) {
+                runCatching {
+                    context.packageManager.getPackageInfo(context.packageName, 0)
+                        .versionName.orEmpty()
+                }.getOrDefault("")
+            }
+            Text("AnyTV · v$version", fontSize = 10.sp, color = Color(0xFF9D9DA1),
+                modifier = Modifier.align(Alignment.CenterHorizontally))
+        }
+        Box(modifier = Modifier.fillMaxSize().clickable(onClick = onClose))
+    }
+}
+
+/** Account controls must never impersonate an unaudited server deletion API. */
+@Composable
+private fun AnyTvAccountPage(
+    route: String, onClose: () -> Unit,
+    onClear: (String) -> Unit, onSettings: (String) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize()
+        .background(MaterialTheme.colorScheme.background)
+        .padding(18.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(when (route) {
+                "account" -> "Minha conta"
+                "help" -> "Ajuda"
+                else -> "Configurações"
+            }, fontSize = 23.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f))
+            IconButton(onClick = onClose) {
+                Icon(Icons.Filled.Close, contentDescription = "Voltar ao catálogo")
+            }
+        }
+        HorizontalDivider()
+        when (route) {
+            "account" -> {
+                Text("Seus dados e sua biblioteca", fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("MINHA BIBLIOTECA", fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                listOf(
+                    "favorites" to "Zerar favoritos",
+                    "series" to "Zerar séries",
+                    "tracking" to "Zerar acompanhamento",
+                    "watched" to "Zerar assistidos"
+                ).forEach { item ->
+                    OutlinedButton(onClick = { onClear(item.first) },
+                        modifier = Modifier.fillMaxWidth()) {
+                        Text(item.second, modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Start)
+                    }
+                }
+                HorizontalDivider()
+                Text("CONTA E PRIVACIDADE", fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Desconectar", fontWeight = FontWeight.SemiBold)
+                Text("Disponível após integrar a sessão de autenticação.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Apagar minha conta", fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.error)
+                Text("A exclusão definitiva exige uma operação verificada no servidor. " +
+                    "Não é executada por esta versão.",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            "help" -> {
+                Text("Ajuda com o AnyTV", fontWeight = FontWeight.SemiBold)
+                Text("Abra Filmes e séries no menu para voltar ao catálogo. " +
+                    "Use a faixa de streamings, a busca e os filtros do cabeçalho.",
+                    fontSize = 13.sp)
+            }
+            else -> {
+                Text("Preferências", fontWeight = FontWeight.SemiBold)
+                OutlinedButton(onClick = { onSettings("streamings") }) {
+                    Text("Streamings e filtros")
+                }
+                OutlinedButton(onClick = { onSettings("genres") }) {
+                    Text("Gêneros favoritos da Home")
+                }
+            }
+        }
+    }
+}
+
 /** Unified low-relief streaming button, preserving original actions and dimensions. */
 @Composable
 private fun AnyTvStreamOutlinedButton(
@@ -4825,6 +4949,90 @@ internal fun TclStreamingScreens(
                             fontSize = 13.sp)
                     }
                 }
+            }
+            if (accountArea.isNotEmpty()) {
+                AnyTvAccountPage(route = accountArea,
+                    onClose = { accountArea = "" },
+                    onClear = { clearAccountSection = it },
+                    onSettings = { which ->
+                        accountArea = ""
+                        if (which == "streamings") {
+                            editingMyServices = myServices
+                            editingFilterGenres = filterGenreIds
+                            showMyStreamingSettings = true
+                        } else {
+                            editingGenreIds = preferredGenreIds
+                            showGenreSettings = true
+                        }
+                    })
+            }
+            if (menuOpen) {
+                AnyTvUnifiedDrawer(onClose = { menuOpen = false },
+                    onRoute = { route ->
+                        menuOpen = false
+                        accountArea = ""
+                        when (route) {
+                            "account", "help", "settings" -> accountArea = route
+                            "remote" -> onDismiss()
+                            "catalogue" -> {
+                                selected = null; homeLibrary = false
+                                selectedHomeGenre = 0; homeContentType = "all"
+                            }
+                            "favorites", "watched", "watching" -> {
+                                selected = null; homeLibrary = true
+                                librarySection = when (route) {
+                                    "favorites" -> "saved"
+                                    "watched" -> "watched"
+                                    else -> "watching"
+                                }
+                            }
+                        }
+                    })
+            }
+            if (clearAccountSection != null) {
+                val section = clearAccountSection.orEmpty()
+                val description = when (section) {
+                    "favorites" -> "todos os favoritos"
+                    "series" -> "a lista Minhas séries"
+                    "tracking" -> "o progresso dos episódios acompanhados"
+                    else -> "os filmes marcados como assistidos"
+                }
+                AlertDialog(onDismissRequest = { clearAccountSection = null },
+                    title = { Text("Confirmar limpeza") },
+                    text = { Text("Apagar $description deste aparelho? " +
+                        "Esta ação não pode ser desfeita.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            when (section) {
+                                "favorites" -> {
+                                    favorites = emptyList()
+                                    prefs.edit().remove("streaming_favorites").apply()
+                                }
+                                "series" -> {
+                                    trackedSeries = emptySet()
+                                    watchingTitles = emptyMap()
+                                    prefs.edit().remove("anytv_tracking_series")
+                                        .remove("anytv_watching_titles_v1").apply()
+                                }
+                                "tracking" -> {
+                                    watchedEpisodes = emptySet()
+                                    prefs.edit().remove("anytv_watched_episodes").apply()
+                                }
+                                "watched" -> {
+                                    watchedFilms = emptySet()
+                                    watchedMovieTitles = emptyMap()
+                                    prefs.edit().remove("anytv_watched_movies")
+                                        .remove("anytv_watched_movie_titles_v1").apply()
+                                }
+                            }
+                            clearAccountSection = null
+                        }) { Text("Apagar") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { clearAccountSection = null }) {
+                            Text("Cancelar")
+                        }
+                    })
             }
             } // catalogue surface and opaque initial-load layer
         }
