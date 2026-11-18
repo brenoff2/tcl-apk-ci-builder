@@ -4425,10 +4425,11 @@ internal fun TclStreamingScreens(
                                 }
                             }
                         }
-                        // Genre page: ten-image hero above either a detailed vertical list
-                        // or three-column vertical grid. The upstream TMDB sort is applied
-                        // consistently to page 1 and every user-requested next 24 titles.
-                        if (!homeLibrary && selected == null && selectedHomeGenre != 0) {
+                        // Genre list/cinema branch only. In sections mode, fall through
+                        // to the shared previewShelves renderer in the final else.
+                        // Otherwise the hero renders but every editorial rail disappears.
+                        if (!homeLibrary && selected == null && selectedHomeGenre != 0 &&
+                            (!genreSectionsMode || selectedHomeGenre == ANYTV_CINEMA_FILTER)) {
                             val genreKey = if (selectedHomeGenre == ANYTV_CINEMA_FILTER)
                                 "movie:$ANYTV_CINEMA_FILTER:$genreSort"
                             else "$selectedGenreKind:" +
