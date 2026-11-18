@@ -23,3 +23,12 @@ Continue approved DEV shared drawer/account UI. Preserve main, Worker/D1, TV com
 - SQLite `anytv`: NOT_VERIFIED in this turn; previous reported permission denial. Do not assert persisted.
 - OpenViking task `8417856e-c876-4cce-8a52-e64414134ee5`: PENDING per user; live status NOT_VERIFIED.
 - GitHub STATUS baseline reported commit `ec7bff77f6dcc82fe1b9b2c9ee34609b693b4124`; this independent handoff records the later evidence. Canonical STATUS was not edited in this action.
+
+## Continuation — surgical DEV corrections and independent readback
+- P0 job 135008833596, run 44362912479: `completed/success` verified via GitHub connector (not a substitute for Android build/QA).
+- Corrected signed contract at `scripts/tests/test_streaming_screens_contract.py`: `31a9aaeca82942266febeed679832d5fe08e097f`; explicitly accepts immutable `val` and mutable `var inventoryVerified` while requiring the verified app-selection gate.
+- Compiled-source composition: `scripts/apply_tcl_v22.py` now copies the existing `overrides/LgWebOsAppsBar.kt` into the prepared Android source (`2a0d4eae0dbd7d5a0848f01da8e84ddf61bf5dc2`). LG-specific `scripts/apply_anytv_lg_apps.py` now accepts it **only when identical to the canonical source** (`50fe489392c73fa3f3919e4b123c97141f06ba23`), otherwise fails closed.
+- GitHub readback of all three changed files at the last commit was confirmed. No Kotlin/Gradle run was executed or found for that commit via available commit-status queries: `NOT_TESTED`. No signed code138 artifact exists from the prior failed runs, and there is NO authorization to use the legacy OTA-publishing signed workflow as a shortcut.
+- SQLite multiproject checkpoint `anytv`: updated with optimistic version `37 -> 38` and readback matching operation `anytv-code138-root-cause-patches-20261118`, `BLOCKED`, evidence SHA `25e4ca4b9d6272763332e17bbac1464c49f137dcedc73d7dafea7c4c9426b052`.
+- OpenViking task `8417856e-c876-4cce-8a52-e64414134ee5`: status still not confirmed; keyword search was unsupported by configured vector backend, semantic attempt failed. No memory write claimed.
+- Next: identify and run only unsigned QA and **manual signed-candidate without OTA**; inspect Gradle compile logs and artifact checks, validate `com.tclremote.livre.v2`, code138, V2 certificate and SHA, then user-driven manual install and physical QA. Retain published OTA code137 and main/Worker/D1/TV/companion/cert2026 untouched.
