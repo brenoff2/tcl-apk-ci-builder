@@ -647,7 +647,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('@Composable\ninternal fun TclStreamingScreens(', self.screen)
         self.assertNotIn('@Composable\n/** Same one-row navigation', self.screen)
         self.assertIn('onMenu = { menuOpen = true }', self.screen)
-        self.assertIn('AnyTvCompactChip("Filmes", homeContentType == "movie")', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", homeContentType != "tv")', self.screen)
         self.assertIn('"catalogue" -> {', self.screen)
         self.assertIn('"favorites", "watched", "watching" -> {', self.screen)
         self.assertIn('librarySection = when (route)', self.screen)
@@ -717,7 +717,7 @@ class StreamingScreens(unittest.TestCase):
             '"Favoritos"', '"Assistidos"', '"Minhas séries"',
             '"Ajuda"', '"Configurações"',
             '"favorites", "watched", "watching" -> {',
-            'AnyTvCompactChip("Filmes", homeContentType == "movie")',
+            'AnyTvCompactChip("Filmes", homeContentType != "tv")',
         ):
             self.assertIn(fragment, self.screen)
         self.assertIn('OfficialTvIcon(app, 52.dp)', self.screen)
@@ -874,10 +874,10 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('successfulRequests == 0', self.screen)
 
     def test_media_chips_both_active_by_default_and_off_independently(self):
-        self.assertIn('contentType != "tv"', self.screen)
-        self.assertIn('contentType != "movie"', self.screen)
-        self.assertIn('if (contentType == "all") "tv" else "all"', self.screen)
-        self.assertIn('if (contentType == "all") "movie" else "all"', self.screen)
+        self.assertIn('homeContentType != "tv"', self.screen)
+        self.assertIn('homeContentType != "movie"', self.screen)
+        self.assertIn('if (homeContentType == "all") "tv" else "all"', self.screen)
+        self.assertIn('if (homeContentType == "all") "movie" else "all"', self.screen)
 
     def test_anime_uses_japanese_animation_not_generic_animation(self):
         self.assertIn('ANYTV_ANIME_FILTER = -2', self.screen)
