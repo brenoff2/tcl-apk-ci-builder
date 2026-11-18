@@ -1,5 +1,8 @@
 name: AnyTV V2 | Publish verified code138 unified-menu OTA (manual owner authorization)
 on:
+  push:
+    branches: ['feat/anytv-p0-device-proof-verifier-20261020']
+    paths: ['.github/workflows/anytv-menu-code138-ota-publish.yml']
   workflow_dispatch:
 permissions:
   contents: write
