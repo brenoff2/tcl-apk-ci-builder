@@ -149,6 +149,23 @@ private fun anyTvBackfillEditorial(
     return backed.take(target)
 }
 private const val ANYTV_LIST_BATCH = 24
+private const val ANYTV_HOME_GENRE_TARGET = 40
+// Only Home genre rails: weekly titles first, 20 movies + 20 series
+// when available, then use genuine titles of the other media type.
+private fun anyTvHomeGenreHighlights(
+    weeklyMovies: List<StreamingTitle>, weeklySeries: List<StreamingTitle>,
+    genreMovies: List<StreamingTitle>, genreSeries: List<StreamingTitle>
+): List<StreamingTitle> {
+    fun qualified(media: String, weekly: List<StreamingTitle>,
+                  genre: List<StreamingTitle>) = (weekly + genre)
+        .filter { it.media == media && it.id > 0 && it.name.isNotBlank() }
+        .distinctBy { "${it.media}:${it.id}" }
+    val films = qualified("movie", weeklyMovies, genreMovies)
+    val shows = qualified("tv", weeklySeries, genreSeries)
+    return (films.take(20) + shows.take(20) +
+        films.drop(20) + shows.drop(20))
+        .distinctBy { "${it.media}:${it.id}" }.take(ANYTV_HOME_GENRE_TARGET)
+}
 private const val ANYTV_EDITORIAL_LIMIT = 50
 /**
  * Editorial candidate ranking; the upstream feed proposes candidates but does not
@@ -2074,6 +2091,7 @@ internal fun TclStreamingScreens(
     var preferredGenreIds by remember { mutableStateOf(initialGenreIds) }
     var editingGenreIds by remember { mutableStateOf(initialGenreIds) }
     val genreShelves = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
+    val homeGenreHighlightPools = remember { mutableStateMapOf<String, List<StreamingTitle>>() }
     val genrePage = remember { mutableStateMapOf<String, Int>() }
     val genreMore = remember { mutableStateMapOf<String, Boolean>() }
     val genreLoading = remember { mutableStateMapOf<String, Boolean>() }
@@ -2597,6 +2615,31 @@ internal fun TclStreamingScreens(
         }
     }
 
+    // Extend only Home's genre candidate pools beyond a single discovery page.
+    LaunchedEffect(filterGenreIds, allMovieGenres, tvGenres, token) {
+        for (selectedId in filterGenreIds) {
+            for (kind in listOf("movie", "tv")) {
+                val resolved = anyTvResolvedGenre(selectedId, kind, allMovieGenres, tvGenres)
+                if (resolved <= 0) continue
+                val key = "$kind:$resolved"
+                if (key in homeGenreHighlightPools) continue
+                val collected = mutableListOf<StreamingTitle>()
+                for (sourcePage in 1..3) {
+                    val result = try {
+                        StreamingCatalog.discoveryGenrePage(resolved, kind, sourcePage, "popular")
+                    } catch (error: java.util.concurrent.CancellationException) {
+                        throw error
+                    } catch (error: Exception) {
+                        break
+                    }
+                    collected.addAll(result.titles.filter { it.media == kind })
+                    if (collected.distinctBy { it.id }.size >= 24 || !result.more) break
+                }
+                if (collected.isNotEmpty()) homeGenreHighlightPools[key] =
+                    collected.distinctBy { it.id }
+            }
+        }
+    }
     LaunchedEffect(selectedHomeGenre, homeContentType, genreSort, genreFirstPageRetry) {
         if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
             val key = "movie:$ANYTV_CINEMA_FILTER:$genreSort"
@@ -3615,12 +3658,26 @@ internal fun TclStreamingScreens(
                                     val kinds = listOf("movie", "tv").filter {
                                         homeContentType == "all" || homeContentType == it
                                     }
-                                    val titles = kinds.flatMap { kind ->
-                                        val resolved = anyTvResolvedGenre(
-                                            id, kind, allMovieGenres, tvGenres)
-                                        if (resolved > 0) genreShelves["$kind:$resolved"].orEmpty()
-                                        else emptyList()
-                                    }.distinctBy { "${it.media}:${it.id}" }
+                                    val movieId = if ("movie" in kinds)
+                                        anyTvResolvedGenre(id, "movie", allMovieGenres, tvGenres)
+                                    else 0
+                                    val tvId = if ("tv" in kinds)
+                                        anyTvResolvedGenre(id, "tv", allMovieGenres, tvGenres)
+                                    else 0
+                                    val movies = if (movieId > 0)
+                                        homeGenreHighlightPools["movie:$movieId"].orEmpty() +
+                                            genreShelves["movie:$movieId"].orEmpty()
+                                    else emptyList()
+                                    val shows = if (tvId > 0)
+                                        homeGenreHighlightPools["tv:$tvId"].orEmpty() +
+                                            genreShelves["tv:$tvId"].orEmpty()
+                                    else emptyList()
+                                    val titles = anyTvHomeGenreHighlights(
+                                        discoveryShelves["Destaques da semana · Filmes"]
+                                            .orEmpty().filter { id in it.genreIds },
+                                        discoveryShelves["Destaques da semana · Séries"]
+                                            .orEmpty().filter { tvId > 0 && tvId in it.genreIds },
+                                        movies, shows)
                                     if (titles.isNotEmpty()) put("Por gênero: $label", titles)
                                 }
                             } else if (selectedHomeGenre == ANYTV_CINEMA_FILTER) {
@@ -3683,7 +3740,8 @@ internal fun TclStreamingScreens(
                         val ranked = if (homeLibrary) candidates else
                             anyTvCurate(candidates, heading, editorialInterests, watchedFilms,
                                 ANYTV_EDITORIAL_LIMIT, traktSignals,
-                                genreCatalogue = selected == null && selectedHomeGenre != 0)
+                                genreCatalogue = (selected == null && selectedHomeGenre != 0) ||
+                                    heading.startsWith("Por gênero: "))
                         // Reserve the first posters of each editorial rail for new discoveries.
                         val fresh = ranked.filterNot { "${it.media}:${it.id}" in seenPreview }
                         val arranged = (fresh + ranked).distinctBy { "${it.media}:${it.id}" }
@@ -3737,6 +3795,8 @@ internal fun TclStreamingScreens(
                                             selectedHomeGenre != ANYTV_CINEMA_FILTER) ||
                                         (cinemaIndexReady && title.id !in cinemaIds))
                                 heading.startsWith("Novas temporadas") -> title.media == "tv"
+                                heading.startsWith("Por gênero: ") ->
+                                    title.id > 0 && title.name.isNotBlank()
                                 // Ordinary genre results are already scoped upstream.
                                 selected == null && selectedHomeGenre > 0 -> true
                                 selected == null && selectedHomeGenre == ANYTV_ANIME_FILTER -> true
@@ -3767,10 +3827,15 @@ internal fun TclStreamingScreens(
                         if (homeLibrary || selected != null || selectedHomeGenre != 0) {
                             heading to shelf
                         } else {
-                            // Reserve only cards actually displayed in this rail.
-                            val preview = shelf.asSequence().filter { title ->
+                            val unseen = shelf.filter { title ->
                                 "${title.media}:${title.id}" !in previewSeen
-                            }.take(ANYTV_EDITORIAL_LIMIT).toList()
+                            }
+                            // Fill genre rails from their own titles after earlier rails,
+                            // avoiding the old 5-card outcome. Never duplicate within a rail.
+                            val preview = if (heading.startsWith("Por gênero: "))
+                                (unseen + shelf).distinctBy { "${it.media}:${it.id}" }
+                                    .take(ANYTV_HOME_GENRE_TARGET)
+                            else unseen.take(ANYTV_EDITORIAL_LIMIT)
                             preview.forEach { previewSeen.add("${it.media}:${it.id}") }
                             heading to preview
                         }
