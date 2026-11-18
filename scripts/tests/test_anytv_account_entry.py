@@ -141,9 +141,14 @@ class GoogleOAuthIntegrationContract(unittest.TestCase):
         home = (ROOT / "overrides/TclApprovedHomeScreen.kt").read_text(encoding="utf-8")
         self.assertIn('CompositionLocalProvider(LocalAnyTvOpenAccount provides { showAccount = true })', account_flow)
         self.assertNotIn('modifier = Modifier.align(Alignment.TopEnd)', account_flow)
-        self.assertIn('TclHeaderAction(Icons.Filled.AccountCircle, "Minha Conta", TclText, onAccount)', home)
-        self.assertLess(home.index('TclHeaderAction(Icons.Filled.PowerSettingsNew'), home.index('TclHeaderAction(Icons.Filled.AccountCircle'))
-        self.assertLess(home.index('TclHeaderAction(Icons.Filled.AccountCircle'), home.index('TclHeaderAction(Icons.Filled.Cast'))
+        # The remote header now exposes the one global drawer; its account
+        # route delegates to the same authenticated CompositionLocal gateway.
+        streaming = (ROOT / "overrides/TclStreamingScreens.kt").read_text(encoding="utf-8")
+        self.assertIn('TclHeaderAction(Icons.Filled.Menu, "Abrir menu do AnyTV"', home)
+        self.assertIn('globalNavRequest += 1', home)
+        self.assertIn('"account" to "Minha conta"', streaming)
+        self.assertIn('val openAccountSession = LocalAnyTvOpenAccount.current', streaming)
+        self.assertIn('onAuth = openAccountSession', streaming)
         self.assertIn('runpy.run_path("scripts/apply_anytv_google_login.py"', build)
 
 
