@@ -3658,7 +3658,11 @@ internal fun TclStreamingScreens(
                         selected != null || selectedHomeGenre != 0) animeSeparatedShelves else
                         linkedMapOf<String, List<StreamingTitle>>().apply {
                             animeSeparatedShelves.forEach { (heading, candidates) ->
-                                val confirmed = candidates.filter { item ->
+                                // Home's "Por gênero" shortcuts are general TMDB discovery,
+                                // not provider-only shelves. Do not silently intersect them
+                                // with subscriptions selected for streaming recommendations.
+                                val confirmed = if (heading.startsWith("Por gênero: "))
+                                    candidates else candidates.filter { item ->
                                     val offers = offerCache["${item.media}:${item.id}"].orEmpty()
                                     StreamingCatalog.matchesSelectedSubscription(
                                         offers.firstOrNull { offer ->
