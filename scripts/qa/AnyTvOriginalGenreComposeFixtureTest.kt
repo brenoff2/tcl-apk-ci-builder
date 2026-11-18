@@ -158,6 +158,10 @@ class AnyTvOriginalGenreComposeFixtureTest {
         val scratch = Files.createTempDirectory("anytv-real-compose-fixture-").toFile()
         try {
             root.set(null, scratch)
+            // RED: selected subscriptions must not erase TMDB genre shortcuts.
+            val appPrefs = org.robolectric.RuntimeEnvironment.getApplication()
+                .getSharedPreferences("anytv_streaming_catalog", android.content.Context.MODE_PRIVATE)
+            appPrefs.edit().putString("anytv_my_streamings", "Netflix").commit()
             compose.setContent {
                 TclStreamingScreens(
                     apps = emptyList(),
@@ -367,6 +371,18 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     sectionCount["Lançamentos · Filmes"])
                 assertEquals("$label: 40 real recent genre TV series", 40,
                     sectionCount["Lançamentos · Séries"])
+                if (label == "Drama") {
+                    compose.onAllNodesWithText("Todos").onFirst().performClick()
+                    compose.waitForIdle()
+                    compose.onAllNodes(hasScrollToIndexAction()).onFirst()
+                        .performScrollToNode(hasText("Por gênero: Drama"))
+                    compose.waitForIdle()
+                    assertTrue("Home Por gênero lost TMDB Drama titles due to subscription filtering",
+                        compose.onAllNodesWithText("QA 18 filme 0")
+                            .fetchSemanticsNodes().isNotEmpty())
+                    compose.onAllNodesWithText("Drama").onFirst().performClick()
+                    compose.waitForIdle()
+                }
                 println("ANYTV_GENRE_EDITORIAL_DEPTH label=$label " +
                     "movie=60 tv=60 maxPerSection=40 sections=$sectionPayload")
                 assertEquals("$label: cannot invent theatrical screenings", 0,
@@ -582,6 +598,9 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 failedGenres.isEmpty())
         } finally {
             root.set(null, prior)
+            org.robolectric.RuntimeEnvironment.getApplication()
+                .getSharedPreferences("anytv_streaming_catalog", android.content.Context.MODE_PRIVATE)
+                .edit().remove("anytv_my_streamings").commit()
             scratch.deleteRecursively()
         }
     }
