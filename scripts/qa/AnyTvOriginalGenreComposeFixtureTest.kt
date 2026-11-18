@@ -108,6 +108,10 @@ class AnyTvOriginalGenreComposeFixtureTest {
                             """{"genres":[{"id":18,"name":"Drama"},{"id":28,"name":"Ação"},{"id":35,"name":"Comédia"},{"id":99,"name":"Documentário"}]}"""
                         route.startsWith("genre/tv/list") ->
                             """{"genres":[{"id":18,"name":"Drama"},{"id":10759,"name":"Ação"},{"id":35,"name":"Comédia"},{"id":99,"name":"Documentário"}]}"""
+                        // Home Ação has 20 valid source titles per page from
+                        // initial load, before the separate Drama retry scenario.
+                        route.startsWith("discover/") && route.contains("with_genres=28") ->
+                            fixtureRecentTitles(route)
                         serveRecentGenreTitles && route.startsWith("discover/") &&
                             route.contains("with_genres=") -> fixtureRecentTitles(route)
                         serveGenreMiniseries && route.startsWith("tv/") &&
@@ -375,10 +379,10 @@ class AnyTvOriginalGenreComposeFixtureTest {
                     compose.onAllNodesWithText("Todos").onFirst().performClick()
                     compose.waitForIdle()
                     compose.onAllNodes(hasScrollToIndexAction()).onFirst()
-                        .performScrollToNode(hasText("Por gênero: Drama"))
+                        .performScrollToNode(hasText("Por gênero: Ação"))
                     compose.waitForIdle()
-                    assertTrue("Home Por gênero lost TMDB Drama titles due to subscription filtering",
-                        compose.onAllNodesWithText("QA 18 filme 0")
+                    assertTrue("Home Por gênero lost verified TMDB Action titles to subscription filtering",
+                        compose.onAllNodesWithText("QA 28 filme 0")
                             .fetchSemanticsNodes().isNotEmpty())
                     compose.onAllNodesWithText("Drama").onFirst().performClick()
                     compose.waitForIdle()
