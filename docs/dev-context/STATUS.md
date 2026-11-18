@@ -1,3 +1,9 @@
+## 18/11/2026 — Variantes de inventário TCL e gate da candidata code138 (atualização)
+
+- O teste `test_real_installed_apps_are_the_source` originalmente presumia inventário ADB verificado na variante padrão, mas `TclInstalledApps.kt` padrão usa `allApps` reais do companion; a variante ADB incorpora `inventoryVerified` pelo script `apply_anytv_tcl_adb.py`. Contrato DEV commit `92fc08f37b42d9e1fdbabd39c1e1ed698f2c6d2b` exige proveniência de inventário em AMBAS as variantes e confirma `initialRoute`; não altera o código Android nem desativa os gates ADB. Run unsigned anterior `44362606852` falhou apenas no contrato de variante antes da compilação; novo run `44362913089` e signed code138 `44362912413` iniciados, GREEN ainda não comprovado.
+- A execução de smoke P0 `44362606578` terminou SUCCESS na versão imediatamente anterior da DEV; nova execução `44362912479` pendente. Signed code138 **não substitui** `updates/android/v2/current.apk`, e a release pública permanece code137 até prova e autorização. A falha isolada do compilador unsigned anterior em tipos LG (`LgAppIcon/LgWebOsApp`) ainda exige confirmação na variante assinada, não contornar incluindo implementações falsas.
+- Ainda falta QA física do controle remoto/menu, operações locais de limpeza e comportamento de sessão autenticada, e endpoint real de apagar conta não foi autorizado/implementado. Macro 7/11 (63%).
+
 ## 18/11/2026 — Menu lateral único e Minha conta DEV, sem OTA
 
 - **Pedido UX aprovado**: um drawer agrupado exatamente em (1) Minha conta / Controle remoto / Filmes e séries, (2) Favoritos / Assistidos / Minhas séries, (3) Ajuda / Configurações; versão instalada pequena e cinza no rodapé. Cabeçalho compacto com botão Menu, título contextual, Buscar e Filtrar; filtros Filmes/Séries mantidos na área do catálogo. Não criar opções de menu Gêneros, Streamings ou Explorar.
