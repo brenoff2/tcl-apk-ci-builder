@@ -1186,7 +1186,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('genreSources.forEach { (_, titles) ->', self.screen)
         self.assertIn('titles.getOrNull(index)?.let { add(it) }', self.screen)
         self.assertIn('val genreTitles = genreCandidates', self.screen)
-        self.assertIn('kind == "tv" && selectedHomeGenre == ANYTV_CINEMA_FILTER', self.screen)
+        self.assertIn('if (selectedHomeGenre == ANYTV_CINEMA_FILTER) selectedHomeGenre = 0', self.screen)
         self.assertIn('put("Cinema · Em cartaz no Brasil", it)', self.screen)
         self.assertIn('homeContentType == "all" || it == homeContentType', self.screen)
         self.assertIn('val selectedKindId = anyTvResolvedGenre(selectedHomeGenre,', self.screen)
