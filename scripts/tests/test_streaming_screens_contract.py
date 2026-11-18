@@ -999,7 +999,7 @@ class StreamingScreens(unittest.TestCase):
     def test_unified_drawer_routes_and_account_clear_scopes(self):
         nav = self.screen
         for fragment in (
-            'private fun AnyTvUnifiedDrawer(', 'private fun AnyTvAccountPage(',
+            'internal fun AnyTvUnifiedDrawer(', 'private fun AnyTvAccountPage(',
             '"account" to "Minha conta"', '"remote" to "Controle remoto"',
             '"catalogue" to "Filmes e séries"', '"favorites" to "Favoritos"',
             '"watched" to "Assistidos"', '"watching" to "Minhas séries"',
