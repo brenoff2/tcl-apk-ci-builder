@@ -27,18 +27,18 @@ jobs:
         run: |
           set -euo pipefail
           for i in $(seq 1 390); do
-            gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/44231535469 > /tmp/code136-run.json
+            gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/44232063037 > /tmp/code136-run.json
             if jq -e '.status == "completed"' /tmp/code136-run.json >/dev/null; then break; fi
             sleep 10
           done
-          jq -e '.id == 44231535469 and .status == "completed" and .conclusion == "success" and .head_sha == "39139ee8792e66590c218a11e468366b02070589" and .head_branch == "feat/anytv-p0-device-proof-verifier-20261020" and .event == "push"' /tmp/code136-run.json >/dev/null
-          gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/44231535469/artifacts > /tmp/code136-artifacts.json
-          jq -e '[.artifacts[] | select(.name == "anytv-v2-29108-code136-signed-manual-candidate" and .expired == false and .workflow_run.id == 44231535469)] | length == 1' /tmp/code136-artifacts.json >/dev/null
+          jq -e '.id == 44232063037 and .status == "completed" and .conclusion == "success" and .head_sha == "a4c53d9c1e04447202a1bdf3ea7988a676ce4424" and .head_branch == "feat/anytv-p0-device-proof-verifier-20261020" and .event == "push"' /tmp/code136-run.json >/dev/null
+          gh api repos/brenoff2/tcl-apk-ci-builder/actions/runs/44232063037/artifacts > /tmp/code136-artifacts.json
+          jq -e '[.artifacts[] | select(.name == "anytv-v2-29108-code136-signed-manual-candidate" and .expired == false and .workflow_run.id == 44232063037)] | length == 1' /tmp/code136-artifacts.json >/dev/null
           echo ANYTV_CODE136_SIGNED_SOURCE_RUN_PASS
       - name: Download signed APK from exact CI run (no rebuild / resign)
         uses: actions/download-artifact@v4
         with:
-          run-id: 44231535469
+          run-id: 44232063037
           name: anytv-v2-29108-code136-signed-manual-candidate
           github-token: ${{ github.token }}
           path: signed-proof
