@@ -3593,17 +3593,19 @@ internal fun TclStreamingScreens(
                             Icon(Icons.Filled.Search, contentDescription = "Buscar filmes e séries",
                                 modifier = Modifier.size(20.dp))
                         }
-                        AnyTvCompactChip("Filmes", homeContentType == "movie") {
-                            homeContentType = "movie"; homeLibrary = false; accountArea = ""
-                            if (selectedHomeGenre == ANYTV_ANIME_FILTER) selectedHomeGenre = 0
+                        // Independent film/series toggles: both are selected by
+                        // default, preserving the original filtering contract.
+                        AnyTvCompactChip("Filmes", homeContentType != "tv") {
+                            homeContentType = if (homeContentType == "all") "tv" else "all"
+                            homeLibrary = false; accountArea = ""
+                            if (homeContentType == "tv" &&
+                                selectedHomeGenre == ANYTV_CINEMA_FILTER) selectedHomeGenre = 0
                         }
-                        AnyTvCompactChip("Séries", homeContentType == "tv") {
-                            homeContentType = "tv"; homeLibrary = false; accountArea = ""
-                            if (selectedHomeGenre == ANYTV_CINEMA_FILTER) selectedHomeGenre = 0
+                        AnyTvCompactChip("Séries", homeContentType != "movie") {
+                            homeContentType = if (homeContentType == "all") "movie" else "all"
+                            homeLibrary = false; accountArea = ""
                         }
-                        AnyTvCompactChip("Todos", selectedHomeGenre == 0 &&
-                            homeContentType == "all") {
-                            homeContentType = "all";
+                        AnyTvCompactChip("Todos", selectedHomeGenre == 0) {
 
                             selectedHomeGenre = 0; homeLibrary = false
                         }
