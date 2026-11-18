@@ -104,4 +104,11 @@ assert 'applicationId = "com.tclremote.livre"' in gradle.read_text()
 assert "BackHandler(enabled = isConnected && !showKeyboard" in screen.read_text()
 assert "REQUEST_INSTALL_PACKAGES" in manifest.read_text()
 assert "TclUpdateManager.check" in settings.read_text()
+# Shared streaming UI already renders verified LG launcher icons in every phone
+# candidate. Compile the existing canonical LG Composable alongside it; this
+# does not enable LG discovery or alter the TCL transport.
+lg_ui = SRC / "ui/app/LgWebOsAppsBar.kt"
+assert not lg_ui.exists(), "LG_SHARED_COMPONENT_ALREADY_EXISTS"
+copyfile(Path("overrides/LgWebOsAppsBar.kt"), lg_ui)
+
 print("TCL_PHONE_22_BACK_AND_UPDATES_READY")
