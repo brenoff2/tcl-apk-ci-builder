@@ -46,6 +46,9 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.ViewList
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.AccountCircle
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -1824,11 +1827,26 @@ internal fun AnyTvUnifiedDrawer(onClose: () -> Unit, onRoute: (String) -> Unit) 
             )
             routes.forEachIndexed { index, item ->
                 if (index == 3 || index == 6) HorizontalDivider(color = Color.DarkGray)
-                Text(item.second, fontSize = 15.sp, color = Color(0xFFE6E6E9),
-                    modifier = Modifier.fillMaxWidth()
-                        .clip(RoundedCornerShape(9.dp))
-                        .clickable { onRoute(item.first) }
-                        .padding(horizontal = 14.dp, vertical = 12.dp))
+                val icon = when (item.first) {
+                    "account" -> Icons.Filled.AccountCircle
+                    "remote" -> Icons.Filled.Tv
+                    "catalogue" -> Icons.Filled.Home
+                    "favorites" -> Icons.Filled.Favorite
+                    "watched" -> Icons.Filled.CheckCircle
+                    "watching" -> Icons.Filled.PlayCircleFilled
+                    "help" -> Icons.Filled.Info
+                    else -> Icons.Filled.Settings
+                }
+                Row(modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(9.dp))
+                    .clickable { onRoute(item.first) }
+                    .padding(horizontal = 14.dp, vertical = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(icon, contentDescription = null,
+                        tint = Color(0xFFC2C2C7), modifier = Modifier.size(20.dp))
+                    Text(item.second, fontSize = 15.sp, color = Color(0xFFE6E6E9))
+                }
             }
             Spacer(modifier = Modifier.weight(1f))
             HorizontalDivider(color = Color.DarkGray)
