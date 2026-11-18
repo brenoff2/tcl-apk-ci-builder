@@ -859,8 +859,8 @@ class StreamingScreens(unittest.TestCase):
         for text in ('Sua lista está vazia.', 'Você ainda não acompanha nenhuma série.',
                      'Nenhum filme marcado como assistido.'):
             self.assertIn(text, self.screen)
-        self.assertIn('AnyTvCompactChip("Filmes", homeContentType == "movie"', self.screen)
-        self.assertIn('AnyTvCompactChip("Séries", homeContentType == "tv"', self.screen)
+        self.assertIn('AnyTvCompactChip("Filmes", homeContentType != "tv"', self.screen)
+        self.assertIn('AnyTvCompactChip("Séries", homeContentType != "movie"', self.screen)
         self.assertIn('accountArea = ""; showGlobalSearch = true', self.screen)
 
     def test_verified_disney_show_id_with_fallback(self):
