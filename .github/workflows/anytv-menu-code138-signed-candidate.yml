@@ -1,9 +1,9 @@
-name: AnyTV 2.9.110 code138 signed genre candidate (NO OTA)
+name: AnyTV 2.9.110 code138 signed unified menu candidate (NO OTA)
 on:
   push:
     branches: ['feat/anytv-p0-device-proof-verifier-20261020']
     paths:
-      - '.github/workflows/anytv-genre-code138-signed-candidate.yml'
+      - '.github/workflows/anytv-menu-code138-signed-candidate.yml'
       - 'overrides/TclStreamingScreens.kt'
       - 'scripts/qa/AnyTvGenreJvmFixtureTest.kt'
       - 'scripts/qa/AnyTvOriginalGenreComposeFixtureTest.kt'
