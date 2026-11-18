@@ -1849,7 +1849,8 @@ private fun AnyTvUnifiedDrawer(onClose: () -> Unit, onRoute: (String) -> Unit) {
 @Composable
 private fun AnyTvAccountPage(
     route: String, onClose: () -> Unit, onMenu: () -> Unit,
-    onClear: (String) -> Unit, onSettings: (String) -> Unit
+    onClear: (String) -> Unit, onSettings: (String) -> Unit,
+    onAuth: (() -> Unit)?
 ) {
     Column(modifier = Modifier.fillMaxSize()
         .background(MaterialTheme.colorScheme.background)
@@ -1887,8 +1888,12 @@ private fun AnyTvAccountPage(
                 HorizontalDivider()
                 Text("CONTA E PRIVACIDADE", fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Desconectar", fontWeight = FontWeight.SemiBold)
-                Text("Disponível após integrar a sessão de autenticação.",
+                OutlinedButton(onClick = { onAuth?.invoke() },
+                    enabled = onAuth != null) {
+                    Text("Gerenciar sessão / Desconectar")
+                }
+                Text("A saída é feita pelo fluxo de autenticação existente, " +
+                    "somente quando houver sessão verificada.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Apagar minha conta", fontWeight = FontWeight.SemiBold,
@@ -2029,6 +2034,7 @@ internal fun TclStreamingScreens(
     lgLaunchStatus: String? = null
 ) {
     val context = LocalContext.current
+    val openAccountSession = LocalAnyTvOpenAccount.current
     StreamingCatalog.configure(context)
     val prefs = remember(context) {
         context.getSharedPreferences("anytv_streaming_catalog", Context.MODE_PRIVATE)
@@ -4956,6 +4962,7 @@ internal fun TclStreamingScreens(
                 AnyTvAccountPage(route = accountArea,
                     onClose = { accountArea = "" },
                     onMenu = { menuOpen = true },
+                    onAuth = openAccountSession,
                     onClear = { clearAccountSection = it },
                     onSettings = { which ->
                         accountArea = ""
