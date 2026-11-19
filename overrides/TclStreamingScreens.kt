@@ -1863,57 +1863,105 @@ internal fun AnyTvUnifiedDrawer(onClose: () -> Unit, onRoute: (String) -> Unit) 
     }
 }
 
-/** Account controls must never impersonate an unaudited server deletion API. */
+/** A single tap row for account destinations; real actions stay with their owners. */
+@Composable
+private fun AnyTvAccountEntry(
+    title: String, detail: String, onClick: () -> Unit
+) {
+    Row(modifier = Modifier.fillMaxWidth()
+        .clip(RoundedCornerShape(14.dp))
+        .background(Color(0xFF292929))
+        .clickable(onClick = onClick)
+        .padding(horizontal = 15.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                color = Color.White)
+            Text(detail, fontSize = 11.sp,
+                color = Color(0xFFB8B8BE), lineHeight = 15.sp)
+        }
+        Text("›", fontSize = 21.sp, color = Color(0xFFB8B8BE))
+    }
+}
+
+/** Account is a PAGE, not another settings menu or a server-deletion API. */
 @Composable
 private fun AnyTvAccountPage(
     route: String, onClose: () -> Unit, onMenu: () -> Unit,
-    onClear: (String) -> Unit, onSettings: (String) -> Unit,
-    onAuth: (() -> Unit)?
+    onClear: (String) -> Unit, onAuth: (() -> Unit)?,
+    onLibrary: (String) -> Unit, onRemote: () -> Unit,
+    tvName: String, tvConnected: Boolean
 ) {
+    var privacyExpanded by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxSize()
         .background(MaterialTheme.colorScheme.background)
-        .padding(18.dp).verticalScroll(rememberScrollState()),
+        .verticalScroll(rememberScrollState())
+        .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AnyTvStreamNavBar(
-            title = when (route) {
-                "account" -> "Minha conta"
-                "help" -> "Ajuda"
-                else -> "Configurações"
-            },
+            title = if (route == "account") "Minha conta" else "Ajuda",
             filtersActive = false, onMenu = onMenu,
             onSearch = {}, onFilters = {}, showActions = false
         )
-        TextButton(onClick = onClose) { Text("Voltar ao catálogo") }
-        HorizontalDivider()
-        when (route) {
-            "account" -> {
-                Text("Seus dados e sua biblioteca", fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("MINHA BIBLIOTECA", fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = onClose) { Text("← Voltar ao catálogo") }
+        if (route == "account") {
+            Text("Seu espaço no AnyTV", fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold)
+            Text("Biblioteca e dispositivos ficam aqui. Atualização, doação, " +
+                "aparência e preferências continuam em Configurações.",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 17.sp)
+            AnyTvAccountEntry(
+                title = "Gerenciar sessão",
+                detail = "Consultar a conta, entrar com Google ou sair com segurança",
+                onClick = { onAuth?.invoke() }
+            )
+            Text("Minhas TVs", fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(top = 8.dp))
+            AnyTvAccountEntry(
+                title = if (tvConnected) tvName else "Nenhuma TV conectada",
+                detail = if (tvConnected) "TV conectada · Ver controle ou escolher outra TV"
+                    else "Abra o controle para localizar e conectar uma TV",
+                onClick = onRemote
+            )
+            Text("Os dispositivos exibidos são os confirmados nesta sessão. " +
+                "O histórico de TVs só aparecerá quando houver dados verificados.",
+                fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            HorizontalDivider()
+            Text("Minha biblioteca", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            AnyTvAccountEntry("Favoritos", "Filmes e séries que você salvou") {
+                onLibrary("favorites")
+            }
+            AnyTvAccountEntry("Assistidos", "Seu histórico de filmes assistidos") {
+                onLibrary("watched")
+            }
+            AnyTvAccountEntry("Minhas séries", "Séries acompanhadas e episódios") {
+                onLibrary("watching")
+            }
+            HorizontalDivider()
+            Text("Dados e privacidade", fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold)
+            AnyTvAccountEntry(
+                title = if (privacyExpanded) "Ocultar limpeza de dados"
+                    else "Gerenciar dados neste aparelho",
+                detail = "Ações locais com confirmação antes de apagar",
+                onClick = { privacyExpanded = !privacyExpanded }
+            )
+            if (privacyExpanded) {
                 listOf(
                     "favorites" to "Zerar favoritos",
                     "series" to "Zerar séries",
                     "tracking" to "Zerar acompanhamento",
                     "watched" to "Zerar assistidos"
-                ).forEach { item ->
-                    OutlinedButton(onClick = { onClear(item.first) },
+                ).forEach { (key, label) ->
+                    OutlinedButton(onClick = { onClear(key) },
                         modifier = Modifier.fillMaxWidth()) {
-                        Text(item.second, modifier = Modifier.weight(1f),
+                        Text(label, modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Start)
                     }
                 }
-                HorizontalDivider()
-                Text("CONTA E PRIVACIDADE", fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedButton(onClick = { onAuth?.invoke() },
-                    enabled = onAuth != null) {
-                    Text("Gerenciar sessão / Desconectar")
-                }
-                Text("A saída é feita pelo fluxo de autenticação existente, " +
-                    "somente quando houver sessão verificada.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Text("Apagar minha conta", fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.error)
                 Text("A exclusão definitiva exige uma operação verificada no servidor. " +
@@ -1921,21 +1969,18 @@ private fun AnyTvAccountPage(
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            "help" -> {
-                Text("Ajuda com o AnyTV", fontWeight = FontWeight.SemiBold)
-                Text("Abra Filmes e séries no menu para voltar ao catálogo. " +
-                    "Use a faixa de streamings, a busca e os filtros do cabeçalho.",
-                    fontSize = 13.sp)
-            }
-            else -> {
-                Text("Preferências", fontWeight = FontWeight.SemiBold)
-                OutlinedButton(onClick = { onSettings("streamings") }) {
-                    Text("Streamings e filtros")
-                }
-                OutlinedButton(onClick = { onSettings("genres") }) {
-                    Text("Gêneros favoritos da Home")
-                }
-            }
+        } else {
+            Text("Ajuda com o AnyTV", fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp)
+            Text("Use o menu para navegar entre Controle remoto, Filmes e séries, " +
+                "Favoritos e Configurações.",
+                fontSize = 13.sp)
+            AnyTvAccountEntry("Conectar uma televisão",
+                "Abra o controle para localizar, selecionar e conectar uma TV",
+                onClick = onRemote)
+            Text("As configurações gerais e a atualização do aplicativo " +
+                "estão em Configurações, no menu compartilhado.",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -5000,17 +5045,18 @@ internal fun TclStreamingScreens(
                     onMenu = { menuOpen = true },
                     onAuth = openAccountSession,
                     onClear = { clearAccountSection = it },
-                    onSettings = { which ->
+                    onLibrary = { route ->
                         accountArea = ""
-                        if (which == "streamings") {
-                            editingMyServices = myServices
-                            editingFilterGenres = filterGenreIds
-                            showMyStreamingSettings = true
-                        } else {
-                            editingGenreIds = preferredGenreIds
-                            showGenreSettings = true
+                        selected = null; homeLibrary = true
+                        librarySection = when (route) {
+                            "watched" -> "watched"
+                            "watching" -> "watching"
+                            else -> "saved"
                         }
-                    })
+                    },
+                    onRemote = onDismiss,
+                    tvName = tvName,
+                    tvConnected = host.isNotBlank() && tvName.isNotBlank())
             }
             if (menuOpen) {
                 AnyTvUnifiedDrawer(onClose = { menuOpen = false },
