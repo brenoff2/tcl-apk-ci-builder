@@ -23,7 +23,9 @@ class RemoteMenuRouteTests(unittest.TestCase):
     def test_remote_menu_route_reaches_real_streaming_surface(self):
         bar = BAR.read_text(encoding="utf-8")
         self.assertIn('LaunchedEffect(globalNavRequest) {', bar)
-        self.assertIn('if (globalNavRequest > 0) showStreaming = true', bar)
+        self.assertIn('if (globalNavRequest > 0) {', bar)
+        self.assertIn('streamingEntryRoute = globalNavRoute', bar)
+        self.assertIn('showStreaming = true', bar)
         self.assertIn('initialRoute = streamingEntryRoute,', bar)
         self.assertIn('streamingEntryRoute = globalNavRoute', bar)
         self.assertIn('streamingEntryRoute = "catalogue"', bar)
