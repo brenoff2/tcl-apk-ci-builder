@@ -202,10 +202,10 @@ class AnyTvOriginalGenreComposeFixtureTest {
             assertTrue("Account cleanup must be cancellable without leaving profile",
                 compose.onAllNodesWithText("Zerar favoritos")
                     .fetchSemanticsNodes().isNotEmpty())
-            // Privacy was scrolled to the bottom. Reveal the profile navbar
-            // before opening its drawer, never tap the hidden catalogue navbar.
+            // The profile navbar is fixed above the independently scrolling
+            // privacy page; its Menu remains visible even after scrolling.
             compose.onAllNodesWithContentDescription("Abrir menu do AnyTV")
-                .onLast().performScrollTo().performClick()
+                .onLast().performClick()
             compose.waitUntil(10_000) {
                 compose.onAllNodesWithText("Filmes e séries")
                     .fetchSemanticsNodes().isNotEmpty()
