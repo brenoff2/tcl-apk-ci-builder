@@ -48,6 +48,23 @@ class AnyTvUxConsistency(unittest.TestCase):
         self.assertIn('allApps.sortedWith(', tv)
         self.assertIn('prefs.edit().putString("anytv_catalog_hidden_installed"', tv)
 
+    def test_native_discovery_polish_preserves_protocol(self):
+        script = (ROOT / "scripts/apply_anytv_internal_pages_ux.py").read_text(encoding="utf-8")
+        for fragment in ('DeviceDiscoveryScreen.kt', 'SettingsScreen.kt',
+                         'Color(0xFFE9003B)', 'contentColor = Color.White',
+                         'checkedTrackColor = Color(0xFFE9003B)',
+                         'TV action targets', 'raise RuntimeError'):
+            self.assertIn(fragment, script)
+        self.assertNotIn('onConnect(device.id) =', script)
+        self.assertNotIn('onSubmitPairingCode =', script)
+
+    def test_session_dialog_retains_real_gateway_and_graphite(self):
+        session = (ROOT / "overrides/AnyTvAccountFlow.kt").read_text(encoding="utf-8")
+        self.assertIn('containerColor = androidx.compose.ui.graphics.Color(0xFF292929)', session)
+        self.assertIn('gateway.restoreSession()', session)
+        self.assertIn('gateway.signOut()', session)
+        self.assertIn('gateway.signInWithGoogle()', session)
+
     def test_native_settings_and_updater_remain_single_source(self):
         self.assertIn('Settings group renderer changed', self.settings)
         self.assertIn('AppBackdrop', self.settings)
