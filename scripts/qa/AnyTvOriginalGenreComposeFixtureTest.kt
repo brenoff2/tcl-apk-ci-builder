@@ -9,6 +9,9 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -189,6 +192,10 @@ class AnyTvOriginalGenreComposeFixtureTest {
             // Destructive actions now live under an explicit privacy disclosure.
             compose.onAllNodesWithText("Gerenciar dados neste aparelho")
                 .onFirst().performClick()
+            // The new privacy actions live below the initial viewport;
+            // scroll the real account page as a user must do.
+            compose.onRoot().performTouchInput { swipeUp() }
+            compose.waitForIdle()
             compose.onAllNodesWithText("Zerar favoritos").onFirst().performClick()
             compose.onAllNodesWithText("Cancelar").onFirst().performClick()
             assertTrue("Account cleanup must be cancellable without leaving profile",
