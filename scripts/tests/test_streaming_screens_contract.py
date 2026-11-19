@@ -715,7 +715,7 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('Text("Ver ›", fontSize = 12.sp', self.screen)
         self.assertLess(
             self.apps.index('OfficialTvIcon(app = app, size = 52.dp)'),
-            self.apps.index('AnyTvHomeFilmBanner(onOpenStreaming = { showStreaming = true })')
+            self.apps.index('AnyTvHomeFilmBanner(onOpenStreaming = {')
         )
 
     def test_navigation_is_compact_and_library_recoverable(self):
