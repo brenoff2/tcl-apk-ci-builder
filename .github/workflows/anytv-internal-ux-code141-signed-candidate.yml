@@ -11,6 +11,7 @@ on:
       - 'scripts/apply_anytv_internal_pages_ux.py'
       - 'scripts/apply_anytv_tcl_adb.py'
       - 'scripts/tests/test_anytv_ux_consistency.py'
+      - 'scripts/qa/AnyTvOriginalGenreComposeFixtureTest.kt'
       - 'overrides/TclInstalledApps.kt'
       - 'overrides/TclInstalledApps.kt'
       - 'scripts/tests/test_anytv_ux_regression.py'
