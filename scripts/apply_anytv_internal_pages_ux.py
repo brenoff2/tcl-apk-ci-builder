@@ -43,30 +43,12 @@ source = replace_exact(
     "                                contentColor = Color.White),",
     "red connect action",
 )
-source = replace_exact(
-    source,
-    "                            modifier = Modifier.height(34.dp)\n"
-    "                        ) {\n"
-    "                            Text(\n"
-    '                                if (device.isPaired) "Reconnect" else "Connect",',
-    "                            modifier = Modifier.height(44.dp)\n"
-    "                        ) {\n"
-    "                            Text(\n"
-    '                                if (device.isPaired) "Reconnect" else "Connect",',
-    "larger connect action target",
-)
-source = replace_exact(
-    source,
-    "                            modifier = Modifier.height(34.dp)\n"
-    "                        ) {\n"
-    "                            Icon(\n"
-    "                                Icons.Filled.LinkOff,",
-    "                            modifier = Modifier.height(44.dp)\n"
-    "                        ) {\n"
-    "                            Icon(\n"
-    "                                Icons.Filled.LinkOff,",
-    "larger disconnect action target",
-)
+# These are the two device action heights (Connect and Disconnect).
+# Match structure rather than user-facing text: localization runs earlier.
+old_height = "modifier = Modifier.height(34.dp)"
+if source.count(old_height) != 2:
+    raise RuntimeError("Expected both native TV action targets")
+source = source.replace(old_height, "modifier = Modifier.height(44.dp)")
 discovery.write_text(source, encoding="utf-8")
 
 settings = UI / "SettingsScreen.kt"
