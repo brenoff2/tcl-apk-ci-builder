@@ -288,7 +288,8 @@ fun TclApprovedHomeScreen(
                         modifier = Modifier.fillMaxWidth(),
                         globalNavRequest = globalNavRequest,
                         globalNavRoute = globalNavRoute,
-                        onOpenAppSettings = onOpenSettings
+                        onOpenAppSettings = onOpenSettings,
+                        onOpenDeviceDiscovery = onOpenDiscovery
                     )
 
                     Column(
