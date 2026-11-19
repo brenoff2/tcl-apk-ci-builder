@@ -9,9 +9,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.hasScrollAction
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.performScrollTo
 import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.net.HttpURLConnection
@@ -191,13 +189,15 @@ class AnyTvOriginalGenreComposeFixtureTest {
             compose.onAllNodesWithText("Minha conta").onFirst().performClick()
             // Destructive actions now live under an explicit privacy disclosure.
             compose.onAllNodesWithText("Gerenciar dados neste aparelho")
-                .onFirst().performClick()
-            // The new privacy actions live below the initial viewport;
-            // scroll the real account page as a user must do.
-            compose.onAllNodes(hasScrollAction()).onLast()
-                .performTouchInput { swipeUp() }
-            compose.waitForIdle()
-            compose.onAllNodesWithText("Zerar favoritos").onFirst().performClick()
+                .onFirst().performScrollTo().performClick()
+            // The label change proves that the actual privacy disclosure opened.
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText("Ocultar limpeza de dados")
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
+            // Scroll the actual target into view before injecting touch events.
+            compose.onAllNodesWithText("Zerar favoritos")
+                .onFirst().performScrollTo().performClick()
             compose.onAllNodesWithText("Cancelar").onFirst().performClick()
             assertTrue("Account cleanup must be cancellable without leaving profile",
                 compose.onAllNodesWithText("Zerar favoritos")
