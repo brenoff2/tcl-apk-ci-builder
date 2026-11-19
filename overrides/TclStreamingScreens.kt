@@ -2062,7 +2062,9 @@ internal fun TclStreamingScreens(
     // The client never requires user-supplied API credentials.
     val token = "backend"
     var showCredits by remember { mutableStateOf(false) }
-    var menuOpen by remember { mutableStateOf(false) }
+    var menuOpen by remember(initialRoute) {
+        mutableStateOf(initialRoute == "menu")
+    }
     var accountArea by remember(initialRoute) {
         mutableStateOf(initialRoute.takeIf {
             it == "account" || it == "help" || it == "settings"
