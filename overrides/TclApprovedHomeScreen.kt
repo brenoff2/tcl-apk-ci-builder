@@ -287,7 +287,8 @@ fun TclApprovedHomeScreen(
                         onKeyboardEnter = { if (isConnected) onKeyboardEnter() else onOpenDiscovery() },
                         modifier = Modifier.fillMaxWidth(),
                         globalNavRequest = globalNavRequest,
-                        globalNavRoute = globalNavRoute
+                        globalNavRoute = globalNavRoute,
+                        onOpenAppSettings = onOpenSettings
                     )
 
                     Column(
