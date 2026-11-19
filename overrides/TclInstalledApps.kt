@@ -535,18 +535,23 @@ fun TclInstalledAppsBar(
     if (showPair) {
         AlertDialog(
             onDismissRequest = { showPair = false },
-            title = { Text("Aplicativos instalados na TCL") },
+            title = { Text("Conectar aplicativos da TV", fontWeight = FontWeight.SemiBold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Na TV, abra Controle TCL TV e encontre o código de 8 dígitos. " +
-                            "Ative a conexão pelo próprio complemento na TV e conecte ambos à mesma rede.",
-                        fontSize = 13.sp
-                    )
+                    Text("Vinculação segura", fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold)
+                    Text("Na televisão, abra Controle TCL TV e localize o código " +
+                        "de 8 dígitos. Celular e TV devem estar na mesma rede.",
+                        fontSize = 13.sp, lineHeight = 18.sp)
+                    Text("O código vincula somente a leitura de aplicativos " +
+                        "dessa TV. O pareamento existente é preservado.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 11.sp)
+
                     OutlinedTextField(
                         value = codeEntry,
                         onValueChange = { text -> codeEntry = text.filter { it.isDigit() }.take(8) },
-                        label = { Text("Código que aparece na TV") },
+                        label = { Text("Código de 8 dígitos") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true
                     )
@@ -597,11 +602,15 @@ fun TclInstalledAppsBar(
                 shape = RoundedCornerShape(22.dp),
                 color = MaterialTheme.colorScheme.surface
             ) {
-                Column(modifier = Modifier.padding(15.dp),
-                    verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    Text("Somente aplicativos realmente instalados na TCL aparecem no controle remoto.",
+                Column(modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                    Text("Selecione os aplicativos que aparecerão no controle remoto. " +
+                        "A lista contém somente aplicativos confirmados pela TCL.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                    Text("${draft.count { it in present }} selecionados de ${displayed.size}",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                     LazyColumn(modifier = Modifier.heightIn(max = 440.dp)) {
                         items(displayed, key = { it.packageName }) { item ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
