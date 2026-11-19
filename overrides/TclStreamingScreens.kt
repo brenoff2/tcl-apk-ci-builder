@@ -1898,7 +1898,6 @@ private fun AnyTvAccountPage(
     var privacyExpanded by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxSize()
         .background(MaterialTheme.colorScheme.background)
-        .verticalScroll(rememberScrollState())
         .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         AnyTvStreamNavBar(
@@ -1907,6 +1906,10 @@ private fun AnyTvAccountPage(
             onSearch = {}, onFilters = {}, showActions = false
         )
         TextButton(onClick = onClose) { Text("← Voltar ao catálogo") }
+        // Keep navigation visible while the profile's longer content scrolls.
+        Column(modifier = Modifier.weight(1f)
+            .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (route == "account") {
             Text("Seu espaço no AnyTV", fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold)
@@ -1983,6 +1986,7 @@ private fun AnyTvAccountPage(
                 "estão em Configurações, no menu compartilhado.",
                 fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        } // Account content scrolls independently of the fixed navbar.
     }
 }
 
