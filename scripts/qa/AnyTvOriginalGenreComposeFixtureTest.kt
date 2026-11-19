@@ -202,8 +202,9 @@ class AnyTvOriginalGenreComposeFixtureTest {
             assertTrue("Account cleanup must be cancellable without leaving profile",
                 compose.onAllNodesWithText("Zerar favoritos")
                     .fetchSemanticsNodes().isNotEmpty())
+            // The profile page overlays the catalogue; use its visible Menu icon.
             compose.onAllNodesWithContentDescription("Abrir menu do AnyTV")
-                .onFirst().performClick()
+                .onLast().performClick()
             compose.onAllNodesWithText("Filmes e séries").onLast().performClick()
             assertTrue("Drawer must return to existing genre catalogue",
                 compose.onAllNodesWithText("Drama").fetchSemanticsNodes().isNotEmpty())
