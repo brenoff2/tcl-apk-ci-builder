@@ -5062,7 +5062,7 @@ internal fun TclStreamingScreens(
                         onOpenDeviceDiscovery()
                     },
                     tvName = tvName,
-                    tvConnected = host.isNotBlank() && tvName.isNotBlank())
+                    tvConnected = (host.isNotBlank() || isLgWebOs) && tvName.isNotBlank())
             }
             if (menuOpen) {
                 AnyTvUnifiedDrawer(onClose = { menuOpen = false },
