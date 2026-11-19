@@ -1791,7 +1791,7 @@ private fun AnyTvStreamNavBar(
             }
             IconButton(onClick = onFilters, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Filled.FilterList, contentDescription = "Filtrar streamings e gêneros",
-                    tint = if (filtersActive) Color(0xFFAD6B73) else fg)
+                    tint = if (filtersActive) Color(0xFFE9003B) else fg)
             }
         }
     }
@@ -2046,14 +2046,14 @@ private fun AnyTvCompactChip(label: String, selected: Boolean, onClick: () -> Un
     Box(modifier = Modifier.padding(end = 2.dp)
         .clip(shape)
         .anyTvCutGraphite(shape)
-        .background(if (selected) Color(0xFF422128).copy(alpha = .32f)
+        .background(if (selected) Color(0xFFE9003B)
                     else Color.Transparent, shape)
-        .border(0.8.dp, if (selected) Color(0xFF71383F).copy(alpha = .72f)
+        .border(0.8.dp, if (selected) Color(0xFFE9003B)
                else Color.Transparent, shape)
         .clickable(onClick = onClick)
         .padding(horizontal = 7.dp, vertical = 5.dp)) {
         Text(label, fontSize = 11.sp, maxLines = 1,
-            color = MaterialTheme.colorScheme.onSurface)
+            color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface)
     }
 }
 
@@ -2069,14 +2069,14 @@ private fun AnyTvGenreViewIcon(
     Box(modifier = Modifier.size(34.dp)
         .clip(shape)
         .anyTvCutGraphite(shape)
-        .background(if (selected) Color(0xFF422128).copy(alpha = .32f)
+        .background(if (selected) Color(0xFFE9003B)
                     else Color.Transparent, shape)
-        .border(0.8.dp, if (selected) Color(0xFF71383F).copy(alpha = .72f)
+        .border(0.8.dp, if (selected) Color(0xFFE9003B)
                else Color.Transparent, shape)
         .clickable(onClick = onClick),
         contentAlignment = Alignment.Center) {
         Icon(image, contentDescription = label,
-            tint = MaterialTheme.colorScheme.onSurface,
+            tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.size(19.dp))
     }
 }
@@ -5712,13 +5712,13 @@ internal fun TclStreamingScreens(
                                         label = { Text(season.name, fontSize = 11.sp) },
                                         colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
                                             containerColor = Color(0xFF151619),
-                                            selectedContainerColor = Color(0xFF422128),
+                                            selectedContainerColor = Color(0xFFE9003B),
                                             selectedLabelColor = Color.White),
                                         border = androidx.compose.material3.FilterChipDefaults.filterChipBorder(
                                             enabled = true,
                                             selected = selectedSeriesSeason == season.number,
                                             borderColor = Color(0xFF35363A),
-                                            selectedBorderColor = Color(0xFF804049)))
+                                            selectedBorderColor = Color(0xFFE9003B)))
                                 }
                             }
                             val watchedThisSeason = seasonEpisodes.count {
@@ -5899,7 +5899,7 @@ internal fun TclStreamingScreens(
                                             detailsPackage = app.packageName
                                         },
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = if (chosen) Color(0xFF422128)
+                                            containerColor = if (chosen) Color(0xFFE9003B)
                                                 else Color(0xFF191A1D),
                                             contentColor = Color.White),
                                         shape = RoundedCornerShape(20.dp),
