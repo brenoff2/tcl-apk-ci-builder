@@ -2050,7 +2050,8 @@ internal fun TclStreamingScreens(
     onLaunchLgNetflixTitle: (String) -> Unit = {},
     onLgTitleChange: () -> Unit = {},
     lgLaunchStatus: String? = null,
-    initialRoute: String = "catalogue"
+    initialRoute: String = "catalogue",
+    onOpenAppSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val openAccountSession = LocalAnyTvOpenAccount.current
@@ -5017,7 +5018,11 @@ internal fun TclStreamingScreens(
                         menuOpen = false
                         accountArea = ""
                         when (route) {
-                            "account", "help", "settings" -> accountArea = route
+                            "account", "help" -> accountArea = route
+                            "settings" -> {
+                                onDismiss()
+                                onOpenAppSettings()
+                            }
                             "remote" -> onDismiss()
                             "catalogue" -> {
                                 selected = null; homeLibrary = false
