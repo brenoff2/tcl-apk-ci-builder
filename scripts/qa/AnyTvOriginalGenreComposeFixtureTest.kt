@@ -9,7 +9,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import java.io.ByteArrayInputStream
@@ -194,7 +194,8 @@ class AnyTvOriginalGenreComposeFixtureTest {
                 .onFirst().performClick()
             // The new privacy actions live below the initial viewport;
             // scroll the real account page as a user must do.
-            compose.onRoot().performTouchInput { swipeUp() }
+            compose.onAllNodes(hasScrollAction()).onLast()
+                .performTouchInput { swipeUp() }
             compose.waitForIdle()
             compose.onAllNodesWithText("Zerar favoritos").onFirst().performClick()
             compose.onAllNodesWithText("Cancelar").onFirst().performClick()
