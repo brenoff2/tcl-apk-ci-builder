@@ -501,7 +501,9 @@ class StreamingScreens(unittest.TestCase):
         else:
             self.assertIn("TclStreamingScreens(apps = allApps, host = host, pairing = pairing", self.apps)
             self.assertIn("allApps = apps", self.apps)
-        self.assertIn("initialRoute = if (globalNavRequest > 0) globalNavRoute else \"catalogue\"", self.apps)
+        self.assertIn("initialRoute = streamingEntryRoute", self.apps)
+        self.assertIn("streamingEntryRoute = globalNavRoute", self.apps)
+        self.assertIn('streamingEntryRoute = "catalogue"', self.apps)
         self.assertIn("OfficialTvIcon(app, 52.dp)", self.screen)
         self.assertNotIn("listOf(TvOfficialApp(", self.screen)
         self.assertIn('"favorites:$deviceKey"', self.apps)
