@@ -202,9 +202,14 @@ class AnyTvOriginalGenreComposeFixtureTest {
             assertTrue("Account cleanup must be cancellable without leaving profile",
                 compose.onAllNodesWithText("Zerar favoritos")
                     .fetchSemanticsNodes().isNotEmpty())
-            // The profile page overlays the catalogue; use its visible Menu icon.
+            // Privacy was scrolled to the bottom. Reveal the profile navbar
+            // before opening its drawer, never tap the hidden catalogue navbar.
             compose.onAllNodesWithContentDescription("Abrir menu do AnyTV")
-                .onLast().performClick()
+                .onLast().performScrollTo().performClick()
+            compose.waitUntil(10_000) {
+                compose.onAllNodesWithText("Filmes e séries")
+                    .fetchSemanticsNodes().isNotEmpty()
+            }
             compose.onAllNodesWithText("Filmes e séries").onLast().performClick()
             assertTrue("Drawer must return to existing genre catalogue",
                 compose.onAllNodesWithText("Drama").fetchSemanticsNodes().isNotEmpty())
