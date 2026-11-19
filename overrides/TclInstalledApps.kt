@@ -355,9 +355,13 @@ fun TclInstalledAppsBar(
     var showManager by remember(deviceKey, host) { mutableStateOf(false) }
     var catalogFavorites by remember { mutableStateOf(prefs.getString("anytv_catalog_visible_services", "")?.split(",")?.filter { it.isNotBlank() }?.toSet() ?: emptySet()) }
     var showStreaming by remember(deviceKey, host) { mutableStateOf(false) }
-    // The remote header opens the same catalogue dialog at the requested route.
+    var streamingEntryRoute by remember(deviceKey, host) { mutableStateOf("catalogue") }
+    // The remote header opens the same catalogue navigation at the requested route.
     LaunchedEffect(globalNavRequest) {
-        if (globalNavRequest > 0) showStreaming = true
+        if (globalNavRequest > 0) {
+            streamingEntryRoute = globalNavRoute
+            showStreaming = true
+        }
     }
     var busy by remember(deviceKey, host) { mutableStateOf(false) }
     var errorText by remember(deviceKey, host) { mutableStateOf<String?>(null) }
@@ -500,7 +504,10 @@ fun TclInstalledAppsBar(
             }
         }
         // Keep TV streaming app icons above the dynamic 75dp movie banner.
-        AnyTvHomeFilmBanner(onOpenStreaming = { showStreaming = true })
+        AnyTvHomeFilmBanner(onOpenStreaming = {
+            streamingEntryRoute = "catalogue"
+            showStreaming = true
+        })
         if (errorText != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(errorText.orEmpty(), color = MaterialTheme.colorScheme.error,
@@ -515,7 +522,7 @@ fun TclInstalledAppsBar(
     if (showStreaming) {
         TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
             tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },
-            initialRoute = if (globalNavRequest > 0) globalNavRoute else "catalogue",
+            initialRoute = streamingEntryRoute,
             onRemoteKey = onRemoteKey,
             onRemoteHoldStart = onRemoteHoldStart,
             onRemoteHoldEnd = onRemoteHoldEnd,
