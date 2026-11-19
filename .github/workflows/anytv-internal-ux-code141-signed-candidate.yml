@@ -10,6 +10,7 @@ on:
       - 'overrides/AnyTvAccountFlow.kt'
       - 'scripts/apply_anytv_internal_pages_ux.py'
       - 'scripts/apply_anytv_tcl_adb.py'
+      - 'scripts/apply_anytv_lg_webos.py'
       - 'scripts/tests/test_anytv_ux_consistency.py'
       - 'scripts/qa/AnyTvOriginalGenreComposeFixtureTest.kt'
       - 'overrides/TclInstalledApps.kt'
