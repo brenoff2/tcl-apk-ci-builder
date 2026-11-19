@@ -40,7 +40,10 @@ class AnyTvUxConsistency(unittest.TestCase):
         self.assertIn('onOpenDeviceDiscovery = onOpenDeviceDiscovery', self.tv)
         self.assertIn('onClick = onDevices', account)
         self.assertIn('tvName = tvName', self.stream)
-        self.assertIn('tvConnected =', self.stream)
+        self.assertIn('tvConnected = (host.isNotBlank() || isLgWebOs)', self.stream)
+        lg = (ROOT / 'scripts/apply_anytv_lg_webos.py').read_text(encoding='utf-8')
+        self.assertIn('onOpenAppSettings = onOpenSettings', lg)
+        self.assertIn('onOpenDeviceDiscovery = onOpenDiscovery', lg)
         self.assertIn('clearAccountSection = it', self.stream)
         self.assertIn('A exclusão definitiva exige uma operação verificada no servidor.', account)
 
