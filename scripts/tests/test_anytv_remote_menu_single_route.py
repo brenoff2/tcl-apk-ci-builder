@@ -24,7 +24,10 @@ class RemoteMenuRouteTests(unittest.TestCase):
         bar = BAR.read_text(encoding="utf-8")
         self.assertIn('LaunchedEffect(globalNavRequest) {', bar)
         self.assertIn('if (globalNavRequest > 0) showStreaming = true', bar)
-        self.assertIn('initialRoute = if (globalNavRequest > 0) globalNavRoute else "catalogue"', bar)
+        self.assertIn('initialRoute = streamingEntryRoute,', bar)
+        self.assertIn('streamingEntryRoute = globalNavRoute', bar)
+        self.assertIn('streamingEntryRoute = "catalogue"', bar)
+        self.assertIn('AnyTvHomeFilmBanner(onOpenStreaming = {', bar)
 
 if __name__ == "__main__":
     unittest.main()
