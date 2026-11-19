@@ -317,7 +317,8 @@ fun TclInstalledAppsBar(
     onKeyboardText: (String) -> Unit = {},
     onKeyboardEnter: () -> Unit = {},
     globalNavRequest: Int = 0,
-    globalNavRoute: String = "catalogue"
+    globalNavRoute: String = "catalogue",
+    onOpenAppSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val prefs = remember(context) {
@@ -523,6 +524,7 @@ fun TclInstalledAppsBar(
         TclStreamingScreens(apps = allApps, host = host, pairing = pairing,
             tvName = tvName.orEmpty(), onDismiss = { showStreaming = false },
             initialRoute = streamingEntryRoute,
+            onOpenAppSettings = onOpenAppSettings,
             onRemoteKey = onRemoteKey,
             onRemoteHoldStart = onRemoteHoldStart,
             onRemoteHoldEnd = onRemoteHoldEnd,
