@@ -9,6 +9,7 @@ on:
       - 'overrides/TclApprovedHomeScreen.kt'
       - 'overrides/AnyTvAccountFlow.kt'
       - 'scripts/apply_anytv_internal_pages_ux.py'
+      - 'scripts/apply_anytv_tcl_adb.py'
       - 'scripts/tests/test_anytv_ux_consistency.py'
       - 'overrides/TclInstalledApps.kt'
       - 'overrides/TclInstalledApps.kt'
