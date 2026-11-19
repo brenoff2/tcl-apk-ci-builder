@@ -20,6 +20,19 @@ class RemoteMenuRouteTests(unittest.TestCase):
         self.assertIn('AnyTvUnifiedDrawer(onClose = { menuOpen = false }', catalog)
         self.assertIn('"account", "help", "settings" -> accountArea = route', catalog)
 
+    def test_shared_settings_routes_to_existing_native_settings_screen(self):
+        remote = REMOTE.read_text(encoding="utf-8")
+        catalog = CATALOG.read_text(encoding="utf-8")
+        bar = BAR.read_text(encoding="utf-8")
+        self.assertIn('onOpenAppSettings = onOpenSettings', remote)
+        self.assertIn('onOpenAppSettings: () -> Unit = {}', bar)
+        self.assertIn('onOpenAppSettings = onOpenAppSettings', bar)
+        self.assertIn('onOpenAppSettings: () -> Unit = {}', catalog)
+        self.assertIn('"settings" -> {', catalog)
+        self.assertIn('onDismiss()', catalog)
+        self.assertIn('onOpenAppSettings()', catalog)
+        self.assertNotIn('"account", "help", "settings" -> accountArea = route', catalog)
+
     def test_remote_menu_route_reaches_real_streaming_surface(self):
         bar = BAR.read_text(encoding="utf-8")
         self.assertIn('LaunchedEffect(globalNavRequest) {', bar)
