@@ -186,6 +186,9 @@ class AnyTvOriginalGenreComposeFixtureTest {
             compose.onAllNodesWithContentDescription("Abrir menu do AnyTV")
                 .onFirst().performClick()
             compose.onAllNodesWithText("Minha conta").onFirst().performClick()
+            // Destructive actions now live under an explicit privacy disclosure.
+            compose.onAllNodesWithText("Gerenciar dados neste aparelho")
+                .onFirst().performClick()
             compose.onAllNodesWithText("Zerar favoritos").onFirst().performClick()
             compose.onAllNodesWithText("Cancelar").onFirst().performClick()
             assertTrue("Account cleanup must be cancellable without leaving profile",
