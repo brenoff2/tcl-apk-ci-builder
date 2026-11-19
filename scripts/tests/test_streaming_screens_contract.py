@@ -1274,20 +1274,22 @@ class StreamingScreens(unittest.TestCase):
         self.assertIn('val history = (watchedFilms.mapNotNull', s)
         self.assertIn('val trackedIds = trackedSeries +', s)
 
-    def test_graphite_streaming_actions_and_reddish_selected_states(self):
+    def test_graphite_streaming_actions_and_solid_red_selected_states(self):
         s = self.screen
         self.assertIn('private fun AnyTvStreamOutlinedButton(', s)
         self.assertIn('containerColor = Color.Transparent, contentColor = Color(0xFFECECEE)', s)
         self.assertIn('modifier = modifier.anyTvCutGraphite(shape)', s)
-        self.assertIn('Color(0xFF422128)', s)
-        self.assertIn('Color(0xFF71383F).copy(alpha = .72f)', s)
+        self.assertIn('Color(0xFFE9003B)', s)
+        self.assertIn('color = if (selected) Color.White else MaterialTheme.colorScheme.onSurface', s)
         self.assertIn('AnyTvStreamOutlinedButton(onClick =', s)
         self.assertIn('private fun AnyTvStreamButton(', s)
         self.assertIn('private fun AnyTvStreamTextButton(', s)
         self.assertIn('AnyTvStreamButton(onClick =', s)
         self.assertIn('AnyTvStreamTextButton(onClick =', s)
-        self.assertIn('selectedContainerColor = Color(0xFF422128)', s)
-        self.assertIn('Color(0xFF422128).copy(alpha = .32f)', s)
+        self.assertIn('selectedContainerColor = Color(0xFFE9003B)', s)
+        self.assertIn('containerColor = if (chosen) Color(0xFFE9003B)', s)
+        self.assertNotIn('Color(0xFF422128)', s)
+        self.assertNotIn('Color(0xFF71383F).copy(alpha = .72f)', s)
         self.assertIn('else Color.Transparent, shape)', s)
 
     def test_watched_film_uses_independent_prefs_snapshot_and_legacy_cache_migration(self):
