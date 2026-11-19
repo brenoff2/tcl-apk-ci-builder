@@ -18,7 +18,9 @@ class RemoteMenuRouteTests(unittest.TestCase):
         catalog = CATALOG.read_text(encoding="utf-8")
         self.assertIn('var menuOpen by remember(initialRoute) {\n        mutableStateOf(initialRoute == "menu")\n    }', catalog)
         self.assertIn('AnyTvUnifiedDrawer(onClose = { menuOpen = false }', catalog)
-        self.assertIn('"account", "help", "settings" -> accountArea = route', catalog)
+        self.assertIn('"account", "help" -> accountArea = route', catalog)
+        self.assertIn('"settings" -> {', catalog)
+        self.assertIn('onOpenAppSettings()', catalog)
 
     def test_shared_settings_routes_to_existing_native_settings_screen(self):
         remote = REMOTE.read_text(encoding="utf-8")
