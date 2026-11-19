@@ -183,7 +183,6 @@ fun TclApprovedHomeScreen(
     val view = LocalView.current
     val isConnected = sessionState.connectedDevice != null
     var showKeyboard by rememberSaveable { mutableStateOf(false) }
-    var remoteMenuOpen by remember { mutableStateOf(false) }
     var globalNavRequest by remember { mutableIntStateOf(0) }
     var globalNavRoute by remember { mutableStateOf("catalogue") }
     var headsetStatus by remember { mutableStateOf<String?>(null) }
@@ -266,7 +265,10 @@ fun TclApprovedHomeScreen(
                         onAccount = { openAccount?.invoke() },
                         onCast = { onTabSelected(HomeTab.Cast) },
                         onSettings = onOpenSettings,
-                        onMenu = { remoteMenuOpen = true }
+                        onMenu = {
+                            globalNavRoute = "menu"
+                            globalNavRequest += 1
+                        }
                     )
 
                     TclInstalledAppsBar(
@@ -433,23 +435,6 @@ fun TclApprovedHomeScreen(
                         }
                     }
                     Spacer(Modifier.height(2.dp))
-        }
-    }
-
-    // The remote and catalogue share one navigation drawer and route contract.
-    if (remoteMenuOpen) {
-        Dialog(onDismissRequest = { remoteMenuOpen = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false)) {
-            Surface(modifier = Modifier.fillMaxSize(), color = Color.Transparent) {
-                AnyTvUnifiedDrawer(onClose = { remoteMenuOpen = false },
-                    onRoute = { route ->
-                        remoteMenuOpen = false
-                        if (route != "remote") {
-                            globalNavRoute = route
-                            globalNavRequest += 1
-                        }
-                    })
-            }
         }
     }
 
