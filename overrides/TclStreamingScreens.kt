@@ -1892,7 +1892,8 @@ private fun AnyTvAccountPage(
     route: String, onClose: () -> Unit, onMenu: () -> Unit,
     onClear: (String) -> Unit, onAuth: (() -> Unit)?,
     onLibrary: (String) -> Unit, onRemote: () -> Unit,
-    tvName: String, tvConnected: Boolean
+    tvName: String, tvConnected: Boolean,
+    onDevices: () -> Unit
 ) {
     var privacyExpanded by remember { mutableStateOf(false) }
     Column(modifier = Modifier.fillMaxSize()
@@ -1924,7 +1925,7 @@ private fun AnyTvAccountPage(
                 title = if (tvConnected) tvName else "Nenhuma TV conectada",
                 detail = if (tvConnected) "TV conectada · Ver controle ou escolher outra TV"
                     else "Abra o controle para localizar e conectar uma TV",
-                onClick = onRemote
+                onClick = onDevices
             )
             Text("Os dispositivos exibidos são os confirmados nesta sessão. " +
                 "O histórico de TVs só aparecerá quando houver dados verificados.",
@@ -2096,7 +2097,8 @@ internal fun TclStreamingScreens(
     onLgTitleChange: () -> Unit = {},
     lgLaunchStatus: String? = null,
     initialRoute: String = "catalogue",
-    onOpenAppSettings: () -> Unit = {}
+    onOpenAppSettings: () -> Unit = {},
+    onOpenDeviceDiscovery: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val openAccountSession = LocalAnyTvOpenAccount.current
@@ -5055,6 +5057,10 @@ internal fun TclStreamingScreens(
                         }
                     },
                     onRemote = onDismiss,
+                    onDevices = {
+                        onDismiss()
+                        onOpenDeviceDiscovery()
+                    },
                     tvName = tvName,
                     tvConnected = host.isNotBlank() && tvName.isNotBlank())
             }
