@@ -56,7 +56,7 @@ internal fun AnyTvAccountFlow(
             }
         } catch (_: Exception) {
             state = AnyTvAccountSession.Choosing
-            message = "Nao foi possivel verificar a sessao. O catalogo continua disponivel."
+            message = "Não foi possível verificar a sessão. O catálogo continua disponível."
         }
     }
 
@@ -69,20 +69,22 @@ internal fun AnyTvAccountFlow(
         val signedIn = state is AnyTvAccountSession.SignedIn
         AlertDialog(
             onDismissRequest = { if (!busy) showAccount = false },
-            title = { Text("Minha Conta") },
+            containerColor = androidx.compose.ui.graphics.Color(0xFF292929),
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+            title = { Text("Minha conta", fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold) },
             text = {
                 androidx.compose.foundation.layout.Column {
                     Text(when (state) {
                         is AnyTvAccountSession.SignedIn -> "Conectado com Google"
-                        AnyTvAccountSession.Loading -> "Verificando sessao..."
-                        else -> "Modo convidado - dados salvos neste aparelho"
+                        AnyTvAccountSession.Loading -> "Verificando sessão…"
+                        else -> "Modo convidado · dados salvos neste aparelho"
                     })
                     if (signedIn) {
                         val user = state as? AnyTvAccountSession.SignedIn
                         if (!user?.email.isNullOrBlank()) Text(user?.email.orEmpty())
-                        Text("Conta autenticada pelo Supabase. Sua lista ainda e local, nao sincronizada.")
+                        Text("Conta conectada. Favoritos e acompanhamento permanecem salvos neste aparelho.")
                     } else {
-                        Text("Entre com Google quando desejar. O catalogo nao exige login.")
+                        Text("Você pode entrar com Google. O catálogo também funciona sem conta.")
                     }
                     if (!message.isNullOrBlank()) Text(message.orEmpty())
                     if (busy) CircularProgressIndicator()
@@ -98,7 +100,7 @@ internal fun AnyTvAccountFlow(
                                 state = AnyTvAccountSession.Guest
                                 message = null
                             } catch (_: Exception) {
-                                message = "Nao foi possivel sair da conta."
+                                message = "Não foi possível sair da conta."
                             } finally { busy = false }
                         }
                     }) { Text("Sair da conta") }
@@ -111,7 +113,7 @@ internal fun AnyTvAccountFlow(
                                 gateway.signInWithGoogle()
                                 showAccount = false
                             } catch (_: Exception) {
-                                message = "Nao foi possivel iniciar o login Google."
+                                message = "Não foi possível iniciar o login Google."
                             } finally { busy = false }
                         }
                     }) { Text("Entrar com Google") }
