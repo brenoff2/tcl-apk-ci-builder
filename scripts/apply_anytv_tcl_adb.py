@@ -336,8 +336,8 @@ text = replace_once(text,
     "First connection instructions only in Edit dialog")
 # Keep the fallback switch inside the favorites manager, not on the home shelf.
 text = replace_once(text,
-    '''                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)''',
-    '''                    Text("Editar aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+    '''                    Text("Aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 19.sp)''',
+    '''                    Text("Aplicativos da TV", fontWeight = FontWeight.Bold, fontSize = 19.sp)
                     if (useAdb) {
                         val warnings = adbApps.lastInventoryWarnings
                         if (warnings.isNotEmpty()) {
