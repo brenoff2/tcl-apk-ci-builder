@@ -39,6 +39,10 @@ class AnyTvUxConsistency(unittest.TestCase):
         self.assertIn('onOpenDeviceDiscovery: () -> Unit = {}', self.stream)
         self.assertIn('onOpenDeviceDiscovery = onOpenDeviceDiscovery', self.tv)
         self.assertIn('onClick = onDevices', account)
+        self.assertLess(account.index('AnyTvStreamNavBar('),
+                        account.index('.verticalScroll(rememberScrollState())'))
+        self.assertLess(account.index('TextButton(onClick = onClose)'),
+                        account.index('.verticalScroll(rememberScrollState())'))
         self.assertIn('tvName = tvName', self.stream)
         self.assertIn('tvConnected = (host.isNotBlank() || isLgWebOs)', self.stream)
         lg = (ROOT / 'scripts/apply_anytv_lg_webos.py').read_text(encoding='utf-8')
