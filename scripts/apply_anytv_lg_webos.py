@@ -347,6 +347,8 @@ home_change(
                             apps = emptyList(), host = "", pairing = "",
                             tvName = sessionState.connectedDevice?.name.orEmpty(),
                             onDismiss = { lgStreaming = false },
+                            onOpenAppSettings = onOpenSettings,
+                            onOpenDeviceDiscovery = onOpenDiscovery,
                             onRemoteKey = { remoteKey(it) },
                             onRemoteHoldStart = { key ->
                                 if (isConnected) remoteKey(key)
